@@ -51,6 +51,7 @@ class HandleInertiaRequests extends Middleware
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),
             ],
+            'bypassRedirectName' => \App\Models\Member::BYPASS_REDIRECT_NAME,
         ];
     }
 }

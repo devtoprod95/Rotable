@@ -17,7 +17,7 @@ export default function TextField({
                 placeholder={placeholder}
                 autoFocus={autoFocus}
                 className={
-                    'rounded-lg border px-3.5 py-3 text-[15px] outline-none transition focus:ring-2 focus:ring-primary-200 ' +
+                    'rounded-lg border px-3.5 py-3 text-base outline-none transition focus:ring-2 focus:ring-primary-200 ' +
                     (error ? 'border-red-500' : 'border-gray-300')
                 }
             />

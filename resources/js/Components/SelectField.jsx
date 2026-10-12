@@ -15,7 +15,7 @@ export default function SelectField({
                 onChange={(e) => onChange(e.target.value)}
                 autoFocus={autoFocus}
                 className={
-                    'rounded-lg border bg-white px-3.5 py-3 text-[15px] outline-none transition focus:ring-2 focus:ring-primary-200 ' +
+                    'rounded-lg border bg-white px-3.5 py-3 text-base outline-none transition focus:ring-2 focus:ring-primary-200 ' +
                     (error ? 'border-red-500' : 'border-gray-300') +
                     (value ? ' text-gray-900' : ' text-gray-400')
                 }

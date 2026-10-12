@@ -1,0 +1,29 @@
+{
+  "mcpServers": {
+    "k20": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "k20-php",
+        "php",
+        "/var/www/html/artisan",
+        "mcp:start",
+        "app",
+        "--no-interaction"
+      ]
+    },
+    "k20-boost": {
+      "command": "docker",
+      "args": [
+        "exec",
+        "-i",
+        "k20-php",
+        "php",
+        "/var/www/html/artisan",
+        "boost:mcp"
+      ],
+      "disabled": true
+    }
+  }
+}

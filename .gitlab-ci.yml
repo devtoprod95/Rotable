@@ -1,0 +1,31 @@
+stages:
+  - deploy
+
+variables:
+  GIT_STRATEGY: "none"
+  PROJECT_PATH: "/home/web03/deploy/runner"
+
+deploy_dev:
+  stage: deploy
+  script:
+    - echo "[#$CI_PIPELINE_IID][$CI_PROJECT_NAME] Deploying to AMS Dev server (dev branch) Start."
+    - cd $PROJECT_PATH
+    - ./ams.vrixon.com.git 1
+    - echo "Deploying to AMS server (dev branch) End. "
+  only:
+    - dev
+  tags:
+    - ams-dev
+
+deploy_prod:
+  stage: deploy
+  script:
+    - echo "[#$CI_PIPELINE_IID][$CI_PROJECT_NAME] Deploying to Production server (master branch) Start."
+    - cd $PROJECT_PATH
+    - ./ams.vrixon.com.git 2
+    - echo "Deploying to AMS server (master branch) End. "
+  only:
+    - master
+  tags:
+    - ams-prod
+  when: on_success

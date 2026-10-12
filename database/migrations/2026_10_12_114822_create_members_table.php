@@ -19,6 +19,14 @@ return new class extends Migration
                 $table->string('password')->comment('비밀번호');
                 $table->unsignedBigInteger('event_id')->comment('event_rounds.id');
 
+                $table->char('gender', 1)->comment('성별 (M: 남, F: 여)');
+                $table->year('birth_year')->comment('출생연도');
+                $table->string('job', 50)->comment('직업');
+                $table->unsignedSmallInteger('height')->comment('키 (cm)');
+                $table->string('mbti', 4)->comment('MBTI');
+                $table->string('region', 50)->comment('지역/거주지');
+                $table->boolean('is_smoker')->comment('흡연 여부 (true: 흡연, false: 비흡연)');
+
                 $table->timestamps();
                 $table->softDeletes();
                 $table->comment('회원 데이터 테이블');

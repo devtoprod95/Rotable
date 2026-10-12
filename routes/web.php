@@ -1,12 +1,8 @@
 <?php
 
-use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\MemberAuthController;
-use App\Http\Controllers\AdminController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MemberPageController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\K6Controller;
 
 /*
 |--------------------------------------------------------------------------

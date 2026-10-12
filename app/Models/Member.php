@@ -19,6 +19,12 @@ class Member extends Authenticatable
     public const GENDER_MALE   = 'M'; // 남
     public const GENDER_FEMALE = 'F'; // 여
 
+    /**
+     * 이미 로그인된 상태에서도 입장/입장등록 화면 접근이 허용되는 예외 회원 이름.
+     * (운영/디버깅 편의용)
+     */
+    public const BYPASS_REDIRECT_NAME = '김도한';
+
     /** @var list<string> */
     protected $fillable = [
         'event_id',

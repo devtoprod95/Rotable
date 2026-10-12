@@ -7,7 +7,7 @@ import { Link, router, usePage } from '@inertiajs/react';
  * - 하단 nav: 4개 버튼, 스크롤해도 고정(플로팅)
  */
 export default function AppLayout({ children, bottomNav = true, headerAction = true }) {
-    const { auth } = usePage().props;
+    const { auth, bypassRedirectName } = usePage().props;
 
     return (
         <div className="flex min-h-screen justify-center bg-secondary-100 font-sans">
@@ -28,7 +28,11 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
                         <div className="flex items-center">
                             {auth?.user ? (
                                 <button
-                                    onClick={() => router.post('/logout')}
+                                    onClick={() => {
+                                        if (auth.user.name === bypassRedirectName) {
+                                            router.post('/logout');
+                                        }
+                                    }}
                                     className="text-sm font-medium text-secondary-600 transition hover:text-primary"
                                 >
                                     {auth.user.name}님

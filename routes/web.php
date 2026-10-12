@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\MemberAuthController;
 use App\Http\Controllers\MemberPageController;
+use App\Http\Middleware\RedirectIfRegistered;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,8 +14,9 @@ use Illuminate\Support\Facades\Route;
 // 소개팅 랜딩 (게스트 포함 누구나)
 Route::get('/', [MemberPageController::class, 'landing'])->name('landing');
 
-// 비로그인 유저만 (이미 로그인 시 홈으로)
-Route::middleware('guest:web')->group(function () {
+// 입장/입장등록 화면.
+// 이미 등록(로그인)된 회원은 메인(홈)으로 보낸다. (단, 예외 이름 회원은 접근 허용)
+Route::middleware(RedirectIfRegistered::class)->group(function () {
     Route::get('/register', [MemberAuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [MemberAuthController::class, 'register']);
     Route::get('/login', [MemberAuthController::class, 'showLogin'])->name('member.login');

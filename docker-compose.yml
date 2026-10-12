@@ -1,0 +1,64 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: rotable-nginx
+    restart: unless-stopped
+    entrypoint: ["/usr/local/bin/nginx-entrypoint.sh"]
+    ports:
+      - "${NGINX_PORT:-9999}:80"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./docker/nginx-entrypoint.sh:/usr/local/bin/nginx-entrypoint.sh:ro
+      - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+      - .:/var/www/html
+    depends_on:
+      php:
+        condition: service_started
+    networks:
+      - rotable-network
+
+  php:
+    build: ./docker
+    container_name: rotable-php
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    expose:
+      - "${PHP_PORT:-9000}"
+    ports:
+      - "5173:5173"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./docker/php.ini:/usr/local/etc/php/php.ini
+      - ./docker/php-fpm.d/www.conf:/usr/local/etc/php-fpm.d/www.conf
+      - .:/var/www/html
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - rotable-network
+
+  redis:
+    image: redis:alpine
+    container_name: rotable-redis
+    restart: unless-stopped
+    ports:
+      - "9998:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - rotable-network
+
+volumes:
+  redis_data:
+
+networks:
+  rotable-network:
+    driver: bridge

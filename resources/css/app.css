@@ -1,0 +1,42 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../js/**/*.jsx';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* ===== 기본(primary) 컬러 - 로고 코랄/핑크 (딥 톤) ===== */
+    --color-primary-50: #fdeef0;
+    --color-primary-100: #fad4da;
+    --color-primary-200: #f3a6b2;
+    --color-primary-300: #ea7488;
+    --color-primary-400: #de4a63;
+    --color-primary-500: #cf2f4c; /* 로고 코랄의 딥 버전 */
+    --color-primary-600: #b2203c;
+    --color-primary-700: #911830;
+    --color-primary-800: #731528;
+    --color-primary-900: #5c1522;
+
+    /* 단축 토큰: bg-primary / text-primary 등 */
+    --color-primary: var(--color-primary-600);
+
+    /* ===== 보조(secondary) 컬러 - 다크 차콜 (딥 톤) ===== */
+    --color-secondary-50: #f4f4f6;
+    --color-secondary-100: #e4e4e9;
+    --color-secondary-200: #c4c4cd;
+    --color-secondary-300: #9a9aa6;
+    --color-secondary-400: #65656f;
+    --color-secondary-500: #3f3f48;
+    --color-secondary-600: #2a2a31;
+    --color-secondary-700: #1f1f25; /* 로고 텍스트 딥 톤 */
+    --color-secondary-800: #16161b;
+    --color-secondary-900: #0e0e12;
+
+    --color-secondary: var(--color-secondary-800);
+
+    /* ===== 레이아웃 토큰 ===== */
+    --spacing-header: 4.5rem; /* 상단 헤더 높이 (기존 h-14=3.5rem 대비 상향) */
+}

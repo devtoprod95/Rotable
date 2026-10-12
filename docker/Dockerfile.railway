@@ -1,0 +1,43 @@
+FROM php:8.3-fpm
+
+ENV TZ=Asia/Seoul
+
+RUN apt-get update && apt-get install -y \
+    build-essential nginx supervisor \
+    libpng-dev libjpeg62-turbo-dev libfreetype6-dev \
+    libzip-dev libonig-dev libxml2-dev libssl-dev libpq-dev \
+    zip unzip jpegoptim optipng pngquant gifsicle \
+    vim git curl tzdata && \
+    docker-php-ext-configure gd --with-freetype --with-jpeg && \
+    docker-php-ext-install pdo_mysql pdo_pgsql pgsql mbstring zip exif pcntl bcmath gd && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    echo "date.timezone = Asia/Seoul" > /usr/local/etc/php/conf.d/timezone.ini
+
+RUN pecl install redis && docker-php-ext-enable redis
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+WORKDIR /var/www/html
+
+COPY . .
+
+COPY docker/php.ini /usr/local/etc/php/php.ini
+COPY docker/nginx/conf.d/default-railway.conf /etc/nginx/conf.d/default.conf
+COPY docker/supervisor-railway.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/motd-railway.sh /etc/profile.d/motd.sh
+
+RUN chmod +x /etc/profile.d/motd.sh && \
+    echo 'source /etc/profile.d/motd.sh' >> /root/.bashrc && \
+    echo 'service() { if [ $# -eq 2 ]; then supervisorctl $2 $1; else supervisorctl $@; fi }' >> /root/.bashrc
+
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev --no-scripts
+
+RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+EXPOSE 8080
+
+CMD php artisan package:discover --ansi && supervisord -c /etc/supervisor/conf.d/supervisord.conf

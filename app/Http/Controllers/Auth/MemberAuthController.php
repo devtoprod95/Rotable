@@ -17,22 +17,26 @@ class MemberAuthController extends Controller
 {
     /**
      * 입장/등록 가능한 회차 목록을 셀렉트박스 옵션 형태로 반환.
-     * - 진행중(S) 회차는 모두 노출한다.
-     * - 종료(X) 회차는 event_time이 최근 일주일 이내인 경우에만 노출한다.
+     * - $statuses 에 해당하는 상태의 회차를 노출한다.
+     * - $includeRecentClosed=true 이면 종료(X) 회차 중 event_time이 최근 일주일 이내인 것도 추가로 노출한다.
      *
+     * @param  array<int, string>  $statuses
      * @return array<int, array{id: int, label: string}>
      */
-    private function roundOptions(): array
+    private function roundOptions(array $statuses, bool $includeRecentClosed = false): array
     {
         return EventRound::query()
-            ->where(function ($query) {
-                $query->where('status', EventRound::STATUS_STARTED)
-                    ->orWhere(function ($q) {
+            ->where(function ($query) use ($statuses, $includeRecentClosed) {
+                $query->whereIn('status', $statuses);
+
+                if ($includeRecentClosed) {
+                    $query->orWhere(function ($q) {
                         $q->where('status', EventRound::STATUS_CLOSED)
                             ->where('event_time', '>=', now()->subWeek());
                     });
+                }
             })
-            ->orderBy('event_time')
+            ->orderBy('event_time', 'desc')
             ->get()
             ->map(fn (EventRound $round): array => [
                 'id'    => $round->id,
@@ -87,7 +91,7 @@ class MemberAuthController extends Controller
     public function showRegister(): InertiaResponse
     {
         return Inertia::render('Auth/Register', [
-            'rounds'      => $this->roundOptions(),
+            'rounds'      => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED]),
             'birthYears'  => $this->birthYearOptions(),
         ]);
     }
@@ -125,7 +129,7 @@ class MemberAuthController extends Controller
             'phone.required'      => '핸드폰번호를 입력해주세요.',
             'phone.regex'         => '핸드폰번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'phone.unique'        => '해당 회차에 이미 등록된 핸드폰번호입니다.',
-            'name.required'       => '이름을 입력해주세요.',
+            'name.required'       => '닉네임을 입력해주세요.',
             'password.required'   => '비밀번호를 입력해주세요.',
             'password.min'        => '비밀번호는 최소 4자 이상이어야 합니다.',
             'gender.required'     => '성별을 선택해주세요.',
@@ -167,7 +171,7 @@ class MemberAuthController extends Controller
     public function showLogin(): InertiaResponse
     {
         return Inertia::render('Auth/Login', [
-            'rounds' => $this->roundOptions(),
+            'rounds' => $this->roundOptions([EventRound::STATUS_STARTED, EventRound::STATUS_PENDING], true),
         ]);
     }
 
@@ -215,9 +219,10 @@ class MemberAuthController extends Controller
      */
     public function logout(Request $request): RedirectResponse
     {
+        // web(회원) guard만 로그아웃한다.
+        // session()->invalidate()는 세션 전체를 날려 admin guard 로그인까지 풀리므로 사용하지 않는다.
         Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $request->session()->regenerate();
 
         return redirect()->route('landing');
     }

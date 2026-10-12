@@ -33,19 +33,21 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label d-block" id="actionLabel">&nbsp;</label>
-                        <button type="button" class="btn btn-primary w-100 d-none" id="rotateBtn">
-                            <i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행
-                        </button>
-                        <button type="button" class="btn btn-danger w-100 d-none" id="finishBtn">
-                            <i class="ti ti-flag-check me-1"></i>로테이션 종료
-                        </button>
-                        <span class="btn btn-outline-secondary w-100 d-none disabled" id="closedBtn">
-                            <i class="ti ti-lock me-1"></i>종료된 행사
-                        </span>
-                        <small class="form-hint text-muted" id="actionHint"></small>
-                        <div class="d-none align-items-center justify-content-center text-danger fw-bold text-center" id="pastNotice" style="min-height: 82px;">
-                            최신 턴에서만 로테이션을 진행할 수 있습니다.
+                        <div class="d-flex align-items-center" style="min-height: 38px;">
+                            <button type="button" class="btn btn-primary w-100 d-none" id="rotateBtn">
+                                <i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행
+                            </button>
+                            <button type="button" class="btn btn-danger w-100 d-none" id="finishBtn">
+                                <i class="ti ti-flag-check me-1"></i>로테이션 종료
+                            </button>
+                            <span class="btn btn-outline-secondary w-100 d-none disabled" id="closedBtn">
+                                <i class="ti ti-lock me-1"></i>종료된 행사
+                            </span>
+                            <div class="d-none align-items-center justify-content-center text-danger fw-bold text-center w-100" id="pastNotice">
+                                최신 턴에서만 로테이션을 진행할 수 있습니다.
+                            </div>
                         </div>
+                        <small class="form-hint text-muted mt-2 d-block" id="actionHint"></small>
                     </div>
                 </div>
             </div>
@@ -137,12 +139,10 @@
                 return;
             }
 
-            // 과거 턴을 보고 있으면 진행/종료 버튼 대신 안내 문구를 세로 가운데에 빨간색으로 표시.
-            // label을 숨기고, pastNotice가 왼쪽 컬럼 전체 높이를 차지하며 중앙 정렬한다.
+            // 과거 턴을 보고 있으면 진행/종료 버튼 대신 안내 문구를 표시한다. (label/힌트 라인은 왼쪽과 정렬 유지)
             if(!isLatest){
-                $hint.text('');
-                $actionLabel.addClass('d-none');
                 $pastNotice.removeClass('d-none').addClass('d-flex');
+                $hint.text('이전 턴은 로테이션을 진행할 수 없습니다.');
                 return;
             }
 
@@ -154,14 +154,21 @@
                 $hint.text('마지막 턴입니다. 로테이션을 종료할 수 있습니다.');
             } else {
                 $rotate.removeClass('d-none');
-                $hint.text('다음 턴을 자동 생성합니다. (여자 고정 / 남자 이동)');
+                // 0턴(아직 로테이션 시작 전)이면 '시작', 그 이후면 '진행'.
+                if(viewRound === 0){
+                    $rotate.html('<i class="ti ti-player-play me-1"></i>로테이션 시작');
+                    $hint.text('0턴 배치로 로테이션을 시작합니다.');
+                } else {
+                    $rotate.html('<i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행');
+                    $hint.text('다음 턴을 자동 생성합니다. (여자 고정 / 남자 이동)');
+                }
             }
         }
 
         function renderBoard(data){
             let $area = $('#boardArea').empty();
             if(!data.tables || data.tables.length === 0){
-                $area.html('<div class="col-12"><div class="card"><div class="card-body text-center text-muted py-5">생성된 테이블이 없습니다. 먼저 테이블을 생성해주세요.</div></div></div>');
+                $area.html('<div class="col-12"><div class="card"><div class="card-body text-center text-muted py-5">생성된 테이블이 없습니다. 행사 관리 &gt; 상세에서 테이블을 먼저 추가해주세요.</div></div></div>');
                 return;
             }
 
@@ -236,7 +243,10 @@
 
         // 로테이션 진행: 현재 턴 기준 다음 턴 자동 생성 (여자 고정 / 남자 이동)
         $('#rotateBtn').on('click', async function(){
-            if(!(await salert({text: '다음 턴으로 로테이션을 진행하시겠습니까?'}))) return;
+            let msg = (viewRound === 0)
+                ? '0턴 배치로 로테이션을 시작하시겠습니까?'
+                : '다음 턴으로 로테이션을 진행하시겠습니까?';
+            if(!(await salert({text: msg}))) return;
 
             $.ajax({
                 url: rotateUrl,

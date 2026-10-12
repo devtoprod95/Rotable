@@ -66,10 +66,10 @@ export default function Register() {
                             error={errors.gender}
                         />
                         <TextField
-                            label="이름"
+                            label="닉네임"
                             value={data.name}
                             onChange={(v) => setData('name', v)}
-                            placeholder="이름을 입력해주세요."
+                            placeholder="닉네임을 입력해주세요."
                             error={errors.name}
                         />
                         <SelectField

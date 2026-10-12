@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Dtos\RotationTableBulkStoreRequestDto;
 use App\Dtos\RotationTableListRequestDto;
 use App\Models\EventRound;
 use App\Models\Member;
@@ -20,6 +19,182 @@ class RotationService
     public function __construct()
     {
         $this->returnMsg = helpersDefaultMessage();
+    }
+
+    /* ======================================================================
+     | 행사(회차) 관리
+     * ==================================================================== */
+
+    /**
+     * 행사 목록 (페이지네이션). 테이블 개수를 함께 집계한다.
+     */
+    /**
+     * 행사 목록 (페이지네이션 + 검색). 테이블 개수와 성별 참여자 수를 함께 집계한다.
+     * searchText는 행사명, 또는 참여 회원의 이름/전화번호로 검색한다.
+     *
+     * @param array{searchText?:string, type?:string, status?:string} $filters
+     */
+    public function eventList(int $page, int $size, array $sort, array $filters = []): LengthAwarePaginator
+    {
+        $query = EventRound::query()
+            ->withCount([
+                'rotationTables',
+                'members as male_count'   => fn ($q) => $q->where('gender', Member::GENDER_MALE),
+                'members as female_count' => fn ($q) => $q->where('gender', Member::GENDER_FEMALE),
+            ]);
+
+        if (!empty($filters['searchText'])) {
+            $keyword = $filters['searchText'];
+            $query->where(function ($q) use ($keyword) {
+                $q->where('title', 'like', '%' . $keyword . '%')
+                    ->orWhereHas('members', function ($mq) use ($keyword) {
+                        $mq->where('name', 'like', '%' . $keyword . '%')
+                            ->orWhere('phone', 'like', '%' . $keyword . '%');
+                    });
+            });
+        }
+        if (!empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+        if (!empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (!empty($sort['field'])) {
+            $query->orderBy($sort['field'], $sort['dir'] ?? 'desc');
+        }
+
+        return $query->paginate($size, ['*'], 'page', $page);
+    }
+
+    /**
+     * 행사 생성. 상태는 무조건 대기(P)로 고정한다.
+     * 테이블 개수(table_count)가 있으면 테이블과 0턴까지 함께 생성한다.
+     *
+     * @param object{title:string, type:string, event_time:string, table_count?:int} $data
+     */
+    public function eventStore(object $data): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            DB::transaction(function () use ($data) {
+                $event = EventRound::create([
+                    'title'      => $data->title,
+                    'type'       => $data->type,
+                    'event_time' => $data->event_time,
+                    'status'     => EventRound::STATUS_PENDING, // 생성 시 상태는 무조건 대기(P)
+                ]);
+
+                $count = (int) ($data->table_count ?? 0);
+                if ($count > 0) {
+                    $rows = [];
+                    for ($i = 1; $i <= $count; $i++) {
+                        $rows[] = [
+                            'event_id'   => $event->id,
+                            'table_no'   => $i,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                    RotationTable::insert($rows);
+
+                    // 최초 턴(0턴) 보장 생성.
+                    RotationRound::firstOrCreate(['event_id' => $event->id, 'round_no' => 0]);
+                }
+            });
+
+            $returnMsg = helpersSuccessMessage('행사를 생성했습니다.');
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 행사 정보 수정 (제목/타입/일시). 상태는 로테이션 흐름에서만 변경되므로 건드리지 않는다.
+     *
+     * @param object{title:string, type:string, event_time:string} $data
+     */
+    public function eventUpdate(int $eventId, object $data): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $event = EventRound::find($eventId);
+            if (!$event) {
+                throw new Exception('행사를 찾을 수 없습니다.');
+            }
+
+            $event->title      = $data->title;
+            $event->type       = $data->type;
+            $event->event_time = $data->event_time;
+            $event->save();
+
+            $returnMsg = helpersSuccessMessage('행사 정보를 수정했습니다.');
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    public function eventDelete(array $ids): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $events = EventRound::whereIn('id', $ids)->get();
+            if ($events->isEmpty()) {
+                throw new Exception('행사를 찾을 수 없습니다.');
+            }
+
+            foreach ($events as $event) {
+                $event->delete();
+            }
+
+            $returnMsg = helpersSuccessMessage();
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 행사 상세 (테이블 목록 + 참여자 목록 포함).
+     */
+    public function eventDetail(int $eventId): ?EventRound
+    {
+        return EventRound::with([
+            'rotationTables' => fn ($q) => $q->orderBy('table_no'),
+            'members'        => fn ($q) => $q->orderBy('gender')->orderBy('name'),
+        ])->find($eventId);
+    }
+
+    /**
+     * 특정 행사에 테이블 1개 추가 (다음 번호).
+     */
+    public function tableAdd(int $eventId): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            DB::transaction(function () use ($eventId) {
+                $maxNo = (int) RotationTable::where('event_id', $eventId)->max('table_no');
+                RotationTable::create(['event_id' => $eventId, 'table_no' => $maxNo + 1]);
+
+                // 0턴 보장 생성.
+                RotationRound::firstOrCreate(['event_id' => $eventId, 'round_no' => 0]);
+            });
+
+            $returnMsg = helpersSuccessMessage('테이블을 추가했습니다.');
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
     }
 
     /* ======================================================================
@@ -41,48 +216,6 @@ class RotationService
         }
 
         return $query->paginate($dto->size, ['*'], 'page', $dto->page);
-    }
-
-    /**
-     * 행사에 테이블을 개수만큼 증분 생성한다.
-     * 기존 최대 table_no 다음 번호부터 count개를 추가한다. (요구사항: a안 증분)
-     */
-    public function tableBulkStore(RotationTableBulkStoreRequestDto $dto): array
-    {
-        $returnMsg = $this->returnMsg;
-
-        try {
-            DB::transaction(function () use ($dto) {
-                $maxNo = (int) RotationTable::where('event_id', $dto->eventId)->max('table_no');
-
-                $rows = [];
-                for ($i = 1; $i <= $dto->count; $i++) {
-                    $rows[] = [
-                        'event_id'   => $dto->eventId,
-                        'table_no'   => $maxNo + $i,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
-                }
-
-                RotationTable::insert($rows);
-
-                // 최초 턴(0턴)을 보장 생성하고, 행사 상태를 '대기(P)'로 둔다.
-                RotationRound::firstOrCreate([
-                    'event_id' => $dto->eventId,
-                    'round_no' => 0,
-                ]);
-
-                EventRound::where('id', $dto->eventId)
-                    ->update(['status' => EventRound::STATUS_PENDING]);
-            });
-
-            $returnMsg = helpersSuccessMessage("테이블 {$dto->count}개를 생성했습니다.");
-        } catch (\Throwable $th) {
-            $returnMsg = helpersFailMessage($th->getMessage());
-        }
-
-        return $returnMsg;
     }
 
     public function tableDelete(array $ids): array
@@ -300,7 +433,10 @@ class RotationService
             // 테이블이 N개면 N턴이 마지막(남자가 제자리 복귀).
             $isLast = $nextRoundNo >= $tableCount;
 
-            $result = DB::transaction(function () use ($eventId, $currentRound, $nextRoundNo, $nextTableId) {
+            // 0턴 → 1턴은 세팅 그대로 복사(남자도 이동 없음). 1턴부터 남자 +1 이동.
+            $shouldMoveMale = $currentRound->round_no >= 1;
+
+            $result = DB::transaction(function () use ($eventId, $currentRound, $nextRoundNo, $nextTableId, $shouldMoveMale) {
                 $nextRound = RotationRound::firstOrCreate(
                     ['event_id' => $eventId, 'round_no' => $nextRoundNo]
                 );
@@ -316,10 +452,11 @@ class RotationService
                 foreach ($currentSeatings as $seating) {
                     $gender = $seating->member?->gender;
 
-                    // 여자: 같은 테이블 고정 / 남자: 다음 테이블로 +1 이동(마지막→첫번째).
-                    $tableId = $gender === Member::GENDER_FEMALE
-                        ? $seating->rotation_table_id
-                        : ($nextTableId[$seating->rotation_table_id] ?? $seating->rotation_table_id);
+                    // 여자: 항상 고정. 남자: 0→1턴은 고정, 1턴부터 다음 테이블로 +1 이동.
+                    $moveThis = $shouldMoveMale && $gender !== Member::GENDER_FEMALE;
+                    $tableId = $moveThis
+                        ? ($nextTableId[$seating->rotation_table_id] ?? $seating->rotation_table_id)
+                        : $seating->rotation_table_id;
 
                     $rows[] = [
                         'rotation_round_id' => $nextRound->id,

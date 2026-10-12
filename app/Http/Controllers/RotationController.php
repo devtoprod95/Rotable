@@ -2,16 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Dtos\RotationTableBulkStoreRequestDto;
 use App\Dtos\RotationTableListRequestDto;
 use App\Http\Requests\Admin\RotationSeatingStoreRequest;
-use App\Http\Requests\Admin\RotationTableBulkStoreRequest;
 use App\Models\EventRound;
 use App\Services\RotationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class RotationController extends Controller
@@ -23,50 +22,143 @@ class RotationController extends Controller
     }
 
     /* ======================================================================
-     | 테이블 관리 — 개수만 입력하면 증분 자동 생성
+     | 행사(회차) 관리 — event_rounds 생성/목록/삭제
      * ==================================================================== */
 
-    public function tableIndex(): View
+    public function eventIndex(): View
     {
         $params = [
-            'eventId'       => $this->request->input('eventId') ?: '',
-            'searchText'    => $this->request->input('searchText') ?: '',
-            'page'          => $this->request->input('page') ?: 1,
-            'size'          => $this->request->input('size') ?: 30,
-            'sort'          => $this->request->input('sort')[0] ?? ['field' => 'id', 'dir' => 'desc'],
-            'pendingEvents' => EventRound::where('status', EventRound::STATUS_PENDING)->orderByDesc('id')->get(),
-            'events'        => EventRound::orderByDesc('id')->get(),
+            'page'     => $this->request->input('page') ?: 1,
+            'size'     => $this->request->input('size') ?: 30,
+            'sort'     => $this->request->input('sort')[0] ?? ['field' => 'id', 'dir' => 'desc'],
+            'searchText' => $this->request->input('searchText') ?: '',
+            'type'     => $this->request->input('type') ?: '',
+            'status'   => $this->request->input('status') ?: '',
+            'types'    => EventRound::typeOptions(),
+            'statuses' => EventRound::statusOptions(),
         ];
 
-        return view('admin.rotation.tableList', $params);
+        return view('admin.rotation.eventList', $params);
     }
 
-    public function tableList(): JsonResponse
+    public function eventList(): JsonResponse
+    {
+        return response()->json($this->rotationService->eventList(
+            (int) $this->request->input('page', 1),
+            (int) $this->request->input('size', 30),
+            $this->request->input('sort.0', ['field' => 'id', 'dir' => 'desc']),
+            [
+                'searchText' => $this->request->input('searchText', ''),
+                'type'       => $this->request->input('type', ''),
+                'status'     => $this->request->input('status', ''),
+            ]
+        ));
+    }
+
+    /**
+     * 행사 생성 전용 페이지. 상세(eventDetail)와 공용 폼 뷰를 사용한다.
+     */
+    public function eventCreate(): View
+    {
+        return view('admin.rotation.eventForm', [
+            'event' => null,
+            'types' => EventRound::typeOptions(),
+        ]);
+    }
+
+    public function eventStore(): JsonResponse
+    {
+        // 상태는 생성 시 무조건 '대기(P)'로 고정하므로 입력받지 않는다.
+        $validator = Validator::make($this->request->all(), [
+            'title'       => 'required|string|max:255',
+            'type'        => ['required', Rule::in([EventRound::TYPE_WINE, EventRound::TYPE_ONE])],
+            'event_time'  => 'required|date',
+            'table_count' => 'nullable|integer|min:0|max:100',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $result = $this->rotationService->eventStore((object) $validator->validated());
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    public function eventDelete(): JsonResponse
+    {
+        if ($this->invalidIds()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
+        }
+
+        $result = $this->rotationService->eventDelete($this->request->input('ids'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /**
+     * 행사 상세 — 생성 페이지와 공용 폼 뷰를 사용하며, 테이블을 CRUD 한다.
+     */
+    public function eventDetail(int $id): View
+    {
+        $event = $this->rotationService->eventDetail($id);
+        abort_if($event === null, 404);
+
+        return view('admin.rotation.eventForm', [
+            'event'    => $event,
+            'types'    => EventRound::typeOptions(),
+            'statuses' => EventRound::statusOptions(),
+        ]);
+    }
+
+    /**
+     * 행사 정보 수정 (상세 화면). 상태(status)는 로테이션 흐름에서 관리하므로 수정하지 않는다.
+     */
+    public function eventUpdate(int $id): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'title'      => 'required|string|max:255',
+            'type'       => ['required', Rule::in([EventRound::TYPE_WINE, EventRound::TYPE_ONE])],
+            'event_time' => 'required|date',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $result = $this->rotationService->eventUpdate($id, (object) $validator->validated());
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /**
+     * 행사 상세의 테이블 목록 (Tabulator ajax).
+     */
+    public function eventTableList(int $id): JsonResponse
     {
         $dto = new RotationTableListRequestDto();
         $dto->bind([
-            'eventId'    => $this->request->input('eventId', ''),
-            'searchText' => $this->request->input('searchText', ''),
-            'page'       => $this->request->input('page', 1),
-            'size'       => $this->request->input('size', 30),
-            'sort'       => $this->request->input('sort.0', ['field' => 'id', 'dir' => 'desc']),
+            'eventId' => (string) $id,
+            'page'    => $this->request->input('page', 1),
+            'size'    => $this->request->input('size', 100),
+            'sort'    => $this->request->input('sort.0', ['field' => 'table_no', 'dir' => 'asc']),
         ]);
 
         return response()->json($this->rotationService->tableList($dto));
     }
 
     /**
-     * 테이블 벌크 생성: 행사 + 개수 → 기존 다음 번호부터 N개 증분 추가.
+     * 행사 상세에서 테이블 1개 추가.
      */
-    public function tableBulkStore(RotationTableBulkStoreRequest $request): JsonResponse
+    public function eventTableAdd(int $id): JsonResponse
     {
-        $dto    = new RotationTableBulkStoreRequestDto((object) $request->validated());
-        $result = $this->rotationService->tableBulkStore($dto);
+        $result = $this->rotationService->tableAdd($id);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
 
-    public function tableDelete(): JsonResponse
+    /**
+     * 행사 상세에서 테이블 삭제.
+     */
+    public function eventTableDelete(int $id): JsonResponse
     {
         if ($this->invalidIds()) {
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());

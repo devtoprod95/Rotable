@@ -15,8 +15,24 @@ class Member extends Authenticatable
 
     protected $table = 'members';
 
+    /** 성별 */
+    public const GENDER_MALE   = 'M'; // 남
+    public const GENDER_FEMALE = 'F'; // 여
+
     /** @var list<string> */
-    protected $fillable = ['event_id', 'name', 'phone', 'password'];
+    protected $fillable = [
+        'event_id',
+        'name',
+        'phone',
+        'password',
+        'gender',
+        'birth_year',
+        'job',
+        'height',
+        'mbti',
+        'region',
+        'is_smoker',
+    ];
 
     /** @var list<string> */
     protected $hidden = ['password'];
@@ -29,7 +45,11 @@ class Member extends Authenticatable
      */
     protected function casts(): array
     {
-        return [];
+        return [
+            'birth_year' => 'integer',
+            'height'     => 'integer',
+            'is_smoker'  => 'boolean',
+        ];
     }
 
     /**

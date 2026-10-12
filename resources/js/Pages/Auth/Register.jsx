@@ -2,15 +2,32 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
+import RadioField from '@/Components/RadioField';
+
+const GENDER_OPTIONS = [
+    { id: 'M', label: '남' },
+    { id: 'F', label: '여' },
+];
+
+const SMOKER_OPTIONS = [
+    { id: '1', label: '흡연' },
+    { id: '0', label: '비흡연' },
+];
 
 export default function Register() {
-    const { rounds = [] } = usePage().props;
+    const { rounds = [], birthYears = [] } = usePage().props;
     const { data, setData, post, processing, errors } = useForm({
         event_id: '',
         phone: '',
         name: '',
         password: '',
-        password_confirmation: '',
+        gender: '',
+        birth_year: '',
+        job: '',
+        height: '',
+        mbti: '',
+        region: '',
+        is_smoker: '',
     });
 
     function submit(e) {
@@ -41,6 +58,28 @@ export default function Register() {
                             error={errors.event_id}
                             autoFocus
                         />
+                        <RadioField
+                            label="성별"
+                            value={data.gender}
+                            onChange={(v) => setData('gender', v)}
+                            options={GENDER_OPTIONS}
+                            error={errors.gender}
+                        />
+                        <TextField
+                            label="이름"
+                            value={data.name}
+                            onChange={(v) => setData('name', v)}
+                            placeholder="이름을 입력해주세요."
+                            error={errors.name}
+                        />
+                        <SelectField
+                            label="출생연도"
+                            value={data.birth_year}
+                            onChange={(v) => setData('birth_year', v)}
+                            options={birthYears}
+                            placeholder="출생연도를 선택해주세요"
+                            error={errors.birth_year}
+                        />
                         <TextField
                             label="핸드폰번호"
                             type="tel"
@@ -50,19 +89,48 @@ export default function Register() {
                             error={errors.phone}
                         />
                         <TextField
-                            label="이름"
-                            value={data.name}
-                            onChange={(v) => setData('name', v)}
-                            placeholder="이름을 입력해주세요."
-                            error={errors.name}
-                        />
-                        <TextField
                             label="비밀번호"
                             type="password"
                             value={data.password}
                             onChange={(v) => setData('password', v)}
                             placeholder="4자리 비밀번호"
                             error={errors.password}
+                        />
+                        <TextField
+                            label="지역/거주지"
+                            value={data.region}
+                            onChange={(v) => setData('region', v)}
+                            placeholder="예: 강남구"
+                            error={errors.region}
+                        />
+                        <TextField
+                            label="키 (cm)"
+                            type="number"
+                            value={data.height}
+                            onChange={(v) => setData('height', v)}
+                            placeholder="예: 170"
+                            error={errors.height}
+                        />
+                        <TextField
+                            label="직업"
+                            value={data.job}
+                            onChange={(v) => setData('job', v)}
+                            placeholder="예: 개발자"
+                            error={errors.job}
+                        />
+                        <TextField
+                            label="MBTI"
+                            value={data.mbti}
+                            onChange={(v) => setData('mbti', v.toUpperCase())}
+                            placeholder="예: ENFP"
+                            error={errors.mbti}
+                        />
+                        <RadioField
+                            label="흡연 여부"
+                            value={data.is_smoker}
+                            onChange={(v) => setData('is_smoker', v)}
+                            options={SMOKER_OPTIONS}
+                            error={errors.is_smoker}
                         />
 
                         <button

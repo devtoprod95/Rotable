@@ -42,13 +42,46 @@ class MemberAuthController extends Controller
         return preg_replace('/\D+/', '', (string) $phone);
     }
 
+    /** 출생연도 선택 하한 (고정) */
+    private const BIRTH_YEAR_MIN = 1980;
+
+    /** 성인 기준 나이 (만 나이) */
+    private const ADULT_AGE = 19;
+
+    /**
+     * 선택 가능한 출생연도의 상한(가장 최근 연도)을 반환한다.
+     * 현재 연도 기준 성인(만 19세)이 되는 출생연도까지만 허용한다.
+     */
+    private function birthYearMax(): int
+    {
+        return (int) now()->year - self::ADULT_AGE;
+    }
+
+    /**
+     * 출생연도 셀렉트박스 옵션 목록. 최근 연도가 위로 오도록 내림차순 정렬한다.
+     *
+     * @return array<int, array{id: int, label: string}>
+     */
+    private function birthYearOptions(): array
+    {
+        $max = $this->birthYearMax();
+
+        return collect(range($max, self::BIRTH_YEAR_MIN))
+            ->map(fn (int $year): array => [
+                'id'    => $year,
+                'label' => $year . '년생',
+            ])
+            ->all();
+    }
+
     /**
      * 입장등록(회원가입) 화면.
      */
     public function showRegister(): InertiaResponse
     {
         return Inertia::render('Auth/Register', [
-            'rounds' => $this->roundOptions(),
+            'rounds'      => $this->roundOptions(),
+            'birthYears'  => $this->birthYearOptions(),
         ]);
     }
 
@@ -70,24 +103,49 @@ class MemberAuthController extends Controller
                     fn ($query) => $query->where('event_id', $request->input('event_id'))
                 ),
             ],
-            'name'     => ['required', 'string', 'max:50'],
-            'password' => ['required', 'string', 'min:4'],
+            'name'       => ['required', 'string', 'max:50'],
+            'password'   => ['required', 'string', 'min:4'],
+            'gender'     => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
+            'birth_year' => ['required', 'integer', 'between:' . self::BIRTH_YEAR_MIN . ',' . $this->birthYearMax()],
+            'job'        => ['required', 'string', 'max:50'],
+            'height'     => ['required', 'integer', 'between:100,250'],
+            'mbti'       => ['required', 'string', 'size:4'],
+            'region'     => ['required', 'string', 'max:50'],
+            'is_smoker'  => ['required', 'boolean'],
         ], [
-            'event_id.required'  => '회차를 선택해주세요.',
-            'event_id.exists'    => '선택한 회차가 올바르지 않습니다.',
-            'phone.required'     => '핸드폰번호를 입력해주세요.',
-            'phone.regex'        => '핸드폰번호는 010으로 시작하는 11자리 숫자여야 합니다.',
-            'phone.unique'       => '해당 회차에 이미 등록된 핸드폰번호입니다.',
-            'name.required'      => '이름을 입력해주세요.',
-            'password.required'  => '비밀번호를 입력해주세요.',
-            'password.min'       => '비밀번호는 최소 4자 이상이어야 합니다.',
+            'event_id.required'   => '회차를 선택해주세요.',
+            'event_id.exists'     => '선택한 회차가 올바르지 않습니다.',
+            'phone.required'      => '핸드폰번호를 입력해주세요.',
+            'phone.regex'         => '핸드폰번호는 010으로 시작하는 11자리 숫자여야 합니다.',
+            'phone.unique'        => '해당 회차에 이미 등록된 핸드폰번호입니다.',
+            'name.required'       => '이름을 입력해주세요.',
+            'password.required'   => '비밀번호를 입력해주세요.',
+            'password.min'        => '비밀번호는 최소 4자 이상이어야 합니다.',
+            'gender.required'     => '성별을 선택해주세요.',
+            'gender.in'           => '성별 선택이 올바르지 않습니다.',
+            'birth_year.required' => '출생연도를 선택해주세요.',
+            'birth_year.between'  => '출생연도 선택이 올바르지 않습니다.',
+            'job.required'        => '직업을 입력해주세요.',
+            'height.required'     => '키를 입력해주세요.',
+            'height.between'      => '키는 100~250cm 사이로 입력해주세요.',
+            'mbti.required'       => 'MBTI를 입력해주세요.',
+            'mbti.size'           => 'MBTI는 4글자로 입력해주세요.',
+            'region.required'     => '지역/거주지를 입력해주세요.',
+            'is_smoker.required'  => '흡연 여부를 선택해주세요.',
         ]);
 
         $member = Member::create([
-            'event_id' => $validated['event_id'],
-            'phone'    => $validated['phone'],
-            'name'     => $validated['name'],
-            'password' => $validated['password'],
+            'event_id'   => $validated['event_id'],
+            'phone'      => $validated['phone'],
+            'name'       => $validated['name'],
+            'password'   => $validated['password'],
+            'gender'     => $validated['gender'],
+            'birth_year' => $validated['birth_year'],
+            'job'        => $validated['job'],
+            'height'     => $validated['height'],
+            'mbti'       => strtoupper($validated['mbti']),
+            'region'     => $validated['region'],
+            'is_smoker'  => $validated['is_smoker'],
         ]);
 
         Auth::guard('web')->login($member);

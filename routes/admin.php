@@ -16,13 +16,19 @@ Route::middleware('role')->group(function () {
 
         Route::prefix("erd")->name('erd.')->group(base_path("routes/erd.php"));
 
-        // 로테이션 소개팅 관리 (테이블 관리 / 좌석 배정)
+        // 로테이션 소개팅 관리 (행사 관리 / 테이블 관리 / 좌석 배정)
         Route::prefix('rotation')->name('rotation.')->group(function () {
-            Route::prefix('table')->name('table.')->group(function () {
-                Route::get('/', [RotationController::class, 'tableIndex'])->name('index');
-                Route::get('/list', [RotationController::class, 'tableList'])->name('list');
-                Route::post('/bulk-store', [RotationController::class, 'tableBulkStore'])->name('bulkStore');
-                Route::delete('/delete', [RotationController::class, 'tableDelete'])->name('delete');
+            Route::prefix('event')->name('event.')->group(function () {
+                Route::get('/', [RotationController::class, 'eventIndex'])->name('index');
+                Route::get('/list', [RotationController::class, 'eventList'])->name('list');
+                Route::get('/create', [RotationController::class, 'eventCreate'])->name('create');
+                Route::post('/store', [RotationController::class, 'eventStore'])->name('store');
+                Route::delete('/delete', [RotationController::class, 'eventDelete'])->name('delete');
+                Route::get('/{id}', [RotationController::class, 'eventDetail'])->whereNumber('id')->name('detail');
+                Route::put('/{id}', [RotationController::class, 'eventUpdate'])->whereNumber('id')->name('update');
+                Route::get('/{id}/tables', [RotationController::class, 'eventTableList'])->whereNumber('id')->name('tables');
+                Route::post('/{id}/tables', [RotationController::class, 'eventTableAdd'])->whereNumber('id')->name('tables.add');
+                Route::delete('/{id}/tables', [RotationController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');
             });
 
             Route::prefix('seating')->name('seating.')->group(function () {

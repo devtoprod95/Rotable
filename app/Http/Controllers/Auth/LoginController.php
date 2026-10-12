@@ -140,8 +140,8 @@ class LoginController extends Controller
             clearAdminPermissionCache($admin);
 
             Auth::guard('admin')->logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+            // admin guard만 로그아웃한다. (세션 전체 invalidate는 web 로그인까지 풀리므로 사용하지 않음)
+            $request->session()->regenerate();
             return apiRes(Response::HTTP_OK, helpersSuccessMessage());
         } catch (\Throwable $th) {
             return apiRes(Response::HTTP_BAD_GATEWAY, helpersFailMessage($th->getMessage()));

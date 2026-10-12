@@ -38,8 +38,18 @@ class MemberPageController extends Controller
         /** @var \App\Models\Member $me */
         $me = Auth::guard('web')->user();
 
-        // 로테이션 상태는 행사(event_rounds) 단위로 관리한다.
-        $eventStatus = EventRound::whereKey($me->event_id)->value('status') ?? EventRound::STATUS_PENDING;
+        // 로테이션 상태/제목은 행사(event_rounds) 단위로 관리한다.
+        $event       = EventRound::find($me->event_id);
+        $eventStatus = $event?->status ?? EventRound::STATUS_PENDING;
+        $eventTitle  = $event?->title;
+
+        // 행사 일시 표시용 (예: "2026/1/10 19:00 토요일")
+        $eventTime = null;
+        if ($event?->event_time) {
+            $weekdays  = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+            $t         = $event->event_time;
+            $eventTime = $t->format('Y/n/j H:i') . ' ' . $weekdays[(int) $t->format('w')];
+        }
 
         // 같은 행사 회차의 모든 턴 + 각 턴의 좌석(회원 포함)을 로드.
         // 0턴(세팅용)은 사용자 페이지에 노출하지 않는다.
@@ -83,6 +93,9 @@ class MemberPageController extends Controller
         return Inertia::render('Home', [
             'rotations'     => $rotations,
             'partnerGender' => $oppositeGen,
+            'eventTitle'    => $eventTitle,
+            'eventTime'     => $eventTime,
+            'eventStatus'   => $eventStatus,
         ]);
     }
 

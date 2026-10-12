@@ -94,14 +94,33 @@ function RoundSection({ round, partnerGender }) {
 }
 
 export default function Home() {
-    const { auth, rotations = [], partnerGender } = usePage().props;
+    const { auth, rotations = [], partnerGender, eventTitle, eventTime, eventStatus } = usePage().props;
 
     return (
         <AppLayout>
             <Head title="기록" />
 
             <div className="min-h-full bg-gray-50 px-4 py-5">
-                <h1 className="text-xl font-extrabold">
+                {eventTitle && (
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+                            <span className="text-sm">❤️</span>
+                            {eventTitle}
+                        </span>
+                        {eventStatus && (
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${(ROUND_STATUS[eventStatus] ?? ROUND_STATUS.P).cls}`}>
+                                {(ROUND_STATUS[eventStatus] ?? ROUND_STATUS.P).label}
+                            </span>
+                        )}
+                        {eventTime && (
+                            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500">
+                                <span>🗓️</span>
+                                {eventTime}
+                            </span>
+                        )}
+                    </div>
+                )}
+                <h1 className="mt-2 text-xl font-extrabold">
                     {auth?.user?.name}님, 로테이션 기록표예요 👋
                 </h1>
                 <p className="mt-1.5 text-sm text-gray-500">

@@ -68,7 +68,7 @@ function BottomNav() {
     const { url } = usePage();
 
     return (
-        <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 flex justify-center pb-3">
+        <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-[480px] justify-center pb-3">
             <div className="pointer-events-auto flex w-[92%] max-w-[440px] items-stretch justify-around rounded-2xl border border-secondary-100 bg-white/95 px-2 py-2 shadow-[0_8px_30px_rgba(0,0,0,0.12)] backdrop-blur">
                 {NAV_ITEMS.map((item) => {
                     const active = url.startsWith(item.href);

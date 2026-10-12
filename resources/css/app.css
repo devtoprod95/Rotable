@@ -40,3 +40,9 @@
     /* ===== 레이아웃 토큰 ===== */
     --spacing-header: 4.5rem; /* 상단 헤더 높이 (기존 h-14=3.5rem 대비 상향) */
 }
+
+/* 고정(fixed) 플로팅 nav 등으로 인한 의도치 않은 가로 스크롤 방지 */
+html,
+body {
+    overflow-x: hidden;
+}

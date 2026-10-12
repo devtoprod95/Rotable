@@ -7,7 +7,7 @@ import { Link, router, usePage } from '@inertiajs/react';
  * - 하단 nav: 4개 버튼, 스크롤해도 고정(플로팅)
  */
 export default function AppLayout({ children, bottomNav = true, headerAction = true }) {
-    const { auth, bypassRedirectName } = usePage().props;
+    const { auth, bypassRedirectName, isProduction } = usePage().props;
 
     return (
         <div className="flex min-h-screen justify-center bg-secondary-100 font-sans">
@@ -29,7 +29,7 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
                             {auth?.user ? (
                                 <button
                                     onClick={() => {
-                                        if (auth.user.name === bypassRedirectName) {
+                                        if (auth.user.name === bypassRedirectName || !isProduction) {
                                             router.post('/logout');
                                         }
                                     }}
@@ -62,7 +62,7 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
 }
 
 const NAV_ITEMS = [
-    { href: '/home', label: '리스트', icon: ListIcon },
+    { href: '/home', label: '기록', icon: ListIcon },
     { href: '/chats', label: '채팅함', icon: ChatIcon },
     { href: '/votes', label: '투표하기', icon: VoteIcon },
     { href: '/requests', label: '요청하기', icon: RequestIcon },

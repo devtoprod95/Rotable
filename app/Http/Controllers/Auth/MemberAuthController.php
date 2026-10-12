@@ -17,14 +17,21 @@ class MemberAuthController extends Controller
 {
     /**
      * 입장/등록 가능한 회차 목록을 셀렉트박스 옵션 형태로 반환.
-     * 진행중(S) 상태의 회차만 노출한다.
+     * - 진행중(S) 회차는 모두 노출한다.
+     * - 종료(X) 회차는 event_time이 최근 일주일 이내인 경우에만 노출한다.
      *
      * @return array<int, array{id: int, label: string}>
      */
     private function roundOptions(): array
     {
         return EventRound::query()
-            ->where('status', EventRound::STATUS_STARTED)
+            ->where(function ($query) {
+                $query->where('status', EventRound::STATUS_STARTED)
+                    ->orWhere(function ($q) {
+                        $q->where('status', EventRound::STATUS_CLOSED)
+                            ->where('event_time', '>=', now()->subWeek());
+                    });
+            })
             ->orderBy('event_time')
             ->get()
             ->map(fn (EventRound $round): array => [

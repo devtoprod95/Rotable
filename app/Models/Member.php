@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
@@ -66,5 +67,16 @@ class Member extends Authenticatable
     public function eventRound(): BelongsTo
     {
         return $this->belongsTo(EventRound::class, 'event_id');
+    }
+
+    /**
+     * 이 회원의 모든 좌석 기록 (턴별 어느 테이블에 앉았는지).
+     * 성별과 무관하게 모든 좌석이 여기에 기록된다.
+     *
+     * @return HasMany<RotationSeating>
+     */
+    public function seatings(): HasMany
+    {
+        return $this->hasMany(RotationSeating::class, 'member_id');
     }
 }

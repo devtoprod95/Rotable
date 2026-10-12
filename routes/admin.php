@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\RotationController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\K6Controller;
 
@@ -14,6 +15,27 @@ Route::middleware('role')->group(function () {
         Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
         Route::prefix("erd")->name('erd.')->group(base_path("routes/erd.php"));
+
+        // 로테이션 소개팅 관리 (테이블 관리 / 좌석 배정)
+        Route::prefix('rotation')->name('rotation.')->group(function () {
+            Route::prefix('table')->name('table.')->group(function () {
+                Route::get('/', [RotationController::class, 'tableIndex'])->name('index');
+                Route::get('/list', [RotationController::class, 'tableList'])->name('list');
+                Route::post('/bulk-store', [RotationController::class, 'tableBulkStore'])->name('bulkStore');
+                Route::delete('/delete', [RotationController::class, 'tableDelete'])->name('delete');
+            });
+
+            Route::prefix('seating')->name('seating.')->group(function () {
+                Route::get('/', [RotationController::class, 'seatingIndex'])->name('index');
+                Route::get('/data', [RotationController::class, 'seatingData'])->name('data');
+                Route::get('/board', [RotationController::class, 'seatingBoard'])->name('board');
+                Route::get('/members', [RotationController::class, 'seatingMembers'])->name('members');
+                Route::post('/store', [RotationController::class, 'seatingStore'])->name('store');
+                Route::post('/rotate', [RotationController::class, 'seatingRotate'])->name('rotate');
+                Route::post('/finish', [RotationController::class, 'seatingFinish'])->name('finish');
+                Route::delete('/delete', [RotationController::class, 'seatingDelete'])->name('delete');
+            });
+        });
 
         Route::prefix('role')->name('role.')->group(function () {
             Route::prefix('route')->name('route.')->group(function () {

@@ -52,6 +52,7 @@ class HandleInertiaRequests extends Middleware
                 'error'   => fn () => $request->session()->get('error'),
             ],
             'bypassRedirectName' => \App\Models\Member::BYPASS_REDIRECT_NAME,
+            'isProduction'       => app()->environment('production'),
         ];
     }
 }

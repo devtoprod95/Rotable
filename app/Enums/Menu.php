@@ -7,6 +7,7 @@ use Illuminate\Support\Str;
 enum Menu: string
 {
     case Dashboard = 'dashboard';
+    case Rotation  = 'rotation';
     case Admin     = 'admin';
     case Settings  = 'settings';
 
@@ -18,6 +19,15 @@ enum Menu: string
                 'icon'    => 'dashboard',
                 'route'   => 'admin.dashboard',
                 'pattern' => 'admin.dashboard*',
+            ],
+            self::Rotation->value => [
+                'name'     => '로테이션',
+                'icon'     => 'rotate',
+                'pattern'  => 'admin.rotation*',
+                'children' => [
+                    ['name' => '테이블 관리', 'route' => 'admin.rotation.table.index', 'pattern' => 'admin.rotation.table*'],
+                    ['name' => '좌석 배정', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
+                ],
             ],
             self::Admin->value => [
                 'name'     => '관리자',

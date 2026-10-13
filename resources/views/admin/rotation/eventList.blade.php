@@ -123,6 +123,12 @@
                         return v > 0 ? `<span class="badge bg-azure-lt">${v}건</span>` : '<span class="text-muted">0건</span>';
                     }
                 },
+                { title: "요청 수", field: "admin_requests_count", hozAlign: "center", width: 90,
+                    formatter: function(cell){
+                        var v = cell.getValue() ?? 0;
+                        return v > 0 ? `<span class="badge bg-red-lt">${v}건</span>` : '<span class="text-muted">0건</span>';
+                    }
+                },
                 { title: "생성일<br>수정일", field: "created_at", width: 180,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
@@ -143,9 +149,16 @@
                         if((data.messages_count ?? 0) >= 1){
                             var $msg = $("<button>")
                                 .addClass("btn btn-sm btn-outline-primary w-100")
-                                .html('<i class="ti ti-messages me-1"></i>메시지')
+                                .text("메시지 " + data.messages_count)
                                 .on("click", function(){ MessagesModal.open(data.id, data.title ?? ''); });
                             $wrap.append($msg);
+                        }
+                        if((data.admin_requests_count ?? 0) >= 1){
+                            var $req = $("<button>")
+                                .addClass("btn btn-sm btn-outline-danger w-100")
+                                .text("요청 " + data.admin_requests_count)
+                                .on("click", function(){ RequestsModal.open(data.id, data.title ?? ''); });
+                            $wrap.append($req);
                         }
                         return $wrap.get(0);
                     }
@@ -161,4 +174,5 @@
 </script>
 
 @include('admin.rotation._messagesModal')
+@include('admin.rotation._requestsModal')
 @endsection

@@ -14,6 +14,14 @@ Route::middleware('role')->group(function () {
         Route::delete('/dashboard/log', [DashboardController::class, 'deleteLog'])->name('dashboard.log.delete');
         Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
+        // 회원 → 관리자 요청하기 (플로팅 위젯)
+        Route::prefix('requests')->name('requests.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\AdminRequestController::class, 'index'])->name('index');
+            Route::get('/list', [\App\Http\Controllers\AdminRequestController::class, 'listData'])->name('list');
+            Route::patch('/{id}/read', [\App\Http\Controllers\AdminRequestController::class, 'markRead'])->whereNumber('id')->name('read');
+            Route::patch('/read-all', [\App\Http\Controllers\AdminRequestController::class, 'markAllRead'])->name('readAll');
+        });
+
         Route::prefix("erd")->name('erd.')->group(base_path("routes/erd.php"));
 
         // 로테이션 소개팅 관리 (행사 관리 / 테이블 관리 / 좌석 배정)

@@ -130,15 +130,15 @@ export default function Home() {
                             <span className="text-sm">❤️</span>
                             {eventTitle}
                         </span>
-                        {eventStatus && (
-                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${(ROUND_STATUS[eventStatus] ?? ROUND_STATUS.P).cls}`}>
-                                {(ROUND_STATUS[eventStatus] ?? ROUND_STATUS.P).label}
-                            </span>
-                        )}
                         {eventTime && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-secondary-100 px-2.5 py-1 text-xs font-semibold text-secondary-700">
                                 <span>🗓️</span>
                                 {eventTime}
+                            </span>
+                        )}
+                        {eventStatus && (
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${(ROUND_STATUS[eventStatus] ?? ROUND_STATUS.P).cls}`}>
+                                {(ROUND_STATUS[eventStatus] ?? ROUND_STATUS.P).label}
                             </span>
                         )}
                     </div>

@@ -40,6 +40,7 @@ class RotationService
             ->withCount([
                 'rotationTables',
                 'messages',
+                'adminRequests',
                 'members as male_count'   => fn ($q) => $q->where('gender', Member::GENDER_MALE),
                 'members as female_count' => fn ($q) => $q->where('gender', Member::GENDER_FEMALE),
             ]);

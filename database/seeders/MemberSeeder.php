@@ -11,7 +11,7 @@ class MemberSeeder extends Seeder
     /**
      * 샘플 회원 데이터 시딩.
      * 등록된 각 회차마다 남/여 회원을 고르게 생성한다.
-     * (핸드폰번호는 회차 + 번호 조합으로 유일하므로 회차별로 생성한다.)
+     * (핸드폰 번호는 회차 + 번호 조합으로 유일하므로 회차별로 생성한다.)
      *
      * 이 시더만 단독 실행하려면:
      *   php artisan db:seed --class=MemberSeeder

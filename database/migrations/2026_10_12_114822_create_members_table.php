@@ -15,7 +15,7 @@ return new class extends Migration
             Schema::create('members', function (Blueprint $table) {
                 $table->id();
                 $table->string('name', 50)->comment('이름');
-                $table->string('phone', 20)->comment('핸드폰번호 (로그인 아이디)');
+                $table->string('phone', 20)->comment('핸드폰 번호 (로그인 아이디)');
                 $table->string('password')->comment('비밀번호');
                 $table->unsignedBigInteger('event_id')->comment('event_rounds.id');
 

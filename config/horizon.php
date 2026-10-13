@@ -197,15 +197,6 @@ return [
     */
 
     'defaults' => [
-        'video-processing-supervisor' => [
-            'connection'   => 'redis',
-            'queue'        => ['video-processing'],
-            'balance'      => 'auto',
-            'maxProcesses' => 3,
-            'minProcesses' => 1,
-            'tries'        => 1,
-            'timeout'      => 0,
-        ],
         'default-supervisor' => [
             'connection'   => 'redis',
             'queue'        => ['default'],
@@ -219,15 +210,6 @@ return [
 
     'environments' => [
         'production' => [
-            'video-processing-supervisor' => [
-                'connection'   => 'redis',
-                'queue'        => ['video-processing'],
-                'balance'      => 'auto',
-                'maxProcesses' => 3,
-                'minProcesses' => 1,
-                'tries'        => 1,
-                'timeout'      => 0,
-            ],
             'default-supervisor' => [
                 'connection'   => 'redis',
                 'queue'        => ['default'],
@@ -239,15 +221,6 @@ return [
             ],
         ],
         'development' => [
-            'video-processing-supervisor' => [
-                'connection'   => 'redis',
-                'queue'        => ['video-processing'],
-                'balance'      => 'auto',
-                'maxProcesses' => 3,
-                'minProcesses' => 1,
-                'tries'        => 1,
-                'timeout'      => 0,
-            ],
             'default-supervisor' => [
                 'connection'   => 'redis',
                 'queue'        => ['default'],
@@ -259,15 +232,6 @@ return [
             ],
         ],
         'local' => [
-            'video-processing-supervisor' => [
-                'connection'   => 'redis',
-                'queue'        => ['video-processing'],
-                'balance'      => 'auto',
-                'maxProcesses' => 3,
-                'minProcesses' => 1,
-                'tries'        => 1,
-                'timeout'      => 0,
-            ],
             'default-supervisor' => [
                 'connection'   => 'redis',
                 'queue'        => ['default'],

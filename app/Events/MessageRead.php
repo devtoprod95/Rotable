@@ -4,14 +4,14 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
  * 수신자가 메시지를 읽었을 때, 발신자의 개인 채널로 "읽음" 상태를 실시간 전파한다.
  */
-class MessageRead implements ShouldBroadcast
+class MessageRead implements ShouldBroadcastNow
 {
     use Dispatchable;
     use InteractsWithSockets;

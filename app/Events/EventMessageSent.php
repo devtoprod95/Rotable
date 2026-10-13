@@ -5,7 +5,7 @@ namespace App\Events;
 use App\Models\Message;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -16,7 +16,7 @@ use Illuminate\Queue\SerializesModels;
  * 행사 단위 공개 채널(event-messages.{eventId})로 전송한다.
  * (관리자 전용 화면에서만 구독하며, 관리자는 모든 정보를 열람할 수 있다.)
  */
-class EventMessageSent implements ShouldBroadcast
+class EventMessageSent implements ShouldBroadcastNow
 {
     use Dispatchable;
     use InteractsWithSockets;

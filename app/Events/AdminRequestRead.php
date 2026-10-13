@@ -4,7 +4,7 @@ namespace App\Events;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -12,7 +12,7 @@ use Illuminate\Queue\SerializesModels;
  * 관리자가 회원의 요청을 확인(읽음) 처리했을 때,
  * 해당 회원의 개인 채널로 "확인됨" 상태를 실시간 전파한다.
  */
-class AdminRequestRead implements ShouldBroadcast
+class AdminRequestRead implements ShouldBroadcastNow
 {
     use Dispatchable;
     use InteractsWithSockets;

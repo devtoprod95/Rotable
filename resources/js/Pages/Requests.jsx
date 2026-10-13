@@ -34,8 +34,9 @@ function RequestItem({ request }) {
 }
 
 export default function Requests() {
-    const { auth, requests = [], eventClosed = false } = usePage().props;
+    const { auth, requests = [], eventClosed = false, flash = {} } = usePage().props;
     const [list, setList] = useState(requests);
+    const [cooldown, setCooldown] = useState(false);
 
     // props(requests)가 바뀌면(부분 갱신/재방문) 목록 동기화.
     useEffect(() => {
@@ -69,7 +70,7 @@ export default function Requests() {
 
     function submit(e) {
         e.preventDefault();
-        if (!data.body.trim()) {
+        if (!data.body.trim() || processing || cooldown) {
             return;
         }
         post('/requests', {
@@ -77,6 +78,11 @@ export default function Requests() {
             preserveState: true,
             only: ['requests', 'flash'],
             onSuccess: () => reset('body'),
+            // 성공/실패와 무관하게 전송 직후 짧은 쿨다운으로 연타를 1차 차단한다.
+            onFinish: () => {
+                setCooldown(true);
+                setTimeout(() => setCooldown(false), 2000);
+            },
         });
     }
 
@@ -113,14 +119,20 @@ export default function Requests() {
                         {errors.body && (
                             <p className="mt-1 text-xs font-medium text-red-500">{errors.body}</p>
                         )}
+                        {flash.error && (
+                            <p className="mt-1 text-xs font-medium text-red-500">{flash.error}</p>
+                        )}
+                        {flash.success && (
+                            <p className="mt-1 text-xs font-medium text-green-600">{flash.success}</p>
+                        )}
                         <div className="mt-2 flex items-center justify-between">
                             <span className="text-[11px] text-gray-400">{data.body.length}/1000</span>
                             <button
                                 type="submit"
-                                disabled={!data.body.trim() || processing}
+                                disabled={!data.body.trim() || processing || cooldown}
                                 className="rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {processing ? '전송 중…' : '요청 보내기'}
+                                {processing || cooldown ? '전송 중…' : '요청 보내기'}
                             </button>
                         </div>
                     </form>

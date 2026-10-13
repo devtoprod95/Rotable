@@ -14,7 +14,6 @@ createInertiaApp({
     setup({ el, App, props }) {
         createRoot(el).render(<App {...props} />);
     },
-    progress: {
-        color: '#4F46E5',
-    },
+    // 기본 상단 로딩바 비활성화 → 커스텀 중앙 스피너(NavigationLoader)로 대체.
+    progress: false,
 });

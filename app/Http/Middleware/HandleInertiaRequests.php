@@ -47,6 +47,10 @@ class HandleInertiaRequests extends Middleware
                     'phone' => $member->phone,
                 ] : null,
             ],
+            // 하단 nav 메시지함 뱃지용 - 나에게 온 안읽은 메시지 개수.
+            'unreadCount' => fn () => $member
+                ? \App\Models\Message::where('receiver_id', $member->id)->whereNull('read_at')->count()
+                : 0,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),

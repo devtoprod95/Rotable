@@ -79,4 +79,24 @@ class Member extends Authenticatable
     {
         return $this->hasMany(RotationSeating::class, 'member_id');
     }
+
+    /**
+     * 이 회원이 보낸 메시지들.
+     *
+     * @return HasMany<Message>
+     */
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    /**
+     * 이 회원이 받은 메시지들.
+     *
+     * @return HasMany<Message>
+     */
+    public function receivedMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'receiver_id');
+    }
 }

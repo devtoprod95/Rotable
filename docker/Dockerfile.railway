@@ -3,6 +3,19 @@ FROM node:20-alpine AS assets
 
 WORKDIR /app
 
+# Vite 빌드 시점에 번들에 박히는 공개 설정값 (Railway 빌드 ARG 로 주입).
+# 운영에서는 공개 도메인/443/https 로, nginx 가 /app 를 reverb 로 프록시한다.
+ARG VITE_APP_NAME
+ARG VITE_REVERB_APP_KEY
+ARG VITE_REVERB_HOST
+ARG VITE_REVERB_PORT=443
+ARG VITE_REVERB_SCHEME=https
+ENV VITE_APP_NAME=${VITE_APP_NAME} \
+    VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY} \
+    VITE_REVERB_HOST=${VITE_REVERB_HOST} \
+    VITE_REVERB_PORT=${VITE_REVERB_PORT} \
+    VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
+
 # 의존성 설치 (lockfile 기반 재현 설치)
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -56,6 +69,6 @@ RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-d
 
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-EXPOSE 8080
+EXPOSE 8080 9997
 
 CMD php artisan package:discover --ansi && supervisord -c /etc/supervisor/conf.d/supervisord.conf

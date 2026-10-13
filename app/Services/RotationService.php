@@ -39,6 +39,7 @@ class RotationService
         $query = EventRound::query()
             ->withCount([
                 'rotationTables',
+                'messages',
                 'members as male_count'   => fn ($q) => $q->where('gender', Member::GENDER_MALE),
                 'members as female_count' => fn ($q) => $q->where('gender', Member::GENDER_FEMALE),
             ]);
@@ -169,7 +170,7 @@ class RotationService
     {
         return EventRound::with([
             'rotationTables' => fn ($q) => $q->orderBy('table_no'),
-            'members'        => fn ($q) => $q->orderBy('gender')->orderBy('name'),
+            'members'        => fn ($q) => $q->withCount('sentMessages')->orderBy('name'),
         ])->find($eventId);
     }
 
@@ -195,6 +196,49 @@ class RotationService
         }
 
         return $returnMsg;
+    }
+
+    /* ======================================================================
+     | 메시지 (누가 누구에게 보냈는지)
+     * ==================================================================== */
+
+    /**
+     * 특정 행사의 메시지 목록 (페이지네이션).
+     * 보낸사람/받는사람 정보를 함께 로드하며, 읽음 필터와 검색을 지원한다.
+     *
+     * @param array{searchText?:string, read?:string} $filters
+     * @return LengthAwarePaginator
+     */
+    public function eventMessageList(int $eventId, int $page, int $size, array $sort, array $filters = []): LengthAwarePaginator
+    {
+        $query = \App\Models\Message::query()
+            ->with(['sender:id,name,gender', 'receiver:id,name,gender'])
+            ->where('event_id', $eventId);
+
+        if (!empty($filters['searchText'])) {
+            $keyword = $filters['searchText'];
+            $query->where(function ($q) use ($keyword) {
+                $q->whereHas('sender', fn ($sq) => $sq->where('name', 'like', '%' . $keyword . '%'))
+                    ->orWhereHas('receiver', fn ($rq) => $rq->where('name', 'like', '%' . $keyword . '%'))
+                    ->orWhere('body', 'like', '%' . $keyword . '%');
+            });
+        }
+
+        if (isset($filters['read']) && $filters['read'] !== '') {
+            if ($filters['read'] === 'Y') {
+                $query->whereNotNull('read_at');
+            } elseif ($filters['read'] === 'N') {
+                $query->whereNull('read_at');
+            }
+        }
+
+        if (!empty($sort['field'])) {
+            $query->orderBy($sort['field'], $sort['dir'] ?? 'desc');
+        } else {
+            $query->orderByDesc('id');
+        }
+
+        return $query->paginate($size, ['*'], 'page', $page);
     }
 
     /* ======================================================================

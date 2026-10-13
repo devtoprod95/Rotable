@@ -1,12 +1,17 @@
 @extends('layouts.app')
 
-@section('title', '로테이션 좌석 배정')
+@section('title', '로테이션 설정')
 
 @section('content')
 <div class="row row-cards mt-2">
     <div class="col-12">
         <div class="card">
-            <div class="card-header"><h3 class="card-title">좌석 배정</h3></div>
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <h3 class="card-title mb-0">로테이션 설정</h3>
+                <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
+                    <i class="ti ti-messages me-1"></i> 메시지 조회
+                </button>
+            </div>
             <div class="card-body">
                 <div class="row g-2 align-items-start">
                     <div class="col-md-5">
@@ -286,6 +291,14 @@
             window.history.replaceState({}, '', url);
         }
 
+        // 선택된 행사의 메시지를 모달로 조회
+        $('#goMessagesBtn').on('click', function(){
+            var eventId = $('#eventSelect').val();
+            if(!eventId){ return; }
+            var label = $('#eventSelect option:selected').text();
+            MessagesModal.open(eventId, label);
+        });
+
         // 턴 네비게이션: 이전/다음 턴 보기 (1턴 ~ 최신 턴 범위, 0턴은 세팅용이라 제외)
         $('#roundPrev').on('click', function(){
             if(viewRound === null){ viewRound = currentRound; }
@@ -310,4 +323,6 @@
         })();
     });
 </script>
+
+@include('admin.rotation._messagesModal')
 @endsection

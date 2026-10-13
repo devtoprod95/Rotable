@@ -15,7 +15,14 @@
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <h3 class="card-title mb-0">{{ $isEdit ? '행사 정보 수정' : '행사 생성' }}</h3>
-                <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary px-4">목록</a>
+                <div class="d-flex gap-2">
+                    @if ($isEdit)
+                        <a href="{{ route('admin.rotation.event.messages', $event->id) }}" class="btn btn-outline-primary px-4">
+                            <i class="ti ti-messages me-1"></i> 메시지 조회
+                        </a>
+                    @endif
+                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary px-4">목록</a>
+                </div>
             </div>
             <div class="card-body">
                 <form id="eventForm">
@@ -92,24 +99,22 @@
                                 <thead>
                                     <tr>
                                         <th class="w-1">No</th>
-                                        <th>이름</th>
-                                        <th class="text-center">성별</th>
+                                        <th>이름 / 성별</th>
                                         <th>연락처</th>
-                                        <th class="text-center">출생연도</th>
-                                        <th class="text-center">나이</th>
+                                        <th class="text-center">출생연도<br>나이</th>
                                         <th>직업</th>
-                                        <th class="text-center">키</th>
-                                        <th class="text-center">MBTI</th>
+                                        <th class="text-center">키<br>MBTI</th>
                                         <th>지역</th>
                                         <th class="text-center">흡연</th>
+                                        <th class="text-center">보낸<br>메시지</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach ($event->members as $i => $member)
                                         <tr>
                                             <td>{{ $i + 1 }}</td>
-                                            <td class="fw-bold">{{ $member->name }}</td>
-                                            <td class="text-center">
+                                            <td>
+                                                <span class="fw-bold">{{ $member->name }}</span>
                                                 @if ($member->gender === 'F')
                                                     <span class="badge bg-pink-lt">여</span>
                                                 @else
@@ -117,13 +122,15 @@
                                                 @endif
                                             </td>
                                             <td class="text-muted">{{ $member->phone ?? '-' }}</td>
-                                            <td class="text-center">{{ $member->birth_year ?? '-' }}</td>
                                             <td class="text-center">
-                                                {{ $member->birth_year ? (now()->year - $member->birth_year + 1) . '세' : '-' }}
+                                                {{ $member->birth_year ?? '-' }}<br>
+                                                <span class="text-muted">{{ $member->birth_year ? (now()->year - $member->birth_year + 1) . '세' : '-' }}</span>
                                             </td>
                                             <td>{{ $member->job ?? '-' }}</td>
-                                            <td class="text-center">{{ $member->height ? $member->height . 'cm' : '-' }}</td>
-                                            <td class="text-center">{{ $member->mbti ?? '-' }}</td>
+                                            <td class="text-center">
+                                                {{ $member->height ? $member->height . 'cm' : '-' }}<br>
+                                                <span class="text-muted">{{ $member->mbti ?? '-' }}</span>
+                                            </td>
                                             <td>{{ $member->region ?? '-' }}</td>
                                             <td class="text-center">
                                                 @if (is_null($member->is_smoker))
@@ -132,6 +139,13 @@
                                                     <span class="badge bg-red-lt">흡연</span>
                                                 @else
                                                     <span class="badge bg-green-lt">비흡연</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @if ($member->sent_messages_count > 0)
+                                                    <span class="badge bg-azure-lt">{{ $member->sent_messages_count }}건</span>
+                                                @else
+                                                    <span class="text-muted">0건</span>
                                                 @endif
                                             </td>
                                         </tr>

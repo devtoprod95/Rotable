@@ -170,6 +170,46 @@ class RotationController extends Controller
     }
 
     /* ======================================================================
+     | 메시지 — 누가 누구에게 보냈는지 조회
+     * ==================================================================== */
+
+    /**
+     * 행사의 메시지 조회 페이지.
+     */
+    public function eventMessages(int $id): View
+    {
+        $event = EventRound::find($id);
+        abort_if($event === null, 404);
+
+        return view('admin.rotation.messages', [
+            'event'  => $event,
+            'reverb' => [
+                'key'    => config('broadcasting.connections.reverb.key'),
+                'host'   => env('VITE_REVERB_HOST', env('REVERB_HOST')),
+                'port'   => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 443)),
+                'scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', 'https')),
+            ],
+        ]);
+    }
+
+    /**
+     * 행사 메시지 목록 (Tabulator ajax).
+     */
+    public function eventMessageList(int $id): JsonResponse
+    {
+        return response()->json($this->rotationService->eventMessageList(
+            $id,
+            (int) $this->request->input('page', 1),
+            (int) $this->request->input('size', 30),
+            $this->request->input('sort.0', ['field' => 'id', 'dir' => 'desc']),
+            [
+                'searchText' => $this->request->input('searchText', ''),
+                'read'       => $this->request->input('read', ''),
+            ]
+        ));
+    }
+
+    /* ======================================================================
      | 좌석 배정 — 단일 화면 (턴 선택 + 테이블 그리드, 넣을 때마다 즉시 저장)
      * ==================================================================== */
 

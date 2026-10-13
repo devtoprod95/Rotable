@@ -117,6 +117,12 @@
                 { title: "상태", field: "status", hozAlign: "center", width: 80,
                     formatter: function(cell){ return STATUS_LABEL[cell.getValue()] ?? cell.getValue(); }
                 },
+                { title: "메시지", field: "messages_count", hozAlign: "center", width: 90,
+                    formatter: function(cell){
+                        var v = cell.getValue() ?? 0;
+                        return v > 0 ? `<span class="badge bg-azure-lt">${v}건</span>` : '<span class="text-muted">0건</span>';
+                    }
+                },
                 { title: "생성일<br>수정일", field: "created_at", width: 180,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
@@ -128,11 +134,20 @@
                 { title: "관리", width: 110, headerSort: false,
                     formatter: function(cell){
                         var data = cell.getRow().getData();
+                        var $wrap = $("<div>").addClass("d-flex flex-column gap-1");
                         var $edit = $("<button>")
                             .addClass("btn btn-sm btn-primary w-100")
                             .text("상세")
                             .on("click", function(){ location.href = detailBase + "/" + data.id; });
-                        return $edit.get(0);
+                        $wrap.append($edit);
+                        if((data.messages_count ?? 0) >= 1){
+                            var $msg = $("<button>")
+                                .addClass("btn btn-sm btn-outline-primary w-100")
+                                .html('<i class="ti ti-messages me-1"></i>메시지')
+                                .on("click", function(){ MessagesModal.open(data.id, data.title ?? ''); });
+                            $wrap.append($msg);
+                        }
+                        return $wrap.get(0);
                     }
                 },
             ],
@@ -144,4 +159,6 @@
         $('#searchForm select').change(function(){ table.setData(); });
     });
 </script>
+
+@include('admin.rotation._messagesModal')
 @endsection

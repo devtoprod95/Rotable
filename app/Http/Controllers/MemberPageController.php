@@ -305,9 +305,63 @@ class MemberPageController extends Controller
 
     /**
      * 요청하기 탭.
+     *
+     * 회원이 관리자(운영진)에게 보낸 요청 목록을 함께 내려준다.
      */
     public function requests(): InertiaResponse
     {
-        return Inertia::render('Requests');
+        /** @var \App\Models\Member $me */
+        $me = Auth::guard('web')->user();
+
+        $event    = EventRound::find($me->event_id);
+        $isClosed = ($event?->status ?? EventRound::STATUS_PENDING) === EventRound::STATUS_CLOSED;
+
+        $requests = \App\Models\AdminRequest::query()
+            ->where('member_id', $me->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (\App\Models\AdminRequest $req) => [
+                'id'         => $req->id,
+                'body'       => $req->body,
+                'is_read'    => $req->read_at !== null,
+                'created_at' => $req->created_at?->format('Y/n/j H:i'),
+            ])
+            ->values();
+
+        return Inertia::render('Requests', [
+            'requests'   => $requests,
+            'eventClosed' => $isClosed,
+        ]);
+    }
+
+    /**
+     * 관리자(운영진)에게 요청을 전송한다.
+     */
+    public function sendRequest(Request $request): RedirectResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me = Auth::guard('web')->user();
+
+        // 종료된 행사에서는 요청 불가.
+        $event = EventRound::find($me->event_id);
+        if (($event?->status ?? EventRound::STATUS_PENDING) === EventRound::STATUS_CLOSED) {
+            return back()->with('error', '종료된 행사에서는 요청을 보낼 수 없어요.');
+        }
+
+        $validated = $request->validate([
+            'body' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $adminRequest = \App\Models\AdminRequest::create([
+            'event_id'  => $me->event_id,
+            'member_id' => $me->id,
+            'table_no'  => $me->currentTableNo(),
+            'body'      => $validated['body'],
+        ]);
+
+        // 관리자 플로팅 위젯으로 실시간 브로드캐스트.
+        broadcast(new \App\Events\AdminRequestSent($adminRequest));
+
+        return back()->with('success', '요청을 전달했어요. 운영진이 확인할게요!');
     }
 }

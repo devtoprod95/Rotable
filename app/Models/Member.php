@@ -99,4 +99,21 @@ class Member extends Authenticatable
     {
         return $this->hasMany(Message::class, 'receiver_id');
     }
+
+    /**
+     * 현재(가장 최신 턴 기준) 이 회원이 앉아 있는 테이블 번호.
+     * 좌석 기록이 없으면 null 을 반환한다.
+     */
+    public function currentTableNo(): ?int
+    {
+        $seating = RotationSeating::query()
+            ->with(['round', 'table'])
+            ->where('member_id', $this->id)
+            ->whereHas('round', fn ($q) => $q->where('event_id', $this->event_id))
+            ->get()
+            ->sortByDesc(fn (RotationSeating $s) => $s->round?->round_no ?? -1)
+            ->first();
+
+        return $seating?->table?->table_no;
+    }
 }

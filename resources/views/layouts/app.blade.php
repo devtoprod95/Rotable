@@ -252,5 +252,8 @@
 
     </div>
 
+    {{-- 회원 → 관리자 요청하기 플로팅 위젯 (모든 관리자 페이지 공통) --}}
+    <x-admin-requests-widget />
+
 </body>
 </html>

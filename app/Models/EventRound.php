@@ -93,6 +93,16 @@ class EventRound extends Model
     }
 
     /**
+     * 이 회차에서 회원이 관리자에게 보낸 요청들.
+     *
+     * @return HasMany<AdminRequest>
+     */
+    public function adminRequests(): HasMany
+    {
+        return $this->hasMany(AdminRequest::class, 'event_id');
+    }
+
+    /**
      * 셀렉트박스 표시용 라벨.
      * 예) "로테이블 와인파티 (2026년 1월 10일 토요일 19:00)"
      */

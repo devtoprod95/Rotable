@@ -103,10 +103,10 @@
                         return `<div class="fw-bold">${d.title ?? '-'}</div><span style="font-size: 0.9em; color: #888;">${t}</span>`;
                     }
                 },
-                { title: "타입", field: "type", hozAlign: "center", width: 110,
+                { title: "타입", field: "type", hozAlign: "center", width: 80,
                     formatter: function(cell){ return TYPE_LABEL[cell.getValue()] ?? cell.getValue(); }
                 },
-                { title: "테이블 수", field: "rotation_tables_count", hozAlign: "center", width: 90 },
+                { title: "테이블 수", field: "rotation_tables_count", hozAlign: "center", width: 80 },
                 { title: "참여자<br>(남/여)", field: "male_count", hozAlign: "center", width: 90, headerSort: false,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
@@ -123,10 +123,16 @@
                         return v > 0 ? `<span class="badge bg-azure-lt">${v}건</span>` : '<span class="text-muted">0건</span>';
                     }
                 },
-                { title: "요청 수", field: "admin_requests_count", hozAlign: "center", width: 90,
+                { title: "요청수", field: "admin_requests_count", hozAlign: "center", width: 90,
                     formatter: function(cell){
                         var v = cell.getValue() ?? 0;
                         return v > 0 ? `<span class="badge bg-red-lt">${v}건</span>` : '<span class="text-muted">0건</span>';
+                    }
+                },
+                { title: "매칭수", field: "match_count", hozAlign: "center", width: 90, headerSort: false,
+                    formatter: function(cell){
+                        var v = cell.getValue() ?? 0;
+                        return v > 0 ? `<span class="badge bg-pink-lt">${v}쌍</span>` : '<span class="text-muted">0쌍</span>';
                     }
                 },
                 { title: "생성일<br>수정일", field: "created_at", width: 180,
@@ -160,6 +166,11 @@
                                 .on("click", function(){ RequestsModal.open(data.id, data.title ?? ''); });
                             $wrap.append($req);
                         }
+                        var $match = $("<button>")
+                            .addClass("btn btn-sm btn-outline-pink w-100")
+                            .text("매칭 " + (data.match_count ?? 0))
+                            .on("click", function(){ MatchesModal.open(data.id, data.title ?? ''); });
+                        $wrap.append($match);
                         return $wrap.get(0);
                     }
                 },
@@ -175,4 +186,5 @@
 
 @include('admin.rotation._messagesModal')
 @include('admin.rotation._requestsModal')
+@include('admin.rotation._matchesModal')
 @endsection

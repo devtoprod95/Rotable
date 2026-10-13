@@ -11,9 +11,14 @@
                     <h3 class="card-title mb-0">로테이션 설정</h3>
                     <span class="badge d-none" id="eventStatusBadge"></span>
                 </div>
-                <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
-                    <i class="ti ti-messages me-1"></i> 메시지 조회
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
+                        <i class="ti ti-heart me-1"></i> 매칭 조회
+                    </button>
+                    <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
+                        <i class="ti ti-messages me-1"></i> 메시지 조회
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <div class="row g-2 align-items-start">
@@ -354,6 +359,14 @@
             MessagesModal.open(eventId, label);
         });
 
+        // 선택된 행사의 매칭 결과를 모달로 조회
+        $('#goMatchesBtn').on('click', function(){
+            var eventId = $('#eventSelect').val();
+            if(!eventId){ return; }
+            var label = $('#eventSelect option:selected').text();
+            MatchesModal.open(eventId, label);
+        });
+
         // 턴 네비게이션: 이전/다음 턴 보기 (1턴 ~ 최신 턴 범위, 0턴은 세팅용이라 제외)
         $('#roundPrev').on('click', function(){
             if(viewRound === null){ viewRound = currentRound; }
@@ -380,4 +393,5 @@
 </script>
 
 @include('admin.rotation._messagesModal')
+@include('admin.rotation._matchesModal')
 @endsection

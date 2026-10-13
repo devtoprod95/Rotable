@@ -174,25 +174,6 @@ class RotationController extends Controller
      * ==================================================================== */
 
     /**
-     * 행사의 메시지 조회 페이지.
-     */
-    public function eventMessages(int $id): View
-    {
-        $event = EventRound::find($id);
-        abort_if($event === null, 404);
-
-        return view('admin.rotation.messages', [
-            'event'  => $event,
-            'reverb' => [
-                'key'    => config('broadcasting.connections.reverb.key'),
-                'host'   => env('VITE_REVERB_HOST', env('REVERB_HOST')),
-                'port'   => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 443)),
-                'scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', 'https')),
-            ],
-        ]);
-    }
-
-    /**
      * 행사 메시지 목록 (Tabulator ajax).
      */
     public function eventMessageList(int $id): JsonResponse
@@ -207,6 +188,24 @@ class RotationController extends Controller
                 'read'       => $this->request->input('read', ''),
             ]
         ));
+    }
+
+    /* ======================================================================
+     | 매칭 — 상호 매칭 쌍 조회
+     * ==================================================================== */
+
+    /**
+     * 행사의 상호 매칭 목록 (모달 Tabulator ajax).
+     * Tabulator 가 기대하는 { data, total } 형태로 반환한다.
+     */
+    public function eventMatchList(int $id): JsonResponse
+    {
+        $matches = $this->rotationService->matchList($id);
+
+        return response()->json([
+            'data'  => $matches,
+            'total' => count($matches),
+        ]);
     }
 
     /* ======================================================================

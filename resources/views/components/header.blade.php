@@ -5,7 +5,7 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <a href="/" class="navbar-brand navbar-brand-autodark d-flex align-items-center gap-2">
+            <a href="{{ route('admin.dashboard') }}" class="navbar-brand navbar-brand-autodark d-flex align-items-center gap-2">
                 <img src="{{ asset('images/logo.png') }}" alt="logo" style="height: 42px; width: 42px; object-fit: contain;">
                 <span class="fw-bold fs-3">{{ env('APP_NAME') }}</span>
             </a>

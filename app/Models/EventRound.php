@@ -83,6 +83,16 @@ class EventRound extends Model
     }
 
     /**
+     * 이 회차에서 오간 메시지들.
+     *
+     * @return HasMany<Message>
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'event_id');
+    }
+
+    /**
      * 셀렉트박스 표시용 라벨.
      * 예) "로테이블 와인파티 (2026년 1월 10일 토요일 19:00)"
      */

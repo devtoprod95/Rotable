@@ -26,7 +26,7 @@ enum Menu: string
                 'pattern'  => 'admin.rotation*',
                 'children' => [
                     ['name' => '행사 관리', 'route' => 'admin.rotation.event.index', 'pattern' => 'admin.rotation.event*'],
-                    ['name' => '좌석 배정', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
+                    ['name' => '로테이션 설정', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
                 ],
             ],
             self::Admin->value => [

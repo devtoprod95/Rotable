@@ -86,6 +86,7 @@
                     <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
                     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+                    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
 
                     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
                     <script src="{{ asset('js/common.js') }}?v={{ filemtime(public_path('js/common.js')) }}"></script>

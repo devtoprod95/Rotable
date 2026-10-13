@@ -255,6 +255,9 @@ class MemberPageController extends Controller
         // 수신자 개인 채널로 실시간 브로드캐스트.
         broadcast(new MessageSent($message));
 
+        // 관리자 "메시지 조회" 화면용 행사 단위 브로드캐스트.
+        broadcast(new \App\Events\EventMessageSent($message));
+
         $remaining = max(0, Message::MAX_SENDS_PER_MEMBER - ($used + 1));
 
         return back()->with('success', "전달되었습니다! 익명으로 메시지를 보냈어요. (남은 전송 횟수 {$remaining}회)");

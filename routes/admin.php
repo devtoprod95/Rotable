@@ -29,6 +29,8 @@ Route::middleware('role')->group(function () {
                 Route::get('/{id}/tables', [RotationController::class, 'eventTableList'])->whereNumber('id')->name('tables');
                 Route::post('/{id}/tables', [RotationController::class, 'eventTableAdd'])->whereNumber('id')->name('tables.add');
                 Route::delete('/{id}/tables', [RotationController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');
+                Route::get('/{id}/messages', [RotationController::class, 'eventMessages'])->whereNumber('id')->name('messages');
+                Route::get('/{id}/messages/list', [RotationController::class, 'eventMessageList'])->whereNumber('id')->name('messages.list');
             });
 
             Route::prefix('seating')->name('seating.')->group(function () {

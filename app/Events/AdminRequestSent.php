@@ -5,7 +5,7 @@ namespace App\Events;
 use App\Models\AdminRequest;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -15,7 +15,7 @@ use Illuminate\Queue\SerializesModels;
  * 모든 관리자 페이지에서 공통으로 구독하는 공개 채널(admin-requests)로 전송한다.
  * (관리자 전용 화면에서만 구독하며, 관리자는 요청자 정보를 열람할 수 있다.)
  */
-class AdminRequestSent implements ShouldBroadcast
+class AdminRequestSent implements ShouldBroadcastNow
 {
     use Dispatchable;
     use InteractsWithSockets;

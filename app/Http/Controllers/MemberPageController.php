@@ -352,6 +352,17 @@ class MemberPageController extends Controller
             'body' => ['required', 'string', 'max:1000'],
         ]);
 
+        // 연속/중복 전송 방지: 최근 10초 내 동일 내용 요청이 있으면 무시한다.
+        $isDuplicate = \App\Models\AdminRequest::query()
+            ->where('member_id', $me->id)
+            ->where('body', $validated['body'])
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->exists();
+
+        if ($isDuplicate) {
+            return back()->with('error', '방금 보낸 요청이에요. 잠시 후 다시 시도해 주세요.');
+        }
+
         $adminRequest = \App\Models\AdminRequest::create([
             'event_id'  => $me->event_id,
             'member_id' => $me->id,
@@ -362,6 +373,6 @@ class MemberPageController extends Controller
         // 관리자 플로팅 위젯으로 실시간 브로드캐스트.
         broadcast(new \App\Events\AdminRequestSent($adminRequest));
 
-        return back()->with('success', '요청을 전달했어요. 운영진이 확인할게요!');
+        return back()->with('success', '요청을 전달했어요. 관리자가 확인할게요!');
     }
 }

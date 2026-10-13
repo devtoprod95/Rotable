@@ -31,7 +31,9 @@ Route::middleware('auth:web')->group(function () {
     Route::post('/chats/messages/read', [MemberPageController::class, 'markMessagesRead'])->name('chats.messages.read');
     Route::get('/votes', [MemberPageController::class, 'votes'])->name('votes');
     Route::get('/requests', [MemberPageController::class, 'requests'])->name('requests');
-    Route::post('/requests', [MemberPageController::class, 'sendRequest'])->name('requests.send');
+    Route::post('/requests', [MemberPageController::class, 'sendRequest'])
+        ->middleware('throttle:5,1')
+        ->name('requests.send');
     Route::post('/logout', [MemberAuthController::class, 'logout'])->name('member.logout');
 });
 

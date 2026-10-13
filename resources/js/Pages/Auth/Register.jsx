@@ -37,7 +37,7 @@ export default function Register() {
 
     return (
         <AppLayout bottomNav={false} headerAction={false}>
-            <Head title="입장등록" />
+            <Head title="Rotable" />
             <div className="flex min-h-full items-center justify-center bg-secondary-50 p-6">
                 <div className="w-full max-w-md rounded-3xl border border-secondary-100 bg-white p-8 shadow-2xl shadow-black/5 sm:p-10">
                     <div className="flex items-center justify-center gap-3">

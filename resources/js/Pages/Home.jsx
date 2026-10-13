@@ -121,7 +121,7 @@ export default function Home() {
 
     return (
         <AppLayout>
-            <Head title="기록" />
+            <Head title="Rotable" />
 
             <div className="min-h-full bg-gray-50 px-4 py-5">
                 {eventTitle && (

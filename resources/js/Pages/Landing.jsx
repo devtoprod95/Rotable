@@ -6,7 +6,7 @@ export default function Landing() {
 
     return (
         <AppLayout>
-            <Head title="두근두근 — 새로운 인연의 시작" />
+            <Head title="Rotable" />
 
             <div className="flex min-h-full flex-col bg-gradient-to-b from-primary-50 via-primary-100 to-primary-200 text-gray-800">
                 <main className="flex flex-1 flex-col items-center justify-center px-6 py-10 text-center">

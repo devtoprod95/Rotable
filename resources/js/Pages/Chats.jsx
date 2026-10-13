@@ -81,7 +81,7 @@ function TabButton({ active, onClick, children, badge }) {
 }
 
 export default function Chats() {
-    const { auth, received = [], sent = [], partners = [], partnerGender, sendLimit } = usePage().props;
+    const { auth, received = [], sent = [], partners = [], partnerGender, sendLimit, canSendMessage = false } = usePage().props;
 
     const [tab, setTab] = useState('received'); // 'received' | 'sent'
     const [messages, setMessages] = useState(received);
@@ -172,6 +172,7 @@ export default function Chats() {
                         partners={partners}
                         partnerGender={partnerGender}
                         sendLimit={sendLimit}
+                        canSend={canSendMessage}
                     />
                 </div>
             </div>

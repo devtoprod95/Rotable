@@ -101,6 +101,26 @@ class Member extends Authenticatable
     }
 
     /**
+     * 이 회원이 한 투표들 (내가 지목한 상대).
+     *
+     * @return HasMany<Vote>
+     */
+    public function castVotes(): HasMany
+    {
+        return $this->hasMany(Vote::class, 'voter_id');
+    }
+
+    /**
+     * 이 회원이 받은 투표들 (나를 지목한 사람).
+     *
+     * @return HasMany<Vote>
+     */
+    public function receivedVotes(): HasMany
+    {
+        return $this->hasMany(Vote::class, 'target_id');
+    }
+
+    /**
      * 현재(가장 최신 턴 기준) 이 회원이 앉아 있는 테이블 번호.
      * 좌석 기록이 없으면 null 을 반환한다.
      */

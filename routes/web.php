@@ -30,6 +30,9 @@ Route::middleware('auth:web')->group(function () {
     Route::post('/chats/messages', [MemberPageController::class, 'sendMessage'])->name('chats.messages.send');
     Route::post('/chats/messages/read', [MemberPageController::class, 'markMessagesRead'])->name('chats.messages.read');
     Route::get('/votes', [MemberPageController::class, 'votes'])->name('votes');
+    Route::post('/votes', [MemberPageController::class, 'saveVotes'])
+        ->middleware('throttle:20,1')
+        ->name('votes.save');
     Route::get('/requests', [MemberPageController::class, 'requests'])->name('requests');
     Route::post('/requests', [MemberPageController::class, 'sendRequest'])
         ->middleware('throttle:5,1')

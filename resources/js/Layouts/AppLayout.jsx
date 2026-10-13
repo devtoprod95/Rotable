@@ -11,7 +11,7 @@ import NavigationLoader from '@/Components/NavigationLoader';
  */
 export default function AppLayout({ children, bottomNav = true, headerAction = true }) {
     const page = usePage();
-    const { auth, bypassRedirectName, isProduction } = page.props;
+    const { auth, bypassRedirectName, isProduction, eventName } = page.props;
     const url = page.url;
     const mainRef = useRef(null);
 
@@ -23,18 +23,25 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
     return (
         <div className="flex min-h-screen justify-center bg-secondary-100 font-sans">
             {/* 모바일 프레임 */}
-            <div className="relative flex min-h-screen w-full max-w-[480px] flex-col bg-white shadow-xl">
+            <div className="relative flex h-screen w-full max-w-[480px] flex-col overflow-hidden bg-white shadow-xl">
                 <FlashToast />
                 <NavigationLoader />
                 {/* 상단 nav (고정) */}
-                <header className="sticky top-0 z-20 flex h-header items-center justify-between border-b border-secondary-100 bg-white/95 px-4 backdrop-blur">
+                <header className="sticky top-0 z-20 flex h-header shrink-0 items-center justify-between border-b border-secondary-100 bg-white/95 px-4 backdrop-blur">
                     <Link href="/" className="flex items-center gap-2">
                         <img
                             src="/images/logo.png"
                             alt="Rotable"
                             className="h-9 w-9 object-contain"
                         />
-                        <span className="font-logo text-xl leading-none tracking-wide text-black translate-y-[1px]">Rotable</span>
+                        <span className="flex flex-col leading-none">
+                            <span className="font-logo text-xl leading-none tracking-wide text-black translate-y-[1px]">Rotable</span>
+                            {eventName && (
+                                <span className="mt-0.5 max-w-[150px] truncate text-[11px] font-medium leading-none text-secondary-400">
+                                    {eventName}
+                                </span>
+                            )}
+                        </span>
                     </Link>
 
                     {headerAction && (
@@ -76,7 +83,7 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
                 </header>
 
                 {/* 컨텐츠 (스크롤 영역). 하단 nav 높이만큼 패딩 확보 */}
-                <main ref={mainRef} className={'flex-1 overflow-y-auto ' + (bottomNav ? 'pb-20' : '')}>
+                <main ref={mainRef} className={'flex-1 overflow-y-auto bg-gray-50 ' + (bottomNav ? 'pb-20' : '')}>
                     {children}
                 </main>
 
@@ -90,7 +97,7 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
 const NAV_ITEMS = [
     { href: '/home', label: '홈', icon: HeartIcon },
     { href: '/chats', label: '메시지함', icon: ChatIcon },
-    { href: '/votes', label: '투표하기', icon: VoteIcon },
+    { href: '/votes', label: '매칭하기', icon: VoteIcon },
     { href: '/requests', label: '요청하기', icon: RequestIcon },
 ];
 
@@ -213,8 +220,10 @@ function ChatIcon() {
 function VoteIcon() {
     return (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 11l3 3L22 4" />
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+            {/* 투표함 + 하트 (사랑 투표 느낌) */}
+            <path d="M3 9h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9z" />
+            <path d="M12 13.3l-.9-.86a1.8 1.8 0 0 0-2.5 2.56L12 18l3.4-3a1.8 1.8 0 0 0-2.5-2.56l-.9.86z" fill="currentColor" stroke="none" />
+            <path d="M8 9V6a4 4 0 0 1 8 0v3" />
         </svg>
     );
 }

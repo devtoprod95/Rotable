@@ -8,9 +8,11 @@ use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\Message;
 use App\Models\RotationRound;
+use App\Models\Vote;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
@@ -153,9 +155,14 @@ class MemberPageController extends Controller
         $used = Message::where('sender_id', $me->id)->count();
         $max  = Message::MAX_SENDS_PER_MEMBER;
 
+        // 메시지 전달은 로테이션 진행중(S)·매칭중(V) 상태에서만 가능하다.
+        $eventStatus    = EventRound::whereKey($me->event_id)->value('status') ?? EventRound::STATUS_PENDING;
+        $canSendMessage = in_array($eventStatus, [EventRound::STATUS_STARTED, EventRound::STATUS_VOTING], true);
+
         return [
-            'partners'      => $partners,
-            'partnerGender' => $oppositeGen,
+            'partners'       => $partners,
+            'partnerGender'  => $oppositeGen,
+            'canSendMessage' => $canSendMessage,
             'sendLimit'     => [
                 'max'       => $max,
                 'used'      => $used,
@@ -217,6 +224,13 @@ class MemberPageController extends Controller
     {
         /** @var \App\Models\Member $me */
         $me = Auth::guard('web')->user();
+
+        // 메시지 전달은 로테이션 진행중(S)·매칭중(V) 상태에서만 허용한다.
+        $event  = EventRound::find($me->event_id);
+        $status = $event?->status ?? EventRound::STATUS_PENDING;
+        if (! in_array($status, [EventRound::STATUS_STARTED, EventRound::STATUS_VOTING], true)) {
+            return back()->with('error', '지금은 메시지를 전달할 수 없어요.');
+        }
 
         $validated = $request->validate([
             'receiver_id' => ['required', 'integer'],
@@ -297,10 +311,142 @@ class MemberPageController extends Controller
 
     /**
      * 투표하기 탭.
+     *
+     * - 투표중(V) 단계에서 이성 회원에게 최대 2명까지 투표(지목)한다.
+     * - 마감 전까지 자유롭게 수정 가능.
+     * - 종료(X) 후에는 상호 매칭(서로 지목한 상대)의 연락처를 공개한다.
+     * - 내가 받은 표 수는 항상 보여준다.
      */
     public function votes(): InertiaResponse
     {
-        return Inertia::render('Votes');
+        /** @var \App\Models\Member $me */
+        $me = Auth::guard('web')->user();
+
+        $event  = EventRound::find($me->event_id);
+        $status = $event?->status ?? EventRound::STATUS_PENDING;
+
+        // 매칭 투표 가능 여부: 상태가 '매칭중(V)'이고 자동 마감 시각(행사 다음 날 오전 9시) 전.
+        $isVotingOpen = $event !== null && $event->isVotingOpen();
+        $isClosed     = $status === EventRound::STATUS_CLOSED;
+
+        // 상태는 V 이지만 마감 시각이 지나 투표만 닫힌 '마감 대기' 상태.
+        // (스케줄이 아직 X로 전환하기 전의 공백 구간)
+        $isVotingEnded = $status === EventRound::STATUS_VOTING && ! $isVotingOpen;
+
+        $oppositeGen = $me->gender === Member::GENDER_MALE
+            ? Member::GENDER_FEMALE
+            : Member::GENDER_MALE;
+
+        // 투표 대상(같은 행사의 이성) 목록.
+        $candidates = Member::query()
+            ->where('event_id', $me->event_id)
+            ->where('gender', $oppositeGen)
+            ->where('id', '!=', $me->id)
+            ->orderBy('name')
+            ->get();
+
+        // 내가 지목한 상대 id 집합.
+        $myVotedIds = Vote::query()
+            ->where('event_id', $me->event_id)
+            ->where('voter_id', $me->id)
+            ->pluck('target_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        // 나를 지목한(= 나에게 투표한) 상대 id 집합. (상호 매칭 판정 + 받은 표 수)
+        $votedForMeIds = Vote::query()
+            ->where('event_id', $me->event_id)
+            ->where('target_id', $me->id)
+            ->pluck('voter_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $candidateList = $candidates->map(function (Member $c) use ($myVotedIds, $votedForMeIds, $isClosed) {
+            $data        = $this->transformMember($c);
+            $iVotedThem  = in_array($c->id, $myVotedIds, true);
+            $theyVotedMe = in_array($c->id, $votedForMeIds, true);
+            $isMatch     = $iVotedThem && $theyVotedMe;
+
+            $data['voted']    = $iVotedThem;
+            $data['is_match'] = $isMatch;
+            // 연락처는 종료 후 "상호 매칭"된 상대에게만 공개한다.
+            $data['phone']    = ($isClosed && $isMatch) ? $c->phone : null;
+
+            return $data;
+        })->values();
+
+        return Inertia::render('Votes', [
+            'eventTitle'    => $event?->title,
+            'eventStatus'   => $status,
+            'canVote'       => $isVotingOpen,
+            'isClosed'      => $isClosed,
+            'votingEnded'   => $isVotingEnded,
+            'maxVotes'      => Vote::MAX_VOTES_PER_MEMBER,
+            'candidates'    => $candidateList,
+            'myVotedIds'    => $myVotedIds,
+            'receivedCount' => count($votedForMeIds),
+            'partnerGender' => $oppositeGen,
+        ]);
+    }
+
+    /**
+     * 투표 저장(수정). 투표중(V) 단계에서만 허용하며, 전달받은 대상 목록으로 전체 교체한다.
+     * - 최대 2명까지만 허용.
+     * - 같은 행사의 이성만 지목 가능.
+     */
+    public function saveVotes(Request $request): RedirectResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me = Auth::guard('web')->user();
+
+        $event = EventRound::find($me->event_id);
+
+        // 투표가 열려 있지 않으면(대기/진행/종료, 또는 자동마감 시각 경과) 저장 불가.
+        if ($event === null || ! $event->isVotingOpen()) {
+            return back()->with('error', '지금은 매칭 투표를 할 수 없어요.');
+        }
+
+        $validated = $request->validate([
+            'target_ids'   => ['present', 'array', 'max:' . Vote::MAX_VOTES_PER_MEMBER],
+            'target_ids.*' => ['integer', 'distinct'],
+        ]);
+
+        $targetIds = array_values(array_unique(array_map('intval', $validated['target_ids'] ?? [])));
+
+        // 지목 대상은 같은 행사의 이성이어야 하며, 본인은 제외한다.
+        $oppositeGen = $me->gender === Member::GENDER_MALE
+            ? Member::GENDER_FEMALE
+            : Member::GENDER_MALE;
+
+        $validTargetIds = Member::query()
+            ->whereIn('id', $targetIds)
+            ->where('event_id', $me->event_id)
+            ->where('gender', $oppositeGen)
+            ->where('id', '!=', $me->id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (count($validTargetIds) !== count($targetIds)) {
+            return back()->with('error', '선택할 수 없는 상대가 포함되어 있어요.');
+        }
+
+        // 내 기존 투표를 전부 지우고 새로 저장한다. (전체 교체 방식)
+        DB::transaction(function () use ($me, $validTargetIds) {
+            Vote::where('event_id', $me->event_id)
+                ->where('voter_id', $me->id)
+                ->delete();
+
+            foreach ($validTargetIds as $targetId) {
+                Vote::create([
+                    'event_id'  => $me->event_id,
+                    'voter_id'  => $me->id,
+                    'target_id' => $targetId,
+                ]);
+            }
+        });
+
+        return back()->with('success', '매칭 선택을 저장했어요!');
     }
 
     /**

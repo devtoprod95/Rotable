@@ -220,9 +220,10 @@ class RotationController extends Controller
         $roundNo = (int) ($this->request->input('roundNo') ?? 0);
 
         return view('admin.rotation.seating', [
-            'events'  => $events,
-            'eventId' => $eventId,
-            'roundNo' => $roundNo,
+            'events'   => $events,
+            'eventId'  => $eventId,
+            'roundNo'  => $roundNo,
+            'statuses' => EventRound::statusOptions(),
         ]);
     }
 
@@ -307,7 +308,7 @@ class RotationController extends Controller
     }
 
     /**
-     * 로테이션 종료: 행사 상태를 '종료(X)'로 전환한다.
+     * 투표 시작: 로테이션이 끝난 행사의 상태를 '투표중(V)'으로 전환한다.
      */
     public function seatingFinish(): JsonResponse
     {
@@ -318,7 +319,25 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
         }
 
-        $result = $this->rotationService->rotateFinish((int) $this->request->input('event_id'));
+        $result = $this->rotationService->openVoting((int) $this->request->input('event_id'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /**
+     * 투표 마감(수동): 행사 상태를 '종료(X)'로 전환한다.
+     * (자동 종료 스케줄러와 별개로, 관리자가 즉시 마감할 때 사용)
+     */
+    public function seatingCloseVoting(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'event_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
+        }
+
+        $result = $this->rotationService->closeVoting((int) $this->request->input('event_id'));
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }

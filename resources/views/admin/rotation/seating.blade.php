@@ -7,7 +7,10 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between">
-                <h3 class="card-title mb-0">로테이션 설정</h3>
+                <div class="d-flex align-items-center gap-2">
+                    <h3 class="card-title mb-0">로테이션 설정</h3>
+                    <span class="badge d-none" id="eventStatusBadge"></span>
+                </div>
                 <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
                     <i class="ti ti-messages me-1"></i> 메시지 조회
                 </button>
@@ -42,8 +45,11 @@
                             <button type="button" class="btn btn-primary w-100 d-none" id="rotateBtn">
                                 <i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행
                             </button>
-                            <button type="button" class="btn btn-danger w-100 d-none" id="finishBtn">
-                                <i class="ti ti-flag-check me-1"></i>로테이션 종료
+                            <button type="button" class="btn btn-success w-100 d-none" id="finishBtn">
+                                <i class="ti ti-checkbox me-1"></i>매칭 시작
+                            </button>
+                            <button type="button" class="btn btn-danger w-100 d-none" id="closeVotingBtn">
+                                <i class="ti ti-flag-check me-1"></i>매칭 종료
                             </button>
                             <span class="btn btn-outline-secondary w-100 d-none disabled" id="closedBtn">
                                 <i class="ti ti-lock me-1"></i>종료된 행사
@@ -71,6 +77,25 @@
         const deleteUrl  = "{{ route('admin.rotation.seating.delete') }}";
         const rotateUrl  = "{{ route('admin.rotation.seating.rotate') }}";
         const finishUrl  = "{{ route('admin.rotation.seating.finish') }}";
+        const closeVotingUrl = "{{ route('admin.rotation.seating.closeVoting') }}";
+
+        // 서버 enum 기반 상태 라벨 (P/S/V/X). 뱃지 표기에 사용.
+        const STATUS_LABEL = @json($statuses);
+        // 상태별 Tabler 뱃지 색상 클래스. (모두 light 변형: 밝은 배경 + 진한 글씨로 가독성 확보)
+        const STATUS_BADGE = { P: 'bg-yellow-lt', S: 'bg-green-lt', V: 'bg-pink-lt', X: 'bg-secondary-lt' };
+
+        // 현재 행사 상태 뱃지를 최신 상태로 갱신한다.
+        function renderStatusBadge(status){
+            let $badge = $('#eventStatusBadge');
+            if(!status || !STATUS_LABEL[status]){
+                $badge.addClass('d-none').text('');
+                return;
+            }
+            let cls = STATUS_BADGE[status] || 'bg-secondary';
+            $badge.removeClass('d-none bg-yellow-lt bg-green-lt bg-pink-lt bg-secondary-lt')
+                  .addClass(cls)
+                  .text('현재 상태: ' + STATUS_LABEL[status]);
+        }
 
         let members = [];
         let dataXhr = null;      // 진행 중인 요청 추적 (중복 호출 방지)
@@ -111,6 +136,7 @@
         function renderActions(meta){
             let $rotate = $('#rotateBtn').addClass('d-none');
             let $finish = $('#finishBtn').addClass('d-none');
+            let $closeVoting = $('#closeVotingBtn').addClass('d-none');
             let $closed = $('#closedBtn').addClass('d-none');
             let $hint   = $('#actionHint');
             let $roundHint = $('#roundHint');
@@ -118,6 +144,9 @@
             let $actionLabel = $('#actionLabel').removeClass('d-none');
 
             currentRound = (typeof meta.current_round !== 'undefined') ? meta.current_round : 0;
+
+            // 현재 행사 상태 뱃지 최신화 (버튼 클릭 → loadData 재호출 시마다 갱신됨)
+            renderStatusBadge(meta.event_status);
 
             // 조회 가능한 최소 턴: 1턴까지만 (0턴은 세팅용이라 조회하지 않음).
             // 단, 아직 0턴만 있는 세팅 단계(current_round=0)에서는 0턴을 본다.
@@ -144,6 +173,19 @@
                 return;
             }
 
+            // 투표중/종료는 로테이션이 끝난 뒤의 "행사 전체 상태"이므로,
+            // 어느 턴을 보고 있든 상태 기준으로 먼저 처리한다.
+            if(meta.is_closed){
+                $closed.removeClass('d-none');
+                $hint.text('이미 종료된 행사입니다. (매칭 마감)');
+                return;
+            }
+            if(meta.is_voting){
+                $closeVoting.removeClass('d-none');
+                $hint.html('매칭이 진행 중입니다. 회원들이 상대를 선택하고 있어요.<br>(행사 다음 날 오전 9시 자동 종료)');
+                return;
+            }
+
             // 과거 턴을 보고 있으면 진행/종료 버튼 대신 안내 문구를 표시한다. (label/힌트 라인은 왼쪽과 정렬 유지)
             if(!isLatest){
                 $pastNotice.removeClass('d-none').addClass('d-flex');
@@ -151,18 +193,15 @@
                 return;
             }
 
-            if(meta.is_closed){
-                $closed.removeClass('d-none');
-                $hint.text('이미 종료된 행사입니다.');
-            } else if(meta.is_last){
+            if(meta.is_last){
                 $finish.removeClass('d-none');
-                $hint.text('마지막 턴입니다. 로테이션을 종료할 수 있습니다.');
+                $hint.text('마지막 턴입니다. 매칭을 시작할 수 있습니다.');
             } else {
                 $rotate.removeClass('d-none');
                 // 0턴(아직 로테이션 시작 전)이면 '시작', 그 이후면 '진행'.
                 if(viewRound === 0){
                     $rotate.html('<i class="ti ti-player-play me-1"></i>로테이션 시작');
-                    $hint.text('0턴 배치로 로테이션을 시작합니다.');
+                    $hint.text('로테이션을 시작합니다.');
                 } else {
                     $rotate.html('<i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행');
                     $hint.text('다음 턴을 자동 생성합니다. (여자 고정 / 남자 이동)');
@@ -249,7 +288,7 @@
         // 로테이션 진행: 현재 턴 기준 다음 턴 자동 생성 (여자 고정 / 남자 이동)
         $('#rotateBtn').on('click', async function(){
             let msg = (viewRound === 0)
-                ? '0턴 배치로 로테이션을 시작하시겠습니까?'
+                ? '로테이션을 시작하시겠습니까?'
                 : '다음 턴으로 로테이션을 진행하시겠습니까?';
             if(!(await salert({text: msg}))) return;
 
@@ -266,12 +305,28 @@
             });
         });
 
-        // 로테이션 종료: 행사 상태를 종료(X)로
+        // 투표 시작: 행사 상태를 투표중(V)으로
         $('#finishBtn').on('click', async function(){
-            if(!(await salert({text: '로테이션을 종료하시겠습니까? 종료 후에는 되돌릴 수 없습니다.'}))) return;
+            if(!(await salert({html: '매칭을 시작하시겠습니까?<br>회원들이 서로에게 투표(선택)할 수 있게 됩니다.'}))) return;
 
             $.ajax({
                 url: finishUrl,
+                type: 'POST',
+                data: { event_id: $('#eventSelect').val() },
+                success: function(res){
+                    viewRound = null;
+                    $.when(loadData()).always(function(){ alert(res?.msg); });
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            });
+        });
+
+        // 투표 마감(수동): 행사 상태를 종료(X)로
+        $('#closeVotingBtn').on('click', async function(){
+            if(!(await salert({html: '그대로 두면 <b>행사 다음 날 오전 9시</b>에 자동으로 마감돼요.<br>지금 바로 매칭을 종료하시겠습니까?<br>종료 후에는 회원이 선택을 수정할 수 없습니다.'}))) return;
+
+            $.ajax({
+                url: closeVotingUrl,
                 type: 'POST',
                 data: { event_id: $('#eventSelect').val() },
                 success: function(res){

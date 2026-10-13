@@ -49,6 +49,7 @@ Route::middleware('role')->group(function () {
                 Route::post('/store', [RotationController::class, 'seatingStore'])->name('store');
                 Route::post('/rotate', [RotationController::class, 'seatingRotate'])->name('rotate');
                 Route::post('/finish', [RotationController::class, 'seatingFinish'])->name('finish');
+                Route::post('/close-voting', [RotationController::class, 'seatingCloseVoting'])->name('closeVoting');
                 Route::delete('/delete', [RotationController::class, 'seatingDelete'])->name('delete');
             });
         });

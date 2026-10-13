@@ -31,6 +31,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
+- **DB 테이블 네이밍 (MUST):** 도메인 테이블은 반드시 그 도메인을 나타내는 prefix를 붙인다. prefix는 프로젝트의 도메인 언어를 따르며 특정 단어에 종속되지 않는다(예: 커머스면 `order_`/`catalog_`, 결제면 `payment_`). 단수형·도메인 불명확 테이블명(`votes`, `logs` 등) 금지. 모델은 `protected $table`에 prefix 테이블명을 명시한다. 상세 규칙과 현재 프로젝트 적용 예시는 `.kiro/steering/table-naming.md` 참고.
 
 ## Verification Scripts
 

@@ -6,6 +6,7 @@ import { SendModal } from '@/Components/MessageSender';
 const ROUND_STATUS = {
     P: { label: '대기', cls: 'bg-amber-100 text-amber-700' },
     S: { label: '진행중', cls: 'bg-green-100 text-green-700' },
+    V: { label: '매칭중', cls: 'bg-pink-100 text-pink-700' },
     X: { label: '종료', cls: 'bg-secondary-700 text-white' },
 };
 
@@ -111,7 +112,7 @@ function RoundSection({ round, partnerGender, onSend, sendDisabled }) {
 }
 
 export default function Home() {
-    const { auth, rotations = [], partnerGender, sendLimit, eventTitle, eventTime, eventStatus } = usePage().props;
+    const { auth, rotations = [], partnerGender, sendLimit, eventTitle, eventTime, eventStatus, canSendMessage = false } = usePage().props;
 
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const remaining = sendLimit?.remaining ?? null;
@@ -147,11 +148,17 @@ export default function Home() {
                     {auth?.user?.name}님, 로테이션 기록표예요 👋
                 </h1>
                 <p className="mt-1.5 text-sm text-gray-500">
-                    만난 상대 카드의 <b className="text-primary">💌 전달</b> 버튼으로 익명 메시지를 보낼 수 있어요.
-                    {sendLimit && (
-                        <span className="ml-1 font-semibold text-gray-600">
-                            <br></br>(남은 전송 횟수 {remaining}/{sendLimit.max}회)
-                        </span>
+                    {canSendMessage ? (
+                        <>
+                            만난 상대 카드의 <b className="text-primary">💌 전달</b> 버튼으로 익명 메시지를 보낼 수 있어요.
+                            {sendLimit && (
+                                <span className="ml-1 font-semibold text-gray-600">
+                                    <br></br>(남은 전송 횟수 {remaining}/{sendLimit.max}회)
+                                </span>
+                            )}
+                        </>
+                    ) : (
+                        '로테이션 진행 중부터 매칭 기간까지 만난 상대에게 익명 메시지를 보낼 수 있어요.'
                     )}
                 </p>
 
@@ -162,7 +169,7 @@ export default function Home() {
                                 key={round.id}
                                 round={round}
                                 partnerGender={partnerGender}
-                                onSend={setTarget}
+                                onSend={canSendMessage ? setTarget : null}
                                 sendDisabled={limitReached}
                             />
                         ))

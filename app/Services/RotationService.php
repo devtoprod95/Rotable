@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Models\RotationRound;
 use App\Models\RotationSeating;
 use App\Models\RotationTable;
+use App\Models\Vote;
 use Exception;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -353,6 +354,7 @@ class RotationService
                 'current_round' => $currentRound,
                 // 테이블 N개면 N턴에서 남자가 제자리 복귀 → 마지막 턴.
                 'is_last'      => $tableCount > 0 && $currentRound >= $tableCount,
+                'is_voting'    => $eventStatus === EventRound::STATUS_VOTING,
                 'is_closed'    => $eventStatus === EventRound::STATUS_CLOSED,
             ],
         ];
@@ -537,11 +539,40 @@ class RotationService
     }
 
     /**
-     * 로테이션 종료: 행사 상태를 '종료(X)'로 전환한다.
+     * 투표 시작: 로테이션이 끝난 행사의 상태를 '투표중(V)'으로 전환한다.
+     * 투표가 열린 시각(voting_opened_at)을 기록한다. (자동 마감 기준점)
      *
      * @return array{isSuccess:bool, message?:string}
      */
-    public function rotateFinish(int $eventId): array
+    public function openVoting(int $eventId): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $event = EventRound::find($eventId);
+            if (!$event) {
+                throw new Exception('행사를 찾을 수 없습니다.');
+            }
+
+            $event->status           = EventRound::STATUS_VOTING;
+            $event->voting_opened_at = now();
+            $event->save();
+
+            $returnMsg = helpersSuccessMessage('매칭을 시작했습니다.');
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 투표 마감: 행사 상태를 '종료(X)'로 전환한다.
+     * (수동 마감 버튼 및 자동 종료 스케줄러에서 공통으로 사용)
+     *
+     * @return array{isSuccess:bool, message?:string}
+     */
+    public function closeVoting(int $eventId): array
     {
         $returnMsg = $this->returnMsg;
 
@@ -554,7 +585,7 @@ class RotationService
             $event->status = EventRound::STATUS_CLOSED;
             $event->save();
 
-            $returnMsg = helpersSuccessMessage('로테이션을 종료했습니다.');
+            $returnMsg = helpersSuccessMessage('매칭을 마감했습니다.');
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
         }

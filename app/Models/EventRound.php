@@ -18,6 +18,7 @@ class EventRound extends Model
     /** 상태 */
     public const STATUS_PENDING  = 'P'; // 대기
     public const STATUS_STARTED  = 'S'; // 진행
+    public const STATUS_VOTING   = 'V'; // 투표중
     public const STATUS_CLOSED   = 'X'; // 종료
 
     /**
@@ -43,6 +44,7 @@ class EventRound extends Model
         return [
             self::STATUS_PENDING => '대기',
             self::STATUS_STARTED => '진행',
+            self::STATUS_VOTING  => '매칭중',
             self::STATUS_CLOSED  => '종료',
         ];
     }
@@ -50,7 +52,7 @@ class EventRound extends Model
     protected $table = 'event_rounds';
 
     /** @var list<string> */
-    protected $fillable = ['title', 'type', 'status', 'event_time'];
+    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at'];
 
     /**
      * @return array<string, string>
@@ -58,7 +60,8 @@ class EventRound extends Model
     protected function casts(): array
     {
         return [
-            'event_time' => 'datetime',
+            'event_time'       => 'datetime',
+            'voting_opened_at' => 'datetime',
         ];
     }
 
@@ -93,6 +96,16 @@ class EventRound extends Model
     }
 
     /**
+     * 이 회차에서 이루어진 투표들.
+     *
+     * @return HasMany<Vote>
+     */
+    public function votes(): HasMany
+    {
+        return $this->hasMany(Vote::class, 'event_id');
+    }
+
+    /**
      * 이 회차에서 회원이 관리자에게 보낸 요청들.
      *
      * @return HasMany<AdminRequest>
@@ -100,6 +113,33 @@ class EventRound extends Model
     public function adminRequests(): HasMany
     {
         return $this->hasMany(AdminRequest::class, 'event_id');
+    }
+
+    /**
+     * 투표가 자동으로 마감되어야 하는 시각(= 행사 다음 날 오전 9시).
+     * 행사 시간이 없으면 null 을 반환한다.
+     */
+    public function votingClosesAt(): ?\Illuminate\Support\Carbon
+    {
+        if (! $this->event_time) {
+            return null;
+        }
+
+        return $this->event_time->copy()->addDay()->setTime(9, 0, 0);
+    }
+
+    /**
+     * 현재 투표가 열려 있고(V), 아직 자동 마감 시각이 지나지 않았는지 여부.
+     */
+    public function isVotingOpen(): bool
+    {
+        if ($this->status !== self::STATUS_VOTING) {
+            return false;
+        }
+
+        $closesAt = $this->votingClosesAt();
+
+        return $closesAt === null || now()->lt($closesAt);
     }
 
     /**

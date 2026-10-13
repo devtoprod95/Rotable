@@ -48,6 +48,10 @@ class HandleInertiaRequests extends Middleware
                     'gender' => $member->gender,
                 ] : null,
             ],
+            // 상단 header 표시용 - 로그인 회원이 참여한 행사명.
+            'eventName' => fn () => $member
+                ? \App\Models\EventRound::whereKey($member->event_id)->value('title')
+                : null,
             // 하단 nav 메시지함 뱃지용 - 나에게 온 안읽은 메시지 개수.
             'unreadCount' => fn () => $member
                 ? \App\Models\Message::where('receiver_id', $member->id)->whereNull('read_at')->count()

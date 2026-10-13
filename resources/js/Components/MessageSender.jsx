@@ -236,12 +236,28 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
  * 메시지 보내기 영역 (이성 회원 리스트 + 전달 모달).
  * Home(기록)과 Chats(메시지함)에서 공통으로 사용한다.
  */
-export default function MessageSender({ partners = [], partnerGender, sendLimit, onSent }) {
+export default function MessageSender({ partners = [], partnerGender, sendLimit, canSend = true, onSent }) {
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const [target, setTarget] = useState(null);
 
     const remaining = sendLimit?.remaining ?? null;
     const limitReached = typeof remaining === 'number' && remaining <= 0;
+
+    // 로테이션 진행중(S)이 아니면 리스트/전달 대신 "보낼 수 없는 상태" 안내를 표시한다.
+    if (!canSend) {
+        return (
+            <section>
+                <h2 className="text-lg font-extrabold">메시지 보내기</h2>
+                <div className="mt-3 flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-12 text-center">
+                    <span className="text-4xl">🔒</span>
+                    <p className="text-base font-bold text-secondary-700">지금은 메시지를 보낼 수 없어요</p>
+                    <p className="text-xs leading-relaxed text-gray-500">
+                        메시지 전달은 <b>로테이션 진행 중 ~ 매칭 기간</b>에만 가능해요.
+                    </p>
+                </div>
+            </section>
+        );
+    }
 
     return (
         <section>

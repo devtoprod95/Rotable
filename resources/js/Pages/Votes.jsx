@@ -173,7 +173,13 @@ export default function Votes() {
                     <Placeholder
                         icon="💝"
                         title="매칭하기"
-                        desc="아직 매칭 투표가 열리지 않았어요. 로테이션이 끝나면 시작됩니다."
+                        desc={
+                            <>
+                                아직 매칭 투표가 열리지 않았어요.
+                                <br />
+                                로테이션이 끝나면 시작됩니다.
+                            </>
+                        }
                     />
                 </div>
             </AppLayout>
@@ -184,11 +190,8 @@ export default function Votes() {
         <AppLayout>
             <Head title="Rotable" />
 
-            {/*
-              하단 영역 패딩: 투표중일 때만 고정 저장 바 높이만큼 확보한다.
-              (하단 nav 피하기용 pb-20 은 레이아웃의 main 에 이미 적용되어 있음)
-            */}
-            <div className={'flex min-h-full flex-1 flex-col bg-gray-50 px-4 py-5 ' + (canVote ? 'pb-24' : '')}>
+            {/* 투표중: 컨텐츠 높이만큼만 차지. 종료: 화면을 채워 위로 메시지를 중앙 배치. */}
+            <div className={'flex flex-col bg-gray-50 px-4 py-5 ' + (isClosed ? 'min-h-full flex-1 ' : '') + (canVote ? 'pb-20' : '')}>
                 <h1 className="text-xl font-extrabold">
                     {isClosed ? '매칭 결과 💘' : '매칭하기 💝'}
                 </h1>
@@ -250,7 +253,7 @@ export default function Votes() {
                     </p>
                 )}
                 {displayList.length > 0 ? (
-                    <div className={'grid flex-1 grid-cols-1 content-start gap-2.5 ' + (isClosed ? '' : 'mt-4')}>
+                    <div className={'grid grid-cols-1 content-start gap-2.5 ' + (isClosed ? 'flex-1' : 'mt-4')}>
                         {displayList.map((c) => (
                             <CandidateCard
                                 key={c.id}
@@ -271,26 +274,26 @@ export default function Votes() {
                         </div>
                     )
                 )}
-            </div>
 
-            {/* 투표중일 때만 저장 바. 하단 nav(약 72px)보다 확실히 위에 배치 */}
-            {canVote && (
-                <div className="pointer-events-none fixed inset-x-0 bottom-24 z-40 mx-auto flex w-full max-w-[480px] justify-center px-4">
-                    <button
-                        type="button"
-                        onClick={save}
-                        disabled={!dirty || saving}
-                        className={
-                            'pointer-events-auto w-full rounded-2xl py-3 text-center text-sm font-bold shadow-lg transition ' +
-                            (dirty && !saving
-                                ? 'bg-primary text-white hover:bg-primary-600 active:scale-[0.99]'
-                                : 'cursor-not-allowed bg-secondary-200 text-secondary-400')
-                        }
-                    >
-                        {saving ? '저장 중...' : `매칭 저장 (${selected.length}/${maxVotes})`}
-                    </button>
-                </div>
-            )}
+                {/* 투표중일 때만 저장 바. 하단 nav(약 5.5rem) 바로 위에 fixed 로 고정 */}
+                {canVote && (
+                    <div className="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-[480px] px-4">
+                        <button
+                            type="button"
+                            onClick={save}
+                            disabled={!dirty || saving}
+                            className={
+                                'w-full rounded-2xl py-3 text-center text-sm font-bold shadow-lg transition ' +
+                                (dirty && !saving
+                                    ? 'bg-primary text-white hover:bg-primary-600 active:scale-[0.99]'
+                                    : 'cursor-not-allowed bg-secondary-200 text-secondary-400')
+                            }
+                        >
+                            {saving ? '저장 중...' : `매칭 저장 (${selected.length}/${maxVotes})`}
+                        </button>
+                    </div>
+                )}
+            </div>
         </AppLayout>
     );
 }

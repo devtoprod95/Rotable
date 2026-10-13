@@ -61,7 +61,7 @@ function RoundSection({ round, partnerGender }) {
             <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/80 px-4 py-3">
                 <div className="flex items-center gap-2.5">
                     <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-primary px-2 text-sm font-extrabold text-white">
-                        {round.round_no}번 째 로테이션
+                        {round.is_last ? '마지막 로테이션' : `${round.round_no}번 째 로테이션`}
                     </span>
                     {/* <span className="text-base font-extrabold text-gray-800">{round.round_no}턴</span> */}
                 </div>

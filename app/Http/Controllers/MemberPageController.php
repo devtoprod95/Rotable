@@ -67,7 +67,10 @@ class MemberPageController extends Controller
         $myId        = $me->id;
         $oppositeGen = $me->gender === Member::GENDER_MALE ? Member::GENDER_FEMALE : Member::GENDER_MALE;
 
-        $rotations = $rounds->map(function (RotationRound $round) use ($eventStatus, $myId, $oppositeGen) {
+        // 테이블 수 = 마지막 로테이션 판정 기준 (round_no >= 테이블 수면 마지막).
+        $tableCount = \App\Models\RotationTable::where('event_id', $me->event_id)->count();
+
+        $rotations = $rounds->map(function (RotationRound $round) use ($eventStatus, $myId, $oppositeGen, $tableCount) {
             // 이번 턴에 내가 앉은 테이블의 좌석들.
             $myTableId = $round->seatings
                 ->firstWhere('member_id', $myId)?->rotation_table_id;
@@ -87,6 +90,7 @@ class MemberPageController extends Controller
                 'round_no' => $round->round_no,
                 'status'   => $eventStatus,
                 'partners' => $partners,
+                'is_last'  => $tableCount > 0 && $round->round_no >= $tableCount,
             ];
         });
 
@@ -109,7 +113,6 @@ class MemberPageController extends Controller
         return [
             'id'         => $member->id,
             'name'       => $member->name,
-            'phone'      => $member->phone,
             'gender'     => $member->gender,
             'birth_year' => $member->birth_year,
             'job'        => $member->job,

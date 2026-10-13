@@ -83,7 +83,7 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
                 </header>
 
                 {/* 컨텐츠 (스크롤 영역). 하단 nav 높이만큼 패딩 확보 */}
-                <main ref={mainRef} className={'flex-1 overflow-y-auto bg-gray-50 ' + (bottomNav ? 'pb-20' : '')}>
+                <main ref={mainRef} className={'flex flex-1 flex-col overflow-y-auto bg-gray-50 ' + (bottomNav ? 'pb-20' : '')}>
                     {children}
                 </main>
 

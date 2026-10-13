@@ -90,7 +90,7 @@ export default function Requests() {
         <AppLayout>
             <Head title="Rotable" />
 
-            <div className="min-h-full bg-gray-50 px-4 py-5">
+            <div className="flex min-h-full flex-1 flex-col bg-gray-50 px-4 py-5">
                 <h1 className="text-xl font-extrabold">요청하기 ✋</h1>
                 <p className="mt-1.5 text-sm text-gray-500">
                     관리자에게 궁금한 점이나 요청사항을 보내보세요.
@@ -139,17 +139,17 @@ export default function Requests() {
                 )}
 
                 {/* 내가 보낸 요청 목록 */}
-                <div className="mt-8">
+                <div className="mt-8 flex flex-1 flex-col">
                     <h2 className="text-lg font-extrabold">내 요청 내역</h2>
-                    <div className="mt-4 space-y-2.5">
-                        {list.length > 0 ? (
-                            list.map((req) => <RequestItem key={req.id} request={req} />)
-                        ) : (
-                            <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-10 text-center text-sm text-gray-400">
-                                아직 보낸 요청이 없어요.
-                            </div>
-                        )}
-                    </div>
+                    {list.length > 0 ? (
+                        <div className="mt-4 space-y-2.5">
+                            {list.map((req) => <RequestItem key={req.id} request={req} />)}
+                        </div>
+                    ) : (
+                        <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-400">
+                            아직 보낸 요청이 없어요.
+                        </div>
+                    )}
                 </div>
             </div>
         </AppLayout>

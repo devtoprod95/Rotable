@@ -124,7 +124,7 @@ export default function Home() {
         <AppLayout>
             <Head title="Rotable" />
 
-            <div className="min-h-full bg-gray-50 px-4 py-5">
+            <div className="flex min-h-full flex-col bg-gray-50 px-4 py-5">
                 {eventTitle && (
                     <div className="mb-2 flex flex-wrap items-center gap-1.5">
                         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
@@ -162,9 +162,9 @@ export default function Home() {
                     )}
                 </p>
 
-                <div className="mt-5 space-y-5">
-                    {rotations.length > 0 ? (
-                        rotations.map((round) => (
+                {rotations.length > 0 ? (
+                    <div className="mt-5 space-y-5">
+                        {rotations.map((round) => (
                             <RoundSection
                                 key={round.id}
                                 round={round}
@@ -172,13 +172,20 @@ export default function Home() {
                                 onSend={canSendMessage ? setTarget : null}
                                 sendDisabled={limitReached}
                             />
-                        ))
-                    ) : (
-                        <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-10 text-center text-sm text-gray-400">
-                            아직 로테이션 기록이 없습니다.
-                        </div>
-                    )}
-                </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="mt-5 flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-10 text-center">
+                        <p className="text-4xl">🪑</p>
+                        <p className="mt-3 text-base font-bold text-secondary-700">
+                            아직 로테이션 기록이 없어요
+                        </p>
+                        <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
+                            행사가 시작되고 자리가 배정되면<br />
+                            여기에서 만난 상대를 확인할 수 있어요.
+                        </p>
+                    </div>
+                )}
             </div>
 
             <SendModal

@@ -147,7 +147,7 @@ export default function Votes() {
         return (
             <AppLayout>
                 <Head title="Rotable" />
-                <div className="flex min-h-full items-center justify-center">
+                <div className="flex min-h-full flex-1 flex-col bg-gray-50 p-4">
                     <Placeholder
                         icon="⏳"
                         title="매칭 마감"
@@ -169,7 +169,7 @@ export default function Votes() {
         return (
             <AppLayout>
                 <Head title="Rotable" />
-                <div className="flex min-h-full items-center justify-center">
+                <div className="flex min-h-full flex-1 flex-col bg-gray-50 p-4">
                     <Placeholder
                         icon="💝"
                         title="매칭하기"
@@ -188,7 +188,7 @@ export default function Votes() {
               하단 영역 패딩: 투표중일 때만 고정 저장 바 높이만큼 확보한다.
               (하단 nav 피하기용 pb-20 은 레이아웃의 main 에 이미 적용되어 있음)
             */}
-            <div className={'flex min-h-full flex-col bg-gray-50 px-4 py-5 ' + (canVote ? 'pb-24' : '')}>
+            <div className={'flex min-h-full flex-1 flex-col bg-gray-50 px-4 py-5 ' + (canVote ? 'pb-24' : '')}>
                 <h1 className="text-xl font-extrabold">
                     {isClosed ? '매칭 결과 💘' : '매칭하기 💝'}
                 </h1>
@@ -250,7 +250,7 @@ export default function Votes() {
                     </p>
                 )}
                 {displayList.length > 0 ? (
-                    <div className={'grid grid-cols-1 gap-2.5 ' + (isClosed ? '' : 'mt-4')}>
+                    <div className={'grid flex-1 grid-cols-1 content-start gap-2.5 ' + (isClosed ? '' : 'mt-4')}>
                         {displayList.map((c) => (
                             <CandidateCard
                                 key={c.id}
@@ -266,7 +266,7 @@ export default function Votes() {
                 ) : (
                     // 종료 시에는 위의 매칭 요약/위로 안내로 충분하므로 빈 목록 문구를 띄우지 않는다.
                     !isClosed && (
-                        <div className="mt-4 rounded-2xl border border-dashed border-gray-200 bg-white py-10 text-center text-sm text-gray-400">
+                        <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-10 text-center text-sm text-gray-400">
                             선택할 수 있는 상대가 없어요.
                         </div>
                     )

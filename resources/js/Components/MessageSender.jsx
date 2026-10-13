@@ -248,7 +248,7 @@ export default function MessageSender({ partners = [], partnerGender, sendLimit,
         return (
             <section>
                 <h2 className="text-lg font-extrabold">메시지 보내기</h2>
-                <div className="mt-3 flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-12 text-center">
+                <div className="mt-3 flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-12 text-center">
                     <span className="text-4xl">🔒</span>
                     <p className="text-base font-bold text-secondary-700">지금은 메시지를 보낼 수 없어요</p>
                     <p className="text-xs leading-relaxed text-gray-500">

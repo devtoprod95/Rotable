@@ -14,8 +14,25 @@ const SMOKER_OPTIONS = [
     { id: '0', label: '비흡연' },
 ];
 
+/**
+ * 개발 편의용 자동 입력 값. (production 이 아닐 때만 사용)
+ * 회차(event_id)는 제외하고 나머지 필드만 채운다. 값은 자유롭게 커스텀하면 된다.
+ */
+const AUTOFILL = {
+    phone: '01025466499',
+    name: '김도한',
+    password: 'qqqq',
+    gender: 'M',
+    birth_year: '1995',
+    job: '개발자',
+    height: '181',
+    mbti: 'ENFP',
+    region: '강남구',
+    is_smoker: '0',
+};
+
 export default function Register() {
-    const { rounds = [], birthYears = [] } = usePage().props;
+    const { rounds = [], birthYears = [], isProduction = true } = usePage().props;
     const { data, setData, post, processing, errors } = useForm({
         event_id: '',
         phone: '',
@@ -29,6 +46,13 @@ export default function Register() {
         region: '',
         is_smoker: '',
     });
+
+    // 회차(event_id)는 유지하고 나머지 필드를 AUTOFILL 값으로 채운다.
+    function autofill() {
+        Object.entries(AUTOFILL).forEach(([key, value]) => {
+            setData(key, value);
+        });
+    }
 
     function submit(e) {
         e.preventDefault();
@@ -53,6 +77,15 @@ export default function Register() {
                     </p>
 
                     <form onSubmit={submit} className="mt-7 flex flex-col gap-4">
+                        {!isProduction && (
+                            <button
+                                type="button"
+                                onClick={autofill}
+                                className="self-end rounded-full border border-dashed border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/10"
+                            >
+                                ⚡ 자동 입력 (회차 제외)
+                            </button>
+                        )}
                         <SelectField
                             label="회차"
                             value={data.event_id}

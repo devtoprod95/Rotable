@@ -10,7 +10,7 @@ export default function RadioField({ label, value, onChange, options = [], error
                         <label
                             key={opt.id}
                             className={
-                                'flex flex-1 cursor-pointer items-center justify-center rounded-lg border px-3.5 py-3 text-base transition ' +
+                                'relative flex flex-1 cursor-pointer items-center justify-center rounded-lg border px-3.5 py-3 text-base transition ' +
                                 (selected
                                     ? 'border-primary bg-primary-50 font-semibold text-primary'
                                     : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400')
@@ -18,7 +18,7 @@ export default function RadioField({ label, value, onChange, options = [], error
                         >
                             <input
                                 type="radio"
-                                className="sr-only"
+                                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                                 checked={selected}
                                 onChange={() => onChange(opt.id)}
                             />

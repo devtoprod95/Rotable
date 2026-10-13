@@ -23,8 +23,13 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite"/>
-        <env name="DB_DATABASE" value=":memory:"/>
+        <!--
+            테스트도 .env 에 설정된 실제 DB 를 사용한다.
+            (아래 sqlite(:memory:) 강제 설정을 제거함. RefreshDatabase 를 쓰는 테스트가 없어 안전)
+            필요 시 아래 두 줄을 복구하면 다시 메모리 sqlite 로 격리된다.
+            <env name="DB_CONNECTION" value="sqlite"/>
+            <env name="DB_DATABASE" value=":memory:"/>
+        -->
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

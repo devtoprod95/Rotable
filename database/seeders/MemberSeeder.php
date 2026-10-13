@@ -28,7 +28,7 @@ class MemberSeeder extends Seeder
         }
 
         foreach ($rounds as $round) {
-            // 각 회차에 남성 5명, 여성 5명 생성.
+            // 각 회차에 남성 10명, 여성 10명 생성.
             Member::factory()
                 ->count(10)
                 ->male()

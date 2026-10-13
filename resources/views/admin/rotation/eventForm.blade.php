@@ -17,9 +17,12 @@
                 <h3 class="card-title mb-0">{{ $isEdit ? '행사 정보 수정' : '행사 생성' }}</h3>
                 <div class="d-flex gap-2">
                     @if ($isEdit)
-                        <a href="{{ route('admin.rotation.event.messages', $event->id) }}" class="btn btn-outline-primary px-4">
+                        <button type="button" id="goMatchesBtn" class="btn btn-outline-pink px-4">
+                            <i class="ti ti-heart me-1"></i> 매칭 조회
+                        </button>
+                        <button type="button" id="goMessagesBtn" class="btn btn-outline-primary px-4">
                             <i class="ti ti-messages me-1"></i> 메시지 조회
-                        </a>
+                        </button>
                     @endif
                     <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary px-4">목록</a>
                 </div>
@@ -106,6 +109,7 @@
                                         <th class="text-center">키<br>MBTI</th>
                                         <th>지역</th>
                                         <th class="text-center">흡연</th>
+                                        <th class="text-center">받은<br>투표수</th>
                                         <th class="text-center">보낸<br>메시지</th>
                                     </tr>
                                 </thead>
@@ -139,6 +143,13 @@
                                                     <span class="badge bg-red-lt">흡연</span>
                                                 @else
                                                     <span class="badge bg-green-lt">비흡연</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @if ($member->received_votes_count > 0)
+                                                    <span class="badge bg-pink-lt">{{ $member->received_votes_count }}표</span>
+                                                @else
+                                                    <span class="text-muted">0표</span>
                                                 @endif
                                             </td>
                                             <td class="text-center">
@@ -243,6 +254,16 @@
             }
         });
         @else
+        // ===== 상세: 매칭 조회 모달 =====
+        $('#goMatchesBtn').on('click', function(){
+            MatchesModal.open({{ $event->id }}, @json($event->label));
+        });
+
+        // ===== 상세: 메시지 조회 모달 =====
+        $('#goMessagesBtn').on('click', function(){
+            MessagesModal.open({{ $event->id }}, @json($event->label));
+        });
+
         // ===== 상세: 행사 정보 수정 =====
         $('.btn-update').click(async function(){
             let $f = $('#eventForm');
@@ -321,4 +342,9 @@
         @endunless
     });
 </script>
+
+@if ($isEdit)
+    @include('admin.rotation._messagesModal')
+    @include('admin.rotation._matchesModal')
+@endif
 @endsection

@@ -67,7 +67,36 @@ class RotationService
             $query->orderBy($sort['field'], $sort['dir'] ?? 'desc');
         }
 
-        return $query->paginate($size, ['*'], 'page', $page);
+        $paginator = $query->paginate($size, ['*'], 'page', $page);
+
+        // 현재 페이지 행사들의 "상호 매칭 쌍 수"를 self-join 으로 한 번에 집계해 주입한다.
+        // (A→B 와 B→A 가 모두 있으면 2번 세지므로 2로 나눈다.)
+        $eventIds = $paginator->getCollection()->pluck('id')->all();
+        $matchCounts = [];
+        if (!empty($eventIds)) {
+            $rows = DB::table('event_votes as v1')
+                ->join('event_votes as v2', function ($join) {
+                    $join->on('v1.event_id', '=', 'v2.event_id')
+                        ->on('v1.voter_id', '=', 'v2.target_id')
+                        ->on('v1.target_id', '=', 'v2.voter_id');
+                })
+                ->whereIn('v1.event_id', $eventIds)
+                ->groupBy('v1.event_id')
+                ->selectRaw('v1.event_id as event_id, COUNT(*) as cnt')
+                ->get();
+
+            foreach ($rows as $row) {
+                $matchCounts[(int) $row->event_id] = (int) ($row->cnt / 2);
+            }
+        }
+
+        $paginator->getCollection()->transform(function (EventRound $event) use ($matchCounts) {
+            $event->match_count = $matchCounts[$event->id] ?? 0;
+
+            return $event;
+        });
+
+        return $paginator;
     }
 
     /**
@@ -172,7 +201,13 @@ class RotationService
     {
         return EventRound::with([
             'rotationTables' => fn ($q) => $q->orderBy('table_no'),
-            'members'        => fn ($q) => $q->withCount('sentMessages')->orderBy('name'),
+            'members'        => fn ($q) => $q
+                ->withCount([
+                    'sentMessages',
+                    // 받은 투표수는 해당 행사(event_id) 범위로 제한.
+                    'receivedVotes as received_votes_count' => fn ($vq) => $vq->where('event_id', $eventId),
+                ])
+                ->orderBy('name'),
         ])->find($eventId);
     }
 
@@ -241,6 +276,69 @@ class RotationService
         }
 
         return $query->paginate($size, ['*'], 'page', $page);
+    }
+
+    /* ======================================================================
+     | 매칭 (투표 기반 상호 매칭 조회)
+     * ==================================================================== */
+
+    /**
+     * 특정 행사의 투표 목록. (쌍방 여부와 무관하게 "누가 누구를 선택했는지" 모두 표기)
+     * 상대도 나를 선택한 경우 is_mutual=true 로 표시한다.
+     *
+     * @return array<int, array{
+     *     id: int,
+     *     voter: array{id:int, name:?string, gender:?string, phone:?string},
+     *     target: array{id:int, name:?string, gender:?string, phone:?string},
+     *     is_mutual: bool,
+     *     voted_at: ?string
+     * }>
+     */
+    public function matchList(int $eventId): array
+    {
+        $votes = Vote::query()
+            ->with(['voter:id,name,gender,phone', 'target:id,name,gender,phone'])
+            ->where('event_id', $eventId)
+            ->orderByDesc('id')
+            ->get();
+
+        // 상호 지목 판정용 맵 (voter_id => [target_id => true]).
+        $votedMap = [];
+        foreach ($votes as $vote) {
+            $votedMap[$vote->voter_id][$vote->target_id] = true;
+        }
+
+        $rows = $votes->map(function (Vote $vote) use ($votedMap) {
+            $isMutual = isset($votedMap[$vote->target_id][$vote->voter_id]);
+
+            return [
+                'id'    => $vote->id,
+                'voter' => [
+                    'id'     => (int) $vote->voter_id,
+                    'name'   => $vote->voter?->name,
+                    'gender' => $vote->voter?->gender,
+                    'phone'  => $vote->voter?->phone,
+                ],
+                'target' => [
+                    'id'     => (int) $vote->target_id,
+                    'name'   => $vote->target?->name,
+                    'gender' => $vote->target?->gender,
+                    'phone'  => $vote->target?->phone,
+                ],
+                'is_mutual' => $isMutual,
+                'voted_at'  => $vote->created_at?->toIso8601String(),
+            ];
+        })->all();
+
+        // 상호 매칭된 건을 먼저, 그다음 최신 투표순으로 정렬한다. (페이지네이션 없이 전부 반환)
+        usort($rows, function ($a, $b) {
+            if ($a['is_mutual'] !== $b['is_mutual']) {
+                return $b['is_mutual'] <=> $a['is_mutual']; // 상호 매칭(true) 먼저
+            }
+            return ($b['voted_at'] ?? '') <=> ($a['voted_at'] ?? ''); // 최신순
+        });
+
+        return $rows;
     }
 
     /* ======================================================================

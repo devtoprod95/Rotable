@@ -222,8 +222,9 @@ function VoteIcon() {
 function RequestIcon() {
     return (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14" />
-            <path d="M5 12h14" />
+            <path d="M3 11v2a1 1 0 0 0 1 1h2l4 4V6L6 10H4a1 1 0 0 0-1 1z" />
+            <path d="M14 7a5 5 0 0 1 0 10" />
+            <path d="M7 18v2a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1v-2" />
         </svg>
     );
 }

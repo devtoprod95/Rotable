@@ -8,6 +8,12 @@
     $reqListUrl = route('admin.requests.list');
     $reqReadBase = url('admin/requests');
     $reqReadAllUrl = route('admin.requests.readAll');
+    $rmReverb = [
+        'key'    => config('broadcasting.connections.reverb.key'),
+        'host'   => env('VITE_REVERB_HOST', env('REVERB_HOST')),
+        'port'   => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 443)),
+        'scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', 'https')),
+    ];
 @endphp
 
 <div class="modal modal-blur fade" id="requestsModal" tabindex="-1" aria-hidden="true">
@@ -15,7 +21,12 @@
         <div class="modal-content">
             <div class="modal-header py-3 px-4 align-items-start">
                 <div>
-                    <h5 class="modal-title mb-0">회원 요청</h5>
+                    <h5 class="modal-title mb-0">
+                        회원 요청
+                        <span id="rm-liveBadge" class="badge bg-secondary-lt ms-1" title="실시간 연결 상태">
+                            <i class="ti ti-circle-filled me-1 text-muted" style="font-size:0.6em;"></i>대기
+                        </span>
+                    </h5>
                     <small class="text-muted" id="rm-eventLabel"></small>
                 </div>
                 <button type="button" class="btn-close mt-1" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -63,12 +74,15 @@
         var listUrl  = @json($reqListUrl);
         var readBase = @json($reqReadBase);
         var readAllUrl = @json($reqReadAllUrl);
+        var reverbCfg = @json($rmReverb);
 
         var table = null;
         var currentEventId = null;
         var modalEl = null;
         var bsModal = null;
         var isOpen = false;
+        var realtimeStarted = false;   // Reverb 연결은 최초 1회만 수행
+        var $live = null;
 
         function genderBadge(g){
             if(g === 'F'){ return '<span class="badge bg-pink-lt">여</span>'; }
@@ -85,6 +99,48 @@
         }
 
         function reload(){ if(table){ table.setData(listUrl, filters()); } }
+
+        // 실시간 연결 상태 뱃지 토글 (위젯과 동일 패턴).
+        function setLive(state){
+            if(!$live){ $live = $('#rm-liveBadge'); }
+            if(state === 'on'){ $live.removeClass('bg-secondary-lt bg-red-lt').addClass('bg-green-lt').html('<i class="ti ti-circle-filled me-1 text-green" style="font-size:0.6em;"></i>실시간 연결됨'); }
+            else if(state === 'off'){ $live.removeClass('bg-secondary-lt bg-green-lt').addClass('bg-red-lt').html('<i class="ti ti-circle-filled me-1 text-red" style="font-size:0.6em;"></i>끊김'); }
+            else { $live.removeClass('bg-green-lt bg-red-lt').addClass('bg-secondary-lt').html('<i class="ti ti-circle-filled me-1 text-muted" style="font-size:0.6em;"></i>대기'); }
+        }
+
+        // Reverb(Pusher 프로토콜) 'admin-requests' 공개 채널 구독.
+        // 연결 상태를 뱃지에 반영하고, 현재 열람 중인 행사의 새 요청이 오면 테이블을 갱신한다.
+        function initRealtime(){
+            if(realtimeStarted){ return; }
+            realtimeStarted = true;
+            if(typeof Pusher === 'undefined' || !reverbCfg.key || !reverbCfg.host){ setLive('off'); return; }
+            try {
+                var pusher = new Pusher(reverbCfg.key, {
+                    wsHost: reverbCfg.host,
+                    wsPort: reverbCfg.port || 80,
+                    wssPort: reverbCfg.port || 443,
+                    forceTLS: reverbCfg.scheme === 'https',
+                    enabledTransports: ['ws', 'wss'],
+                    disableStats: true,
+                    cluster: '',
+                });
+                pusher.connection.bind('connected', function(){ setLive('on'); });
+                pusher.connection.bind('disconnected', function(){ setLive('off'); });
+                pusher.connection.bind('unavailable', function(){ setLive('off'); });
+                pusher.connection.bind('error', function(){ setLive('off'); });
+
+                var channel = pusher.subscribe('admin-requests');
+                channel.bind('request.sent', function(d){
+                    // 모달이 열려 있고, 수신 요청이 현재 열람 중인 행사와 같을 때만 갱신.
+                    if(isOpen && d && (!currentEventId || String(d.event_id) === String(currentEventId))){
+                        reload();
+                    }
+                });
+            } catch(e){
+                console.error('요청 모달 Reverb 연결 실패:', e);
+                setLive('off');
+            }
+        }
 
         function fn_read(id){
             $.ajax({
@@ -192,6 +248,8 @@
 
                 bsModal.show();
                 isOpen = true;
+
+                initRealtime();   // 최초 1회 Reverb 연결
 
                 setTimeout(function(){
                     if(!table){ buildTable(); }

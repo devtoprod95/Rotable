@@ -42,9 +42,10 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $member ? [
-                    'id'    => $member->id,
-                    'name'  => $member->name,
-                    'phone' => $member->phone,
+                    'id'     => $member->id,
+                    'name'   => $member->name,
+                    'phone'  => $member->phone,
+                    'gender' => $member->gender,
                 ] : null,
             ],
             // 하단 nav 메시지함 뱃지용 - 나에게 온 안읽은 메시지 개수.

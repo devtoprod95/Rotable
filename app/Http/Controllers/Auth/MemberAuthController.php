@@ -46,7 +46,7 @@ class MemberAuthController extends Controller
     }
 
     /**
-     * 핸드폰번호에서 하이픈/공백 등 숫자가 아닌 문자를 모두 제거한다.
+     * 핸드폰 번호에서 하이픈/공백 등 숫자가 아닌 문자를 모두 제거한다.
      */
     private function normalizePhone(?string $phone): string
     {
@@ -126,9 +126,9 @@ class MemberAuthController extends Controller
         ], [
             'event_id.required'   => '회차를 선택해주세요.',
             'event_id.exists'     => '선택한 회차가 올바르지 않습니다.',
-            'phone.required'      => '핸드폰번호를 입력해주세요.',
-            'phone.regex'         => '핸드폰번호는 010으로 시작하는 11자리 숫자여야 합니다.',
-            'phone.unique'        => '해당 회차에 이미 등록된 핸드폰번호입니다.',
+            'phone.required'      => '핸드폰 번호를 입력해주세요.',
+            'phone.regex'         => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
+            'phone.unique'        => '해당 회차에 이미 등록된 핸드폰 번호입니다.',
             'name.required'       => '닉네임을 입력해주세요.',
             'password.required'   => '비밀번호를 입력해주세요.',
             'password.min'        => '비밀번호는 최소 4자 이상이어야 합니다.',
@@ -176,8 +176,8 @@ class MemberAuthController extends Controller
     }
 
     /**
-     * 입장 처리. 회차 + 핸드폰번호 + 비밀번호로 인증한다.
-     * (핸드폰번호는 회차별로 중복될 수 있으므로 회차가 인증 조건에 포함된다.)
+     * 입장 처리. 회차 + 핸드폰 번호 + 비밀번호로 인증한다.
+     * (핸드폰 번호는 회차별로 중복될 수 있으므로 회차가 인증 조건에 포함된다.)
      */
     public function login(Request $request): RedirectResponse
     {
@@ -191,8 +191,8 @@ class MemberAuthController extends Controller
         ], [
             'event_id.required' => '회차를 선택해주세요.',
             'event_id.exists'   => '선택한 회차가 올바르지 않습니다.',
-            'phone.required'    => '핸드폰번호를 입력해주세요.',
-            'phone.regex'       => '핸드폰번호는 010으로 시작하는 11자리 숫자여야 합니다.',
+            'phone.required'    => '핸드폰 번호를 입력해주세요.',
+            'phone.regex'       => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'password.required' => '비밀번호를 입력해주세요.',
         ]);
 
@@ -204,7 +204,7 @@ class MemberAuthController extends Controller
 
         if ($member === null || ! hash_equals($member->password, $validated['password'])) {
             throw ValidationException::withMessages([
-                'phone' => '회차, 핸드폰번호 또는 비밀번호가 일치하지 않습니다.',
+                'phone' => '회차, 핸드폰 번호 또는 비밀번호가 일치하지 않습니다.',
             ]);
         }
 

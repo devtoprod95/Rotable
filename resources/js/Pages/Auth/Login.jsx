@@ -21,12 +21,16 @@ export default function Login() {
             <Head title="입장" />
             <div className="flex min-h-full items-center justify-center bg-secondary-50 p-6">
                 <div className="w-full max-w-md rounded-3xl border border-secondary-100 bg-white p-8 shadow-2xl shadow-black/5 sm:p-10">
-                    <Link href="/" className="block text-center text-xl font-extrabold tracking-wide text-primary">
-                        Rotable
-                    </Link>
-                    <h1 className="mt-4 text-center text-2xl font-extrabold text-secondary-800">입장</h1>
+                    <div className="flex items-center justify-center gap-3">
+                        <Link href="/" className="flex items-center gap-2">
+                            <img src="/images/logo.png" alt="Rotable" className="h-11 w-11 object-contain" />
+                            <span className="font-logo text-3xl leading-none tracking-wide text-black translate-y-[2px]">Rotable</span>
+                        </Link>
+                        <span className="h-7 w-px bg-secondary-200"></span>
+                        <h1 className="text-2xl font-extrabold text-secondary-800">입장</h1>
+                    </div>
                     <p className="mt-1.5 text-center text-sm text-secondary-400">
-                        회차를 선택하고 핸드폰번호와 비밀번호를 입력해주세요.
+                        회차를 선택하고 핸드폰 번호와 비밀번호를 입력해주세요.
                     </p>
 
                     <form onSubmit={submit} className="mt-7 flex flex-col gap-4">
@@ -40,7 +44,7 @@ export default function Login() {
                             autoFocus
                         />
                         <TextField
-                            label="핸드폰번호"
+                            label="핸드폰 번호"
                             type="tel"
                             value={data.phone}
                             onChange={(v) => setData('phone', v)}

@@ -2,15 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm } from '@inertiajs/react';
 
-function ageText(birthYear) {
+function birthYearText(birthYear) {
     if (!birthYear) return null;
-    const now = new Date().getFullYear();
-    return `${now - birthYear + 1}세`;
+    return `${String(birthYear).slice(-2)}년생`;
 }
 
 function memberSpecs(member) {
     return [
-        ageText(member.birth_year),
+        birthYearText(member.birth_year),
         member.job,
         member.height ? `${member.height}cm` : null,
         member.mbti,
@@ -42,7 +41,7 @@ function PartnerRow({ member, tone, onSelect, disabled }) {
                 {specs.map((s, i) => (
                     <span
                         key={i}
-                        className="rounded-md bg-white/70 px-1.5 py-0.5 text-[11px] font-medium text-gray-600"
+                        className="rounded-md border border-secondary-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-600"
                     >
                         {s}
                     </span>
@@ -246,23 +245,23 @@ export default function MessageSender({ partners = [], partnerGender, sendLimit,
 
     return (
         <section>
-            <div className="flex items-end justify-between">
-                <div>
+            <div>
+                <div className="flex items-center justify-between gap-2">
                     <h2 className="text-lg font-extrabold">메시지 보내기</h2>
-                    <p className="mt-1.5 text-sm text-gray-500">
-                        마음에 드는 상대에게 익명으로 메시지를 전달해보세요.
-                    </p>
+                    {sendLimit && (
+                        <span
+                            className={
+                                'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ' +
+                                (limitReached ? 'bg-gray-100 text-gray-400' : 'bg-primary/10 text-primary')
+                            }
+                        >
+                            남은 전송 횟수 {remaining}/{sendLimit.max}회
+                        </span>
+                    )}
                 </div>
-                {sendLimit && (
-                    <span
-                        className={
-                            'shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ' +
-                            (limitReached ? 'bg-gray-100 text-gray-400' : 'bg-primary/10 text-primary')
-                        }
-                    >
-                        남은 전송 횟수 {remaining}/{sendLimit.max}회
-                    </span>
-                )}
+                <p className="mt-1.5 text-sm text-gray-500">
+                    마음에 드는 상대에게 익명으로 메시지를 전달해보세요.
+                </p>
             </div>
 
             {limitReached && (

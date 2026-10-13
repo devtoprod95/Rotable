@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Lilita+One&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css');
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -5,8 +7,11 @@
 @source '../js/**/*.jsx';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Pretendard Variable', Pretendard, 'Instrument Sans', ui-sans-serif, system-ui, sans-serif,
+        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    /* 브랜드 로고 전용 폰트 (Lilita One) */
+    --font-logo: 'Lilita One', system-ui, sans-serif;
 
     /* ===== 기본(primary) 컬러 - 로고 코랄/핑크 (딥 톤) ===== */
     --color-primary-50: #fdeef0;

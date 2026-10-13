@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useRealtimeChat from '@/useRealtimeChat';
 import NavigationLoader from '@/Components/NavigationLoader';
 
@@ -10,7 +10,15 @@ import NavigationLoader from '@/Components/NavigationLoader';
  * - 하단 nav: 4개 버튼, 스크롤해도 고정(플로팅)
  */
 export default function AppLayout({ children, bottomNav = true, headerAction = true }) {
-    const { auth, bypassRedirectName, isProduction } = usePage().props;
+    const page = usePage();
+    const { auth, bypassRedirectName, isProduction } = page.props;
+    const url = page.url;
+    const mainRef = useRef(null);
+
+    // 페이지(라우트)가 바뀌면 스크롤 영역을 항상 최상단으로 되돌린다.
+    useEffect(() => {
+        mainRef.current?.scrollTo({ top: 0 });
+    }, [url]);
 
     return (
         <div className="flex min-h-screen justify-center bg-secondary-100 font-sans">
@@ -26,22 +34,35 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
                             alt="Rotable"
                             className="h-9 w-9 object-contain"
                         />
-                        <span className="text-lg font-extrabold tracking-wide text-primary">Rotable</span>
+                        <span className="font-logo text-xl leading-none tracking-wide text-black translate-y-[1px]">Rotable</span>
                     </Link>
 
                     {headerAction && (
                         <div className="flex items-center">
                             {auth?.user ? (
-                                <button
-                                    onClick={() => {
-                                        if (auth.user.name === bypassRedirectName || !isProduction) {
-                                            router.post('/logout');
-                                        }
-                                    }}
-                                    className="text-sm font-medium text-secondary-600 transition hover:text-primary"
-                                >
-                                    {auth.user.name}님
-                                </button>
+                                (() => {
+                                    const isFemale = auth.user.gender === 'F';
+                                    const toneCls = isFemale
+                                        ? 'border-rose-200 bg-rose-50 text-rose-600'
+                                        : 'border-sky-200 bg-sky-50 text-sky-600';
+                                    return (
+                                        <button
+                                            onClick={() => {
+                                                if (auth.user.name === bypassRedirectName || !isProduction) {
+                                                    router.post('/logout');
+                                                }
+                                            }}
+                                            className={
+                                                'flex items-center gap-1.5 rounded-full border px-3 py-1 shadow-sm transition hover:shadow active:scale-95 ' +
+                                                toneCls
+                                            }
+                                        >
+                                            <span className="text-base leading-none">{isFemale ? '👩' : '👨'}</span>
+                                            <span className="text-sm font-bold tracking-tight">{auth.user.name}</span>
+                                            <span className="text-xs font-medium opacity-70">님</span>
+                                        </button>
+                                    );
+                                })()
                             ) : (
                                 <Link
                                     href="/login"
@@ -55,7 +76,7 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
                 </header>
 
                 {/* 컨텐츠 (스크롤 영역). 하단 nav 높이만큼 패딩 확보 */}
-                <main className={'flex-1 overflow-y-auto ' + (bottomNav ? 'pb-20' : '')}>
+                <main ref={mainRef} className={'flex-1 overflow-y-auto ' + (bottomNav ? 'pb-20' : '')}>
                     {children}
                 </main>
 
@@ -67,7 +88,7 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
 }
 
 const NAV_ITEMS = [
-    { href: '/home', label: '기록', icon: ListIcon },
+    { href: '/home', label: '홈', icon: HeartIcon },
     { href: '/chats', label: '메시지함', icon: ChatIcon },
     { href: '/votes', label: '투표하기', icon: VoteIcon },
     { href: '/requests', label: '요청하기', icon: RequestIcon },
@@ -119,7 +140,6 @@ function BottomNav() {
                                 }
                             }}
                             aria-current={active ? 'page' : undefined}
-                            preserveScroll
                             className={
                                 'relative flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition ' +
                                 (active
@@ -165,7 +185,7 @@ function FlashToast() {
 
     return (
         <div className="pointer-events-none fixed inset-x-0 top-header z-50 mx-auto mt-3 flex w-full max-w-[480px] justify-center px-4">
-            <div className={`pointer-events-auto rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg ${cls}`}>
+            <div className={`pointer-events-auto rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-lg ${cls}`}>
                 {toast.message}
             </div>
         </div>
@@ -174,15 +194,10 @@ function FlashToast() {
 
 /* ---- 아이콘 (currentColor 사용) ---- */
 
-function ListIcon() {
+function HeartIcon() {
     return (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="8" y1="6" x2="21" y2="6" />
-            <line x1="8" y1="12" x2="21" y2="12" />
-            <line x1="8" y1="18" x2="21" y2="18" />
-            <line x1="3" y1="6" x2="3.01" y2="6" />
-            <line x1="3" y1="12" x2="3.01" y2="12" />
-            <line x1="3" y1="18" x2="3.01" y2="18" />
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
         </svg>
     );
 }

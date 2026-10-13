@@ -4,21 +4,20 @@ import AppLayout from '@/Layouts/AppLayout';
 import { SendModal } from '@/Components/MessageSender';
 
 const ROUND_STATUS = {
-    P: { label: '대기', cls: 'bg-secondary-100 text-secondary-600' },
+    P: { label: '대기', cls: 'bg-amber-100 text-amber-700' },
     S: { label: '진행중', cls: 'bg-green-100 text-green-700' },
-    X: { label: '종료', cls: 'bg-gray-100 text-gray-500' },
+    X: { label: '종료', cls: 'bg-secondary-700 text-white' },
 };
 
-function ageText(birthYear) {
+function birthYearText(birthYear) {
     if (!birthYear) return null;
-    const now = new Date().getFullYear();
-    return `${now - birthYear + 1}세`;
+    return `${String(birthYear).slice(-2)}년생`;
 }
 
 /** 한 명의 회원 칩 (members 전체 정보 노출) */
 function MemberChip({ member, tone, onSend, sendDisabled }) {
     const specs = [
-        ageText(member.birth_year),
+        birthYearText(member.birth_year),
         member.job,
         member.height ? `${member.height}cm` : null,
         member.mbti,
@@ -51,7 +50,7 @@ function MemberChip({ member, tone, onSend, sendDisabled }) {
                 {specs.map((s, i) => (
                     <span
                         key={i}
-                        className="rounded-md bg-white/70 px-1.5 py-0.5 text-[11px] font-medium text-gray-600"
+                        className="rounded-md border border-secondary-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-600"
                     >
                         {s}
                     </span>
@@ -137,7 +136,7 @@ export default function Home() {
                             </span>
                         )}
                         {eventTime && (
-                            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-secondary-100 px-2.5 py-1 text-xs font-semibold text-secondary-700">
                                 <span>🗓️</span>
                                 {eventTime}
                             </span>
@@ -151,7 +150,7 @@ export default function Home() {
                     만난 상대 카드의 <b className="text-primary">💌 전달</b> 버튼으로 익명 메시지를 보낼 수 있어요.
                     {sendLimit && (
                         <span className="ml-1 font-semibold text-gray-600">
-                            (남은 전송 횟수 {remaining}/{sendLimit.max}회)
+                            <br></br>(남은 전송 횟수 {remaining}/{sendLimit.max}회)
                         </span>
                     )}
                 </p>

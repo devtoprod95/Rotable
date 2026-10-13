@@ -145,9 +145,9 @@ export default function Votes() {
     // 매칭중(V)이지만 마감 시각이 지나 투표만 닫힌 '결과 집계 대기' 상태
     if (votingEnded) {
         return (
-            <AppLayout>
+            <AppLayout center>
                 <Head title="Rotable" />
-                <div className="flex min-h-full flex-1 flex-col bg-gray-50 p-4">
+                <div className="flex w-full flex-col bg-gray-50 p-4">
                     <Placeholder
                         icon="⏳"
                         title="매칭 마감"
@@ -167,9 +167,9 @@ export default function Votes() {
     // 매칭 투표가 아직 열리지 않은 상태(대기/진행)
     if (!canVote && !isClosed) {
         return (
-            <AppLayout>
+            <AppLayout center>
                 <Head title="Rotable" />
-                <div className="flex min-h-full flex-1 flex-col bg-gray-50 p-4">
+                <div className="flex w-full flex-col bg-gray-50 p-4">
                     <Placeholder
                         icon="💝"
                         title="매칭하기"

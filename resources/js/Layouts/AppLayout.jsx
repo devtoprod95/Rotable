@@ -13,6 +13,7 @@ export default function AppLayout({
     children,
     bottomNav = true,
     headerAction = true,
+    center = false,
 }) {
     const page = usePage();
     const { auth, bypassRedirectName, isProduction, eventName } = page.props;
@@ -27,7 +28,7 @@ export default function AppLayout({
         <div className="min-h-screen bg-secondary-100 font-sans">
             {/* 모바일 프레임. 뷰포트 높이를 고정하지 않고 body(페이지)가 스크롤되게 둔다.
                 header/nav 는 position:fixed 로 뷰포트에 고정 → 모바일 Chrome 주소창/툴바 변화와 무관하게 항상 고정. */}
-            <div className="relative mx-auto min-h-screen w-full max-w-[480px] bg-gray-50 shadow-xl">
+            <div className="relative mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-gray-50 shadow-xl">
                 <FlashToast />
                 <NavigationLoader />
 
@@ -112,10 +113,11 @@ export default function AppLayout({
                     (상단: header 높이 + safe-area-top / 하단: nav 높이 + safe-area-bottom) */}
                 <main
                     className={
-                        "flex min-h-screen flex-col bg-gray-50 pt-[calc(var(--spacing-header)+env(safe-area-inset-top))] " +
+                        "flex flex-col bg-gray-50 pt-[calc(var(--spacing-header)+env(safe-area-inset-top))] " +
                         (bottomNav
-                            ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))]"
-                            : "")
+                            ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] "
+                            : "") +
+                        (center ? "min-h-dvh justify-center" : "")
                     }
                 >
                     {children}

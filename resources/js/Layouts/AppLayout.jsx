@@ -1,4 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
+import useRealtimeChat from '@/useRealtimeChat';
+import NavigationLoader from '@/Components/NavigationLoader';
 
 /**
  * 유저(회원) 영역 공통 모바일 레이아웃.
@@ -13,6 +16,8 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
         <div className="flex min-h-screen justify-center bg-secondary-100 font-sans">
             {/* 모바일 프레임 */}
             <div className="relative flex min-h-screen w-full max-w-[480px] flex-col bg-white shadow-xl">
+                <FlashToast />
+                <NavigationLoader />
                 {/* 상단 nav (고정) */}
                 <header className="sticky top-0 z-20 flex h-header items-center justify-between border-b border-secondary-100 bg-white/95 px-4 backdrop-blur">
                     <Link href="/" className="flex items-center gap-2">
@@ -63,13 +68,38 @@ export default function AppLayout({ children, bottomNav = true, headerAction = t
 
 const NAV_ITEMS = [
     { href: '/home', label: '기록', icon: ListIcon },
-    { href: '/chats', label: '채팅함', icon: ChatIcon },
+    { href: '/chats', label: '메시지함', icon: ChatIcon },
     { href: '/votes', label: '투표하기', icon: VoteIcon },
     { href: '/requests', label: '요청하기', icon: RequestIcon },
 ];
 
 function BottomNav() {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const sharedUnread = props.unreadCount ?? 0;
+    const memberId = props.auth?.user?.id ?? null;
+
+    // 서버에서 내려온 안읽음 수를 기준으로, 소켓 수신 시 실시간 증가시킨다.
+    const [unreadCount, setUnreadCount] = useState(sharedUnread);
+    const onChatsPage = url.startsWith('/chats');
+
+    // 페이지 이동(Inertia)으로 shared prop 이 갱신되면 동기화.
+    useEffect(() => {
+        setUnreadCount(sharedUnread);
+    }, [sharedUnread]);
+
+    // 메시지함 화면에 있으면 뱃지는 0으로 유지.
+    useEffect(() => {
+        if (onChatsPage) {
+            setUnreadCount(0);
+        }
+    }, [onChatsPage]);
+
+    // 소켓으로 새 메시지가 오면, 메시지함 밖일 때만 뱃지를 올린다.
+    useRealtimeChat(memberId, () => {
+        if (!onChatsPage) {
+            setUnreadCount((n) => n + 1);
+        }
+    });
 
     return (
         <nav className="pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-[480px] justify-center pb-3">
@@ -77,22 +107,68 @@ function BottomNav() {
                 {NAV_ITEMS.map((item) => {
                     const active = url.startsWith(item.href);
                     const Icon = item.icon;
+                    const badge = item.href === '/chats' ? unreadCount : 0;
                     return (
                         <Link
                             key={item.href}
                             href={item.href}
+                            // 이미 active 인 탭을 다시 누르면 아무 동작도 하지 않는다.
+                            onClick={(e) => {
+                                if (active) {
+                                    e.preventDefault();
+                                }
+                            }}
+                            aria-current={active ? 'page' : undefined}
+                            preserveScroll
                             className={
-                                'flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition ' +
-                                (active ? 'text-primary' : 'text-secondary-400 hover:text-secondary-600')
+                                'relative flex flex-1 flex-col items-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition ' +
+                                (active
+                                    ? 'cursor-default text-primary'
+                                    : 'text-secondary-400 hover:text-secondary-600')
                             }
                         >
-                            <Icon active={active} />
+                            <span className="relative">
+                                <Icon active={active} />
+                                {badge > 0 && (
+                                    <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-white">
+                                        {badge > 99 ? '99+' : badge}
+                                    </span>
+                                )}
+                            </span>
                             {item.label}
                         </Link>
                     );
                 })}
             </div>
         </nav>
+    );
+}
+
+/**
+ * 전역 flash 토스트. 모든 회원 페이지에서 success/error flash 를 상단에 잠깐 노출한다.
+ */
+function FlashToast() {
+    const { flash } = usePage().props;
+    const [toast, setToast] = useState(null);
+
+    useEffect(() => {
+        const message = flash?.success || flash?.error;
+        if (!message) return undefined;
+        setToast({ message, type: flash?.error ? 'error' : 'success' });
+        const timer = setTimeout(() => setToast(null), 2500);
+        return () => clearTimeout(timer);
+    }, [flash?.success, flash?.error]);
+
+    if (!toast) return null;
+
+    const cls = toast.type === 'error' ? 'bg-red-500' : 'bg-primary';
+
+    return (
+        <div className="pointer-events-none fixed inset-x-0 top-header z-50 mx-auto mt-3 flex w-full max-w-[480px] justify-center px-4">
+            <div className={`pointer-events-auto rounded-full px-4 py-2 text-sm font-semibold text-white shadow-lg ${cls}`}>
+                {toast.message}
+            </div>
+        </div>
     );
 }
 

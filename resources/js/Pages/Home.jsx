@@ -1,5 +1,7 @@
 import { Head, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
+import { SendModal } from '@/Components/MessageSender';
 
 const ROUND_STATUS = {
     P: { label: '대기', cls: 'bg-secondary-100 text-secondary-600' },
@@ -14,7 +16,7 @@ function ageText(birthYear) {
 }
 
 /** 한 명의 회원 칩 (members 전체 정보 노출) */
-function MemberChip({ member, tone }) {
+function MemberChip({ member, tone, onSend, sendDisabled }) {
     const specs = [
         ageText(member.birth_year),
         member.job,
@@ -34,6 +36,16 @@ function MemberChip({ member, tone }) {
             <div className="flex items-center gap-2">
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
                 <span className="font-bold">{member.name}</span>
+                {onSend && (
+                    <button
+                        type="button"
+                        onClick={() => onSend(member)}
+                        disabled={sendDisabled}
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[11px] font-bold text-white transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                        💌 전달
+                    </button>
+                )}
             </div>
             <div className="mt-1.5 flex flex-wrap gap-1">
                 {specs.map((s, i) => (
@@ -50,7 +62,7 @@ function MemberChip({ member, tone }) {
 }
 
 /** 로테이션 턴 섹션: 이 턴에 만난 상대들을 카드 그룹으로 표시 */
-function RoundSection({ round, partnerGender }) {
+function RoundSection({ round, partnerGender, onSend, sendDisabled }) {
     const status = ROUND_STATUS[round.status] ?? ROUND_STATUS.P;
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const partners = round.partners ?? [];
@@ -78,9 +90,15 @@ function RoundSection({ round, partnerGender }) {
             {/* 턴 본문 */}
             <div className="p-3">
                 {partners.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 gap-2.5">
                         {partners.map((m) => (
-                            <MemberChip key={m.id} member={m} tone={tone} />
+                            <MemberChip
+                                key={m.id}
+                                member={m}
+                                tone={tone}
+                                onSend={onSend}
+                                sendDisabled={sendDisabled}
+                            />
                         ))}
                     </div>
                 ) : (
@@ -94,7 +112,13 @@ function RoundSection({ round, partnerGender }) {
 }
 
 export default function Home() {
-    const { auth, rotations = [], partnerGender, eventTitle, eventTime, eventStatus } = usePage().props;
+    const { auth, rotations = [], partnerGender, sendLimit, eventTitle, eventTime, eventStatus } = usePage().props;
+
+    const tone = partnerGender === 'F' ? 'female' : 'male';
+    const remaining = sendLimit?.remaining ?? null;
+    const limitReached = typeof remaining === 'number' && remaining <= 0;
+
+    const [target, setTarget] = useState(null);
 
     return (
         <AppLayout>
@@ -124,12 +148,25 @@ export default function Home() {
                     {auth?.user?.name}님, 로테이션 기록표예요 👋
                 </h1>
                 <p className="mt-1.5 text-sm text-gray-500">
-                    로테이션마다 어느 테이블에서 누구와 만났는지 확인할 수 있어요.
+                    만난 상대 카드의 <b className="text-primary">💌 전달</b> 버튼으로 익명 메시지를 보낼 수 있어요.
+                    {sendLimit && (
+                        <span className="ml-1 font-semibold text-gray-600">
+                            (남은 전송 횟수 {remaining}/{sendLimit.max}회)
+                        </span>
+                    )}
                 </p>
 
                 <div className="mt-5 space-y-5">
                     {rotations.length > 0 ? (
-                        rotations.map((round) => <RoundSection key={round.id} round={round} partnerGender={partnerGender} />)
+                        rotations.map((round) => (
+                            <RoundSection
+                                key={round.id}
+                                round={round}
+                                partnerGender={partnerGender}
+                                onSend={setTarget}
+                                sendDisabled={limitReached}
+                            />
+                        ))
                     ) : (
                         <div className="rounded-2xl border border-dashed border-gray-200 bg-white py-10 text-center text-sm text-gray-400">
                             아직 로테이션 기록이 없습니다.
@@ -137,6 +174,13 @@ export default function Home() {
                     )}
                 </div>
             </div>
+
+            <SendModal
+                target={target}
+                tone={tone}
+                remaining={remaining}
+                onClose={() => setTarget(null)}
+            />
         </AppLayout>
     );
 }

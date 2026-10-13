@@ -56,6 +56,28 @@ services:
     networks:
       - rotable-network
 
+  # Laravel Reverb (WebSocket) 서버. php 이미지를 재사용해 reverb:start 데몬만 실행한다.
+  # 컨테이너 내부는 기본 포트 8080 사용, 호스트에는 9997 로 공개한다.
+  # 기본 entrypoint(php-fpm 고정)를 덮어써서 reverb 를 직접 띄운다.
+  reverb:
+    build: ./docker
+    container_name: rotable-reverb
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    entrypoint: ["php", "artisan", "reverb:start", "--host=0.0.0.0", "--port=8080"]
+    ports:
+      - "${REVERB_HOST_PORT:-9997}:8080"
+    environment:
+      - TZ=Asia/Seoul
+    volumes:
+      - ./docker/php.ini:/usr/local/etc/php/php.ini
+      - .:/var/www/html
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - rotable-network
+
 volumes:
   redis_data:
 

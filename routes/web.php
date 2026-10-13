@@ -27,6 +27,8 @@ Route::middleware(RedirectIfRegistered::class)->group(function () {
 Route::middleware('auth:web')->group(function () {
     Route::get('/home', [MemberPageController::class, 'home'])->name('home');
     Route::get('/chats', [MemberPageController::class, 'chats'])->name('chats');
+    Route::post('/chats/messages', [MemberPageController::class, 'sendMessage'])->name('chats.messages.send');
+    Route::post('/chats/messages/read', [MemberPageController::class, 'markMessagesRead'])->name('chats.messages.read');
     Route::get('/votes', [MemberPageController::class, 'votes'])->name('votes');
     Route::get('/requests', [MemberPageController::class, 'requests'])->name('requests');
     Route::post('/logout', [MemberAuthController::class, 'logout'])->name('member.logout');

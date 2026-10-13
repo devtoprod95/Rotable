@@ -35,8 +35,8 @@ export default function Login() {
     return (
         <AppLayout bottomNav={false} headerAction={false}>
             <Head title="Rotable" />
-            <div className="flex min-h-full items-center justify-center bg-secondary-50 p-6">
-                <div className="w-full max-w-md rounded-3xl border border-secondary-100 bg-white p-8 shadow-2xl shadow-black/5 sm:p-10">
+            <div className="flex min-h-full justify-center bg-secondary-50 p-6">
+                <div className="my-auto w-full max-w-md rounded-3xl border border-secondary-100 bg-white p-8 shadow-2xl shadow-black/5 sm:p-10">
                     <div className="flex items-center justify-center gap-3">
                         <Link href="/" className="flex items-center gap-2">
                             <img src="/images/logo.png" alt="Rotable" className="h-11 w-11 object-contain" />

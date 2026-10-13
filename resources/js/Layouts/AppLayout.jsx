@@ -113,11 +113,11 @@ export default function AppLayout({
                     (상단: header 높이 + safe-area-top / 하단: nav 높이 + safe-area-bottom) */}
                 <main
                     className={
-                        "flex flex-col bg-gray-50 pt-[calc(var(--spacing-header)+env(safe-area-inset-top))] " +
+                        "flex flex-1 flex-col bg-gray-50 pt-[calc(var(--spacing-header)+env(safe-area-inset-top))] " +
                         (bottomNav
                             ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] "
                             : "") +
-                        (center ? "min-h-dvh justify-center" : "")
+                        (center ? "justify-center" : "")
                     }
                 >
                     {children}

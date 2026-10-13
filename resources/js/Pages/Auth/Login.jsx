@@ -35,8 +35,8 @@ export default function Login() {
     return (
         <AppLayout bottomNav={false} headerAction={false}>
             <Head title="Rotable" />
-            <div className="flex min-h-full justify-center bg-secondary-50 p-6">
-                <div className="my-auto w-full max-w-md rounded-3xl border border-secondary-100 bg-white p-8 shadow-2xl shadow-black/5 sm:p-10">
+            <div className="flex flex-1 flex-col bg-secondary-50 p-6">
+                <div className="m-auto w-full max-w-md rounded-3xl border border-secondary-100 bg-white p-8 shadow-2xl shadow-black/5 sm:p-10">
                     <div className="flex items-center justify-center gap-3">
                         <Link href="/" className="flex items-center gap-2">
                             <img src="/images/logo.png" alt="Rotable" className="h-11 w-11 object-contain" />
@@ -46,7 +46,7 @@ export default function Login() {
                         <h1 className="text-2xl font-extrabold text-secondary-800">입장</h1>
                     </div>
                     <p className="mt-1.5 text-center text-sm text-secondary-400">
-                        회차를 선택하고 핸드폰 번호와 비밀번호를 입력해주세요.
+                        회차를 선택하고 핸드폰 번호와<br></br>비밀번호를 입력해주세요.
                     </p>
 
                     <form onSubmit={submit} className="mt-7 flex flex-col gap-4">

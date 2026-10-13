@@ -133,7 +133,7 @@ export default function Chats() {
 
     return (
         <AppLayout>
-            <Head title="메시지함" />
+            <Head title="Rotable" />
 
             <div className="min-h-full bg-gray-50 px-4 py-5">
                 <h1 className="text-xl font-extrabold">메시지함 💌</h1>

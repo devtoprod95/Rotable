@@ -149,7 +149,7 @@ cp .env.example .env
 
 ```bash
 docker compose up -d --build
-docker compose exec php83 bash
+docker compose exec php bash
 
 # 컨테이너 내부
 composer install
@@ -168,9 +168,9 @@ npm install && npm run build   # 참가자 React/Tailwind 빌드
 ## 자주 쓰는 명령어
 
 ```bash
-docker compose exec php83 php artisan migrate      # 마이그레이션
-docker compose exec php83 php artisan optimize:clear
-docker compose exec php83 php artisan test --compact
+docker compose exec php php artisan migrate      # 마이그레이션
+docker compose exec php php artisan optimize:clear
+docker compose exec php php artisan test --compact
 npm run dev    # 프론트 개발 모드 (HMR)
 ```
 

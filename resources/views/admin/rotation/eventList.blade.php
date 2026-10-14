@@ -3,7 +3,113 @@
 @section('title', '로테이션 행사 관리')
 
 @section('content')
+<style>
+    /* 방문 통계 안내 툴팁: 설명이 길어 넓게 + 밝고 읽기 편한 색상으로 표시 */
+    .visit-stat-tooltip {
+        opacity: 1 !important;
+    }
+    .visit-stat-tooltip .tooltip-inner {
+        max-width: 440px;
+        text-align: left;
+        line-height: 1.6;
+        padding: 12px 14px;
+        font-size: 0.9rem;
+        background-color: #374151;   /* gray-700: 차분한 다크 그레이 */
+        color: #f9fafb;              /* 거의 흰색 글씨 */
+        border-radius: 8px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+    .visit-stat-tooltip .tooltip-arrow::before {
+        border-right-color: #374151;
+        border-left-color: #374151;
+        border-top-color: #374151;
+        border-bottom-color: #374151;
+    }
+</style>
 <div class="row row-cards mt-2">
+
+    {{-- 방문 통계 (매일 자정 스냅샷) --}}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h3 class="card-title mb-0 d-flex align-items-center">
+                    <i class="ti ti-chart-bar me-1"></i> 방문 통계
+                    <i class="ti ti-info-circle text-blue ms-2"
+                       id="visitStatNotice"
+                       style="cursor: help; font-size: 1.4rem; line-height: 1;"
+                       data-bs-toggle="tooltip"
+                       data-bs-placement="right"
+                       data-bs-html="true"
+                       data-bs-custom-class="visit-stat-tooltip"
+                       title="‘총 방문수’는 방문 횟수, ‘1~6번 방문’ 칸은 사람 수 기준이에요.<br>그래서 같은 사람이 여러 번 방문하면 두 숫자가 다를 수 있습니다.<br>예) 혼자 3번 온 사람 1명 → 사람은 1명, 방문수는 3회로 집계"></i>
+                </h3>
+                @if ($visitSnapshot)
+                    <span class="text-muted" style="font-size: 0.9em;">
+                        {{ \Illuminate\Support\Carbon::parse($visitSnapshot->snapshot_date)->format('Y-m-d') }} 자정까지의 데이터 (매일 자정 집계)
+                    </span>
+                @else
+                    <span class="text-muted" style="font-size: 0.9em;">아직 집계된 스냅샷이 없습니다. (매일 자정 자동 집계)</span>
+                @endif
+            </div>
+            <div class="card-body">
+                @if ($visitSnapshot)
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-vcenter text-center mb-0">
+                            <thead>
+                                <tr>
+                                    <th rowspan="2" class="align-middle">구분</th>
+                                    <th rowspan="2" class="align-middle">총 방문수</th>
+                                    <th colspan="6">방문 횟수별 인원</th>
+                                </tr>
+                                <tr>
+                                    <th>1번 방문</th>
+                                    <th>2번 방문</th>
+                                    <th>3번 방문</th>
+                                    <th>4번 방문</th>
+                                    <th>5번 방문</th>
+                                    <th>6번 이상</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th class="text-start">전체</th>
+                                    <td><span class="badge bg-secondary-lt">{{ number_format($visitSnapshot->total_visits) }}명</span></td>
+                                    <td>{{ number_format($visitSnapshot->visit_1) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_2) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_3) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_4) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_5) }}명</td>
+                                    <td><span class="badge bg-orange-lt">{{ number_format($visitSnapshot->visit_6_plus) }}명</span></td>
+                                </tr>
+                                <tr>
+                                    <th class="text-start"><span class="badge bg-blue-lt">남</span></th>
+                                    <td><span class="badge bg-blue-lt">{{ number_format($visitSnapshot->total_male) }}명</span></td>
+                                    <td>{{ number_format($visitSnapshot->visit_1_male) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_2_male) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_3_male) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_4_male) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_5_male) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_6_plus_male) }}명</td>
+                                </tr>
+                                <tr>
+                                    <th class="text-start"><span class="badge bg-pink-lt">여</span></th>
+                                    <td><span class="badge bg-pink-lt">{{ number_format($visitSnapshot->total_female) }}명</span></td>
+                                    <td>{{ number_format($visitSnapshot->visit_1_female) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_2_female) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_3_female) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_4_female) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_5_female) }}명</td>
+                                    <td>{{ number_format($visitSnapshot->visit_6_plus_female) }}명</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                @else
+                    <div class="text-center text-muted py-3">표시할 통계 데이터가 없습니다.</div>
+                @endif
+            </div>
+        </div>
+    </div>
 
     {{-- 검색 필터 --}}
     <div class="col-12">
@@ -68,6 +174,20 @@
 <script>
     $(document).ready(function(){
         var table;
+
+        // 방문 통계 제목 옆 notice 아이콘 툴팁 초기화.
+        // Tabler(=Bootstrap5 기반) 번들은 data-bs-toggle="tooltip" 를 자동 초기화하지 않으므로 수동 초기화한다.
+        // 번들이 전역에 노출하는 Tooltip 위치가 환경마다 다를 수 있어 가능한 경로를 모두 탐색한다.
+        (function(){
+            var el = document.getElementById('visitStatNotice');
+            if (!el) { return; }
+            var Tooltip =
+                (window.bootstrap && window.bootstrap.Tooltip) ||
+                (window.tabler && window.tabler.bootstrap && window.tabler.bootstrap.Tooltip) ||
+                window.Tooltip;
+            if (typeof Tooltip === 'function') { new Tooltip(el); }
+            // Tooltip 클래스를 못 찾아도 네이티브 title 속성으로 hover 설명은 보장된다.
+        })();
 
         const TYPE_LABEL   = @json($types);
         const STATUS_LABEL = @json($statuses);

@@ -19,7 +19,7 @@ class MemberPurgeTest extends TestCase
      *
      * 실행:
      *   php artisan test --filter=test_purge_all_members
-     *   docker compose exec php83 php artisan test --filter=test_purge_all_members
+     *   docker compose exec php php artisan test --filter=test_purge_all_members
      */
     public function test_purge_all_members(): void
     {
@@ -70,7 +70,7 @@ class MemberPurgeTest extends TestCase
      *
      * 실행:
      *   php artisan test --filter=test_purge_all_data
-     *   docker compose exec php83 php artisan test --filter=test_purge_all_data
+     *   docker compose exec php php artisan test --filter=test_purge_all_data
      */
     public function test_purge_all_data(): void
     {

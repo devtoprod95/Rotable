@@ -14,4 +14,10 @@ Schedule::command('rotation:close-voting')
     ->withoutOverlapping()
     ->description('매칭 자동 마감 (매일 오전 9시)');
 
+// 방문 통계 스냅샷: 매일 자정에 "그 자정까지의" 누적 방문 통계를 1행으로 적재.
+Schedule::command('rotation:snapshot-visit-stats')
+    ->dailyAt('00:00')
+    ->withoutOverlapping()
+    ->description('방문 통계 일일 스냅샷 적재 (매일 자정)');
+
 // Schedule::command('cron:test_cron')->description('테스트 크론')->cron('* * * * *');

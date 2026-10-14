@@ -130,6 +130,9 @@
                                                     @else
                                                         <span class="badge bg-blue-lt">남</span>
                                                     @endif
+                                                    @if ($member->visit_ordinal)
+                                                        <span class="badge bg-purple-lt" title="이 전화번호 기준 누적 방문 순번">{{ $member->visit_ordinal }}번째 방문</span>
+                                                    @endif
                                                 </div>
                                                 <div class="text-muted" style="font-size: 0.85em;">
                                                     {{ $member->phone ?? '-' }}

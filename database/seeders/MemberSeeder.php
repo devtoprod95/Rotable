@@ -23,7 +23,7 @@ class MemberSeeder extends Seeder
      *   php artisan db:seed --class=MemberSeeder
      *
      * Docker 환경에서는:
-     *   docker compose exec php83 php artisan db:seed --class=MemberSeeder
+     *   docker compose exec php php artisan db:seed --class=MemberSeeder
      */
     public function run(): void
     {

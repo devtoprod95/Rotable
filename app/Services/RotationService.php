@@ -200,10 +200,11 @@ class RotationService
 
     /**
      * 행사 상세 (테이블 목록 + 참여자 목록 포함).
+     * 각 참여자에는 "그 전화번호의 몇 번째 방문인지"(visit_ordinal)를 함께 주입한다.
      */
     public function eventDetail(int $eventId): ?EventRound
     {
-        return EventRound::with([
+        $event = EventRound::with([
             'rotationTables' => fn ($q) => $q->orderBy('table_no'),
             'members'        => fn ($q) => $q
                 ->withCount([
@@ -215,6 +216,18 @@ class RotationService
                 ])
                 ->orderBy('name'),
         ])->find($eventId);
+
+        if ($event !== null) {
+            // 참여자 전화번호 기준으로 "몇 번째 방문인지"를 계산해 각 회원에 주입한다.
+            $ordinalMap = app(VisitStatService::class)
+                ->visitOrdinalMap($event->members->pluck('phone')->all());
+
+            foreach ($event->members as $member) {
+                $member->visit_ordinal = $ordinalMap[$member->id] ?? null;
+            }
+        }
+
+        return $event;
     }
 
     /**

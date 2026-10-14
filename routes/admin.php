@@ -40,6 +40,7 @@ Route::middleware('role')->group(function () {
                 Route::get('/{id}/messages/list', [RotationController::class, 'eventMessageList'])->whereNumber('id')->name('messages.list');
                 Route::get('/{id}/matches/list', [RotationController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
                 Route::get('/{id}/members/{memberId}/voters/list', [RotationController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
+                Route::get('/{id}/members/{memberId}/voted/list', [RotationController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');
             });
 
             Route::prefix('seating')->name('seating.')->group(function () {
@@ -58,6 +59,16 @@ Route::middleware('role')->group(function () {
             Route::prefix('detail')->name('detail.')->group(function () {
                 Route::get('/', [RotationController::class, 'detailIndex'])->name('index');
                 Route::post('/save', [RotationController::class, 'detailSave'])->name('save');
+            });
+
+            // 만남 이력 조회 — 전화번호(정확 일치) 기준. 만남 = 같은 행사 공동 참여.
+            Route::prefix('history')->name('history.')->group(function () {
+                // 만남 이력 기본 조회 (번호 1개 → 함께 참여한 상대)
+                Route::get('/', [RotationController::class, 'historyIndex'])->name('index');
+                Route::get('/search', [RotationController::class, 'historySearch'])->name('search');
+                // 만남 이력 상세 조회 (번호 2개 → 두 사람의 만남 이력)
+                Route::get('/detail', [RotationController::class, 'historyDetailIndex'])->name('detail');
+                Route::get('/detail/data', [RotationController::class, 'historyDetailData'])->name('detail.data');
             });
         });
 

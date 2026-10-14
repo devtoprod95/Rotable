@@ -28,6 +28,14 @@ enum Menu: string
                     ['name' => '행사 관리', 'route' => 'admin.rotation.event.index', 'pattern' => 'admin.rotation.event*'],
                     ['name' => '로테이션 설정', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
                     ['name' => '상세페이지 제작', 'route' => 'admin.rotation.detail.index', 'pattern' => 'admin.rotation.detail*'],
+                    [
+                        'name'     => '만남 이력',
+                        'pattern'  => 'admin.rotation.history*',
+                        'children' => [
+                            ['name' => '만남 이력 기본 조회', 'route' => 'admin.rotation.history.index', 'pattern' => 'admin.rotation.history.index*'],
+                            ['name' => '만남 이력 상세 조회', 'route' => 'admin.rotation.history.detail', 'pattern' => 'admin.rotation.history.detail*'],
+                        ],
+                    ],
                 ],
             ],
             self::Admin->value => [

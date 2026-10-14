@@ -15,6 +15,31 @@ function birthYearText(birthYear) {
  * - 종료 후: 상호 매칭된 상대는 연락처(phone) 공개
  */
 function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }) {
+    const [copied, setCopied] = useState(false);
+
+    const copyPhone = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const phone = candidate.phone;
+        const done = () => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1800);
+        };
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(phone).then(done).catch(done);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = phone;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (err) {}
+            document.body.removeChild(ta);
+            done();
+        }
+    };
+
     const specs = [
         birthYearText(candidate.birth_year),
         candidate.job,
@@ -35,8 +60,8 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
     return (
         <button
             type="button"
-            disabled={!clickable}
-            onClick={() => clickable && onToggle(candidate.id)}
+            aria-disabled={!clickable}
+            onClick={() => { if (clickable) { onToggle(candidate.id); } }}
             className={
                 'w-full rounded-2xl border p-3 text-left transition ' +
                 (isMatched
@@ -90,15 +115,28 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
 
             {/* 종료 후 상호 매칭된 상대의 연락처 공개 */}
             {isMatched && candidate.phone && (
-                <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-rose-100">
+                <div className="relative mt-2.5 flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-rose-100">
                     <span className="text-base">📞</span>
                     <div className="leading-tight">
                         <p className="text-[10px] font-semibold text-rose-400">먼저 연락해 보세요!</p>
-                        <a href={`tel:${candidate.phone}`} className="text-sm font-extrabold text-rose-600">
+                        <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={copyPhone}
+                            className="cursor-pointer text-sm font-extrabold text-rose-600"
+                        >
                             {candidate.phone}
-                        </a>
+                        </span>
+                        <p className="text-[9px] text-gray-400">클릭하면 자동 복사됩니다</p>
                     </div>
                     <span className="ml-auto text-lg">💌</span>
+
+                    {/* 복사 토스트 */}
+                    {copied && (
+                        <span className="pointer-events-none absolute -top-2 right-2 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white shadow-lg">
+                            복사되었습니다!
+                        </span>
+                    )}
                 </div>
             )}
         </button>

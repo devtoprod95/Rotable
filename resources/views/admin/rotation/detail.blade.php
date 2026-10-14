@@ -19,11 +19,11 @@
                     <button type="button" class="btn btn-outline-secondary btn-sample-two">
                         <i class="ti ti-layout-columns me-1"></i> 2열 샘플
                     </button>
-                    <button type="button" class="btn btn-primary btn-detail-save">
-                        <i class="ti ti-device-floppy me-1"></i> 저장
-                    </button>
                     <button type="button" class="btn btn-azure btn-open-preview">
                         <i class="ti ti-eye me-1"></i> 미리보기
+                    </button>
+                    <button type="button" class="btn btn-primary btn-detail-save">
+                        <i class="ti ti-device-floppy me-1"></i> 저장
                     </button>
                     <button type="button" class="btn btn-dark btn-detail-download">
                         <i class="ti ti-download me-1"></i> 이미지 다운로드

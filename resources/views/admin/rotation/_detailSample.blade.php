@@ -169,7 +169,7 @@
         </div>
         <div style="padding:16px; font-size:15px; color:#374151; line-height:1.8; text-align:center;">
             <div style="margin-bottom:10px;"><b>1. 입장 &amp; 닉네임 확인</b><br>도착하시면 나만의 닉네임을 받고 지정 테이블에 착석해요.</div>
-            <div style="margin-bottom:10px;"><b>2. 로테이션 대화</b><br>테이블 단위로 만나요. (3:3, 4:4, 때로는 3:2 등 회차마다 조금씩 달라요)<br>시간이 지나면 자리를 이동하며 여러 분과 자연스럽게 대화해요.</div>
+            <div style="margin-bottom:10px;"><b>2. 로테이션 대화</b><br>회차 타입에 따라 테이블 단위(3:3, 4:4, 3:2 등)로 함께 또는 1:1로 만나요.<br>시간이 지나면 자리를 이동하며 여러 분과 자연스럽게 대화해요.</div>
             <div style="margin-bottom:10px;"><b>3. 메시지 &amp; 비밀 투표</b><br>대화 중 마음이 가는 분께 살짝 메시지도 보낼 수 있어요 💌<br>로테이션이 끝나면 마음에 든 상대를 비공개로 선택해요.</div>
             <div style="margin-bottom:10px;"><b>4. 자유 대화 시간 (2차)</b><br>투표가 끝난 뒤에는, 마음에 드는 분과 자유롭게 앉아<br>더 깊은 이야기를 나눌 수 있는 시간을 드려요 ☕</div>
             <div><b>5. 매칭 발표</b><br>서로 선택했다면 매칭 성사! 결과는 <b>다음 날 오전</b>에 알려드려요 😊</div>

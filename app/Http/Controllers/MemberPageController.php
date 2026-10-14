@@ -378,6 +378,21 @@ class MemberPageController extends Controller
             return $data;
         })->values();
 
+        // 이번 행사에서 탄생한 커플(상호 매칭 쌍) 수. 종료(X) 상태에서만 계산해 안내에 쓴다.
+        $coupleCount = 0;
+        if ($isClosed && $event !== null) {
+            // 서로 지목한 쌍(A→B, B→A)을 self-join 으로 센 뒤 2로 나눠 쌍 수를 구한다.
+            $mutualRows = DB::table('event_votes as v1')
+                ->join('event_votes as v2', function ($join) {
+                    $join->on('v1.event_id', '=', 'v2.event_id')
+                        ->on('v1.voter_id', '=', 'v2.target_id')
+                        ->on('v1.target_id', '=', 'v2.voter_id');
+                })
+                ->where('v1.event_id', $event->id)
+                ->count();
+            $coupleCount = intdiv($mutualRows, 2);
+        }
+
         return Inertia::render('Votes', [
             'eventTitle'    => $event?->title,
             'eventStatus'   => $status,
@@ -388,6 +403,7 @@ class MemberPageController extends Controller
             'candidates'    => $candidateList,
             'myVotedIds'    => $myVotedIds,
             'receivedCount' => count($votedForMeIds),
+            'coupleCount'   => $coupleCount,
             'partnerGender' => $oppositeGen,
         ]);
     }

@@ -29,14 +29,19 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
 
     const clickable = !closed && !(disabled && !selected);
 
+    // 종료 후 매칭된 상대는 특별히 사랑스럽게 강조한다.
+    const isMatched = closed && candidate.is_match;
+
     return (
         <button
             type="button"
             disabled={!clickable}
             onClick={() => clickable && onToggle(candidate.id)}
             className={
-                'w-full rounded-xl border p-3 text-left transition ' +
-                toneCls +
+                'w-full rounded-2xl border p-3 text-left transition ' +
+                (isMatched
+                    ? 'border-rose-300 bg-gradient-to-br from-rose-50 to-pink-50 shadow-md shadow-rose-100 ring-1 ring-rose-200'
+                    : toneCls) +
                 (selected ? ' ring-2 ring-primary ring-offset-1' : '') +
                 (clickable ? ' active:scale-[0.99]' : closed ? '' : ' opacity-50')
             }
@@ -45,9 +50,15 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
                 <span className="font-bold">{candidate.name}</span>
 
-                {candidate.is_match && (
-                    <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white">
-                        💘 매칭
+                {isMatched && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
+                        💘 매칭 성공
+                    </span>
+                )}
+
+                {closed && !candidate.is_match && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold text-gray-500">
+                        💔 매칭 실패
                     </span>
                 )}
 
@@ -78,12 +89,16 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
             </div>
 
             {/* 종료 후 상호 매칭된 상대의 연락처 공개 */}
-            {closed && candidate.is_match && candidate.phone && (
-                <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-white/80 px-2.5 py-1.5">
-                    <span className="text-sm">📞</span>
-                    <a href={`tel:${candidate.phone}`} className="text-sm font-bold text-primary">
-                        {candidate.phone}
-                    </a>
+            {isMatched && candidate.phone && (
+                <div className="mt-2.5 flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-rose-100">
+                    <span className="text-base">📞</span>
+                    <div className="leading-tight">
+                        <p className="text-[10px] font-semibold text-rose-400">먼저 연락해 보세요!</p>
+                        <a href={`tel:${candidate.phone}`} className="text-sm font-extrabold text-rose-600">
+                            {candidate.phone}
+                        </a>
+                    </div>
+                    <span className="ml-auto text-lg">💌</span>
                 </div>
             )}
         </button>
@@ -99,6 +114,7 @@ export default function Votes() {
         candidates = [],
         myVotedIds = [],
         receivedCount = 0,
+        coupleCount = 0,
         partnerGender,
     } = usePage().props;
 
@@ -140,7 +156,13 @@ export default function Votes() {
     const matches = candidates.filter((c) => c.is_match);
 
     // 종료 후에는 "내가 선택한 사람"만 리스트에 노출한다. (투표중에는 전체 후보)
-    const displayList = isClosed ? candidates.filter((c) => c.voted) : candidates;
+    // 종료 시: 내가 선택한 사람만, 매칭 성공한 상대가 먼저 오도록 정렬.
+    const displayList = isClosed
+        ? candidates
+              .filter((c) => c.voted)
+              .slice()
+              .sort((a, b) => (b.is_match ? 1 : 0) - (a.is_match ? 1 : 0))
+        : candidates;
 
     // 매칭중(V)이지만 마감 시각이 지나 투표만 닫힌 '결과 집계 대기' 상태
     if (votingEnded) {
@@ -192,14 +214,34 @@ export default function Votes() {
 
             {/* 투표중: 컨텐츠 높이만큼만 차지. 종료: 화면을 채워 위로 메시지를 중앙 배치. */}
             <div className={'flex flex-col bg-gray-50 px-4 py-5 ' + (isClosed ? 'min-h-full flex-1 ' : '') + (canVote ? 'pb-20' : '')}>
-                <h1 className="text-xl font-extrabold">
-                    {isClosed ? '매칭 결과 💘' : '매칭하기 💝'}
-                </h1>
-                <p className="mt-1.5 text-sm text-gray-500">
-                    {isClosed
-                        ? '서로(쌍방) 선택한 상대와만 매칭되어 연락처가 공개돼요. 아래에서 확인하세요!'
-                        : `마음에 든 상대를 최대 ${maxVotes}명까지 선택하세요. 서로 선택하면 매칭이에요! 💘`}
-                </p>
+                {!isClosed && (
+                    <>
+                        <h1 className="text-xl font-extrabold">매칭하기 💝</h1>
+                        <p className="mt-1.5 text-sm text-gray-500">
+                            {`마음에 든 상대를 최대 ${maxVotes}명까지 선택하세요. 서로 선택하면 매칭이에요! 💘`}
+                        </p>
+                    </>
+                )}
+
+                {/* 종료(결과): 따뜻한 헤더 + 이번 행사 커플 수 안내 */}
+                {isClosed && (
+                    <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-rose-400 via-pink-400 to-rose-500 p-5 text-center text-white shadow-lg shadow-rose-200">
+                        <p className="text-3xl">💕</p>
+                        <h1 className="mt-1 text-xl font-extrabold tracking-tight">매칭 결과가 나왔어요!</h1>
+                        <p className="mt-1 text-[13px] leading-relaxed text-white/90">
+                            설레는 시간을 함께해 주셔서 고마워요.<br />
+                            이번 로테이블에서 이렇게 많은 인연이 피어났답니다 🌸
+                        </p>
+                        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
+                            <span className="text-lg">🥂</span>
+                            <span className="text-sm font-semibold">
+                                이번 로테이블에서{' '}
+                                <span className="text-lg font-extrabold">{coupleCount}</span>
+                                커플이 탄생했어요
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 {/* 투표중 안내: 결과 공개 시점/규칙 안내 (현재 시스템 로직 기준) */}
                 {canVote && (
@@ -212,36 +254,34 @@ export default function Votes() {
                     </div>
                 )}
 
-                {/* 나를 선택한 사람 수 — 매칭이 끝난(종료) 뒤에만 공개 */}
-                {isClosed && (
-                    <div className="mt-4 flex items-center gap-3 rounded-2xl border border-primary/15 bg-primary/5 p-4">
-                        <span className="text-2xl">⭐</span>
-                        <div>
-                            <p className="text-xs font-medium text-gray-500">나를 선택한 사람 (매칭과 무관한 전체 투표수)</p>
-                            <p className="text-lg font-extrabold text-primary">{receivedCount}명</p>
-                        </div>
-                    </div>
-                )}
-
-                {/* 종료 후: 매칭 요약 */}
+                {/* 종료 후: 나의 매칭 결과 요약 (사랑스럽게) */}
                 {isClosed && matches.length > 0 && (
-                    <div className="mt-4">
-                        <p className="text-sm font-bold text-secondary-700">
-                            🎉 {matches.length}명과 매칭됐어요!
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-gradient-to-r from-rose-50 to-pink-50 p-4 text-center">
+                        <p className="text-2xl">💘</p>
+                        <p className="mt-1 text-base font-extrabold text-rose-600">
+                            축하해요! {matches.length}명과 서로 통했어요
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-rose-500/90">
+                            아래에서 연락처를 확인하고 먼저 용기 내어 연락해 보세요 📞<br />
+                            좋은 인연으로 이어지길 진심으로 응원할게요!
                         </p>
                     </div>
                 )}
 
                 {/* 종료 + 매칭 없음: 위로 메시지를 남은 공간 전체를 채워 중앙에 배치 */}
                 {isClosed && matches.length === 0 && (
-                    <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 px-4 py-10 text-center">
-                        <p className="text-4xl">🍀</p>
-                        <p className="mt-3 text-base font-bold text-secondary-700">
+                    <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-3xl border border-rose-100 bg-white px-5 py-12 text-center shadow-sm">
+                        <p className="text-5xl">🍀</p>
+                        <p className="mt-4 text-lg font-extrabold text-secondary-700">
                             이번엔 서로 닿지 못했지만 괜찮아요
                         </p>
-                        <p className="mt-2 text-xs leading-relaxed text-gray-500">
-                            인연은 타이밍이에요. 분명 더 잘 맞는 사람이 기다리고 있을 거예요.<br />
-                            다음 로테이블에서 또 만나요! 💛
+                        <p className="mt-3 text-sm leading-relaxed text-gray-500">
+                            설레는 마음으로 참여해 주신 것만으로 충분히 멋졌어요.<br />
+                            인연은 늘 타이밍이라, 분명 더 잘 맞는 사람이<br />
+                            다음 자리에서 당신을 기다리고 있을 거예요. 💛
+                        </p>
+                        <p className="mt-4 rounded-full bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-500">
+                            다음 로테이블에서 또 만나요! 🌷
                         </p>
                     </div>
                 )}
@@ -273,6 +313,17 @@ export default function Votes() {
                             선택할 수 있는 상대가 없어요.
                         </div>
                     )
+                )}
+
+                {/* 나를 선택해준 사람 수 — 맨 아래에 배치 (매칭이 끝난 뒤에만 공개) */}
+                {isClosed && (
+                    <div className="mt-5 flex items-center gap-3 rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                        <span className="text-2xl">⭐</span>
+                        <div>
+                            <p className="text-xs font-medium text-gray-500">나를 선택해준 사람</p>
+                            <p className="text-lg font-extrabold text-primary">{receivedCount}명</p>
+                        </div>
+                    </div>
                 )}
 
                 {/* 투표중일 때만 저장 바. 하단 nav(약 5.5rem) 바로 위에 fixed 로 고정 */}

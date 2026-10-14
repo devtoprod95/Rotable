@@ -192,6 +192,8 @@ class RotationController extends Controller
                 'searchText' => $this->request->input('searchText', ''),
                 'read'       => $this->request->input('read', ''),
                 'senderId'   => (int) $this->request->input('senderId', 0),
+                'convA'      => (int) $this->request->input('convA', 0),
+                'convB'      => (int) $this->request->input('convB', 0),
             ]
         ));
     }
@@ -242,6 +244,20 @@ class RotationController extends Controller
         ]);
     }
 
+    /**
+     * 특정 회원이 "선택(투표)한 상대들" 목록 (매칭 여부 포함).
+     * Tabulator 가 기대하는 { data, total } 형태로 반환한다.
+     */
+    public function eventMemberVotedList(int $id, int $memberId): JsonResponse
+    {
+        $targets = $this->rotationService->memberVotedTargetList($id, $memberId);
+
+        return response()->json([
+            'data'  => $targets,
+            'total' => count($targets),
+        ]);
+    }
+
     /* ======================================================================
      | 상세페이지 디자이너 — HTML 에디터로 꾸며서 이미지(PNG)로 다운로드
      | 작성한 HTML 은 DB 가 아니라 storage 파일(공용 템플릿 1개)에 저장한다.
@@ -279,6 +295,68 @@ class RotationController extends Controller
         $result = $this->rotationService->detailHtmlSave((string) $this->request->input('html', ''));
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /* ======================================================================
+     | 만남 이력 조회 — 전화번호(정확 일치) 기준. 만남 = 같은 행사 공동 참여.
+     * ==================================================================== */
+
+    /**
+     * 만남 이력 기본 조회 화면. (번호 1개로 함께 참여한 상대 조회)
+     */
+    public function historyIndex(): View
+    {
+        return view('admin.rotation.history.search');
+    }
+
+    /**
+     * 만남 이력 기본 조회 — 특정 전화번호의 사람이 함께 참여한 상대 목록(ajax).
+     */
+    public function historySearch(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'phone' => 'required|string|max:20',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        return response()->json(
+            $this->rotationService->meetingPartnersByPhone((string) $this->request->input('phone'))
+        );
+    }
+
+    /**
+     * 만남 이력 상세 조회 화면. (번호 2개로 두 사람의 만남 이력 조회)
+     * (쿼리스트링 phoneA/phoneB 가 있으면 초기값으로 채운다.)
+     */
+    public function historyDetailIndex(): View
+    {
+        return view('admin.rotation.history.detail', [
+            'initialPhoneA' => (string) $this->request->query('phoneA', ''),
+            'initialPhoneB' => (string) $this->request->query('phoneB', ''),
+        ]);
+    }
+
+    /**
+     * 만남 이력 상세 조회 — 두 전화번호의 만남 이력 상세(ajax).
+     */
+    public function historyDetailData(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'phoneA' => 'required|string|max:20',
+            'phoneB' => 'required|string|max:20',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        return response()->json(
+            $this->rotationService->meetingHistoryBetween(
+                (string) $this->request->input('phoneA'),
+                (string) $this->request->input('phoneB')
+            )
+        );
     }
 
     /* ======================================================================

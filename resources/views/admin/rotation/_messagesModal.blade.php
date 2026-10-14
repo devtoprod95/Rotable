@@ -78,6 +78,8 @@
         var currentChannel = null;
         var currentEventId = null;
         var currentSenderId = null;
+        var currentConvA = null;
+        var currentConvB = null;
         var modalEl = null;
         var bsModal = null;
 
@@ -106,6 +108,7 @@
                 read: $('#mm-searchForm [name=read]').val(),
             };
             if(currentSenderId){ f.senderId = currentSenderId; }
+            if(currentConvA && currentConvB){ f.convA = currentConvA; f.convB = currentConvB; }
             return f;
         }
 
@@ -113,6 +116,14 @@
             var f = filters();
             // 특정 발신자 전용 조회 중이면 그 사람이 보낸 것만 실시간 반영.
             if(currentSenderId && d.sender && Number(d.sender.id) !== Number(currentSenderId)){ return false; }
+            // 두 회원 대화 전용 조회 중이면 그 둘 사이 메시지만 실시간 반영.
+            if(currentConvA && currentConvB){
+                var sid = d.sender ? Number(d.sender.id) : 0;
+                var rid = d.receiver ? Number(d.receiver.id) : 0;
+                var pair = (sid === Number(currentConvA) && rid === Number(currentConvB))
+                        || (sid === Number(currentConvB) && rid === Number(currentConvA));
+                if(!pair){ return false; }
+            }
             if(f.read === 'Y' && !d.read_at){ return false; }
             if(f.read === 'N' && d.read_at){ return false; }
             var kw = (f.searchText || '').trim().toLowerCase();
@@ -243,10 +254,12 @@
                 var opts = options || {};
                 currentEventId = eventId;
                 currentSenderId = opts.senderId || null;
+                currentConvA = opts.convA || null;
+                currentConvB = opts.convB || null;
                 $('#mm-eventLabel').text(eventLabel || '');
                 $('#mm-searchForm')[0].reset();
                 // 특정 발신자 전용 조회면 제목에 표시.
-                $('#mm-modalTitleText').text(currentSenderId ? '보낸 메시지' : '메시지 조회');
+                $('#mm-modalTitleText').text((currentSenderId || (currentConvA && currentConvB)) ? '대화 메시지' : '메시지 조회');
                 setLive('대기');
 
                 if(!modalEl){

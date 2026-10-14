@@ -19,23 +19,16 @@ export default function AppLayout({
     const { auth, eventName } = page.props;
     const url = page.url;
 
-    // 헤더의 "~님" 버튼을 5번 연속 터치하면 로그아웃되는 숨김 제스처.
-    // 1.5초 안에 다시 누르지 않으면 카운트가 초기화된다.
+    // 헤더의 "~님" 버튼을 2번 연속 터치하면 로그아웃되는 숨김 제스처.
     const logoutTapRef = useRef({ count: 0, timer: null });
     const handleNameTap = () => {
         const s = logoutTapRef.current;
         s.count += 1;
-        if (s.timer) {
-            clearTimeout(s.timer);
-        }
-        if (s.count >= 5) {
+        if (s.count >= 2) {
             s.count = 0;
             router.post("/logout");
             return;
         }
-        s.timer = setTimeout(() => {
-            s.count = 0;
-        }, 1500);
     };
 
     // 페이지(라우트)가 바뀌면 항상 최상단으로 되돌린다. (body 가 스크롤 컨테이너)

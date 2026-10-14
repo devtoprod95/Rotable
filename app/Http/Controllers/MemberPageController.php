@@ -154,7 +154,9 @@ class MemberPageController extends Controller
             ->map(fn (Member $member) => $this->transformMember($member))
             ->values();
 
-        $used = Message::where('sender_id', $me->id)->count();
+        $used = Message::where('event_id', $me->event_id)
+            ->where('sender_id', $me->id)
+            ->count();
         $max  = Message::MAX_SENDS_PER_MEMBER;
 
         // 메시지 전달은 로테이션 진행중(S)·매칭중(V) 상태에서만 가능하다.
@@ -240,7 +242,9 @@ class MemberPageController extends Controller
         ]);
 
         // 최대 전송 횟수 제한 체크.
-        $used = Message::where('sender_id', $me->id)->count();
+        $used = Message::where('event_id', $me->event_id)
+            ->where('sender_id', $me->id)
+            ->count();
         if ($used >= Message::MAX_SENDS_PER_MEMBER) {
             return back()->with('error', '메시지는 최대 ' . Message::MAX_SENDS_PER_MEMBER . '번까지만 보낼 수 있어요.');
         }

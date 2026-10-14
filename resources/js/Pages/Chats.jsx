@@ -1,5 +1,5 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import MessageSender from '@/Components/MessageSender';
 import useRealtimeChat from '@/useRealtimeChat';
@@ -80,12 +80,30 @@ function TabButton({ active, onClick, children, badge }) {
     );
 }
 
+/**
+ * 안읽은 받은 메시지가 있으면 서버에 읽음 처리를 요청한다.
+ * 중복 호출 방지를 위해 전달된 idSet 에 이미 처리한 id 를 기록한다.
+ */
+function flushUnread(messages, markedRef) {
+    const ids = messages
+        .filter((m) => !m.is_read && !markedRef.current.has(m.id))
+        .map((m) => m.id);
+
+    if (ids.length === 0) return;
+
+    ids.forEach((id) => markedRef.current.add(id));
+    router.post('/chats/messages/read', { message_ids: ids }, { preserveScroll: true, preserveState: true });
+}
+
 export default function Chats() {
     const { auth, received = [], sent = [], partners = [], partnerGender, sendLimit, canSendMessage = false } = usePage().props;
 
     const [tab, setTab] = useState('received'); // 'received' | 'sent'
     const [messages, setMessages] = useState(received);
     const [sentMessages, setSentMessages] = useState(sent);
+
+    // 이미 읽음 요청을 보낸 메시지 id 를 추적해 중복 호출을 방지한다.
+    const markedRef = useRef(new Set());
 
     // props(received)가 바뀌면(부분 갱신/재방문 등) 목록 동기화.
     useEffect(() => {
@@ -97,19 +115,20 @@ export default function Chats() {
         setSentMessages(sent);
     }, [sent]);
 
-    const unreadInList = received.some((m) => !m.is_read);
     const unreadCount = messages.filter((m) => !m.is_read).length;
 
-    // 메시지함 진입 시, 받은 메시지를 읽음 처리 (nav 뱃지 초기화).
+    // 받은 메시지 탭이 보이는 상태일 때만 읽음 처리한다.
+    // - 페이지 진입 시 탭이 'received' 면 즉시 처리
+    // - 보낸 탭 → 받은 탭으로 전환 시 처리
+    // - 받은 탭 상태에서 새 메시지가 들어왔을 때 처리
     useEffect(() => {
-        if (unreadInList) {
-            router.post('/chats/messages/read', {}, { preserveScroll: true, preserveState: true });
+        if (tab === 'received') {
+            flushUnread(messages, markedRef);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [tab, messages]);
 
     // 소켓 구독:
-    // - 받은 메시지: 목록 맨 위 추가 + 즉시 읽음 처리
+    // - 받은 메시지: 목록 맨 위 추가 (탭이 received 면 다음 effect 에서 자동 읽음 처리)
     // - 보낸 메시지 읽음: 해당 메시지들을 '읽음'으로 갱신
     useRealtimeChat(
         auth?.user?.id,
@@ -118,9 +137,8 @@ export default function Chats() {
                 if (prev.some((m) => m.id === message.id)) {
                     return prev;
                 }
-                return [{ ...message, is_read: true }, ...prev];
+                return [{ ...message, is_read: false }, ...prev];
             });
-            router.post('/chats/messages/read', {}, { preserveScroll: true, preserveState: true });
         },
         ({ message_ids: ids = [] }) => {
             setSentMessages((prev) =>

@@ -187,14 +187,13 @@ class MemberAuthController extends Controller
         $validated = $request->validate([
             'event_id' => ['required', 'integer', 'exists:event_rounds,id'],
             'phone'    => ['required', 'string', 'regex:/^010\d{8}$/'],
-            'password' => ['required', 'string', 'size:4'],
+            'password' => ['required', 'string'],
         ], [
             'event_id.required' => '회차를 선택해주세요.',
             'event_id.exists'   => '선택한 회차가 올바르지 않습니다.',
             'phone.required'    => '핸드폰 번호를 입력해주세요.',
             'phone.regex'       => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'password.required' => '비밀번호를 입력해주세요.',
-            'password.size'     => '비밀번호는 4자리로 입력해주세요.',
         ]);
 
         // 비밀번호를 평문 저장하므로 Hash 기반 attempt() 대신 직접 비교한다.

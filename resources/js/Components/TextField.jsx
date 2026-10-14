@@ -6,6 +6,8 @@ export default function TextField({
     placeholder,
     error,
     autoFocus = false,
+    maxLength,
+    digitsOnly = false,
 }) {
     const isNumber = type === 'number';
 
@@ -21,13 +23,19 @@ export default function TextField({
     }
 
     function handleChange(e) {
-        if (isNumber) {
-            // 숫자 이외 문자를 제거해 음수 기호 등이 남지 않도록 한다.
-            onChange(e.target.value.replace(/[^\d]/g, ''));
-            return;
+        let next = e.target.value;
+
+        // 숫자만 허용(digitsOnly) 또는 number 타입이면 숫자 이외 문자를 제거한다.
+        if (isNumber || digitsOnly) {
+            next = next.replace(/[^\d]/g, '');
         }
 
-        onChange(e.target.value);
+        // 최대 길이 제한.
+        if (typeof maxLength === 'number' && next.length > maxLength) {
+            next = next.slice(0, maxLength);
+        }
+
+        onChange(next);
     }
 
     return (
@@ -40,7 +48,8 @@ export default function TextField({
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
                 autoFocus={autoFocus}
-                inputMode={isNumber ? 'numeric' : undefined}
+                maxLength={maxLength}
+                inputMode={isNumber || digitsOnly ? 'numeric' : undefined}
                 min={isNumber ? 0 : undefined}
                 className={
                     'rounded-lg border px-3.5 py-3 text-base outline-none transition focus:ring-2 focus:ring-primary-200 ' +

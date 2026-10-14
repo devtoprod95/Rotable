@@ -81,8 +81,9 @@ export default function Login() {
                             type="password"
                             value={data.password}
                             onChange={(v) => setData('password', v)}
-                            placeholder="비밀번호"
+                            placeholder="비밀번호 4자리"
                             error={errors.password}
+                            maxLength={4}
                         />
 
                         <button

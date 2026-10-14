@@ -53,6 +53,12 @@ Route::middleware('role')->group(function () {
                 Route::post('/close-voting', [RotationController::class, 'seatingCloseVoting'])->name('closeVoting');
                 Route::delete('/delete', [RotationController::class, 'seatingDelete'])->name('delete');
             });
+
+            // 상세페이지 디자이너 — HTML 에디터로 꾸미고 이미지(PNG)로 다운로드
+            Route::prefix('detail')->name('detail.')->group(function () {
+                Route::get('/', [RotationController::class, 'detailIndex'])->name('index');
+                Route::post('/save', [RotationController::class, 'detailSave'])->name('save');
+            });
         });
 
         Route::prefix('role')->name('role.')->group(function () {

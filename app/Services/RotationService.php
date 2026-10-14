@@ -12,6 +12,8 @@ use App\Models\Vote;
 use Exception;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\View;
 
 class RotationService
 {
@@ -901,6 +903,58 @@ class RotationService
             $event->save();
 
             $returnMsg = helpersSuccessMessage('매칭을 마감했습니다.');
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /* ======================================================================
+     | 상세페이지 디자이너 — 공용 템플릿 HTML 1개를 storage 파일에 저장/로드
+     * ==================================================================== */
+
+    /** 상세페이지 HTML 저장 경로 (storage/app/private/rotation/detail.html) */
+    private const DETAIL_HTML_PATH = 'rotation/detail.html';
+
+    /**
+     * 저장된 상세페이지 HTML 을 반환한다.
+     * 저장된 파일이 없으면 기본 샘플(2열) 을 렌더링해서 돌려준다.
+     */
+    public function detailHtmlLoad(): string
+    {
+        if (Storage::exists(self::DETAIL_HTML_PATH)) {
+            return (string) Storage::get(self::DETAIL_HTML_PATH);
+        }
+
+        return $this->detailSampleHtml(2);
+    }
+
+    /**
+     * 기본 샘플 HTML 을 렌더링한다.
+     * 실제 행사 데이터와 무관하게 더미 참여자(남/여 각 5명) 로 구성한다.
+     *
+     * @param int $columns 행사 배치 열 수 (1 또는 2)
+     */
+    public function detailSampleHtml(int $columns = 2): string
+    {
+        return trim(View::make('admin.rotation._detailSample', [
+            'columns' => $columns === 1 ? 1 : 2,
+        ])->render());
+    }
+
+    /**
+     * 상세페이지 HTML 을 storage 파일에 저장한다.
+     *
+     * @return array{isSuccess:bool, message?:string}
+     */
+    public function detailHtmlSave(string $html): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            Storage::put(self::DETAIL_HTML_PATH, $html);
+            $returnMsg = helpersSuccessMessage('상세페이지를 저장했습니다.');
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
         }

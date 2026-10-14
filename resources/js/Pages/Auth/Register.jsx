@@ -130,8 +130,9 @@ export default function Register() {
                             type="password"
                             value={data.password}
                             onChange={(v) => setData('password', v)}
-                            placeholder="4자리 비밀번호"
+                            placeholder="비밀번호 4자리"
                             error={errors.password}
+                            maxLength={4}
                         />
                         <TextField
                             label="지역/거주지"

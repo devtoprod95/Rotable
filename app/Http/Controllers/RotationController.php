@@ -241,6 +241,45 @@ class RotationController extends Controller
     }
 
     /* ======================================================================
+     | 상세페이지 디자이너 — HTML 에디터로 꾸며서 이미지(PNG)로 다운로드
+     | 작성한 HTML 은 DB 가 아니라 storage 파일(공용 템플릿 1개)에 저장한다.
+     * ==================================================================== */
+
+    /**
+     * 상세페이지 디자이너 화면.
+     * 저장된 HTML 이 있으면 그걸, 없으면 기본 샘플 blade 를 초기 내용으로 넘긴다.
+     */
+    public function detailIndex(): View
+    {
+        $saved       = $this->rotationService->detailHtmlLoad();
+        $sampleOne   = $this->rotationService->detailSampleHtml(1);
+        $sampleTwo   = $this->rotationService->detailSampleHtml(2);
+
+        return view('admin.rotation.detail', [
+            'savedHtml'  => $saved,
+            'sampleOne'  => $sampleOne,
+            'sampleTwo'  => $sampleTwo,
+        ]);
+    }
+
+    /**
+     * 상세페이지 HTML 저장 (storage 파일에 기록).
+     */
+    public function detailSave(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'html' => 'nullable|string',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $result = $this->rotationService->detailHtmlSave((string) $this->request->input('html', ''));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /* ======================================================================
      | 좌석 배정 — 단일 화면 (턴 선택 + 테이블 그리드, 넣을 때마다 즉시 저장)
      * ==================================================================== */
 

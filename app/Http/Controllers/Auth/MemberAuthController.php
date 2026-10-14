@@ -115,7 +115,7 @@ class MemberAuthController extends Controller
                 ),
             ],
             'name'       => ['required', 'string', 'max:50'],
-            'password'   => ['required', 'string', 'min:4'],
+            'password'   => ['required', 'string', 'size:4'],
             'gender'     => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
             'birth_year' => ['required', 'integer', 'between:' . self::BIRTH_YEAR_MIN . ',' . $this->birthYearMax()],
             'job'        => ['required', 'string', 'max:50'],
@@ -131,7 +131,7 @@ class MemberAuthController extends Controller
             'phone.unique'        => '해당 회차에 이미 등록된 핸드폰 번호입니다.',
             'name.required'       => '닉네임을 입력해주세요.',
             'password.required'   => '비밀번호를 입력해주세요.',
-            'password.min'        => '비밀번호는 최소 4자 이상이어야 합니다.',
+            'password.size'       => '비밀번호는 4자리로 입력해주세요.',
             'gender.required'     => '성별을 선택해주세요.',
             'gender.in'           => '성별 선택이 올바르지 않습니다.',
             'birth_year.required' => '출생연도를 선택해주세요.',
@@ -187,13 +187,14 @@ class MemberAuthController extends Controller
         $validated = $request->validate([
             'event_id' => ['required', 'integer', 'exists:event_rounds,id'],
             'phone'    => ['required', 'string', 'regex:/^010\d{8}$/'],
-            'password' => ['required', 'string'],
+            'password' => ['required', 'string', 'size:4'],
         ], [
             'event_id.required' => '회차를 선택해주세요.',
             'event_id.exists'   => '선택한 회차가 올바르지 않습니다.',
             'phone.required'    => '핸드폰 번호를 입력해주세요.',
             'phone.regex'       => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'password.required' => '비밀번호를 입력해주세요.',
+            'password.size'     => '비밀번호는 4자리로 입력해주세요.',
         ]);
 
         // 비밀번호를 평문 저장하므로 Hash 기반 attempt() 대신 직접 비교한다.

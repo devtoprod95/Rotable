@@ -36,6 +36,8 @@ class RotationController extends Controller
             'status'   => $this->request->input('status') ?: '',
             'types'    => EventRound::typeOptions(),
             'statuses' => EventRound::statusOptions(),
+            // 방문 통계: 가장 최근 자정 스냅샷 1건. (없으면 null)
+            'visitSnapshot' => \App\Models\EventVisitSnapshot::orderByDesc('snapshot_date')->first(),
         ];
 
         return view('admin.rotation.eventList', $params);

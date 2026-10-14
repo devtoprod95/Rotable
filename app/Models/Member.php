@@ -136,12 +136,15 @@ class Member extends Authenticatable
      */
     public function currentTableNo(): ?int
     {
+        // 가장 최신 턴(round_no 역순) 1건만 DB에서 바로 가져온다.
+        // (전체 좌석을 메모리에 올려 PHP로 정렬하지 않도록 join + orderBy 로 처리)
         $seating = RotationSeating::query()
-            ->with(['round', 'table'])
-            ->where('member_id', $this->id)
+            ->with('table')
             ->whereHas('round', fn ($q) => $q->where('event_id', $this->event_id))
-            ->get()
-            ->sortByDesc(fn (RotationSeating $s) => $s->round?->round_no ?? -1)
+            ->where('member_id', $this->id)
+            ->join('rotation_rounds', 'rotation_rounds.id', '=', 'rotation_seatings.rotation_round_id')
+            ->orderByDesc('rotation_rounds.round_no')
+            ->select('rotation_seatings.*')
             ->first();
 
         return $seating?->table?->table_no;

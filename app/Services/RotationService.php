@@ -308,17 +308,7 @@ class RotationService
      */
     public function matchList(int $eventId): array
     {
-        $votes = Vote::query()
-            ->with(['voter:id,name,gender,phone,birth_year,job,height,region,is_smoker,mbti', 'target:id,name,gender,phone,birth_year,job,height,region,is_smoker,mbti'])
-            ->where('event_id', $eventId)
-            ->orderByDesc('id')
-            ->get();
-
-        // 상호 지목 판정용 맵 (voter_id => [target_id => true]).
-        $votedMap = [];
-        foreach ($votes as $vote) {
-            $votedMap[$vote->voter_id][$vote->target_id] = true;
-        }
+        [$votes, $votedMap] = $this->loadVotesWithMutualMap($eventId);
 
         // 같은 선택한 사람(voter)끼리 묶는다.
         $grouped = [];
@@ -327,18 +317,7 @@ class RotationService
 
             if (!isset($grouped[$voterId])) {
                 $grouped[$voterId] = [
-                    'voter' => [
-                        'id'         => $voterId,
-                        'name'       => $vote->voter?->name,
-                        'gender'     => $vote->voter?->gender,
-                        'phone'      => $vote->voter?->phone,
-                        'birth_year' => $vote->voter?->birth_year,
-                        'job'        => $vote->voter?->job,
-                        'height'     => $vote->voter?->height,
-                        'region'     => $vote->voter?->region,
-                        'is_smoker'  => $vote->voter?->is_smoker,
-                        'mbti'       => $vote->voter?->mbti,
-                    ],
+                    'voter'      => $this->personPayload($vote->voter, $voterId),
                     'targets'    => [],
                     'has_mutual' => false,
                     'voted_at'   => null,
@@ -347,29 +326,14 @@ class RotationService
 
             $isMutual = isset($votedMap[$vote->target_id][$vote->voter_id]);
 
-            $grouped[$voterId]['targets'][] = [
-                'id'         => (int) $vote->target_id,
-                'name'       => $vote->target?->name,
-                'gender'     => $vote->target?->gender,
-                'phone'      => $vote->target?->phone,
-                'birth_year' => $vote->target?->birth_year,
-                'job'        => $vote->target?->job,
-                'height'     => $vote->target?->height,
-                'region'     => $vote->target?->region,
-                'is_smoker'  => $vote->target?->is_smoker,
-                'mbti'       => $vote->target?->mbti,
-                'is_mutual'  => $isMutual,
-            ];
+            $grouped[$voterId]['targets'][] = $this->personPayload($vote->target, (int) $vote->target_id, $isMutual);
 
             if ($isMutual) {
                 $grouped[$voterId]['has_mutual'] = true;
             }
 
             // 가장 최신 투표 시각 1개만 유지한다.
-            $votedAt = $vote->created_at?->toIso8601String();
-            if ($votedAt !== null && ($grouped[$voterId]['voted_at'] === null || $votedAt > $grouped[$voterId]['voted_at'])) {
-                $grouped[$voterId]['voted_at'] = $votedAt;
-            }
+            $this->keepLatestVotedAt($grouped[$voterId], $vote);
         }
 
         $rows = array_values($grouped);
@@ -408,17 +372,7 @@ class RotationService
      */
     public function matchedPairList(int $eventId): array
     {
-        $votes = Vote::query()
-            ->with(['voter:id,name,gender,phone,birth_year,job,height,region,is_smoker,mbti', 'target:id,name,gender,phone,birth_year,job,height,region,is_smoker,mbti'])
-            ->where('event_id', $eventId)
-            ->orderByDesc('id')
-            ->get();
-
-        // 상호 지목 판정용 맵 (voter_id => [target_id => true]).
-        $votedMap = [];
-        foreach ($votes as $vote) {
-            $votedMap[$vote->voter_id][$vote->target_id] = true;
-        }
+        [$votes, $votedMap] = $this->loadVotesWithMutualMap($eventId);
 
         $grouped = [];
         foreach ($votes as $vote) {
@@ -449,42 +403,16 @@ class RotationService
 
             if (!isset($grouped[$voterId])) {
                 $grouped[$voterId] = [
-                    'voter' => [
-                        'id'         => $voterId,
-                        'name'       => $vote->voter?->name,
-                        'gender'     => $vote->voter?->gender,
-                        'phone'      => $vote->voter?->phone,
-                        'birth_year' => $vote->voter?->birth_year,
-                        'job'        => $vote->voter?->job,
-                        'height'     => $vote->voter?->height,
-                        'region'     => $vote->voter?->region,
-                        'is_smoker'  => $vote->voter?->is_smoker,
-                        'mbti'       => $vote->voter?->mbti,
-                    ],
+                    'voter'      => $this->personPayload($vote->voter, $voterId),
                     'targets'    => [],
                     'has_mutual' => true,
                     'voted_at'   => null,
                 ];
             }
 
-            $grouped[$voterId]['targets'][] = [
-                'id'         => (int) $vote->target_id,
-                'name'       => $vote->target?->name,
-                'gender'     => $vote->target?->gender,
-                'phone'      => $vote->target?->phone,
-                'birth_year' => $vote->target?->birth_year,
-                'job'        => $vote->target?->job,
-                'height'     => $vote->target?->height,
-                'region'     => $vote->target?->region,
-                'is_smoker'  => $vote->target?->is_smoker,
-                'mbti'       => $vote->target?->mbti,
-                'is_mutual'  => true,
-            ];
+            $grouped[$voterId]['targets'][] = $this->personPayload($vote->target, (int) $vote->target_id, true);
 
-            $votedAt = $vote->created_at?->toIso8601String();
-            if ($votedAt !== null && ($grouped[$voterId]['voted_at'] === null || $votedAt > $grouped[$voterId]['voted_at'])) {
-                $grouped[$voterId]['voted_at'] = $votedAt;
-            }
+            $this->keepLatestVotedAt($grouped[$voterId], $vote);
         }
 
         $rows = array_values($grouped);
@@ -495,6 +423,69 @@ class RotationService
         });
 
         return $rows;
+    }
+
+    /**
+     * 특정 행사의 투표 전체를 (voter/target 상세 포함) 로드하고,
+     * 상호 지목 판정용 맵(voter_id => [target_id => true])을 함께 만들어 반환한다.
+     *
+     * @return array{0: \Illuminate\Database\Eloquent\Collection<int, Vote>, 1: array<int, array<int, true>>}
+     */
+    private function loadVotesWithMutualMap(int $eventId): array
+    {
+        $votes = Vote::query()
+            ->with(['voter:id,name,gender,phone,birth_year,job,height,region,is_smoker,mbti', 'target:id,name,gender,phone,birth_year,job,height,region,is_smoker,mbti'])
+            ->where('event_id', $eventId)
+            ->orderByDesc('id')
+            ->get();
+
+        $votedMap = [];
+        foreach ($votes as $vote) {
+            $votedMap[$vote->voter_id][$vote->target_id] = true;
+        }
+
+        return [$votes, $votedMap];
+    }
+
+    /**
+     * 매칭/투표 응답용 회원 상세 payload 를 만든다.
+     * $isMutual 이 전달되면 target 용(상호 매칭 플래그 포함) payload 로 간주한다.
+     *
+     * @return array<string, mixed>
+     */
+    private function personPayload(?Member $member, int $id, ?bool $isMutual = null): array
+    {
+        $payload = [
+            'id'         => $id,
+            'name'       => $member?->name,
+            'gender'     => $member?->gender,
+            'phone'      => $member?->phone,
+            'birth_year' => $member?->birth_year,
+            'job'        => $member?->job,
+            'height'     => $member?->height,
+            'region'     => $member?->region,
+            'is_smoker'  => $member?->is_smoker,
+            'mbti'       => $member?->mbti,
+        ];
+
+        if ($isMutual !== null) {
+            $payload['is_mutual'] = $isMutual;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * 그룹 행에 들어있는 voted_at 을, 전달된 투표의 생성 시각과 비교해 더 최신값으로 갱신한다.
+     *
+     * @param array<string, mixed> $row
+     */
+    private function keepLatestVotedAt(array &$row, Vote $vote): void
+    {
+        $votedAt = $vote->created_at?->toIso8601String();
+        if ($votedAt !== null && ($row['voted_at'] === null || $votedAt > $row['voted_at'])) {
+            $row['voted_at'] = $votedAt;
+        }
     }
 
     /**

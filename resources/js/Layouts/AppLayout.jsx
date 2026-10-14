@@ -1,5 +1,5 @@
 import { Link, router, usePage } from "@inertiajs/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import useRealtimeChat from "@/useRealtimeChat";
 import NavigationLoader from "@/Components/NavigationLoader";
 
@@ -16,8 +16,27 @@ export default function AppLayout({
     center = false,
 }) {
     const page = usePage();
-    const { auth, bypassRedirectName, isProduction, eventName } = page.props;
+    const { auth, eventName } = page.props;
     const url = page.url;
+
+    // 헤더의 "~님" 버튼을 5번 연속 터치하면 로그아웃되는 숨김 제스처.
+    // 1.5초 안에 다시 누르지 않으면 카운트가 초기화된다.
+    const logoutTapRef = useRef({ count: 0, timer: null });
+    const handleNameTap = () => {
+        const s = logoutTapRef.current;
+        s.count += 1;
+        if (s.timer) {
+            clearTimeout(s.timer);
+        }
+        if (s.count >= 5) {
+            s.count = 0;
+            router.post("/logout");
+            return;
+        }
+        s.timer = setTimeout(() => {
+            s.count = 0;
+        }, 1500);
+    };
 
     // 페이지(라우트)가 바뀌면 항상 최상단으로 되돌린다. (body 가 스크롤 컨테이너)
     useEffect(() => {
@@ -65,17 +84,7 @@ export default function AppLayout({
                                                 : "border-sky-200 bg-sky-50 text-sky-600";
                                             return (
                                                 <button
-                                                    onClick={() => {
-                                                        if (
-                                                            auth.user.name ===
-                                                                bypassRedirectName ||
-                                                            !isProduction
-                                                        ) {
-                                                            router.post(
-                                                                "/logout",
-                                                            );
-                                                        }
-                                                    }}
+                                                    onClick={handleNameTap}
                                                     className={
                                                         "flex items-center gap-1.5 rounded-full border px-3 py-1 shadow-sm transition hover:shadow active:scale-95 " +
                                                         toneCls

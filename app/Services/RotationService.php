@@ -693,8 +693,19 @@ class RotationService
         $returnMsg = $this->returnMsg;
 
         try {
+            $eventId = (int) $data->event_id;
+
+            // 종료(X)된 행사는 좌석(회원) 추가/이동을 막는다.
+            $event = EventRound::find($eventId);
+            if ($event === null) {
+                throw new Exception('행사를 찾을 수 없습니다.');
+            }
+            if ($event->status === EventRound::STATUS_CLOSED) {
+                throw new Exception('종료된 행사에는 회원을 추가할 수 없습니다.');
+            }
+
             $round = RotationRound::firstOrCreate(
-                ['event_id' => (int) $data->event_id, 'round_no' => (int) $data->round_no]
+                ['event_id' => $eventId, 'round_no' => (int) $data->round_no]
             );
 
             // 같은 턴에 이미 앉아있으면 테이블만 갱신(이동), 없으면 새로 생성.

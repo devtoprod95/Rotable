@@ -156,7 +156,9 @@
                 }).join('');
                 $tb.html(html);
             }
-            $('#matched-pageCount').text('총 ' + list.length + '쌍');
+            // 쌍 수 = 각 남자(행)가 매칭된 상대(targets) 수의 합.
+            var pairCount = list.reduce(function(sum, r){ return sum + ((r.targets || []).length); }, 0);
+            $('#matched-pageCount').text('총 ' + pairCount + '쌍');
         }
 
         function load(){

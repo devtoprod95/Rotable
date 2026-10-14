@@ -135,6 +135,7 @@
         let dataXhr = null;      // 진행 중인 요청 추적 (중복 호출 방지)
         let viewRound = null;    // 현재 보고 있는 턴 (null이면 최신 턴으로 자동 설정)
         let currentRound = 0;    // 좌석이 존재하는 최신 턴 (메타 기준)
+        let isClosed = false;    // 행사가 종료(X)되었는지 — 종료 시 회원 추가 비활성
 
         // 성별 색상 구분: 남성=파랑(blue), 여성=핑크(pink)
         function genderBadgeClass(g){ return g === 'F' ? 'bg-pink-lt' : 'bg-blue-lt'; }
@@ -213,6 +214,9 @@
             let $actionLabel = $('#actionLabel').removeClass('d-none');
 
             currentRound = (typeof meta.current_round !== 'undefined') ? meta.current_round : 0;
+
+            // 종료(X) 여부: 회원 추가 비활성화 판단에 사용.
+            isClosed = !!meta.is_closed;
 
             // 현재 행사 상태 뱃지 최신화 (버튼 클릭 → loadData 재호출 시마다 갱신됨)
             renderStatusBadge(meta.event_status);
@@ -319,7 +323,7 @@
                                 <span class="text-muted ms-1">(${t.members.length}명)</span></div>
                             <div class="card-body py-2">
                                 <div class="mb-2 seat-chips">${chips || '<span class="text-muted">비어있음</span>'}</div>
-                                <select class="form-select form-select-sm seat-add" data-table-id="${t.id}">${memberOptions(assignedIds)}</select>
+                                <select class="form-select form-select-sm seat-add" data-table-id="${t.id}" ${isClosed ? 'disabled' : ''}>${memberOptions(assignedIds)}</select>
                             </div>
                         </div>
                     </div>`;
@@ -344,7 +348,7 @@
         function initSeatChoices(){
             destroySeatChoices();
             document.querySelectorAll('#boardArea .seat-add').forEach(function(el){
-                seatChoices.push(new Choices(el, {
+                var c = new Choices(el, {
                     searchEnabled: true,
                     searchFields: ['label'],
                     searchFloor: 1,
@@ -355,7 +359,10 @@
                     noResultsText: '검색 결과가 없습니다.',
                     noChoicesText: '추가할 회원이 없습니다.',
                     fuseOptions: { threshold: 0.3, ignoreLocation: true },
-                }));
+                });
+                // 종료된 행사면 선택 자체를 막는다.
+                if(isClosed){ try { c.disable(); } catch(e){} }
+                seatChoices.push(c);
             });
         }
 

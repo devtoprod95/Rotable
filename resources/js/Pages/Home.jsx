@@ -154,7 +154,7 @@ export default function Home() {
                             만난 상대 카드의 <b className="text-primary">💌 전달</b> 버튼으로 익명 메시지를 보낼 수 있어요.
                         </>
                     ) : (
-                        '로테이션 진행 중부터 매칭 기간까지 만난 상대에게 익명 메시지를 보낼 수 있어요.'
+                        <span>로테이션 진행 중부터 매칭 기간까지 만난 상대에게<br />익명 메시지를 보낼 수 있어요.</span>
                     )}
                 </p>
                 {canSendMessage && sendLimit && (

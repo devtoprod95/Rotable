@@ -212,9 +212,17 @@ class RotationController extends Controller
             ? $this->rotationService->matchedPairList($id)
             : $this->rotationService->matchList($id);
 
+        // 매칭 전용 조회는 "쌍 수"를 total 로 반환한다.
+        // (한 사람이 여러 명과 매칭될 수 있어 행 수 != 쌍 수 이므로 targets 합으로 센다.)
+        if ($matchedOnly) {
+            $total = array_sum(array_map(static fn ($row) => count($row['targets'] ?? []), $matches));
+        } else {
+            $total = count($matches);
+        }
+
         return response()->json([
             'data'  => $matches,
-            'total' => count($matches),
+            'total' => $total,
         ]);
     }
 

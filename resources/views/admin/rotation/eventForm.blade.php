@@ -88,6 +88,8 @@
         @php
             $maleCount   = $event->members->where('gender', 'M')->count();
             $femaleCount = $event->members->where('gender', 'F')->count();
+            // 최고관리자만 참여자 비밀번호를 볼 수 있다.
+            $isSuperAdmin = auth('admin')->user()?->hasRole(\App\Enums\Role::SuperAdmin->value) ?? false;
         @endphp
         <div class="col-12">
             <div class="card">
@@ -139,6 +141,11 @@
                                                         -
                                                     @endif
                                                 </div>
+                                                @if ($isSuperAdmin)
+                                                    <div style="font-size: 0.85em; margin-top: 2px;">
+                                                        <span class="text-red fw-bold font-monospace" style="user-select: all; cursor: text;">{{ $member->password ?? '-' }}</span>
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td>
                                                 <div>{{ $member->job ?? '-' }}</div>

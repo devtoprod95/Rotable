@@ -1,43 +1,110 @@
-# BasePlate — Laravel Admin Starter (Tabler UI)
+# ROTABLE (로테이블) — 로테이션 소개팅 운영 플랫폼
 
-Laravel 13 기반의 **관리자 전용 페이지 데모 프로젝트**입니다.
-프론트엔드는 [Tabler](https://tabler.io/) 템플릿을 Blade 뷰로 구성했으며, 새 프로젝트를 시작할 때 바로 이어서 작업할 수 있도록 관리자 페이지의 기본 레이아웃(헤더, 사이드 네비게이션, 인증 등)을 미리 구축해 둔 **초기 셋팅용 보일러플레이트**입니다.
+> 한 자리에서 모두와 마주치는 **로테이션 소개팅 파티**를 기획·운영·매칭까지 한 번에 처리하는 웹 서비스입니다.
 
-새 프로젝트에 투입될 때 이 레포를 클론해서 도메인 로직만 얹으면 되는 것을 목표로 합니다.
-
----
-
-## 주요 특징
-
-- **Laravel 13** 기반, View는 전부 **Blade**로 작성
-- **Tabler** 어드민 템플릿 적용 (헤더 / 사이드바 / 카드 / 테이블 등 공통 레이아웃 포함)
-- 관리자 **로그인/인증 기능 포함**
-- **Docker**로 로컬 및 Railway 배포 모두 대응
-- **MySQL / PostgreSQL 둘 다 지원** (드라이버 빌트인, `.env` 설정만 변경하면 전환 가능)
-- 아이콘 라이브러리 등 관리자 화면에서 바로 활용 가능한 UI 리소스 포함
+로테이블은 오프라인 소개팅 행사(와인파티 등)를 디지털로 운영하기 위한 플랫폼입니다.
+참가자는 행사장에서 자리를 **로테이션(순환)** 하며 모든 상대와 대화하고, 마음에 든 상대에게 **비밀 투표**를 합니다.
+서로를 선택한 경우 **다음 날 오전 매칭 결과**가 발표됩니다. 관리자는 행사 생성부터 좌석 배정, 투표 집계, 매칭 결과 확인까지 전 과정을 웹에서 관리합니다.
 
 ---
 
-## 샘플 화면
-<img width="1664" height="934" alt="스크린샷 2026-06-19 151005" src="https://github.com/user-attachments/assets/f9a68fb7-4ea0-4d3e-a1d6-91358f4c66b5" />
-<img width="1744" height="894" alt="스크린샷 2026-06-19 152211" src="https://github.com/user-attachments/assets/ea19a0ed-742b-4215-b0bf-ab42b517510a" />
-<img width="1702" height="965" alt="스크린샷 2026-06-19 152200" src="https://github.com/user-attachments/assets/f7166706-851b-40da-9e3f-ab303bdbe287" />
-<img width="1654" height="918" alt="스크린샷 2026-06-19 152145" src="https://github.com/user-attachments/assets/85db48ae-76cb-4e1b-ab50-89dd2b165f5e" />
-<img width="1691" height="884" alt="스크린샷 2026-06-19 152223" src="https://github.com/user-attachments/assets/8eb14125-7c02-4a27-ac1c-c61f702fba0d" />
+## 서비스 개요
+
+### 참가자(회원) 관점 흐름
+
+1. **입장등록 / 입장** — 회차(행사)를 선택하고 닉네임·핸드폰·비밀번호(4자리) 등 프로필을 등록하거나 로그인
+2. **로테이션 대화** — 행사 타입(와인파티 / 1:1 로테이션 등)에 따라 테이블 단위(3:3, 4:4, 3:2 등)로 단체 대화를 하거나 1:1로 대화하며, 턴마다 자리를 이동해 여러 상대를 만남
+3. **메시지 & 비밀 투표** — 대화 중 상대에게 메시지를 보내고, 마음에 든 상대를 최대 3명까지 비공개로 선택
+4. **자유 대화 시간(2차)** — 투표 후, 마음에 드는 상대와 자유롭게 앉아 더 깊은 대화
+5. **매칭 발표** — 서로 선택한 경우 다음 날 오전 매칭 성사 안내
+
+### 관리자 관점 흐름
+
+```
+행사 생성(대기) → 테이블/좌석 배정 → 로테이션 진행(턴 생성) → 투표 시작(투표중)
+   → 투표 마감(종료) → 매칭 결과/메시지/요청 확인
+```
+
+- **행사 관리**: 회차(행사) 생성/수정/삭제, 참여자 현황 확인
+- **로테이션 설정(좌석 배정)**: 턴별로 어느 회원이 어느 테이블에 앉는지 배치하고, 로테이션을 자동 진행(여자 고정 / 남자 한 칸 이동)
+- **매칭/메시지/요청 조회**: 투표 결과(상호 매칭 쌍), 오간 메시지, 회원이 관리자에게 보낸 요청 확인
+- **상세페이지 제작**: 홍보용 상세페이지를 HTML 에디터로 꾸미고 PNG 이미지로 다운로드
 
 ---
 
-## 기술 스택
+## 핵심 도메인 모델
+
+| 모델 | 테이블 | 설명 |
+|---|---|---|
+| `EventRound` | `event_rounds` | 행사(회차). 상태: 대기(P) → 진행(S) → 투표중(V) → 종료(X) |
+| `Member` | `members` | 회차에 입장/등록한 참가자. 성별·출생연도·직업·키·MBTI 등 프로필 |
+| `RotationTable` | `rotation_tables` | 행사의 테이블(자리). 테이블 번호 보유 |
+| `RotationRound` | `rotation_rounds` | 로테이션 "턴"(0턴, 1턴, ...). 행사별로 턴이 쌓임 |
+| `RotationSeating` | `rotation_seatings` | 특정 턴에서 어느 회원이 어느 테이블에 앉았는지 |
+| `Vote` | `event_votes` | 비밀 투표(지목). 한 회원당 최대 3명 선택 |
+| `Message` | `messages` | 참가자 간 메시지 |
+| `AdminRequest` | `admin_requests` | 회원이 관리자에게 보낸 요청 |
+| `Admin` / `Role` | `admins` / RBAC | 관리자 계정과 역할/권한 |
+
+> **테이블 네이밍 규칙**: 도메인별 prefix(`event_`, `rotation_`)를 사용합니다. 상세 규칙은 `.kiro/steering/table-naming.md` 참고.
+
+### 상태 전이 (EventRound.status)
+
+```
+P(대기) ──[로테이션 진행]──▶ S(진행) ──[투표 시작]──▶ V(투표중) ──[투표 마감]──▶ X(종료)
+```
+
+- 투표는 행사 다음 날 오전 9시에 자동 마감(`votingClosesAt()`)되며, 관리자가 수동으로 즉시 마감할 수도 있습니다.
+
+---
+
+## 아키텍처
+
+### 레이어 구성
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Client                                                      │
+│  ├─ 관리자(Admin)  : Blade + Tabler UI  (서버 렌더링)         │
+│  └─ 참가자(Member) : React + Inertia.js  (SPA 느낌)          │
+└─────────────────────────────────────────────────────────────┘
+                    │ HTTP / Inertia
+┌─────────────────────────────────────────────────────────────┐
+│  Laravel 13 (PHP 8.3)                                        │
+│  ├─ Routes      : routes/web.php (회원) · routes/admin.php    │
+│  ├─ Controllers : RotationController, MemberPageController …  │
+│  ├─ Services    : RotationService (도메인 로직 집중)          │
+│  ├─ Models      : Eloquent (event_/rotation_ prefix)         │
+│  └─ Events      : 메시지/요청 실시간 브로드캐스트             │
+└─────────────────────────────────────────────────────────────┘
+          │                    │                    │
+   ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+   │ MySQL/Pgsql  │    │ Redis        │    │ Reverb/Pusher│
+   │ (영속 데이터)│    │ (세션/캐시/큐)│   │ (실시간 채팅)│
+   └──────────────┘    └──────────────┘    └──────────────┘
+```
+
+### 기술 스택
 
 | 영역 | 사용 기술 |
 |---|---|
 | Backend | Laravel 13, PHP 8.3 (FPM) |
-| View | Blade, Tabler UI |
-| DB | MySQL 또는 PostgreSQL (선택) |
-| Cache / Session | Redis |
+| 관리자 View | Blade + Tabler UI |
+| 참가자 View | React + Inertia.js, Tailwind CSS v4 (Vite 빌드) |
+| DB | MySQL 또는 PostgreSQL (드라이버 빌트인, `.env`로 전환) |
+| Cache / Session / Queue | Redis |
+| 실시간 | Laravel Reverb / Pusher (Echo) |
+| 모니터링 | Laravel Horizon, Pulse |
 | Web Server | Nginx (Alpine) |
 | 실행 환경 | Docker |
 | 배포 | Railway |
+
+### 요청 처리 패턴
+
+- 관리자 화면은 **Blade**로 서버 렌더링하고, 목록/표는 **Tabulator**(ajax)로 조회합니다.
+- 참가자 화면은 **Inertia + React**로 구성되어 SPA처럼 동작합니다.
+- 도메인 로직은 컨트롤러가 아닌 **`RotationService`에 집중**되어 있습니다. 컨트롤러는 검증/응답 변환만 담당합니다.
+- 공통 응답은 `apiRes()` / `helpersSuccessMessage()` / `helpersFailMessage()` 헬퍼로 표준화합니다.
 
 ---
 
@@ -45,270 +112,70 @@ Laravel 13 기반의 **관리자 전용 페이지 데모 프로젝트**입니다
 
 ```
 .
-├── app/                        # Laravel 애플리케이션 코드
-├── resources/views/            # Blade 뷰 (Tabler 레이아웃 포함)
-├── docker/
-│   ├── nginx/conf.d/default.conf
-│   ├── php.ini
-│   └── Dockerfile
-├── docker-compose.yml          # 로컬 개발용
-├── docker-entrypoint.sh
-├── .env.example
-└── README.md
+├── app/
+│   ├── Http/Controllers/   # RotationController(행사/좌석/매칭), MemberPageController(참가자) …
+│   ├── Services/           # RotationService (핵심 도메인 로직)
+│   ├── Models/             # EventRound, Member, Rotation*, Vote, Message …
+│   └── Events/             # 메시지/요청 실시간 이벤트
+├── resources/
+│   ├── views/admin/rotation/   # 관리자 로테이션 화면(Blade)
+│   │   ├── eventList / eventForm      # 행사 목록 / 상세
+│   │   ├── seating                    # 좌석 배정
+│   │   ├── detail / _detailSample     # 상세페이지 제작 + 샘플
+│   │   └── _*Modal                    # 매칭/메시지/요청/투표 모달
+│   └── js/Pages/               # 참가자 React 페이지 (Auth, Home, Votes, Chats …)
+├── routes/
+│   ├── web.php             # 참가자(회원) 라우트
+│   └── admin.php           # 관리자 라우트
+├── database/migrations/    # event_/rotation_ 테이블
+└── docker/ , docker-compose.yml
 ```
-
----
-
-## 요구 사항
-
-- Docker / Docker Compose
-
-> PHP, Composer 등은 모두 Docker 이미지 내부에 포함되어 있어 **로컬에 별도 설치할 필요가 없습니다.**
 
 ---
 
 ## 시작하기 (Quick Start)
 
-### 1. 프로젝트 클론
+### 1. 클론 & 환경 변수
 
 ```bash
-git clone <repository-url> baseplate
-cd baseplate
-```
-
-### 2. 환경 변수 설정
-
-```bash
+git clone <repository-url> rotable
+cd rotable
 cp .env.example .env
 ```
 
-`.env`에서 아래 항목을 환경에 맞게 수정합니다.
+`.env`에서 DB/Redis/포트를 환경에 맞게 설정합니다. (`DB_CONNECTION`을 `mysql` 또는 `pgsql`로 전환 가능)
 
-```env
-APP_NAME=BasePlate
-APP_ENV=local
-APP_URL=http://localhost:9083
-
-# DB 드라이버 선택: mysql 또는 pgsql
-DB_CONNECTION=mysql
-DB_HOST=mysql        # 또는 postgres (사용하는 DB 서비스명에 맞게)
-DB_PORT=3306         # mysql: 3306 / pgsql: 5432
-DB_DATABASE=baseplate
-DB_USERNAME=baseplate
-DB_PASSWORD=secret
-
-REDIS_HOST=phpredis
-REDIS_PORT=6379
-
-NGINX_PORT=9083
-PHP_PORT=9000
-```
-
-> ⚠️ 본 `docker-compose.yml` 기본 구성에는 **DB 컨테이너가 포함되어 있지 않습니다.** 로컬 환경에 맞춰 MySQL 또는 PostgreSQL 컨테이너를 compose에 추가하거나, 외부(원격) DB에 연결해서 사용하세요. (예시는 [DB 컨테이너 추가하기](#db-컨테이너-추가하기-선택) 참고)
-
-### 3. 컨테이너 빌드 & 실행
+### 2. 컨테이너 빌드 & 실행
 
 ```bash
 docker compose up -d --build
-```
-
-### 4. 컨테이너 진입 후 초기 셋팅
-
-```bash
 docker compose exec php83 bash
 
-# 컨테이너 내부에서 실행
+# 컨테이너 내부
 composer install
 php artisan key:generate
 php artisan migrate --seed
+npm install && npm run build   # 참가자 React/Tailwind 빌드
 ```
 
-### 5. 접속 확인
+### 3. 접속
 
-브라우저에서 아래 주소로 접속합니다.
-
-```
-http://localhost:9083
-```
-
-관리자 로그인 페이지가 표시되면 정상 구동된 것입니다.
-
-**테스트 계정**
-
-| 항목 | 값 |
-|---|---|
-| 아이디 | admin |
-| 비밀번호 | 1234 |
-
----
-
-## Docker 구성
-
-### 로컬 (docker-compose.yml)
-
-| 서비스 | 설명 | 포트 |
-|---|---|---|
-| `nginx` | 웹 서버, Blade로 렌더링된 페이지 서빙 | `9083` (호스트) → `80` (컨테이너) |
-| `php83` | PHP 8.3-FPM, Laravel 애플리케이션 실행 | `9000` (내부 expose) |
-| `phpredis` | 세션/캐시용 Redis | `6379` |
-
-```yaml
-services:
-  nginx:
-    image: nginx:alpine
-    container_name: nginx
-    ports:
-      - "${NGINX_PORT:-9083}:80"
-    environment:
-      - TZ=Asia/Seoul
-    volumes:
-      - ./docker/nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
-      - .:/var/www/html
-    depends_on:
-      - php83
-
-  php83:
-    build: ./docker
-    container_name: php83
-    restart: always
-    user: "1000:1000"
-    expose:
-      - "${PHP_PORT:-9000}"
-    environment:
-      - TZ=Asia/Seoul
-      - REDIS_HOST=phpredis
-      - REDIS_PORT=${REDIS_PORT:-6379}
-    volumes:
-      - ./docker/php.ini:/usr/local/etc/php/php.ini
-      - .:/var/www/html
-    depends_on:
-      - phpredis
-
-  phpredis:
-    image: redis:alpine
-    container_name: phpredis
-    restart: always
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data
-    command: redis-server --appendonly yes
-
-volumes:
-  redis_data:
-```
-
-### Railway 배포
-
-Railway는 별도 `docker-compose.yml` 없이 **Dockerfile 단독**으로 배포됩니다. Redis와 PostgreSQL은 Railway 서비스로 각각 분리하여 운영합니다.
-
-| Railway 서비스 | 설명 |
-|---|---|
-| `laravel-docker` | PHP 애플리케이션 (Dockerfile 빌드) |
-| `Redis` | 세션 / 캐시용 |
-| `Postgres` | 데이터베이스 |
-
-Railway 환경 변수는 각 서비스의 Variables 탭에서 설정하며, `DATABASE_URL`, `REDIS_URL` 등은 Railway가 자동으로 주입합니다.
-
-### PHP 컨테이너 (docker/Dockerfile)
-
-- Base: `php:8.3-fpm`
-- 확장 모듈: `pdo_mysql`, `pdo_pgsql`, `pgsql`, `mbstring`, `zip`, `exif`, `pcntl`, `bcmath`, `gd`, `redis`
-- **MySQL / PostgreSQL 드라이버가 모두 설치되어 있어** `.env`의 `DB_CONNECTION` 값만 바꾸면 DB를 전환할 수 있습니다.
-- Composer 포함 (`composer:latest` 이미지에서 바이너리 복사)
-- Timezone: `Asia/Seoul`
-- 컨테이너 내부 `www-data` 사용자를 UID/GID `1000`으로 맞춰 호스트와 파일 권한 충돌 방지
-
-### DB 컨테이너 추가하기 (선택)
-
-기본 compose 파일에는 DB 서비스가 없으므로, 필요에 따라 아래 둘 중 하나를 `docker-compose.yml`의 `services` 항목에 추가하세요.
-
-**MySQL 사용 시**
-
-```yaml
-  mysql:
-    image: mysql:8.0
-    container_name: mysql
-    restart: always
-    environment:
-      - TZ=Asia/Seoul
-      - MYSQL_DATABASE=baseplate
-      - MYSQL_USER=baseplate
-      - MYSQL_PASSWORD=secret
-      - MYSQL_ROOT_PASSWORD=root
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-```
-
-**PostgreSQL 사용 시**
-
-```yaml
-  postgres:
-    image: postgres:16-alpine
-    container_name: postgres
-    restart: always
-    environment:
-      - TZ=Asia/Seoul
-      - POSTGRES_DB=baseplate
-      - POSTGRES_USER=baseplate
-      - POSTGRES_PASSWORD=secret
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-```
-
-추가한 DB 서비스명에 맞춰 `.env`의 `DB_HOST`, `DB_PORT`, `DB_CONNECTION`을 수정하고, 하단 `volumes:`에도 `mysql_data:` 또는 `postgres_data:`를 추가해주세요.
-
----
-
-## 관리자 페이지 구성
-
-현재 포함된 기본 레이아웃 / 기능:
-
-- **로그인 / 인증**: 관리자 로그인 화면 및 인증 미들웨어 적용
-- **공통 레이아웃**: 상단 헤더(앱 이름, 관리자 정보) + 좌측 사이드 네비게이션(홈 / 대시보드 / 관리자 / 설정)
-- **아이콘 라이브러리 페이지**: Tabler Icons(`ti ti-*`) 204개를 카테고리별로 모아 보여주고, 클릭 시 클래스명이 복사되는 내부 도구 페이지 포함
-
-새로운 화면을 추가할 때는 이 공통 레이아웃(`resources/views/layouts/`)을 `@extends` 하여 콘텐츠 영역만 채우면 됩니다.
+- 관리자: `http://localhost:9083/admin/login`
+- 참가자: `http://localhost:9083/`
 
 ---
 
 ## 자주 쓰는 명령어
 
 ```bash
-# 컨테이너 로그 확인
-docker compose logs -f php83
-
-# 컨테이너 진입
-docker compose exec php83 bash
-
-# 마이그레이션
-docker compose exec php83 php artisan migrate
-
-# 캐시/설정 초기화
+docker compose exec php83 php artisan migrate      # 마이그레이션
 docker compose exec php83 php artisan optimize:clear
-
-# 컨테이너 중지
-docker compose down
+docker compose exec php83 php artisan test --compact
+npm run dev    # 프론트 개발 모드 (HMR)
 ```
-
----
-
-## 트러블슈팅
-
-| 증상 | 확인 사항 |
-|---|---|
-| 파일 권한 오류 (Permission denied) | Dockerfile에서 `www-data`를 UID/GID `1000`으로 맞췄으므로, 호스트 사용자도 UID `1000`인지 확인 |
-| DB 연결 실패 | `.env`의 `DB_CONNECTION`, `DB_HOST`, `DB_PORT`가 실제 추가한 DB 컨테이너 서비스명/포트와 일치하는지 확인 |
-| 포트 충돌 | `.env`의 `NGINX_PORT`, `REDIS_PORT` 값을 다른 포트로 변경 후 `docker compose up -d` 재실행 |
-| Redis 연결 실패 | `phpredis` 컨테이너가 정상 기동했는지 `docker compose ps`로 확인 |
-| Railway 배포 후 500 에러 | Railway Variables에서 `APP_KEY`, `DB_*`, `REDIS_*` 환경 변수가 올바르게 설정되어 있는지 확인 |
 
 ---
 
 ## 라이선스
 
-내부/데모 목적의 보일러플레이트 프로젝트입니다.
+내부 운영용 프로젝트입니다.

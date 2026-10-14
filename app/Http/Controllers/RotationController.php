@@ -79,7 +79,10 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
         }
 
-        $result = $this->rotationService->eventStore((object) $validator->validated());
+        $data = $validator->validated();
+        $data['created_by'] = auth('admin')->id();
+
+        $result = $this->rotationService->eventStore((object) $data);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -186,6 +189,7 @@ class RotationController extends Controller
             [
                 'searchText' => $this->request->input('searchText', ''),
                 'read'       => $this->request->input('read', ''),
+                'senderId'   => (int) $this->request->input('senderId', 0),
             ]
         ));
     }
@@ -195,16 +199,36 @@ class RotationController extends Controller
      * ==================================================================== */
 
     /**
-     * 행사의 상호 매칭 목록 (모달 Tabulator ajax).
+     * 행사의 투표/매칭 목록 (모달 Tabulator ajax).
+     * - matched=1 이면 "상호 매칭된 쌍"만 남자 기준으로 묶어 반환한다.
+     * - 그 외에는 누가 누구를 선택했는지 전체 투표를 선택한 사람 기준으로 묶어 반환한다.
      * Tabulator 가 기대하는 { data, total } 형태로 반환한다.
      */
     public function eventMatchList(int $id): JsonResponse
     {
-        $matches = $this->rotationService->matchList($id);
+        $matchedOnly = $this->request->boolean('matched');
+
+        $matches = $matchedOnly
+            ? $this->rotationService->matchedPairList($id)
+            : $this->rotationService->matchList($id);
 
         return response()->json([
             'data'  => $matches,
             'total' => count($matches),
+        ]);
+    }
+
+    /**
+     * 특정 회원을 "선택(지목)한 사람들" 목록 (받은 투표수 모달 Tabulator ajax).
+     * Tabulator 가 기대하는 { data, total } 형태로 반환한다.
+     */
+    public function eventMemberVoterList(int $id, int $memberId): JsonResponse
+    {
+        $voters = $this->rotationService->memberVoterList($id, $memberId);
+
+        return response()->json([
+            'data'  => $voters,
+            'total' => count($voters),
         ]);
     }
 

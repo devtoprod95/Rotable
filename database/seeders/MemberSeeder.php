@@ -27,19 +27,28 @@ class MemberSeeder extends Seeder
             return;
         }
 
-        foreach ($rounds as $round) {
-            // 각 회차에 남성 10명, 여성 10명 생성.
-            Member::factory()
-                ->count(10)
-                ->male()
-                ->for($round, 'eventRound')
-                ->create();
+        $maleNames   = Member::factory()->maleNames();
+        $femaleNames = Member::factory()->femaleNames();
 
-            Member::factory()
-                ->count(10)
-                ->female()
-                ->for($round, 'eventRound')
-                ->create();
+        foreach ($rounds as $round) {
+            // 한 회차 안에서 이름이 겹치지 않도록, 이름 풀을 셔플해 순서대로 하나씩 배정한다.
+            $maleShuffled   = collect($maleNames)->shuffle()->values();
+            $femaleShuffled = collect($femaleNames)->shuffle()->values();
+
+            // 각 회차에 남성 10명, 여성 10명 생성.
+            for ($i = 0; $i < 10; $i++) {
+                Member::factory()
+                    ->male()
+                    ->for($round, 'eventRound')
+                    ->create(['name' => $maleShuffled[$i]]);
+            }
+
+            for ($i = 0; $i < 10; $i++) {
+                Member::factory()
+                    ->female()
+                    ->for($round, 'eventRound')
+                    ->create(['name' => $femaleShuffled[$i]]);
+            }
         }
     }
 }

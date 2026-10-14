@@ -18,10 +18,16 @@
                 <div class="d-flex gap-2">
                     @if ($isEdit)
                         <button type="button" id="goMatchesBtn" class="btn btn-outline-pink px-4">
-                            <i class="ti ti-heart me-1"></i> 매칭 조회
+                            <i class="ti ti-heart me-1"></i> 전체 매칭
+                        </button>
+                        <button type="button" id="goMatchedBtn" class="btn btn-outline-pink px-4">
+                            <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
                         </button>
                         <button type="button" id="goMessagesBtn" class="btn btn-outline-primary px-4">
-                            <i class="ti ti-messages me-1"></i> 메시지 조회
+                            <i class="ti ti-messages me-1"></i> 전체 메시지<span id="messagesCount"></span>
+                        </button>
+                        <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow px-4">
+                            <i class="ti ti-hand-stop me-1"></i> 전체 요청<span id="requestsCount"></span>
                         </button>
                     @endif
                     <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary px-4">목록</a>
@@ -102,15 +108,12 @@
                                 <thead>
                                     <tr>
                                         <th class="w-1">No</th>
-                                        <th>이름 / 성별</th>
-                                        <th>연락처</th>
-                                        <th class="text-center">출생연도<br>나이</th>
-                                        <th>직업</th>
-                                        <th class="text-center">키<br>MBTI</th>
-                                        <th>지역</th>
-                                        <th class="text-center">흡연</th>
+                                        <th>회원 정보</th>
+                                        <th>직업 / 키 / MBTI</th>
+                                        <th>지역 / 흡연</th>
                                         <th class="text-center">받은<br>투표수</th>
                                         <th class="text-center">보낸<br>메시지</th>
+                                        <th class="text-center">보낸<br>요청수</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -118,43 +121,78 @@
                                         <tr>
                                             <td>{{ $i + 1 }}</td>
                                             <td>
-                                                <span class="fw-bold">{{ $member->name }}</span>
-                                                @if ($member->gender === 'F')
-                                                    <span class="badge bg-pink-lt">여</span>
-                                                @else
-                                                    <span class="badge bg-blue-lt">남</span>
-                                                @endif
+                                                <div>
+                                                    <span class="fw-bold">{{ $member->name }}</span>
+                                                    @if ($member->gender === 'F')
+                                                        <span class="badge bg-pink-lt">여</span>
+                                                    @else
+                                                        <span class="badge bg-blue-lt">남</span>
+                                                    @endif
+                                                </div>
+                                                <div class="text-muted" style="font-size: 0.85em;">
+                                                    {{ $member->phone ?? '-' }}
+                                                </div>
+                                                <div class="text-muted" style="font-size: 0.85em;">
+                                                    @if ($member->birth_year)
+                                                        {{ $member->birth_year }}년생 · {{ now()->year - $member->birth_year + 1 }}세
+                                                    @else
+                                                        -
+                                                    @endif
+                                                </div>
                                             </td>
-                                            <td class="text-muted">{{ $member->phone ?? '-' }}</td>
-                                            <td class="text-center">
-                                                {{ $member->birth_year ?? '-' }}<br>
-                                                <span class="text-muted">{{ $member->birth_year ? (now()->year - $member->birth_year + 1) . '세' : '-' }}</span>
+                                            <td>
+                                                <div>{{ $member->job ?? '-' }}</div>
+                                                <div class="text-muted" style="font-size: 0.85em;">
+                                                    {{ $member->height ? $member->height . 'cm' : '-' }}
+                                                    @if ($member->mbti)
+                                                        · {{ $member->mbti }}
+                                                    @endif
+                                                </div>
                                             </td>
-                                            <td>{{ $member->job ?? '-' }}</td>
-                                            <td class="text-center">
-                                                {{ $member->height ? $member->height . 'cm' : '-' }}<br>
-                                                <span class="text-muted">{{ $member->mbti ?? '-' }}</span>
-                                            </td>
-                                            <td>{{ $member->region ?? '-' }}</td>
-                                            <td class="text-center">
-                                                @if (is_null($member->is_smoker))
-                                                    -
-                                                @elseif ($member->is_smoker)
-                                                    <span class="badge bg-red-lt">흡연</span>
-                                                @else
-                                                    <span class="badge bg-green-lt">비흡연</span>
-                                                @endif
+                                            <td>
+                                                <div>{{ $member->region ?? '-' }}</div>
+                                                <div style="font-size: 0.85em;">
+                                                    @if (is_null($member->is_smoker))
+                                                        <span class="text-muted">-</span>
+                                                    @elseif ($member->is_smoker)
+                                                        <span class="badge bg-red-lt">흡연</span>
+                                                    @else
+                                                        <span class="badge bg-green-lt">비흡연</span>
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td class="text-center">
                                                 @if ($member->received_votes_count > 0)
-                                                    <span class="badge bg-pink-lt">{{ $member->received_votes_count }}표</span>
+                                                    <button type="button"
+                                                            class="btn btn-outline-pink btn-voters"
+                                                            data-member-id="{{ $member->id }}"
+                                                            data-member-label="{{ $member->name }}">
+                                                        {{ $member->received_votes_count }}표
+                                                    </button>
                                                 @else
                                                     <span class="text-muted">0표</span>
                                                 @endif
                                             </td>
                                             <td class="text-center">
                                                 @if ($member->sent_messages_count > 0)
-                                                    <span class="badge bg-azure-lt">{{ $member->sent_messages_count }}건</span>
+                                                    <button type="button"
+                                                            class="btn btn-outline-primary btn-sent-messages"
+                                                            data-member-id="{{ $member->id }}"
+                                                            data-member-label="{{ $member->name }}">
+                                                        {{ $member->sent_messages_count }}건
+                                                    </button>
+                                                @else
+                                                    <span class="text-muted">0건</span>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @if ($member->admin_requests_count > 0)
+                                                    <button type="button"
+                                                            class="btn btn-outline-yellow btn-sent-requests"
+                                                            data-member-id="{{ $member->id }}"
+                                                            data-member-label="{{ $member->name }}">
+                                                        {{ $member->admin_requests_count }}건
+                                                    </button>
                                                 @else
                                                     <span class="text-muted">0건</span>
                                                 @endif
@@ -259,9 +297,62 @@
             MatchesModal.open({{ $event->id }}, @json($event->label));
         });
 
+        // ===== 상세: 매칭 결과(매칭된 쌍만, 남자 기준) 모달 =====
+        $('#goMatchedBtn').on('click', function(){
+            MatchedModal.open({{ $event->id }}, @json($event->label));
+        });
+
         // ===== 상세: 메시지 조회 모달 =====
         $('#goMessagesBtn').on('click', function(){
             MessagesModal.open({{ $event->id }}, @json($event->label));
+        });
+
+        // ===== 상세: 전체 요청 모달 =====
+        $('#goRequestsBtn').on('click', function(){
+            RequestsModal.open({{ $event->id }}, @json($event->label));
+        });
+
+        // ===== 상세: 상단 버튼 수 표시 (매칭 쌍 / 메시지 / 요청) =====
+        (function(){
+            var eventId = {{ $event->id }};
+            var matchesUrl  = "{{ route('admin.rotation.event.matches.list', ['id' => $event->id]) }}";
+            var messagesUrl = "{{ route('admin.rotation.event.messages.list', ['id' => $event->id]) }}";
+            var requestsUrl = "{{ route('admin.requests.list') }}";
+
+            function setCount(sel, cnt, unit){
+                $(sel).text((cnt > 0) ? ' (' + cnt + unit + ')' : '');
+            }
+
+            $.get(matchesUrl + '?matched=1', function(res){
+                setCount('#matchedCount', res?.total ?? (res?.data ? res.data.length : 0), '쌍');
+            });
+            $.get(messagesUrl, { size: 1 }, function(res){
+                setCount('#messagesCount', res?.total ?? 0, '건');
+            });
+            $.get(requestsUrl, { eventId: eventId, size: 1 }, function(res){
+                setCount('#requestsCount', res?.total ?? 0, '건');
+            });
+        })();
+
+        // ===== 상세: 받은 투표수(나를 선택한 사람) 모달 =====
+        $(document).on('click', '.btn-voters', function(){
+            var memberId = $(this).data('member-id');
+            var label = $(this).data('member-label') || '';
+            VotersModal.open({{ $event->id }}, memberId, label + ' 님을 선택한 사람');
+        });
+
+        // ===== 상세: 보낸 메시지 모달 (특정 회원이 보낸 것만) =====
+        $(document).on('click', '.btn-sent-messages', function(){
+            var memberId = $(this).data('member-id');
+            var label = $(this).data('member-label') || '';
+            MessagesModal.open({{ $event->id }}, label + ' 님이 보낸 메시지', { senderId: memberId });
+        });
+
+        // ===== 상세: 보낸 요청 모달 (특정 회원이 보낸 것만) =====
+        $(document).on('click', '.btn-sent-requests', function(){
+            var memberId = $(this).data('member-id');
+            var label = $(this).data('member-label') || '';
+            RequestsModal.open({{ $event->id }}, label + ' 님이 보낸 요청', { memberId: memberId });
         });
 
         // ===== 상세: 행사 정보 수정 =====
@@ -346,5 +437,8 @@
 @if ($isEdit)
     @include('admin.rotation._messagesModal')
     @include('admin.rotation._matchesModal')
+    @include('admin.rotation._matchedModal')
+    @include('admin.rotation._votersModal')
+    @include('admin.rotation._requestsModal')
 @endif
 @endsection

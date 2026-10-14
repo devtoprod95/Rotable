@@ -10,7 +10,7 @@ return new class extends Migration
      * Run the migrations.
      *
      * 회원 간 투표(최종 선택) 테이블.
-     * - 투표중(V) 단계에서 회원이 마음에 든 이성에게 투표한다. (회원당 최대 2명)
+     * - 투표중(V) 단계에서 회원이 마음에 든 이성에게 투표한다. (회원당 최대 3명)
      * - voter_id 와 target_id 가 서로를 지목하면 "상호 매칭"으로 간주한다.
      * - (event_id, voter_id, target_id) 조합은 유일하다. (같은 상대 중복 투표 방지)
      */

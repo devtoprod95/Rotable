@@ -95,7 +95,7 @@ export default function Votes() {
         canVote = false,
         isClosed = false,
         votingEnded = false,
-        maxVotes = 2,
+        maxVotes = 3,
         candidates = [],
         myVotedIds = [],
         receivedCount = 0,
@@ -204,10 +204,10 @@ export default function Votes() {
                 {/* 투표중 안내: 결과 공개 시점/규칙 안내 (현재 시스템 로직 기준) */}
                 {canVote && (
                     <div className="mt-3 space-y-1.5 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-xs leading-relaxed text-amber-800">
-                        <p>📝 선택은 <b>마감 전까지 자유롭게 수정</b>할 수 있어요.</p>
+                        <p>📝 선택은 <b>다음 날 오전 9시 전까지</b> 자유롭게 수정할 수 있어요.</p>
                         <p>💘 <b>서로(쌍방) 선택한 상대</b>와만 매칭되어 <b>연락처가 공개</b>돼요.</p>
                         <p>⭐ 매칭이 안 되더라도 <b>나를 선택한 투표수</b>는 확인할 수 있어요.</p>
-                        <p>⏰ 결과는 <b>행사 다음 날 오전 9시 이후</b>에 공개돼요.</p>
+                        <p>⏰ 결과는 <b>다음 날 오전 9시 이후</b>에 공개돼요.</p>
                         <p className="text-amber-600">※ 처리 시점에 따라 공개까지 최대 1시간 정도 걸릴 수 있어요.</p>
                     </div>
                 )}

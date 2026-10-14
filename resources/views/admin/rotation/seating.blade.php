@@ -3,6 +3,22 @@
 @section('title', '로테이션 설정')
 
 @section('content')
+<style>
+    /* Choices 드롭다운이 턴 네비게이션 등 다른 요소 위로 오도록 z-index 최상단 처리.
+       열린 셀렉트의 카드가 다른 카드/버튼보다 위에 쌓이도록 함께 올린다. */
+    .choices { position: relative; }
+    .choices.is-open { z-index: 1080; }
+    .choices__list--dropdown,
+    .choices__list[aria-expanded] {
+        z-index: 1080 !important;
+    }
+    /* 열린 셀렉트를 품은 카드가 형제 카드 위로 오도록 */
+    .card:has(.choices.is-open) { position: relative; z-index: 1080; }
+
+    /* 칩 제거(x) 버튼: 클릭 영역을 넓히고 hover 시 배경 피드백 */
+    .seat-chips .chip-remove { transition: background-color .12s ease; cursor: pointer; }
+    .seat-chips .chip-remove:hover { background-color: rgba(214, 57, 57, 0.15); }
+</style>
 <div class="row row-cards mt-2">
     <div class="col-12">
         <div class="card">
@@ -12,11 +28,20 @@
                     <span class="badge d-none" id="eventStatusBadge"></span>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="goDetailBtn" class="btn btn-outline-secondary">
+                        <i class="ti ti-external-link me-1"></i> 행사 상세
+                    </button>
                     <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
-                        <i class="ti ti-heart me-1"></i> 매칭 조회
+                        <i class="ti ti-heart me-1"></i> 전체 매칭
+                    </button>
+                    <button type="button" id="goMatchedBtn" class="btn btn-outline-pink">
+                        <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
                     </button>
                     <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
-                        <i class="ti ti-messages me-1"></i> 메시지 조회
+                        <i class="ti ti-messages me-1"></i> 전체 메시지<span id="messagesCount"></span>
+                    </button>
+                    <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow">
+                        <i class="ti ti-hand-stop me-1"></i> 전체 요청<span id="requestsCount"></span>
                     </button>
                 </div>
             </div>
@@ -83,6 +108,10 @@
         const rotateUrl  = "{{ route('admin.rotation.seating.rotate') }}";
         const finishUrl  = "{{ route('admin.rotation.seating.finish') }}";
         const closeVotingUrl = "{{ route('admin.rotation.seating.closeVoting') }}";
+        const matchesUrlTemplate = "{{ route('admin.rotation.event.matches.list', ['id' => '__ID__']) }}";
+        const messagesUrlTemplate = "{{ route('admin.rotation.event.messages.list', ['id' => '__ID__']) }}";
+        const requestsListUrl = "{{ route('admin.requests.list') }}";
+        const eventDetailBase = "{{ url('admin/rotation/event') }}";
 
         // 서버 enum 기반 상태 라벨 (P/S/V/X). 뱃지 표기에 사용.
         const STATUS_LABEL = @json($statuses);
@@ -116,7 +145,12 @@
             let html = '<option value="">+ 회원 추가</option>';
             members.forEach(function(m){
                 if(assignedIds && assignedIds.has(m.id)) return; // 이미 배정된 회원은 제외
-                html += `<option value="${m.id}">[${genderLabel(m.gender)}] ${m.name}</option>`;
+                // 동명이인 구분을 위해 직업/출생연도를 함께 표기한다.
+                let info = [];
+                if(m.birth_year){ info.push(String(m.birth_year).slice(-2) + '년생'); }
+                if(m.job){ info.push(m.job); }
+                let suffix = info.length ? ` · ${info.join(' · ')}` : '';
+                html += `<option value="${m.id}">[${genderLabel(m.gender)}] ${m.name}${suffix}</option>`;
             });
             return html;
         }
@@ -131,7 +165,37 @@
                 renderActions(res?.board?.meta || {});
                 renderBoard(res?.board || {});
             }).always(function(){ dataXhr = null; });
+            refreshCounts();
             return dataXhr;
+        }
+
+        // 상단 버튼들에 현재 행사의 매칭 쌍 수 / 메시지 수 / 요청 수를 표시한다.
+        function refreshCounts(){
+            var eventId = $('#eventSelect').val();
+            var $matched = $('#matchedCount');
+            var $messages = $('#messagesCount');
+            var $requests = $('#requestsCount');
+
+            if(!eventId){ $matched.text(''); $messages.text(''); $requests.text(''); return; }
+
+            function setCount($el, cnt, unit){
+                $el.text((cnt > 0) ? ' (' + cnt + unit + ')' : '');
+            }
+
+            // 매칭 쌍 수 (남자 기준 중복 제거된 쌍)
+            $.get(matchesUrlTemplate.replace('__ID__', eventId) + '?matched=1', function(res){
+                setCount($matched, res?.total ?? (res?.data ? res.data.length : 0), '쌍');
+            }).fail(function(){ $matched.text(''); });
+
+            // 전체 메시지 수
+            $.get(messagesUrlTemplate.replace('__ID__', eventId), { size: 1 }, function(res){
+                setCount($messages, res?.total ?? 0, '건');
+            }).fail(function(){ $messages.text(''); });
+
+            // 전체 요청 수
+            $.get(requestsListUrl, { eventId: eventId, size: 1 }, function(res){
+                setCount($requests, res?.total ?? 0, '건');
+            }).fail(function(){ $requests.text(''); });
         }
 
         // 메타 기반 버튼/네비게이션 제어:
@@ -215,6 +279,8 @@
         }
 
         function renderBoard(data){
+            // 이전 Choices 인스턴스를 먼저 정리(원본 select 복원)한 뒤 보드를 비운다.
+            destroySeatChoices();
             let $area = $('#boardArea').empty();
             if(!data.tables || data.tables.length === 0){
                 $area.html('<div class="col-12"><div class="card"><div class="card-body text-center text-muted py-5">생성된 테이블이 없습니다. 행사 관리 &gt; 상세에서 테이블을 먼저 추가해주세요.</div></div></div>');
@@ -230,9 +296,19 @@
 
             data.tables.forEach(function(t){
                 let chips = t.members.map(function(m){
-                    return `<span class="badge ${genderBadgeClass(m.gender)} me-1 mb-1 d-inline-flex align-items-center gap-1">
-                                ${m.name}
-                                <a href="#" class="text-danger chip-remove" data-seating-id="${m.seating_id}">&times;</a>
+                    // 이름 옆에 출생연도/직업을 작은 글씨로 표기한다.
+                    let info = [];
+                    if(m.birth_year){ info.push(String(m.birth_year).slice(-2) + '년생'); }
+                    if(m.job){ info.push(m.job); }
+                    let infoText = info.length
+                        ? ` <span style="font-weight:400;opacity:0.7;font-size:0.85em;">${info.join(' · ')}</span>`
+                        : '';
+                    return `<span class="badge ${genderBadgeClass(m.gender)} me-1 mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1">
+                                <span>${m.name}${infoText}</span>
+                                <a href="#" class="chip-remove d-inline-flex align-items-center justify-content-center text-danger"
+                                   data-seating-id="${m.seating_id}"
+                                   title="제거"
+                                   style="width:1.4rem;height:1.4rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.95rem;line-height:1;"></i></a>
                             </span>`;
                 }).join('');
 
@@ -248,6 +324,38 @@
                         </div>
                     </div>`;
                 $area.append(card);
+            });
+
+            // 각 테이블의 '회원 추가' 셀렉트를 Choices(검색형)로 변환.
+            // 보드는 매 렌더마다 재생성되므로 여기서 매번 초기화한다.
+            initSeatChoices();
+        }
+
+        // 회원 추가 셀렉트(.seat-add)에 Choices 적용. (단일 선택 + 검색)
+        // 보드가 매 렌더마다 재생성되므로, 이전 인스턴스를 먼저 destroy 하여
+        // option 이 중복 누적되는 것을 방지한다.
+        let seatChoices = [];
+        function destroySeatChoices(){
+            seatChoices.forEach(function(c){
+                try { c.destroy(); } catch (e) { /* noop */ }
+            });
+            seatChoices = [];
+        }
+        function initSeatChoices(){
+            destroySeatChoices();
+            document.querySelectorAll('#boardArea .seat-add').forEach(function(el){
+                seatChoices.push(new Choices(el, {
+                    searchEnabled: true,
+                    searchFields: ['label'],
+                    searchFloor: 1,
+                    searchResultLimit: -1,
+                    shouldSort: false,
+                    itemSelectText: '',
+                    searchPlaceholderValue: '🔍 이름으로 검색',
+                    noResultsText: '검색 결과가 없습니다.',
+                    noChoicesText: '추가할 회원이 없습니다.',
+                    fuseOptions: { threshold: 0.3, ignoreLocation: true },
+                }));
             });
         }
 
@@ -359,12 +467,35 @@
             MessagesModal.open(eventId, label);
         });
 
+        // 선택된 행사의 상세 페이지를 새 창으로 연다.
+        $('#goDetailBtn').on('click', function(){
+            var eventId = $('#eventSelect').val();
+            if(!eventId){ return; }
+            window.open(eventDetailBase + '/' + eventId, '_blank');
+        });
+
         // 선택된 행사의 매칭 결과를 모달로 조회
         $('#goMatchesBtn').on('click', function(){
             var eventId = $('#eventSelect').val();
             if(!eventId){ return; }
             var label = $('#eventSelect option:selected').text();
             MatchesModal.open(eventId, label);
+        });
+
+        // 선택된 행사의 "매칭된 쌍"만 모달로 조회 (남자 기준)
+        $('#goMatchedBtn').on('click', function(){
+            var eventId = $('#eventSelect').val();
+            if(!eventId){ return; }
+            var label = $('#eventSelect option:selected').text();
+            MatchedModal.open(eventId, label);
+        });
+
+        // 선택된 행사의 회원 요청을 모달로 조회
+        $('#goRequestsBtn').on('click', function(){
+            var eventId = $('#eventSelect').val();
+            if(!eventId){ return; }
+            var label = $('#eventSelect option:selected').text();
+            RequestsModal.open(eventId, label);
         });
 
         // 턴 네비게이션: 이전/다음 턴 보기 (1턴 ~ 최신 턴 범위, 0턴은 세팅용이라 제외)
@@ -394,4 +525,6 @@
 
 @include('admin.rotation._messagesModal')
 @include('admin.rotation._matchesModal')
+@include('admin.rotation._matchedModal')
+@include('admin.rotation._requestsModal')
 @endsection

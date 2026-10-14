@@ -20,10 +20,10 @@
         position: fixed; right: 24px; bottom: 24px; z-index: 1055;
         width: 60px; height: 60px; border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
-        background: #d63939 !important; border-color: #d63939 !important; color: #fff;
-        box-shadow: 0 8px 24px rgba(214,57,57,.4);
+        background: #d9a406 !important; border-color: #d9a406 !important; color: #fff;
+        box-shadow: 0 8px 24px rgba(217,164,6,.4);
     }
-    .ar-fab:hover { background: #c22c2c !important; border-color: #c22c2c !important; color: #fff;}
+    .ar-fab:hover { background: #b98a04 !important; border-color: #b98a04 !important; color: #fff;}
     .ar-fab .ar-badge {
         position: absolute; top: -5px; right: -5px;
         min-width: 22px; height: 22px; padding: 0 6px;

@@ -22,7 +22,7 @@
             <div class="modal-header py-3 px-4 align-items-start">
                 <div>
                     <h5 class="modal-title mb-0">
-                        회원 요청
+                        <span id="rm-titleText">회원 요청</span>
                         <span id="rm-liveBadge" class="badge bg-secondary-lt ms-1" title="실시간 연결 상태">
                             <i class="ti ti-circle-filled me-1 text-muted" style="font-size:0.6em;"></i>대기
                         </span>
@@ -78,6 +78,7 @@
 
         var table = null;
         var currentEventId = null;
+        var currentMemberId = null;
         var modalEl = null;
         var bsModal = null;
         var isOpen = false;
@@ -93,6 +94,7 @@
         function filters(){
             return {
                 eventId: currentEventId || '',
+                memberId: currentMemberId || '',
                 read: $('#rm-searchForm [name=read]').val(),
                 searchText: $('#rm-searchForm [name=searchText]').val(),
             };
@@ -158,6 +160,7 @@
         function buildTable(){
             table = new Tabulator("#rm-table", {
                 ajaxURL: listUrl,
+                ajaxParams: filters,
                 layout: "fitColumns",
                 height: "55vh",
                 initialSort: [{column: "id", dir: "desc"}],
@@ -225,10 +228,13 @@
 
         return {
             search: function(){ reload(); },
-            open: function(eventId, eventLabel){
+            open: function(eventId, eventLabel, options){
                 if(!eventId){ return; }
+                var opts = options || {};
                 currentEventId = eventId;
+                currentMemberId = opts.memberId || null;
                 $('#rm-eventLabel').text(eventLabel || '');
+                $('#rm-titleText').text(currentMemberId ? '보낸 요청' : '회원 요청');
                 $('#rm-searchForm')[0].reset();
 
                 if(!modalEl){
@@ -240,9 +246,20 @@
                         window.Modal;
                     if(!ModalClass){ console.error('Modal 클래스를 찾을 수 없습니다.'); return; }
                     bsModal = new ModalClass(modalEl);
-                    modalEl.addEventListener('shown.bs.modal', function(){ isOpen = true; });
+                    // 모달이 완전히 표시된 뒤에 테이블을 생성/갱신한다. (숨김 상태 생성 시 레이아웃 null 에러 방지)
+                    var onShown = function(){
+                        isOpen = true;
+                        if(!table){
+                            buildTable(); // 생성 시 ajaxParams(filters)로 자동 로드되므로 reload 불필요
+                        } else {
+                            reload();     // 재오픈: 현재 필터로 다시 로드
+                        }
+                        var el = document.getElementById('rm-table');
+                        if(table && el && el.offsetParent !== null){ try { table.redraw(true); } catch(e){} }
+                    };
+                    modalEl.addEventListener('shown.bs.modal', onShown);
+                    modalEl.addEventListener('shown.coreui.modal', onShown);
                     modalEl.addEventListener('hidden.bs.modal', function(){ isOpen = false; });
-                    modalEl.addEventListener('shown.coreui.modal', function(){ isOpen = true; });
                     modalEl.addEventListener('hidden.coreui.modal', function(){ isOpen = false; });
                 }
 
@@ -251,11 +268,13 @@
 
                 initRealtime();   // 최초 1회 Reverb 연결
 
-                setTimeout(function(){
-                    if(!table){ buildTable(); }
-                    reload();
-                    if(table){ table.redraw(true); }
-                }, 200);
+                // 이미 열려 있으면 shown 이 재발생하지 않으므로 보이는 경우 즉시 갱신.
+                var elNow = document.getElementById('rm-table');
+                if(elNow && elNow.offsetParent !== null){
+                    if(!table){ buildTable(); } // 생성 시 자동 로드
+                    else { reload(); }
+                    try { table.redraw(true); } catch(e){}
+                }
             },
             // 플로팅 위젯에서 읽음 처리 시, 모달이 열려 있으면 동기화.
             reloadIfOpen: function(){ if(isOpen){ reload(); } },

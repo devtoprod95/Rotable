@@ -65,6 +65,26 @@ class MemberFactory extends Factory
     }
 
     /**
+     * 남성 이름 풀 반환. (Seeder 에서 중복 없는 배정에 사용)
+     *
+     * @return list<string>
+     */
+    public function maleNames(): array
+    {
+        return self::MALE_NAMES;
+    }
+
+    /**
+     * 여성 이름 풀 반환. (Seeder 에서 중복 없는 배정에 사용)
+     *
+     * @return list<string>
+     */
+    public function femaleNames(): array
+    {
+        return self::FEMALE_NAMES;
+    }
+
+    /**
      * 남성 회원 상태. (남자 한글 이름 사용)
      */
     public function male(): static

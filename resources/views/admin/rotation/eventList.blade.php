@@ -71,6 +71,7 @@
 
         const TYPE_LABEL   = @json($types);
         const STATUS_LABEL = @json($statuses);
+        const STATUS_COLOR = { 'P': 'bg-secondary', 'S': 'bg-blue', 'V': 'bg-green', 'X': 'bg-dark' };
         const detailBase   = "{{ url('admin/rotation/event') }}";
 
         $('.btn-remove').click(async function(){
@@ -96,17 +97,29 @@
             columns: [
                 { formatter: "rowSelection", titleFormatter: "rowSelection", headerSort: false, width: 60 },
                 { title: "No", field: "id", width: 80 },
-                { title: "행사명<br>일시", field: "title", minWidth: 220,
+                { title: "행사명<br>일시", field: "title", hozAlign: "center", minWidth: 240,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
                         var t = d.event_time ? new Date(d.event_time).toLocaleString('ko-KR') : '-';
-                        return `<div class="fw-bold">${d.title ?? '-'}</div><span style="font-size: 0.9em; color: #888;">${t}</span>`;
+                        var statusLabel = STATUS_LABEL[d.status] ?? d.status ?? '-';
+                        var statusColor = STATUS_COLOR[d.status] ?? 'bg-secondary';
+                        var name = $('<div>').text(d.title ?? '-').html();
+                        return `<div class="d-flex align-items-center justify-content-center gap-2">`
+                                 + `<span class="fw-bold">${name}</span>`
+                                 + `<span class="badge ${statusColor} text-white">${statusLabel}</span>`
+                             + `</div>`
+                             + `<div style="font-size: 0.9em; color: #888;">${t}</div>`;
                     }
                 },
-                { title: "타입", field: "type", hozAlign: "center", width: 80,
-                    formatter: function(cell){ return TYPE_LABEL[cell.getValue()] ?? cell.getValue(); }
+                { title: "타입<br>테이블", field: "type", hozAlign: "center", width: 100, headerSort: false,
+                    formatter: function(cell){
+                        var d = cell.getRow().getData();
+                        var typeLabel   = TYPE_LABEL[d.type] ?? d.type ?? '-';
+                        var tableCount  = d.rotation_tables_count ?? 0;
+                        return `<div><span class="badge bg-azure-lt">${typeLabel}</span></div>`
+                            + `<div class="mt-1"><span class="badge bg-green-lt">테이블 ${tableCount}개</span></div>`;
+                    }
                 },
-                { title: "테이블 수", field: "rotation_tables_count", hozAlign: "center", width: 80 },
                 { title: "참여자<br>(남/여)", field: "male_count", hozAlign: "center", width: 90, headerSort: false,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
@@ -114,33 +127,30 @@
                         return `<span class="badge bg-blue-lt">남 ${m}</span><br><span class="badge bg-pink-lt mt-1">여 ${f}</span>`;
                     }
                 },
-                { title: "상태", field: "status", hozAlign: "center", width: 80,
-                    formatter: function(cell){ return STATUS_LABEL[cell.getValue()] ?? cell.getValue(); }
-                },
-                { title: "메시지", field: "messages_count", hozAlign: "center", width: 90,
+                { title: "매칭수", field: "match_count", hozAlign: "center", width: 110, headerSort: false,
                     formatter: function(cell){
                         var v = cell.getValue() ?? 0;
-                        return v > 0 ? `<span class="badge bg-azure-lt">${v}건</span>` : '<span class="text-muted">0건</span>';
+                        if(v > 0){
+                            return `<button type="button" class="btn btn-outline-pink">${v}쌍</button>`;
+                        }
+                        return '<span class="text-muted">0쌍</span>';
+                    },
+                    cellClick: function(e, cell){
+                        var d = cell.getRow().getData();
+                        if((d.match_count ?? 0) > 0){
+                            MatchedModal.open(d.id, d.title ?? '');
+                        }
                     }
                 },
-                { title: "요청수", field: "admin_requests_count", hozAlign: "center", width: 90,
-                    formatter: function(cell){
-                        var v = cell.getValue() ?? 0;
-                        return v > 0 ? `<span class="badge bg-red-lt">${v}건</span>` : '<span class="text-muted">0건</span>';
-                    }
-                },
-                { title: "매칭수", field: "match_count", hozAlign: "center", width: 90, headerSort: false,
-                    formatter: function(cell){
-                        var v = cell.getValue() ?? 0;
-                        return v > 0 ? `<span class="badge bg-pink-lt">${v}쌍</span>` : '<span class="text-muted">0쌍</span>';
-                    }
-                },
-                { title: "생성일<br>수정일", field: "created_at", width: 180,
+                { title: "등록자<br>생성일/수정일", field: "created_at", width: 190,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
+                        var name = d.creator && d.creator.name ? $('<div>').text(d.creator.name).html() : '-';
                         var c = d.created_at ? new Date(d.created_at).toLocaleString('ko-KR') : '-';
                         var u = d.updated_at ? new Date(d.updated_at).toLocaleString('ko-KR') : '-';
-                        return `<div>${c}</div><span style="font-size: 0.9em; color: #888;">${u}</span>`;
+                        return `<div><span class="badge bg-secondary-lt">${name}</span></div>`
+                            + `<div class="mt-1">${c}</div>`
+                            + `<span style="font-size: 0.9em; color: #888;">${u}</span>`;
                     }
                 },
                 { title: "관리", width: 110, headerSort: false,
@@ -161,14 +171,14 @@
                         }
                         if((data.admin_requests_count ?? 0) >= 1){
                             var $req = $("<button>")
-                                .addClass("btn btn-sm btn-outline-danger w-100")
+                                .addClass("btn btn-sm btn-outline-yellow w-100")
                                 .text("요청 " + data.admin_requests_count)
                                 .on("click", function(){ RequestsModal.open(data.id, data.title ?? ''); });
                             $wrap.append($req);
                         }
                         var $match = $("<button>")
                             .addClass("btn btn-sm btn-outline-pink w-100")
-                            .text("매칭 " + (data.match_count ?? 0))
+                            .text("전체 매칭")
                             .on("click", function(){ MatchesModal.open(data.id, data.title ?? ''); });
                         $wrap.append($match);
                         return $wrap.get(0);
@@ -187,4 +197,5 @@
 @include('admin.rotation._messagesModal')
 @include('admin.rotation._requestsModal')
 @include('admin.rotation._matchesModal')
+@include('admin.rotation._matchedModal')
 @endsection

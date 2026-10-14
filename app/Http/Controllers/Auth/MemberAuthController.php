@@ -91,7 +91,7 @@ class MemberAuthController extends Controller
     public function showRegister(): InertiaResponse
     {
         return Inertia::render('Auth/Register', [
-            'rounds'      => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED]),
+            'rounds'      => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING]),
             'birthYears'  => $this->birthYearOptions(),
         ]);
     }
@@ -171,7 +171,7 @@ class MemberAuthController extends Controller
     public function showLogin(): InertiaResponse
     {
         return Inertia::render('Auth/Login', [
-            'rounds' => $this->roundOptions([EventRound::STATUS_STARTED, EventRound::STATUS_PENDING], true),
+            'rounds' => $this->roundOptions([EventRound::STATUS_STARTED, EventRound::STATUS_PENDING, EventRound::STATUS_VOTING], true),
         ]);
     }
 

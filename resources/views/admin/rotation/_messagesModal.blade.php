@@ -22,7 +22,7 @@
             <div class="modal-header py-3 px-4 align-items-start">
                 <div>
                     <h5 class="modal-title mb-0">
-                        메시지 조회
+                        <span id="mm-modalTitleText">메시지 조회</span>
                         <span id="mm-liveBadge" class="badge bg-secondary-lt ms-2" title="실시간 연결 상태">
                             <i class="ti ti-circle-filled me-1 text-muted" style="font-size:0.6em;"></i>실시간 대기
                         </span>
@@ -77,6 +77,7 @@
         var pusher = null;
         var currentChannel = null;
         var currentEventId = null;
+        var currentSenderId = null;
         var modalEl = null;
         var bsModal = null;
 
@@ -100,14 +101,18 @@
         }
 
         function filters(){
-            return {
+            var f = {
                 searchText: $('#mm-searchForm [name=searchText]').val(),
                 read: $('#mm-searchForm [name=read]').val(),
             };
+            if(currentSenderId){ f.senderId = currentSenderId; }
+            return f;
         }
 
         function matchesFilter(d){
             var f = filters();
+            // 특정 발신자 전용 조회 중이면 그 사람이 보낸 것만 실시간 반영.
+            if(currentSenderId && d.sender && Number(d.sender.id) !== Number(currentSenderId)){ return false; }
             if(f.read === 'Y' && !d.read_at){ return false; }
             if(f.read === 'N' && d.read_at){ return false; }
             var kw = (f.searchText || '').trim().toLowerCase();
@@ -125,6 +130,7 @@
         function buildTable(eventId){
             table = new Tabulator("#mm-table", {
                 ajaxURL: listUrl(eventId),
+                ajaxParams: filters,
                 layout: "fitColumns",
                 height: "55vh",
                 initialSort: [{column: "id", dir: "desc"}],
@@ -232,11 +238,15 @@
                 if(!table || !currentEventId){ return; }
                 table.setData(listUrl(currentEventId), filters());
             },
-            open: function(eventId, eventLabel){
+            open: function(eventId, eventLabel, options){
                 if(!eventId){ return; }
+                var opts = options || {};
                 currentEventId = eventId;
+                currentSenderId = opts.senderId || null;
                 $('#mm-eventLabel').text(eventLabel || '');
                 $('#mm-searchForm')[0].reset();
+                // 특정 발신자 전용 조회면 제목에 표시.
+                $('#mm-modalTitleText').text(currentSenderId ? '보낸 메시지' : '메시지 조회');
                 setLive('대기');
 
                 if(!modalEl){
@@ -257,17 +267,29 @@
                     // 모달 닫힐 때 구독 해제
                     modalEl.addEventListener('hidden.bs.modal', function(){ unsubscribe(); });
                     modalEl.addEventListener('hidden.coreui.modal', function(){ unsubscribe(); });
+                    // 모달이 완전히 표시된 뒤에 테이블을 생성/갱신한다. (숨김 상태 생성 시 레이아웃 null 에러 방지)
+                    var onShown = function(){
+                        if(!currentEventId){ return; }
+                        if(!table){ buildTable(currentEventId); }
+                        else { table.setData(listUrl(currentEventId), filters()); }
+                        subscribe(currentEventId);
+                        var el = document.getElementById('mm-table');
+                        if(table && el && el.offsetParent !== null){ try { table.redraw(true); } catch(e){} }
+                    };
+                    modalEl.addEventListener('shown.bs.modal', onShown);
+                    modalEl.addEventListener('shown.coreui.modal', onShown);
                 }
 
                 bsModal.show();
 
-                // 모달 렌더 후 테이블 생성/갱신 (최초 1회 생성, 이후 데이터만 교체)
-                setTimeout(function(){
-                    if(!table){ buildTable(eventId); }
-                    else { table.setData(listUrl(eventId), filters()); }
-                    subscribe(eventId);
-                    if(table){ table.redraw(true); }
-                }, 200);
+                // 이미 열려 있으면 shown 이 재발생하지 않으므로 보이는 경우 즉시 갱신.
+                var elNow = document.getElementById('mm-table');
+                if(elNow && elNow.offsetParent !== null){
+                    if(!table){ buildTable(currentEventId); }
+                    else { table.setData(listUrl(currentEventId), filters()); }
+                    subscribe(currentEventId);
+                    try { table.redraw(true); } catch(e){}
+                }
             },
         };
     })();

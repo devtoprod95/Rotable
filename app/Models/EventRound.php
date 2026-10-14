@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class EventRound extends Model
@@ -52,7 +53,7 @@ class EventRound extends Model
     protected $table = 'event_rounds';
 
     /** @var list<string> */
-    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at'];
+    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'created_by'];
 
     /**
      * @return array<string, string>
@@ -73,6 +74,16 @@ class EventRound extends Model
     public function members(): HasMany
     {
         return $this->hasMany(Member::class, 'event_id');
+    }
+
+    /**
+     * 이 행사를 생성한 관리자.
+     *
+     * @return BelongsTo<Admin, EventRound>
+     */
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'created_by');
     }
 
     /**

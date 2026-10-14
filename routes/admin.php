@@ -39,6 +39,7 @@ Route::middleware('role')->group(function () {
                 Route::delete('/{id}/tables', [RotationController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');
                 Route::get('/{id}/messages/list', [RotationController::class, 'eventMessageList'])->whereNumber('id')->name('messages.list');
                 Route::get('/{id}/matches/list', [RotationController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
+                Route::get('/{id}/members/{memberId}/voters/list', [RotationController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
             });
 
             Route::prefix('seating')->name('seating.')->group(function () {

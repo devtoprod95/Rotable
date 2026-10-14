@@ -77,9 +77,10 @@ class MemberPageController extends Controller
         $tableCount = \App\Models\RotationTable::where('event_id', $me->event_id)->count();
 
         $rotations = $rounds->map(function (RotationRound $round) use ($eventStatus, $myId, $oppositeGen, $tableCount) {
-            // 이번 턴에 내가 앉은 테이블의 좌석들.
-            $myTableId = $round->seatings
-                ->firstWhere('member_id', $myId)?->rotation_table_id;
+            // 이번 턴에 내가 앉은 좌석(테이블).
+            $mySeating = $round->seatings->firstWhere('member_id', $myId);
+            $myTableId = $mySeating?->rotation_table_id;
+            $myTableNo = $mySeating?->table?->table_no;
 
             // 그 테이블에서 나와 만난 상대 성별 회원만 추린다.
             $partners = collect();
@@ -94,6 +95,7 @@ class MemberPageController extends Controller
             return [
                 'id'       => $round->id,
                 'round_no' => $round->round_no,
+                'table_no' => $myTableNo,
                 'status'   => $eventStatus,
                 'partners' => $partners,
                 'is_last'  => $tableCount > 0 && $round->round_no >= $tableCount,
@@ -312,7 +314,7 @@ class MemberPageController extends Controller
     /**
      * 투표하기 탭.
      *
-     * - 투표중(V) 단계에서 이성 회원에게 최대 2명까지 투표(지목)한다.
+     * - 투표중(V) 단계에서 이성 회원에게 최대 3명까지 투표(지목)한다.
      * - 마감 전까지 자유롭게 수정 가능.
      * - 종료(X) 후에는 상호 매칭(서로 지목한 상대)의 연락처를 공개한다.
      * - 내가 받은 표 수는 항상 보여준다.
@@ -365,7 +367,8 @@ class MemberPageController extends Controller
             $data        = $this->transformMember($c);
             $iVotedThem  = in_array($c->id, $myVotedIds, true);
             $theyVotedMe = in_array($c->id, $votedForMeIds, true);
-            $isMatch     = $iVotedThem && $theyVotedMe;
+            // 매칭 여부는 종료(X) 후에만 공개한다. 매칭중(V)에는 쌍방이어도 노출하지 않는다.
+            $isMatch     = $isClosed && $iVotedThem && $theyVotedMe;
 
             $data['voted']    = $iVotedThem;
             $data['is_match'] = $isMatch;
@@ -391,7 +394,7 @@ class MemberPageController extends Controller
 
     /**
      * 투표 저장(수정). 투표중(V) 단계에서만 허용하며, 전달받은 대상 목록으로 전체 교체한다.
-     * - 최대 2명까지만 허용.
+     * - 최대 3명까지만 허용.
      * - 같은 행사의 이성만 지목 가능.
      */
     public function saveVotes(Request $request): RedirectResponse

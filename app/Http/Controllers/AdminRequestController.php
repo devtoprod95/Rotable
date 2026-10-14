@@ -25,6 +25,7 @@ class AdminRequestController extends Controller
         $size = (int) $this->request->input('size', 30);
         $sort = $this->request->input('sort.0', ['field' => 'id', 'dir' => 'desc']);
         $eventId = (int) $this->request->input('eventId', 0);
+        $memberId = (int) $this->request->input('memberId', 0);
         $read = $this->request->input('read', '');
         $searchText = $this->request->input('searchText', '');
 
@@ -33,6 +34,9 @@ class AdminRequestController extends Controller
 
         if ($eventId > 0) {
             $query->where('event_id', $eventId);
+        }
+        if ($memberId > 0) {
+            $query->where('member_id', $memberId);
         }
         if ($read === 'Y') {
             $query->whereNotNull('read_at');

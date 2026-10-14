@@ -59,6 +59,11 @@ class HandleInertiaRequests extends Middleware
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),
+                // 동일 메시지를 연속으로 flash 할 때도 프론트에서 매번 토스트를 띄울 수 있도록
+                // success/error 가 있을 때마다 바뀌는 고유 토큰을 함께 내려준다.
+                'ts'      => fn () => ($request->session()->get('success') || $request->session()->get('error'))
+                    ? (string) \Illuminate\Support\Str::uuid()
+                    : null,
             ],
             'bypassRedirectName' => \App\Models\Member::BYPASS_REDIRECT_NAME,
             'isProduction'       => app()->environment('production'),

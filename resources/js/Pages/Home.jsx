@@ -62,7 +62,7 @@ function MemberChip({ member, tone, onSend, sendDisabled }) {
 }
 
 /** 로테이션 턴 섹션: 이 턴에 만난 상대들을 카드 그룹으로 표시 */
-function RoundSection({ round, partnerGender, onSend, sendDisabled }) {
+function RoundSection({ round, partnerGender, onSend, sendDisabled, showTable = false }) {
     const status = ROUND_STATUS[round.status] ?? ROUND_STATUS.P;
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const partners = round.partners ?? [];
@@ -74,6 +74,7 @@ function RoundSection({ round, partnerGender, onSend, sendDisabled }) {
                 <div className="flex items-center gap-2.5">
                     <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-primary px-2 text-sm font-extrabold text-white">
                         {round.is_last ? '마지막 로테이션' : `${round.round_no}번 째 로테이션`}
+                        {showTable && round.table_no ? ` (${round.table_no}번 테이블)` : ''}
                     </span>
                     {/* <span className="text-base font-extrabold text-gray-800">{round.round_no}턴</span> */}
                 </div>
@@ -151,16 +152,23 @@ export default function Home() {
                     {canSendMessage ? (
                         <>
                             만난 상대 카드의 <b className="text-primary">💌 전달</b> 버튼으로 익명 메시지를 보낼 수 있어요.
-                            {sendLimit && (
-                                <span className="ml-1 font-semibold text-gray-600">
-                                    <br></br>(남은 전송 횟수 {remaining}/{sendLimit.max}회)
-                                </span>
-                            )}
                         </>
                     ) : (
                         '로테이션 진행 중부터 매칭 기간까지 만난 상대에게 익명 메시지를 보낼 수 있어요.'
                     )}
                 </p>
+                {canSendMessage && sendLimit && (
+                    <div className="mt-2">
+                        <span
+                            className={
+                                'inline-block shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ' +
+                                (limitReached ? 'bg-gray-100 text-gray-400' : 'bg-primary/10 text-primary')
+                            }
+                        >
+                            남은 전송 횟수 {remaining}/{sendLimit.max}회
+                        </span>
+                    </div>
+                )}
 
                 {rotations.length > 0 ? (
                     <div className="mt-5 space-y-5">
@@ -169,6 +177,7 @@ export default function Home() {
                                 key={round.id}
                                 round={round}
                                 partnerGender={partnerGender}
+                                showTable={auth?.user?.gender === 'M'}
                                 onSend={canSendMessage ? setTarget : null}
                                 sendDisabled={limitReached}
                             />

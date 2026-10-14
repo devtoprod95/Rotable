@@ -121,6 +121,16 @@ class Member extends Authenticatable
     }
 
     /**
+     * 이 회원이 관리자에게 보낸 요청들.
+     *
+     * @return HasMany<AdminRequest>
+     */
+    public function adminRequests(): HasMany
+    {
+        return $this->hasMany(AdminRequest::class, 'member_id');
+    }
+
+    /**
      * 현재(가장 최신 턴 기준) 이 회원이 앉아 있는 테이블 번호.
      * 좌석 기록이 없으면 null 을 반환한다.
      */

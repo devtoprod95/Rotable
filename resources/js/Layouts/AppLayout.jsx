@@ -117,7 +117,11 @@ export default function AppLayout({
                         (bottomNav
                             ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] "
                             : "") +
-                        (center ? "justify-center" : "")
+                        // center 는 pt(header) 와 pb(nav+safe) 가 비대칭이라 그냥 justify-center 하면
+                        // 아래로 쏠려 보인다. 하단 보정분의 절반만큼 위로 당겨 시각적 정중앙을 맞춘다.
+                        (center
+                            ? "justify-center [&>*]:-mt-[calc((5.5rem+env(safe-area-inset-bottom))/2)]"
+                            : "")
                     }
                 >
                     {children}
@@ -191,7 +195,7 @@ function BottomNav() {
                                         : "font-semibold text-secondary-400 hover:text-primary-400")
                                 }
                             >
-                                <span className="relative">
+                                <span className="relative flex h-6 w-6 items-center justify-center">
                                     <Icon active={active} />
                                     {badge > 0 && (
                                         <span className="absolute -right-2.5 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-white">
@@ -231,7 +235,7 @@ function FlashToast() {
         setToast({ message, type: flash?.error ? "error" : "success" });
         const timer = setTimeout(() => setToast(null), 2500);
         return () => clearTimeout(timer);
-    }, [flash?.success, flash?.error]);
+    }, [flash?.success, flash?.error, flash?.ts]);
 
     if (!toast) return null;
 

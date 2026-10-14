@@ -14,7 +14,7 @@ class Vote extends Model
     protected $table = 'event_votes';
 
     /** 한 회원이 투표할 수 있는 최대 상대 수 */
-    public const MAX_VOTES_PER_MEMBER = 2;
+    public const MAX_VOTES_PER_MEMBER = 3;
 
     /** @var list<string> */
     protected $fillable = [

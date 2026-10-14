@@ -285,17 +285,31 @@ class MemberPageController extends Controller
 
     /**
      * 나에게 온 메시지를 읽음 처리하고, 각 발신자에게 "읽음"을 실시간 전파한다.
+     *
+     * - message_ids 가 전달되면 해당 메시지들만 읽음 처리한다. (받은함에서 메시지를 열어봤을 때)
+     * - message_ids 가 없으면 받은 메시지 전체를 읽음 처리한다. (하위호환)
      */
     public function markMessagesRead(Request $request): RedirectResponse
     {
         /** @var \App\Models\Member $me */
         $me = Auth::guard('web')->user();
 
+        $validated = $request->validate([
+            'message_ids'   => ['sometimes', 'array'],
+            'message_ids.*' => ['integer'],
+        ]);
+
         // 읽음 처리 전에 대상 메시지(id/발신자)를 먼저 수집한다.
-        $unread = Message::query()
+        $query = Message::query()
             ->where('receiver_id', $me->id)
-            ->whereNull('read_at')
-            ->get(['id', 'sender_id']);
+            ->whereNull('read_at');
+
+        // 특정 메시지만 열어본 경우: 전달받은 id 로 범위를 좁힌다.
+        if (!empty($validated['message_ids'])) {
+            $query->whereIn('id', $validated['message_ids']);
+        }
+
+        $unread = $query->get(['id', 'sender_id']);
 
         if ($unread->isEmpty()) {
             return back();

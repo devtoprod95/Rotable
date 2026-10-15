@@ -85,7 +85,7 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
                 {/* 상호매칭은 아니지만 나를 선택해준 상대 (1:1에서 번호 공개 대상) */}
                 {closed && !candidate.is_match && candidate.voted_for_me && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
-                        ⭐ 나를 선택함
+                        💝 나에게 호감
                     </span>
                 )}
 
@@ -130,7 +130,7 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
                     <span className="text-base">📞</span>
                     <div className="leading-tight">
                         <p className="text-[10px] font-semibold text-rose-400">
-                            {candidate.is_match ? '서로 선택했어요! 먼저 연락해 보세요!' : '이 분이 당신을 선택했어요!'}
+                            {candidate.is_match ? '서로 선택했어요! 먼저 연락해 보세요!' : '당신에게 호감을 표현한 분이에요 💝'}
                         </p>
                         <span
                             role="button"
@@ -233,17 +233,20 @@ export default function Votes() {
     // 나를 선택해준 사람(종료 후 공개). 1:1에서 번호 공개 대상.
     const votedForMe = candidates.filter((c) => c.voted_for_me);
 
-    // 종료 후 노출 목록:
-    //  - 와인파티: 내가 선택한 사람만
-    //  - 1:1: 내가 선택한 사람 + 나를 선택해준 사람 (번호 공개 대상)
-    // 정렬: 상호매칭 → 나를 선택함 → 그 외.
+    // 종료 후 노출 목록을 두 그룹으로 나눈다.
+    //  - myPickList : 내가 선택한 사람 (상호매칭 포함). ⭐ 섹션 위에 노출.
+    //  - pickedMeList : 내가 선택하진 않았지만 "나를 선택해준 사람". ⭐ 섹션 아래에 노출(1:1).
+    // 투표중(미종료)에는 전체 후보를 토글용으로 그대로 보여준다.
     const rank = (c) => (c.is_match ? 2 : c.voted_for_me ? 1 : 0);
-    const displayList = isClosed
+    const myPickList = isClosed
         ? candidates
-              .filter((c) => (isOneToOne ? c.voted || c.voted_for_me : c.voted))
+              .filter((c) => c.voted)
               .slice()
               .sort((a, b) => rank(b) - rank(a))
         : candidates;
+    const pickedMeList = isClosed && isOneToOne
+        ? candidates.filter((c) => c.voted_for_me && !c.voted)
+        : [];
 
     // 매칭중(V)이지만 마감 시각이 지나 투표만 닫힌 '결과 집계 대기' 상태
     if (votingEnded) {
@@ -377,15 +380,15 @@ export default function Votes() {
                     </div>
                 )}
 
-                {/* 목록: 투표중=전체 후보 / 종료=결과(홈 카드 UI와 동일) */}
-                {isClosed && displayList.length > 0 && (
+                {/* 목록(위): 투표중=전체 후보 / 종료=내가 선택한 사람 */}
+                {isClosed && myPickList.length > 0 && (
                     <p className="mt-5 mb-2 text-sm font-bold text-secondary-700">
-                        {isOneToOne ? '내 매칭 결과 💌' : '내가 선택한 사람 💌'}
+                        내가 선택한 사람 💌
                     </p>
                 )}
-                {displayList.length > 0 ? (
-                    <div className={'grid grid-cols-1 content-start gap-2.5 ' + (isClosed ? 'flex-1' : 'mt-4')}>
-                        {displayList.map((c) => (
+                {myPickList.length > 0 ? (
+                    <div className={'grid grid-cols-1 content-start gap-2.5 ' + (isClosed ? '' : 'mt-4')}>
+                        {myPickList.map((c) => (
                             <CandidateCard
                                 key={c.id}
                                 candidate={c}
@@ -406,8 +409,8 @@ export default function Votes() {
                     )
                 )}
 
-                {/* 나를 선택해준 사람 수 — 맨 아래에 배치 (매칭이 끝난 뒤에만 공개) */}
-                {isClosed && (
+                {/* 나를 선택해준 사람 수 요약 — 와인파티에서만(1:1은 아래 제목에 인원수 표기) */}
+                {isClosed && !isOneToOne && (
                     <div className="mt-5 flex items-center gap-3 rounded-2xl border border-primary/15 bg-primary/5 p-4">
                         <span className="text-2xl">⭐</span>
                         <div>
@@ -415,6 +418,28 @@ export default function Votes() {
                             <p className="text-lg font-extrabold text-primary">{receivedCount}명</p>
                         </div>
                     </div>
+                )}
+
+                {/* 나를 선택해준 사람 리스트 — 제목에 인원수 표기(1:1) */}
+                {isClosed && pickedMeList.length > 0 && (
+                    <>
+                        <p className="mt-5 mb-2 text-sm font-bold text-secondary-700">
+                            나를 선택해준 분들 ({pickedMeList.length}명) 💝
+                        </p>
+                        <div className="grid grid-cols-1 content-start gap-2.5">
+                            {pickedMeList.map((c) => (
+                                <CandidateCard
+                                    key={c.id}
+                                    candidate={c}
+                                    tone={tone}
+                                    selected={false}
+                                    disabled={true}
+                                    closed={isClosed}
+                                    onToggle={toggle}
+                                />
+                            ))}
+                        </div>
+                    </>
                 )}
 
                 {/* 투표중일 때만 저장 바. 하단 nav(약 5.5rem) 바로 위에 fixed 로 고정 */}

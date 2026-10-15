@@ -69,6 +69,15 @@
     if ($columns === 1) {
         $sampleEvents = array_slice($sampleEvents, 0, 1);
     }
+
+    // 명단 테이블 치수 — 2열일 때는 카드 폭이 절반이라 글씨/간격을 줄여 레이아웃이 깨지지 않게 한다.
+    $cellTitleSize   = $columns === 1 ? '29px' : '22px'; // 행사명
+    $cellDateSize    = $columns === 1 ? '21px' : '16px'; // 날짜
+    $cellHeadSize    = $columns === 1 ? '21px' : '17px'; // 남/여 헤더
+    $cellNoSize      = $columns === 1 ? '23px' : '18px'; // N호
+    $cellInfoSize    = $columns === 1 ? '19px' : '14px'; // 키·직업·나이
+    $cellHeight      = $columns === 1 ? '84px' : '70px'; // 셀 높이
+    $cellPadding     = $columns === 1 ? '10px' : '6px';  // 셀 패딩
 @endphp
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap');
@@ -82,14 +91,14 @@
     </div>
 
     <div style="text-align:center; margin-bottom:24px;">
-        <div style="font-family:'Jua',sans-serif; font-size:46px; font-weight:400; color:#e86aa6; letter-spacing:0.5px;">{{ $typeConfig['title'] }}</div>
-        <div style="font-size:24px; color:#9ca3af; margin-top:2px;">{{ $typeConfig['subtitle'] }}</div>
+        <div style="font-family:'Jua',sans-serif; font-size:64px; font-weight:400; color:#e86aa6; letter-spacing:0.5px;">{{ $typeConfig['title'] }}</div>
+        <div style="font-size:34px; color:#9ca3af; margin-top:2px;">{{ $typeConfig['subtitle'] }}</div>
     </div>
 
     {{-- 실시간 명단 업데이트 안내 --}}
-    <div style="background:#f3e8ff; border:1px solid #e9d5ff; border-radius:12px; padding:9px 11px; margin-bottom:11px; text-align:center;">
-        <div style="font-family:'Jua',sans-serif; font-size:25px; font-weight:400; color:#7e22ce; letter-spacing:0.5px;">실시간 명단 업데이트 중</div>
-        <div style="font-size:21px; color:#6b21a8; margin-top:2px;">
+    <div style="background:#ede9fe; border:2px solid #c4b5fd; border-radius:12px; padding:9px 11px; margin-bottom:11px; text-align:center;">
+        <div style="font-family:'Jua',sans-serif; font-size:35px; font-weight:400; color:#7e22ce; letter-spacing:0.5px;">실시간 명단 업데이트 중</div>
+        <div style="font-size:29px; color:#6b21a8; margin-top:2px;">
             아래 참여자 명단은 신청 현황에 따라 수시로 갱신됩니다.<br>
             <b>마지막 업데이트: {{ now()->format('n월 j일 H:i') }}</b> 기준
         </div>
@@ -101,34 +110,34 @@
             <div style="width:{{ $cardWidth }}; box-sizing:border-box; padding:3px;">
                 <div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; height:100%;">
                     {{-- 행사명 + 날짜 --}}
-                    <div style="background:#f8fafc; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:29px; font-weight:900;">{{ $event['title'] }}</div>
-                        <div style="font-size:21px; color:#6b7280; margin-top:1px;">{{ $event['date'] }}</div>
+                    <div style="background:#eef2f7; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">
+                        <div style="font-size:{{ $cellTitleSize }}; font-weight:900; word-break:keep-all;">{{ $event['title'] }}</div>
+                        <div style="font-size:{{ $cellDateSize }}; color:#6b7280; margin-top:1px;">{{ $event['date'] }}</div>
                     </div>
 
                     {{-- 남(좌) / 여(우) 헤더 --}}
-                    <div style="display:flex; font-size:21px; font-weight:900; text-align:center; border-bottom:1px solid #eee;">
-                        <div style="width:50%; padding:4px; background:#eff6ff; color:#2563eb;">남 {{ count($maleSample) }}</div>
-                        <div style="width:50%; padding:4px; background:#fdf2f8; color:#be185d;">여 {{ count($femaleSample) }}</div>
+                    <div style="display:flex; font-size:{{ $cellHeadSize }}; font-weight:900; text-align:center; border-bottom:1px solid #eee;">
+                        <div style="width:50%; padding:4px; background:#3b82f6; color:#ffffff;">남 {{ count($maleSample) }}</div>
+                        <div style="width:50%; padding:4px; background:#ec4899; color:#ffffff;">여 {{ count($femaleSample) }}</div>
                     </div>
 
                     {{-- 남/여 행 맞춤 --}}
                     <div style="display:flex;">
                         {{-- 좌: 남자 --}}
-                        <div style="width:50%; box-sizing:border-box; border-right:1px solid #eee;">
+                        <div style="width:50%; box-sizing:border-box; border-right:1px solid #c7d7ee; background:#eff6ff;">
                             @foreach ($maleSample as $m)
-                                <div style="height:84px; padding:10px; border-bottom:1px solid #f3f4f6; text-align:center; display:flex; flex-direction:column; justify-content:center;">
-                                    <div style="font-weight:900; font-size:23px;">{{ $m['no'] }}호</div>
-                                    <div style="color:#6b7280; font-size:19px; margin-top:4px;">{{ $m['height'] }}cm · {{ $m['job'] }} · {{ $m['age'] }}</div>
+                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:1px solid #d7e3ef; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                                    <div style="font-weight:900; font-size:{{ $cellNoSize }};">{{ $m['no'] }}호</div>
+                                    <div style="color:#6b7280; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $m['height'] }}cm · {{ $m['job'] }} · {{ $m['age'] }}</div>
                                 </div>
                             @endforeach
                         </div>
                         {{-- 우: 여자 --}}
-                        <div style="width:50%; box-sizing:border-box;">
+                        <div style="width:50%; box-sizing:border-box; background:#fdf2f8;">
                             @foreach ($femaleSample as $f)
-                                <div style="height:84px; padding:10px; border-bottom:1px solid #f3f4f6; text-align:center; display:flex; flex-direction:column; justify-content:center;">
-                                    <div style="font-weight:900; font-size:23px;">{{ $f['no'] }}호</div>
-                                    <div style="color:#6b7280; font-size:19px; margin-top:4px;">{{ $f['height'] }}cm · {{ $f['job'] }} · {{ $f['age'] }}</div>
+                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:1px solid #f6d9e6; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                                    <div style="font-weight:900; font-size:{{ $cellNoSize }};">{{ $f['no'] }}호</div>
+                                    <div style="color:#6b7280; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $f['height'] }}cm · {{ $f['job'] }} · {{ $f['age'] }}</div>
                                 </div>
                             @endforeach
                         </div>
@@ -140,34 +149,34 @@
 
     {{-- 이전 로테이블 기록 --}}
     <div style="margin-top:30px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#f0f9ff; padding:7px 10px; font-size:28px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#0369a1; text-align:center;">
+        <div style="background:#0ea5e9; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             이전 로테이블 기록
         </div>
-        <div style="padding:14px 16px; text-align:center;">
+        <div style="background:#f0f9ff; padding:14px 16px; text-align:center;">
             {{-- 헤더 --}}
-            <div style="display:flex; font-size:20px; font-weight:800; color:#6b7280; border-bottom:2px solid #e5e7eb; padding-bottom:10px; margin-bottom:4px;">
-                <div style="width:28%;">날짜</div>
-                <div style="width:27%;">행사명</div>
-                <div style="width:25%;">인원 (남/여)</div>
+            <div style="display:flex; font-size:28px; font-weight:800; color:#6b7280; border-bottom:2px solid #cbd5e1; padding-bottom:10px; margin-bottom:4px;">
+                <div style="width:28%; border-right:1px solid #cbd5e1;">날짜</div>
+                <div style="width:27%; border-right:1px solid #cbd5e1;">행사명</div>
+                <div style="width:25%; border-right:1px solid #cbd5e1;">인원 (남/여)</div>
                 <div style="width:20%;">매칭</div>
             </div>
             {{-- 행사 기록 (더미) --}}
-            <div style="display:flex; font-size:21px; color:#374151; padding:14px 0; border-bottom:1px solid #f3f4f6;">
-                <div style="width:28%;">2025.12.20</div>
-                <div style="width:27%;">3회 {{ $typeConfig['eventName'] }}</div>
-                <div style="width:25%;">16명 (8/8)</div>
+            <div style="display:flex; font-size:29px; color:#374151; padding:14px 0; border-bottom:1px solid #d7e3ef;">
+                <div style="width:28%; border-right:1px solid #d7e3ef;">2025.12.20</div>
+                <div style="width:27%; border-right:1px solid #d7e3ef;">3회 {{ $typeConfig['eventName'] }}</div>
+                <div style="width:25%; border-right:1px solid #d7e3ef;">16명 (8/8)</div>
                 <div style="width:20%; color:#be185d; font-weight:800;">4커플</div>
             </div>
-            <div style="display:flex; font-size:21px; color:#374151; padding:14px 0; border-bottom:1px solid #f3f4f6;">
-                <div style="width:28%;">2025.11.15</div>
-                <div style="width:27%;">2회 {{ $typeConfig['eventName'] }}</div>
-                <div style="width:25%;">14명 (7/7)</div>
+            <div style="display:flex; font-size:29px; color:#374151; padding:14px 0; border-bottom:1px solid #d7e3ef;">
+                <div style="width:28%; border-right:1px solid #d7e3ef;">2025.11.15</div>
+                <div style="width:27%; border-right:1px solid #d7e3ef;">2회 {{ $typeConfig['eventName'] }}</div>
+                <div style="width:25%; border-right:1px solid #d7e3ef;">14명 (7/7)</div>
                 <div style="width:20%; color:#be185d; font-weight:800;">3커플</div>
             </div>
-            <div style="display:flex; font-size:21px; color:#374151; padding:14px 0;">
-                <div style="width:28%;">2025.10.18</div>
-                <div style="width:27%;">1회 {{ $typeConfig['eventName'] }}</div>
-                <div style="width:25%;">18명 (9/9)</div>
+            <div style="display:flex; font-size:29px; color:#374151; padding:14px 0;">
+                <div style="width:28%; border-right:1px solid #d7e3ef;">2025.10.18</div>
+                <div style="width:27%; border-right:1px solid #d7e3ef;">1회 {{ $typeConfig['eventName'] }}</div>
+                <div style="width:25%; border-right:1px solid #d7e3ef;">18명 (9/9)</div>
                 <div style="width:20%; color:#be185d; font-weight:800;">5커플</div>
             </div>
         </div>
@@ -175,10 +184,10 @@
 
     {{-- 로테이블 포인트 --}}
     <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#fdf2f8; padding:7px 10px; font-size:28px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#be185d; text-align:center;">
+        <div style="background:#ec4899; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             💗 로테이블 포인트
         </div>
-        <div style="padding:10px; text-align:center; font-size:22px; color:#374151; line-height:2.0;">
+        <div style="background:#fdf2f8; padding:10px; text-align:center; font-size:31px; color:#374151; line-height:2.0;">
             @foreach ($typeConfig['points'] as $point)
                 <div>- {!! $point !!}</div>
             @endforeach
@@ -187,10 +196,10 @@
 
     {{-- 참여 조건 --}}
     <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#eff6ff; padding:7px 10px; font-size:28px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#2563eb; text-align:center;">
+        <div style="background:#3b82f6; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             참여 조건
         </div>
-        <div style="padding:10px; text-align:center; font-size:22px; color:#374151; line-height:2.0;">
+        <div style="background:#eff6ff; padding:10px; text-align:center; font-size:31px; color:#374151; line-height:2.0;">
             <div>- 남성 00~88년생 / 여성 02~88년생</div>
             <div>- 미혼이신 분 (돌싱·기혼은 참여가 어려워요)</div>
             <div>- 안정적인 직업과 경제력을 갖추신 분 (신분·재직 확인에 협조해 주세요)</div>
@@ -202,10 +211,10 @@
 
     {{-- 로테이블 이용안내 --}}
     <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#ecfdf5; padding:7px 10px; font-size:28px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#047857; text-align:center;">
+        <div style="background:#10b981; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             로테이블 이용안내
         </div>
-        <div style="padding:10px; font-size:22px; color:#374151; line-height:1.7; text-align:center;">
+        <div style="background:#ecfdf5; padding:10px; font-size:31px; color:#374151; line-height:1.7; text-align:center;">
             @if ($type === 'solo')
                 <div style="margin-bottom:6px;"><b>1. 입장 &amp; 닉네임 확인</b><br>도착하시면 나만의 닉네임을 받고 지정 자리에 착석해요.</div>
                 <div style="margin-bottom:6px;"><b>2. 1:1 로테이션 대화</b><br>한 분씩 마주 앉아 1:1로 대화해요 ☕<br>시간이 지나면 자리를 옮겨 모든 상대와 차례로 만나요.</div>
@@ -224,10 +233,10 @@
 
     {{-- 자주 묻는 질문 --}}
     <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#fef3c7; padding:7px 10px; font-size:28px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#b45309; text-align:center;">
+        <div style="background:#f59e0b; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             자주 묻는 질문
         </div>
-        <div style="padding:10px; font-size:22px; color:#374151; line-height:1.7; text-align:center;">
+        <div style="background:#fffbeb; padding:10px; font-size:31px; color:#374151; line-height:1.7; text-align:center;">
             <div style="margin-bottom:8px;">
                 <div style="font-weight:900;">Q. 혼자 가도 괜찮나요?</div>
                 <div style="color:#6b7280;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다.<br>전문 호스트가 처음부터 끝까지 분위기를 부드럽게 이끌어 드리고,<br>자연스럽게 대화가 이어지도록 도와드리니 편한 마음으로 오세요.</div>

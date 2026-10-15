@@ -12,7 +12,7 @@ class MemberSeeder extends Seeder
      * 회원을 생성할 대상 행사(event_rounds.id).
      * 이 id의 행사에만 샘플 회원을 생성한다.
      */
-    private const TARGET_EVENT_ID = 5;
+    private const TARGET_EVENT_ID = 6;
 
     /**
      * 샘플 회원 데이터 시딩.

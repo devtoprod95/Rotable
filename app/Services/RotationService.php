@@ -996,46 +996,66 @@ class RotationService
      | 상세페이지 디자이너 — 공용 템플릿 HTML 1개를 storage 파일에 저장/로드
      * ==================================================================== */
 
-    /** 상세페이지 HTML 저장 경로 (storage/app/private/rotation/detail.html) */
-    private const DETAIL_HTML_PATH = 'rotation/detail.html';
+    /** 상세페이지 HTML 저장 경로 (유형별, storage/app/private/rotation/detail_{type}.html) */
+    private const DETAIL_HTML_PATH = 'rotation/detail_%s.html';
+
+    /** 유형 값 정규화 ('wine' | 'solo') */
+    private function detailType(?string $type): string
+    {
+        return $type === 'solo' ? 'solo' : 'wine';
+    }
+
+    /** 유형별 저장 경로 반환 */
+    private function detailHtmlPath(?string $type): string
+    {
+        return sprintf(self::DETAIL_HTML_PATH, $this->detailType($type));
+    }
 
     /**
-     * 저장된 상세페이지 HTML 을 반환한다.
-     * 저장된 파일이 없으면 기본 샘플(2열) 을 렌더링해서 돌려준다.
+     * 저장된 상세페이지 HTML 을 유형별로 반환한다.
+     * 저장된 파일이 없으면 해당 유형의 기본 샘플(2열) 을 렌더링해서 돌려준다.
+     *
+     * @param string $type 상세페이지 유형 ('wine' 와인파티 | 'solo' 1:1 소개팅)
      */
-    public function detailHtmlLoad(): string
+    public function detailHtmlLoad(string $type = 'wine'): string
     {
-        if (Storage::exists(self::DETAIL_HTML_PATH)) {
-            return (string) Storage::get(self::DETAIL_HTML_PATH);
+        $path = $this->detailHtmlPath($type);
+
+        if (Storage::exists($path)) {
+            return (string) Storage::get($path);
         }
 
-        return $this->detailSampleHtml(2);
+        return $this->detailSampleHtml(2, $this->detailType($type));
     }
 
     /**
      * 기본 샘플 HTML 을 렌더링한다.
      * 실제 행사 데이터와 무관하게 더미 참여자(남/여 각 5명) 로 구성한다.
      *
-     * @param int $columns 행사 배치 열 수 (1 또는 2)
+     * @param int    $columns 행사 배치 열 수 (1 또는 2)
+     * @param string $type    상세페이지 유형 ('wine' 와인파티 | 'solo' 1:1 소개팅)
      */
-    public function detailSampleHtml(int $columns = 2): string
+    public function detailSampleHtml(int $columns = 2, string $type = 'wine'): string
     {
         return trim(View::make('admin.rotation._detailSample', [
             'columns' => $columns === 1 ? 1 : 2,
+            'type'    => $type === 'solo' ? 'solo' : 'wine',
         ])->render());
     }
 
     /**
-     * 상세페이지 HTML 을 storage 파일에 저장한다.
+     * 상세페이지 HTML 을 유형별 storage 파일에 저장한다.
      *
+     * @param string $html 저장할 HTML
+     * @param string $type 상세페이지 유형 ('wine' 와인파티 | 'solo' 1:1 소개팅)
      * @return array{isSuccess:bool, message?:string}
      */
-    public function detailHtmlSave(string $html): array
+    public function detailHtmlSave(string $html, string $type = 'wine'): array
     {
         $returnMsg = $this->returnMsg;
 
         try {
-            Storage::put(self::DETAIL_HTML_PATH, $html);
+            Storage::put($this->detailHtmlPath($type), $html);
             $returnMsg = helpersSuccessMessage('상세페이지를 저장했습니다.');
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());

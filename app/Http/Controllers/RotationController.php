@@ -269,14 +269,15 @@ class RotationController extends Controller
      */
     public function detailIndex(): View
     {
-        $saved       = $this->rotationService->detailHtmlLoad();
-        $sampleOne   = $this->rotationService->detailSampleHtml(1);
-        $sampleTwo   = $this->rotationService->detailSampleHtml(2);
-
         return view('admin.rotation.detail', [
-            'savedHtml'  => $saved,
-            'sampleOne'  => $sampleOne,
-            'sampleTwo'  => $sampleTwo,
+            // 유형별 저장본 (없으면 해당 유형 2열 샘플로 폴백)
+            'savedWine'    => $this->rotationService->detailHtmlLoad('wine'),
+            'savedSolo'    => $this->rotationService->detailHtmlLoad('solo'),
+            // 유형(와인파티/1:1) × 열 수(1열/2열) 조합 샘플
+            'wineOne'      => $this->rotationService->detailSampleHtml(1, 'wine'),
+            'wineTwo'      => $this->rotationService->detailSampleHtml(2, 'wine'),
+            'soloOne'      => $this->rotationService->detailSampleHtml(1, 'solo'),
+            'soloTwo'      => $this->rotationService->detailSampleHtml(2, 'solo'),
         ]);
     }
 
@@ -287,12 +288,16 @@ class RotationController extends Controller
     {
         $validator = Validator::make($this->request->all(), [
             'html' => 'nullable|string',
+            'type' => 'nullable|in:wine,solo',
         ]);
         if ($validator->fails()) {
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
         }
 
-        $result = $this->rotationService->detailHtmlSave((string) $this->request->input('html', ''));
+        $result = $this->rotationService->detailHtmlSave(
+            (string) $this->request->input('html', ''),
+            (string) $this->request->input('type', 'wine'),
+        );
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }

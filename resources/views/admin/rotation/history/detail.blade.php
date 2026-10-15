@@ -64,6 +64,7 @@
                     <div class="text-center px-3">
                         <div class="h1 mb-0 text-primary" id="meetingCount">0</div>
                         <div class="text-muted" style="font-size:0.8rem;">함께한 행사</div>
+                        <div class="mt-1 d-flex justify-content-center gap-1 flex-wrap" id="meetingCountByType"></div>
                     </div>
                     <div class="text-start" id="summaryB" style="min-width:160px;"></div>
                 </div>
@@ -208,6 +209,7 @@
                  + `</div>`;
         }
 
+        // 함께한 행사들을 "행사 유형(와인파티/1:1)"별로 묶어서 섹션으로 렌더링.
         function meetingCard(m){
             var a = m.a || {}, b = m.b || {};
             return `<div class="card mb-3">`
@@ -240,6 +242,26 @@
             $('#summaryA').html(summaryPerson(res.a));
             $('#summaryB').html(summaryPerson(res.b));
             $('#meetingCount').text((res.meetings || []).length);
+
+            // 함께한 행사를 유형별로 집계해 배지로 표시 (와인파티 → 1:1 → 기타 순).
+            var byType = {};
+            (res.meetings || []).forEach(function(m){
+                var key = (m.event && m.event.type) ? m.event.type : 'etc';
+                if(!byType[key]){
+                    byType[key] = { label: (m.event && m.event.type_label) ? m.event.type_label : '기타', count: 0 };
+                }
+                byType[key].count++;
+            });
+            var order = ['wine', 'one'];
+            var typeHtml = Object.keys(byType).sort(function(x, y){
+                var ix = order.indexOf(x); if(ix < 0){ ix = 99; }
+                var iy = order.indexOf(y); if(iy < 0){ iy = 99; }
+                return ix - iy;
+            }).map(function(k){
+                return `<span class="badge bg-azure-lt">${esc(byType[k].label)} ${byType[k].count}</span>`;
+            }).join('');
+            $('#meetingCountByType').html(typeHtml);
+
             $('#summaryCard').removeClass('d-none');
 
             if(!res.meetings || !res.meetings.length){

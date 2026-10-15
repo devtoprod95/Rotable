@@ -31,7 +31,7 @@ class EventRound extends Model
     {
         return [
             self::TYPE_WINE => '와인파티',
-            self::TYPE_ONE  => '1:1',
+            self::TYPE_ONE  => '1:1 소개팅',
         ];
     }
 

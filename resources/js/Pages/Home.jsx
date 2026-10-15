@@ -344,6 +344,17 @@ export default function Home() {
                     </div>
                 )}
 
+                {/* 1:1 연락처 공개 유의 안내 */}
+                {showSelectBar && (
+                    <div className="mt-2.5 flex items-start gap-2 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-xs leading-relaxed text-rose-600">
+                        <span className="text-sm leading-none">⚠️</span>
+                        <span>
+                            <b>유의하세요!</b> 내가 선택한 상대에게는 <b>서로 매칭되지 않더라도</b> 내 연락처가 공개될 수 있어요.
+                            신중하게 선택해 주세요. 🙏
+                        </span>
+                    </div>
+                )}
+
                 {/* 와인파티 메시지 전송 횟수 안내 */}
                 {!isOneToOne && canSendMessage && sendLimit && (
                     <div className="mt-2">

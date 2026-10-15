@@ -231,6 +231,20 @@
         </div>
     </div>
 
+    @if ($type === 'solo')
+    {{-- 1:1 소개팅 연락처 공개 유의 안내 --}}
+    <div style="margin-top:28px; border:2px solid #fca5a5; border-radius:12px; overflow:hidden;">
+        <div style="background:#ef4444; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+            ⚠️ 매칭 선택 전 유의사항
+        </div>
+        <div style="background:#fef2f2; padding:16px; font-size:31px; color:#b91c1c; line-height:1.7; text-align:center;">
+            내가 선택한 상대에게는 <b>서로 매칭되지 않더라도</b><br>
+            내 연락처가 공개될 수 있어요.<br>
+            마음에 드는 분을 <b>신중하게</b> 선택해 주세요 🙏
+        </div>
+    </div>
+    @endif
+
     {{-- 자주 묻는 질문 --}}
     <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
         <div style="background:#f59e0b; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">

@@ -154,6 +154,30 @@ class EventRound extends Model
     }
 
     /**
+     * 1:1 로테이션 행사인지 여부.
+     */
+    public function isOneToOne(): bool
+    {
+        return $this->type === self::TYPE_ONE;
+    }
+
+    /**
+     * 참가자가 지금 매칭(투표) 선택을 하거나 수정할 수 있는지 여부.
+     *
+     * - 1:1(one): 로테이션 진행(S)·매칭중(V) 동안 종료(X) 전까지 자유롭게 선택/수정.
+     *   관리자가 "매칭종료"를 누르는 시점(X 전환)까지가 마감이며, 자동 9시 마감은 적용하지 않는다.
+     * - 와인파티(wine): 기존 로직대로 매칭중(V) + 자동 마감 시각(다음 날 오전 9시) 전까지.
+     */
+    public function isMatchSelectable(): bool
+    {
+        if ($this->isOneToOne()) {
+            return in_array($this->status, [self::STATUS_STARTED, self::STATUS_VOTING], true);
+        }
+
+        return $this->isVotingOpen();
+    }
+
+    /**
      * 셀렉트박스 표시용 라벨.
      * 예) "로테이블 와인파티 (2026년 1월 10일 토요일 19:00)"
      */

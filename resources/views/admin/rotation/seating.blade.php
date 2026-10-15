@@ -136,6 +136,7 @@
         let viewRound = null;    // 현재 보고 있는 턴 (null이면 최신 턴으로 자동 설정)
         let currentRound = 0;    // 좌석이 존재하는 최신 턴 (메타 기준)
         let isClosed = false;    // 행사가 종료(X)되었는지 — 종료 시 회원 추가 비활성
+        let isOneToOne = false;  // 1:1 로테이션 행사 여부 — 마지막 턴 '매칭 종료' 버튼/문구 분기
 
         // 성별 색상 구분: 남성=파랑(blue), 여성=핑크(pink)
         function genderBadgeClass(g){ return g === 'F' ? 'bg-pink-lt' : 'bg-blue-lt'; }
@@ -217,6 +218,8 @@
 
             // 종료(X) 여부: 회원 추가 비활성화 판단에 사용.
             isClosed = !!meta.is_closed;
+            // 1:1 로테이션 여부: 마지막 턴 '매칭 종료' 버튼/문구 분기에 사용.
+            isOneToOne = !!meta.is_one_to_one;
 
             // 현재 행사 상태 뱃지 최신화 (버튼 클릭 → loadData 재호출 시마다 갱신됨)
             renderStatusBadge(meta.event_status);
@@ -267,8 +270,14 @@
             }
 
             if(meta.is_last){
-                $finish.removeClass('d-none');
-                $hint.text('마지막 턴입니다. 매칭을 시작할 수 있습니다.');
+                if(meta.is_one_to_one){
+                    // 1:1: 매칭 선택을 홈에서 받으므로 '매칭 시작(V)' 없이 바로 '매칭 종료(X)'.
+                    $closeVoting.removeClass('d-none');
+                    $hint.text('마지막 턴입니다. 매칭을 종료하면 결과가 공개됩니다.');
+                } else {
+                    $finish.removeClass('d-none');
+                    $hint.text('마지막 턴입니다. 매칭을 시작할 수 있습니다.');
+                }
             } else {
                 $rotate.removeClass('d-none');
                 // 0턴(아직 로테이션 시작 전)이면 '시작', 그 이후면 '진행'.
@@ -443,7 +452,11 @@
 
         // 투표 마감(수동): 행사 상태를 종료(X)로
         $('#closeVotingBtn').on('click', async function(){
-            if(!(await salert({html: '그대로 두면 <b>행사 다음 날 오전 9시</b>에 자동으로 마감돼요.<br>지금 바로 매칭을 종료하시겠습니까?<br>종료 후에는 회원이 선택을 수정할 수 없습니다.'}))) return;
+            // 1:1은 자동 마감이 없고 홈에서 선택을 받으므로 문구를 분기한다.
+            let confirmHtml = isOneToOne
+                ? '매칭을 종료하시겠습니까?<br>종료 시점의 선택으로 매칭 결과가 확정·공개되며,<br>회원은 더 이상 선택을 수정할 수 없습니다.'
+                : '그대로 두면 <b>행사 다음 날 오전 9시</b>에 자동으로 마감돼요.<br>지금 바로 매칭을 종료하시겠습니까?<br>종료 후에는 회원이 선택을 수정할 수 없습니다.';
+            if(!(await salert({html: confirmHtml}))) return;
 
             $.ajax({
                 url: closeVotingUrl,

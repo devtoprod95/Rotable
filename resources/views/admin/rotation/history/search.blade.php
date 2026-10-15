@@ -37,7 +37,7 @@
             <div class="card-body d-flex align-items-center gap-3 flex-wrap">
                 <span class="avatar avatar-lg" id="meAvatar">?</span>
                 <div id="meInfo"></div>
-                <span class="badge bg-blue-lt fs-4 py-2 ">참여 행사 <span id="meEventsCount" class="fw-bold">0</span>회</span>
+                <div id="meEventsBadges" class="d-flex align-items-center gap-2 flex-wrap"></div>
             </div>
         </div>
     </div>
@@ -69,6 +69,7 @@
                     <thead>
                         <tr>
                             <th>상대</th>
+                            <th class="text-center" style="width:150px;">방문 횟수</th>
                             <th class="text-center" style="width:140px;">관계</th>
                             <th class="text-center" style="width:120px;">매칭 조회</th>
                             <th class="text-center" style="width:130px;">메시지</th>
@@ -127,15 +128,44 @@
                  + `<div class="text-muted" style="font-size:0.85em;">${t}</div>`;
         }
 
-        function personCell(p, ordinal){
+        function personCell(p){
             if(!p){ return '-'; }
             var line = specLine(p);
-            var ordBadge = (ordinal && ordinal > 0)
-                ? ` <span class="badge bg-purple-lt" title="이 전화번호 기준 누적 방문 순번">${ordinal}번째 방문</span>`
-                : '';
-            return `<div><span class="fw-bold">${esc(p.name) || '-'}</span> ${genderBadge(p.gender)}${ordBadge}</div>`
+            return `<div><span class="fw-bold">${esc(p.name) || '-'}</span> ${genderBadge(p.gender)}</div>`
                  + (line ? `<div class="text-muted" style="font-size:0.85em;">${line}</div>` : '')
                  + (p.phone ? `<div class="text-muted" style="font-size:0.85em;">${esc(p.phone)}</div>` : '');
+        }
+
+        // 방문 횟수 컬럼 셀: 행사 유형별 누적 방문 횟수. (예: 와인파티 3회 · 1:1 2회)
+        var VISIT_TYPE_LABEL = @json(\App\Models\EventRound::typeOptions());
+        // 유형별 뱃지 색상 (eventForm 과 동일 규칙)
+        var VISIT_TYPE_BADGE = {
+            '{{ \App\Models\EventRound::TYPE_WINE }}': 'bg-red-lt',
+            '{{ \App\Models\EventRound::TYPE_ONE }}': 'bg-purple-lt',
+        };
+        function visitCell(counts){
+            if(!counts || typeof counts !== 'object'){ return '<span class="text-muted">-</span>'; }
+            var badges = Object.keys(VISIT_TYPE_LABEL)
+                .filter(function(k){ return counts[k] && counts[k] > 0; })
+                .map(function(k){
+                    var cls = VISIT_TYPE_BADGE[k] || 'bg-azure-lt';
+                    return `<span class="badge ${cls} mb-1">${esc(VISIT_TYPE_LABEL[k])} ${counts[k]}회</span>`;
+                });
+            return badges.length ? `<div class="d-flex flex-column align-items-center">${badges.join('')}</div>` : '<span class="text-muted">-</span>';
+        }
+
+        // 본인 요약: 참여 행사 횟수를 유형별 뱃지로 (예: 와인파티 3회 · 1:1 2회)
+        function eventsBadges(countsByType, total){
+            var badges = Object.keys(VISIT_TYPE_LABEL)
+                .filter(function(k){ return countsByType && countsByType[k] && countsByType[k] > 0; })
+                .map(function(k){
+                    var cls = VISIT_TYPE_BADGE[k] || 'bg-azure-lt';
+                    return `<span class="badge ${cls} fs-4 py-2">${esc(VISIT_TYPE_LABEL[k])} ${countsByType[k]}회</span>`;
+                });
+            if(!badges.length){
+                return `<span class="badge bg-blue-lt fs-4 py-2">참여 행사 ${total || 0}회</span>`;
+            }
+            return badges.join('');
         }
 
         function relationCell(row){
@@ -182,7 +212,7 @@
             updateMyRequestBtn(evtId);
 
             if(!partners.length){
-                $('#partnerTbody').html('<tr><td colspan="6" class="text-center text-muted py-4">조건에 맞는 상대가 없습니다.</td></tr>');
+                $('#partnerTbody').html('<tr><td colspan="7" class="text-center text-muted py-4">조건에 맞는 상대가 없습니다.</td></tr>');
                 return;
             }
 
@@ -205,7 +235,8 @@
                       + `<i class="ti ti-heart me-1"></i>매칭 조회</button>`;
 
                 return `<tr>`
-                     + `<td>${personCell(p, r.visit_ordinal)}</td>`
+                     + `<td>${personCell(p)}</td>`
+                     + `<td class="text-center align-middle">${visitCell(r.visit_counts)}</td>`
                      + `<td class="text-center align-middle">${relationCell(r)}</td>`
                      + `<td class="text-center align-middle">${votedCell}</td>`
                      + `<td class="text-center align-middle">${msgCell}</td>`
@@ -251,7 +282,7 @@
             var me = res.me || {};
             $('#meAvatar').text((me.name || '?').slice(0,1));
             $('#meInfo').html(personCell(me));
-            $('#meEventsCount').text(res.events_count || 0);
+            $('#meEventsBadges').html(eventsBadges(res.events_count_by_type, res.events_count));
             $('#meCard').removeClass('d-none');
 
             if(!(res.partners || []).length){

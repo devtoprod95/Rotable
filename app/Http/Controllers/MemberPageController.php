@@ -102,11 +102,31 @@ class MemberPageController extends Controller
             ];
         });
 
+        // 1:1 로테이션: 매칭 선택을 '홈'에서 수행한다.
+        //  - isOneToOne: 프론트에서 선택 UI 노출 분기
+        //  - matchSelectable: 지금 선택/수정이 가능한 기간인지(진행 S / 매칭중 V, 종료 전)
+        //  - myVotedIds: 내가 이미 선택한 상대 id (카드 선택 상태 표시)
+        //  - maxVotes: 최대 선택 가능 수
+        $isOneToOne = $event !== null && $event->isOneToOne();
+        $myVotedIds = [];
+        if ($isOneToOne) {
+            $myVotedIds = Vote::query()
+                ->where('event_id', $me->event_id)
+                ->where('voter_id', $me->id)
+                ->pluck('target_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
         return Inertia::render('Home', [
-            'rotations'     => $rotations,
-            'eventTitle'    => $eventTitle,
-            'eventTime'     => $eventTime,
-            'eventStatus'   => $eventStatus,
+            'rotations'       => $rotations,
+            'eventTitle'      => $eventTitle,
+            'eventTime'       => $eventTime,
+            'eventStatus'     => $eventStatus,
+            'isOneToOne'      => $isOneToOne,
+            'matchSelectable' => $event !== null && $event->isMatchSelectable(),
+            'myVotedIds'      => $myVotedIds,
+            'maxVotes'        => Vote::MAX_VOTES_PER_MEMBER,
             ...$this->messagingData($me),
         ]);
     }
@@ -345,13 +365,21 @@ class MemberPageController extends Controller
         $event  = EventRound::find($me->event_id);
         $status = $event?->status ?? EventRound::STATUS_PENDING;
 
-        // 매칭 투표 가능 여부: 상태가 '매칭중(V)'이고 자동 마감 시각(행사 다음 날 오전 9시) 전.
+        $isOneToOne = $event !== null && $event->isOneToOne();
+
+        // 매칭 투표 가능 여부(와인파티): 상태가 '매칭중(V)'이고 자동 마감 시각(다음 날 오전 9시) 전.
         $isVotingOpen = $event !== null && $event->isVotingOpen();
         $isClosed     = $status === EventRound::STATUS_CLOSED;
 
-        // 상태는 V 이지만 마감 시각이 지나 투표만 닫힌 '마감 대기' 상태.
+        // 1:1은 매칭 선택을 '홈'에서만 하고, '매칭 결과' 탭은 종료(X) 후 결과만 보여준다.
+        // 따라서 이 화면에서의 선택 가능(canVote)은 와인파티에서만 true.
+        $canVote = ! $isOneToOne && $isVotingOpen;
+
+        // 상태는 V 이지만 마감 시각이 지나 투표만 닫힌 '마감 대기' 상태(와인파티 전용).
         // (스케줄이 아직 X로 전환하기 전의 공백 구간)
-        $isVotingEnded = $status === EventRound::STATUS_VOTING && ! $isVotingOpen;
+        $isVotingEnded = ! $isOneToOne
+            && $status === EventRound::STATUS_VOTING
+            && ! $isVotingOpen;
 
         $oppositeGen = $me->gender === Member::GENDER_MALE
             ? Member::GENDER_FEMALE
@@ -381,17 +409,22 @@ class MemberPageController extends Controller
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        $candidateList = $candidates->map(function (Member $c) use ($myVotedIds, $votedForMeIds, $isClosed) {
+        $candidateList = $candidates->map(function (Member $c) use ($myVotedIds, $votedForMeIds, $isClosed, $isOneToOne) {
             $data        = $this->transformMember($c);
             $iVotedThem  = in_array($c->id, $myVotedIds, true);
             $theyVotedMe = in_array($c->id, $votedForMeIds, true);
             // 매칭 여부는 종료(X) 후에만 공개한다. 매칭중(V)에는 쌍방이어도 노출하지 않는다.
             $isMatch     = $isClosed && $iVotedThem && $theyVotedMe;
 
-            $data['voted']    = $iVotedThem;
-            $data['is_match'] = $isMatch;
-            // 연락처는 종료 후 "상호 매칭"된 상대에게만 공개한다.
-            $data['phone']    = ($isClosed && $isMatch) ? $c->phone : null;
+            $data['voted']       = $iVotedThem;
+            $data['voted_for_me'] = $isClosed && $theyVotedMe; // 종료 후에만 "나를 선택함" 공개
+            $data['is_match']    = $isMatch;
+
+            // 연락처 공개 규칙 (종료 후):
+            //  - 와인파티: "상호 매칭"된 상대에게만 공개.
+            //  - 1:1: 상호 매칭 + "나를 선택해준 상대"의 번호까지 공개.
+            $revealPhone = $isClosed && ($isMatch || ($isOneToOne && $theyVotedMe));
+            $data['phone'] = $revealPhone ? $c->phone : null;
 
             return $data;
         })->values();
@@ -414,7 +447,8 @@ class MemberPageController extends Controller
         return Inertia::render('Votes', [
             'eventTitle'    => $event?->title,
             'eventStatus'   => $status,
-            'canVote'       => $isVotingOpen,
+            'isOneToOne'    => $isOneToOne,
+            'canVote'       => $canVote,
             'isClosed'      => $isClosed,
             'votingEnded'   => $isVotingEnded,
             'maxVotes'      => Vote::MAX_VOTES_PER_MEMBER,
@@ -438,9 +472,11 @@ class MemberPageController extends Controller
 
         $event = EventRound::find($me->event_id);
 
-        // 투표가 열려 있지 않으면(대기/진행/종료, 또는 자동마감 시각 경과) 저장 불가.
-        if ($event === null || ! $event->isVotingOpen()) {
-            return back()->with('error', '지금은 매칭 투표를 할 수 없어요.');
+        // 매칭 선택이 가능한 기간이 아니면 저장 불가.
+        // - 1:1: 진행(S)·매칭중(V) 동안 종료 전까지 (선택은 홈에서 수행)
+        // - 와인파티: 매칭중(V) + 자동마감 시각 전
+        if ($event === null || ! $event->isMatchSelectable()) {
+            return back()->with('error', '지금은 매칭 선택을 할 수 없어요.');
         }
 
         $validated = $request->validate([

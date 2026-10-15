@@ -211,6 +211,8 @@ class RotationService
                     'sentMessages',
                     // 받은 투표수는 해당 행사(event_id) 범위로 제한.
                     'receivedVotes as received_votes_count' => fn ($vq) => $vq->where('event_id', $eventId),
+                    // 보낸 투표수(내가 선택한 상대 수)도 해당 행사 범위로 제한.
+                    'castVotes as cast_votes_count' => fn ($vq) => $vq->where('event_id', $eventId),
                     // 보낸 요청수도 해당 행사 범위로 제한.
                     'adminRequests as admin_requests_count' => fn ($rq) => $rq->where('event_id', $eventId),
                 ])
@@ -218,12 +220,13 @@ class RotationService
         ])->find($eventId);
 
         if ($event !== null) {
-            // 참여자 전화번호 기준으로 "몇 번째 방문인지"를 계산해 각 회원에 주입한다.
-            $ordinalMap = app(VisitStatService::class)
-                ->visitOrdinalMap($event->members->pluck('phone')->all());
+            // 참여자 전화번호 기준 "행사 유형별 누적 방문 횟수"를 각 회원에 주입한다.
+            // (예: visit_counts = ['wine' => 3, 'one' => 2])
+            $countsByPhone = app(VisitStatService::class)
+                ->visitCountsByType($event->members->pluck('phone')->all());
 
             foreach ($event->members as $member) {
-                $member->visit_ordinal = $ordinalMap[$member->id] ?? null;
+                $member->visit_counts = $countsByPhone[$member->phone] ?? [];
             }
         }
 
@@ -717,7 +720,8 @@ class RotationService
                 ];
             });
 
-        $eventStatus = EventRound::whereKey($eventId)->value('status') ?? EventRound::STATUS_PENDING;
+        $event       = EventRound::find($eventId);
+        $eventStatus = $event?->status ?? EventRound::STATUS_PENDING;
 
         return [
             'tables' => $tableData,
@@ -729,6 +733,9 @@ class RotationService
                 'is_last'      => $tableCount > 0 && $currentRound >= $tableCount,
                 'is_voting'    => $eventStatus === EventRound::STATUS_VOTING,
                 'is_closed'    => $eventStatus === EventRound::STATUS_CLOSED,
+                // 1:1 로테이션 여부. 1:1은 매칭 선택을 '홈'에서 받으므로
+                // 마지막 턴에서 '매칭 시작(V)' 없이 바로 '매칭 종료(X)'한다.
+                'is_one_to_one' => $event !== null && $event->isOneToOne(),
             ],
         ];
     }
@@ -917,6 +924,9 @@ class RotationService
                 'is_last'   => $isLast,
                 'max_round' => $tableCount,
             ];
+
+            // 참가자 홈을 실시간으로 갱신(새 좌석/턴 반영). 와인파티·1:1 공통.
+            broadcast(new \App\Events\RotationUpdated($eventId));
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
         }
@@ -970,6 +980,9 @@ class RotationService
 
             $event->status = EventRound::STATUS_CLOSED;
             $event->save();
+
+            // 참가자 화면을 실시간으로 갱신하여 매칭 결과를 바로 노출. 와인파티·1:1 공통.
+            broadcast(new \App\Events\EventClosed($event->id));
 
             $returnMsg = helpersSuccessMessage('매칭을 마감했습니다.');
         } catch (\Throwable $th) {
@@ -1065,7 +1078,7 @@ class RotationService
             ->get();
 
         if ($myMembers->isEmpty()) {
-            return ['found' => false, 'me' => null, 'events_count' => 0, 'partners' => [], 'events' => []];
+            return ['found' => false, 'me' => null, 'events_count' => 0, 'events_count_by_type' => [], 'partners' => [], 'events' => []];
         }
 
         // 검색한 사람의 성별(최근 레코드 기준). 상대는 "이성"만 보여준다.
@@ -1121,10 +1134,10 @@ class RotationService
             }
         }
 
-        // 상대의 "이 행사가 그 전화번호 기준 몇 번째 방문인지"(N번째 방문) 맵.
+        // 상대의 "행사 유형별 누적 방문 횟수" 맵. (phone => ['wine'=>N, 'one'=>M])
         // 행사 상세 참여자 리스트와 동일한 표기(VisitStatService 재사용).
         $otherPhones = $others->pluck('phone')->unique()->values()->all();
-        $ordinalByMemberId = app(VisitStatService::class)->visitOrdinalMap($otherPhones);
+        $visitCountsByPhone = app(VisitStatService::class)->visitCountsByType($otherPhones);
 
         // 행사별 "내 회원 레코드" 매핑 (행사 안에서 상대와 매칭 비교할 때 사용).
         $myByEvent = $myMembers->keyBy('event_id');
@@ -1170,8 +1183,8 @@ class RotationService
                 'is_opposite'       => $oppositeGender !== null && $other->gender === $oppositeGender,
                 // 나와 그 상대가 이 행사에서 주고받은 메시지 수 (양방향 합계, 0이면 버튼 숨김).
                 'message_count'     => (int) ($betweenCountByOther[$other->id] ?? 0),
-                // 이 행사가 그 상대의 몇 번째 방문인지(N번째 방문).
-                'visit_ordinal'     => (int) ($ordinalByMemberId[$other->id] ?? 1),
+                // 상대의 행사 유형별 누적 방문 횟수. (예: ['wine'=>3,'one'=>2])
+                'visit_counts'      => $visitCountsByPhone[$other->phone] ?? [],
                 'i_voted'           => $iVotedThem,
                 'they_voted'        => $theyVotedMe,
                 'is_mutual'         => $iVotedThem && $theyVotedMe,
@@ -1220,6 +1233,9 @@ class RotationService
             'me'           => $this->meetingPersonPayload($myMembers->first()),
             'my_gender'    => $myGender,
             'events_count' => count($eventIds),
+            // 본인(검색한 전화번호)의 행사 유형별 참여 횟수. (예: ['wine'=>3,'one'=>2])
+            'events_count_by_type' => app(VisitStatService::class)
+                ->visitCountsByType([$myMembers->first()->phone])[$myMembers->first()->phone] ?? [],
             'partners'     => $partners,
             'events'       => $events,
         ];

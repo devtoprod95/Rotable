@@ -912,8 +912,17 @@ class RotationService
                 }
 
                 // 로테이션이 시작되었으므로 행사 상태를 '진행(S)'으로.
-                EventRound::where('id', $eventId)
-                    ->update(['status' => EventRound::STATUS_STARTED]);
+                $event = EventRound::find($eventId);
+                $event->status = EventRound::STATUS_STARTED;
+
+                // 1:1 소개팅은 별도 "투표 시작(V)" 단계 없이 진행(S)부터 매칭 선택이 열린다.
+                // 따라서 로테이션이 처음 시작되는 시점에 voting_opened_at 을 기록해 둔다.
+                // (이미 기록돼 있으면 유지 — 매 턴 진행마다 덮어쓰지 않음)
+                if ($event->isOneToOne() && $event->voting_opened_at === null) {
+                    $event->voting_opened_at = now();
+                }
+
+                $event->save();
 
                 return $nextRound->round_no;
             });

@@ -169,7 +169,8 @@
                                 <ul class="lh-lg">
                                     <li><b>진행</b> 중에는 턴이 바뀔 때마다 안내된 자리로 이동하며 대화하고, <b>중간에 메시지</b>를 보낼 수 있습니다.</li>
                                     <li><b>투표중</b>이 되면 마음에 든 상대를 <mark>최대 <b class="text-red">3명</b>까지 비밀 투표</mark>할 수 있습니다.</li>
-                                    <li>투표 후 <b>2차 자유 대화 시간</b>에 원하는 상대와 자유롭게 앉아 대화합니다.</li>
+                                    <li><span class="badge bg-azure-lt">와인파티</span> 투표 후 <b>2차 자유 대화 시간</b>에 원하는 상대와 자유롭게 앉아 대화하고, 매칭 결과는 <b>다음 날 오전</b>에 발표됩니다.</li>
+                                    <li><span class="badge bg-pink-lt">1:1 소개팅</span> 한 명씩 1:1로 마주 앉아 대화하고(여자 고정/남자 이동), 로테이션이 끝나면 <mark>그 자리에서 바로 매칭 결과</mark>를 확인합니다.</li>
                                 </ul>
                             </div>
 
@@ -185,7 +186,9 @@
                                 </ul>
                                 <div class="fw-bold text-pink mb-1"><i class="ti ti-users me-1"></i> 그러면 참가자는</div>
                                 <ul class="lh-lg">
-                                    <li><mark>매칭 결과는 <b class="text-red">다음 날 오전</b>에 발표</mark>됩니다. 서로 선택한 경우에만 매칭 성사로 안내됩니다.</li>
+                                    <li><span class="badge bg-azure-lt">와인파티</span> <mark>매칭 결과는 <b class="text-red">다음 날 오전</b>에 발표</mark>됩니다.</li>
+                                    <li><span class="badge bg-pink-lt">1:1 소개팅</span> <mark>로테이션 종료 직후 바로 매칭 결과</mark>를 확인하고, 나를 선택한 상대의 정보도 공유받아 이후 연락할 수 있습니다.</li>
+                                    <li>두 유형 모두 <b>서로 선택한 경우에만</b> 매칭 성사로 안내됩니다.</li>
                                 </ul>
                             </div>
 
@@ -194,11 +197,15 @@
                                 <p class="text-muted">홍보용 상세페이지를 HTML로 꾸미고 <b>이미지로 저장</b>해 외부 홍보에 사용합니다.</p>
                                 <div class="fw-bold text-blue mb-1"><i class="ti ti-user-cog me-1"></i> 관리자가 하는 일</div>
                                 <ul class="lh-lg">
-                                    <li><b>1열/2열 샘플</b> 버튼으로 기본 틀을 불러옵니다. <mark>모임 1개면 1열, 여러 개면 2열</mark>을 추천합니다.</li>
+                                    <li><b>유형 선택</b>: 상단에서 <span class="badge bg-pink-lt">와인파티</span> <span class="badge bg-pink-lt">1:1 소개팅</span> 중 하나를 먼저 고릅니다. <mark>유형별로 상단 이미지 · 로테이블 포인트 · 이용안내 문구가 다릅니다.</mark></li>
+                                    <li><b>1열/2열 샘플</b> 버튼을 누르면 <b>선택한 유형</b>의 기본 틀을 불러옵니다. <mark>모임 1개면 1열, 여러 개면 2열</mark>을 추천합니다.</li>
                                     <li>HTML 에디터로 문구·디자인을 수정합니다. (참여조건, 이용안내, FAQ, 로테이블 포인트 등 포함)</li>
-                                    <li><span class="badge bg-primary text-white">저장</span> 하면 다음에 다시 열어도 유지됩니다.</li>
+                                    <li><span class="badge bg-primary text-white">저장</span> 은 <mark>유형별로 따로 저장</mark>됩니다. 와인파티에서 저장한 내용과 1:1 소개팅 내용은 서로 영향을 주지 않습니다. 유형을 전환하면 해당 유형의 저장본이 에디터에 나타납니다.</li>
                                     <li><b>미리보기</b>로 확인하고 <span class="badge bg-dark text-white">이미지 다운로드</span> 로 <mark>PNG 이미지</mark>를 저장합니다.</li>
                                 </ul>
+                                <div class="alert alert-important alert-info py-2 my-2">
+                                    <i class="ti ti-info-circle me-1"></i> 유형별 전용 상단 이미지를 쓰려면 <code>public/images/detail_wine.png</code> · <code>detail_solo.png</code> 를 넣으세요. 없으면 기본 이미지로 표시됩니다.
+                                </div>
                                 <div class="fw-bold text-pink mb-1"><i class="ti ti-photo me-1"></i> 활용</div>
                                 <ul class="lh-lg">
                                     <li>저장한 이미지를 <b>SNS·오픈채팅·홍보 채널</b>에 올려 참가자 모집에 사용합니다.</li>

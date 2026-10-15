@@ -327,7 +327,7 @@ export default function Votes() {
                             이번 로테이블에서 이렇게 많은 인연이 피어났답니다 🌸
                         </p>
                         <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
-                            <span className="text-lg">🥂</span>
+                            <span className="text-lg">{isOneToOne ? '💑' : '🥂'}</span>
                             <span className="text-sm font-semibold">
                                 이번 로테이블에서{' '}
                                 <span className="text-lg font-extrabold">{coupleCount}</span>
@@ -420,25 +420,36 @@ export default function Votes() {
                     </div>
                 )}
 
-                {/* 나를 선택해준 사람 리스트 — 제목에 인원수 표기(1:1) */}
-                {isClosed && pickedMeList.length > 0 && (
+                {/* 나를 선택해준 사람 리스트 — 제목에 인원수 표기(1:1). 0명이어도 안내 노출. */}
+                {isClosed && isOneToOne && (
                     <>
-                        <p className="mt-5 mb-2 text-sm font-bold text-secondary-700">
+                        <p className="mt-5 mb-1 text-sm font-bold text-secondary-700">
                             나를 선택해준 분들 ({pickedMeList.length}명) 💝
                         </p>
-                        <div className="grid grid-cols-1 content-start gap-2.5">
-                            {pickedMeList.map((c) => (
-                                <CandidateCard
-                                    key={c.id}
-                                    candidate={c}
-                                    tone={tone}
-                                    selected={false}
-                                    disabled={true}
-                                    closed={isClosed}
-                                    onToggle={toggle}
-                                />
-                            ))}
-                        </div>
+                        <p className="mb-2 text-xs leading-relaxed text-gray-400">
+                            ※ 서로 매칭된 분은 위 결과에 포함되어 여기서는 제외됩니다.
+                        </p>
+                        {pickedMeList.length > 0 ? (
+                            <div className="grid grid-cols-1 content-start gap-2.5">
+                                {pickedMeList.map((c) => (
+                                    <CandidateCard
+                                        key={c.id}
+                                        candidate={c}
+                                        tone={tone}
+                                        selected={false}
+                                        disabled={true}
+                                        closed={isClosed}
+                                        onToggle={toggle}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center text-xs leading-relaxed text-rose-500/90 shadow-sm">
+                                <p className="mb-1 text-xl">🌱</p>
+                                아직 나를 선택해준 분이 없어요.<br />
+                                다음 로테이블에서 좋은 인연을 만나보세요 😊
+                            </div>
+                        )}
                     </>
                 )}
 

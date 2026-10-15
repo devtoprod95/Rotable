@@ -111,9 +111,10 @@
                                     <tr>
                                         <th class="w-1">No</th>
                                         <th>회원 정보</th>
+                                        <th class="text-center">방문 횟수</th>
                                         <th>직업 / 키 / MBTI</th>
                                         <th>지역 / 흡연</th>
-                                        <th class="text-center">받은<br>투표수</th>
+                                        <th class="text-center">투표<br>(보낸/받은)</th>
                                         <th class="text-center">보낸<br>메시지</th>
                                         <th class="text-center">보낸<br>요청수</th>
                                     </tr>
@@ -130,9 +131,6 @@
                                                     @else
                                                         <span class="badge bg-blue-lt">남</span>
                                                     @endif
-                                                    @if ($member->visit_ordinal)
-                                                        <span class="badge bg-purple-lt" title="이 전화번호 기준 누적 방문 순번">{{ $member->visit_ordinal }}번째 방문</span>
-                                                    @endif
                                                 </div>
                                                 <div class="text-muted" style="font-size: 0.85em;">
                                                     {{ $member->phone ?? '-' }}
@@ -148,6 +146,28 @@
                                                     <div style="font-size: 0.85em; margin-top: 2px;">
                                                         <span class="text-red fw-bold font-monospace" style="user-select: all; cursor: text;">{{ $member->password ?? '-' }}</span>
                                                     </div>
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @php
+                                                    $visitCounts = $member->visit_counts ?? [];
+                                                    $typeLabels  = \App\Models\EventRound::typeOptions();
+                                                    // 유형별 뱃지 색상
+                                                    $typeBadgeCls = [
+                                                        \App\Models\EventRound::TYPE_WINE => 'bg-red-lt',
+                                                        \App\Models\EventRound::TYPE_ONE  => 'bg-purple-lt',
+                                                    ];
+                                                @endphp
+                                                @if (!empty($visitCounts))
+                                                    <div class="d-flex flex-column align-items-center gap-1">
+                                                        @foreach ($typeLabels as $typeKey => $typeLabel)
+                                                            @if (!empty($visitCounts[$typeKey]))
+                                                                <span class="badge {{ $typeBadgeCls[$typeKey] ?? 'bg-azure-lt' }}">{{ $typeLabel }} {{ $visitCounts[$typeKey] }}회</span>
+                                                            @endif
+                                                        @endforeach
+                                                    </div>
+                                                @else
+                                                    <span class="text-muted">-</span>
                                                 @endif
                                             </td>
                                             <td>
@@ -172,16 +192,30 @@
                                                 </div>
                                             </td>
                                             <td class="text-center">
-                                                @if ($member->received_votes_count > 0)
-                                                    <button type="button"
-                                                            class="btn btn-outline-pink btn-voters"
-                                                            data-member-id="{{ $member->id }}"
-                                                            data-member-label="{{ $member->name }}">
-                                                        {{ $member->received_votes_count }}표
-                                                    </button>
-                                                @else
-                                                    <span class="text-muted">0표</span>
-                                                @endif
+                                                <div class="d-flex flex-column align-items-center gap-1">
+                                                    {{-- 보낸 투표: 이 회원이 선택한 상대 (VotedModal) --}}
+                                                    @if ($member->cast_votes_count > 0)
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-blue btn-voted"
+                                                                data-member-id="{{ $member->id }}"
+                                                                data-member-label="{{ $member->name }}">
+                                                            보낸 {{ $member->cast_votes_count }}표
+                                                        </button>
+                                                    @else
+                                                        <span class="text-muted" style="font-size:0.85em;">보낸 0표</span>
+                                                    @endif
+                                                    {{-- 받은 투표: 이 회원을 선택한 사람 (VotersModal) --}}
+                                                    @if ($member->received_votes_count > 0)
+                                                        <button type="button"
+                                                                class="btn btn-sm btn-outline-pink btn-voters"
+                                                                data-member-id="{{ $member->id }}"
+                                                                data-member-label="{{ $member->name }}">
+                                                            받은 {{ $member->received_votes_count }}표
+                                                        </button>
+                                                    @else
+                                                        <span class="text-muted" style="font-size:0.85em;">받은 0표</span>
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td class="text-center">
                                                 @if ($member->sent_messages_count > 0)
@@ -351,6 +385,13 @@
             VotersModal.open({{ $event->id }}, memberId, label + ' 님을 선택한 사람');
         });
 
+        // ===== 상세: 보낸 투표(이 회원이 선택한 상대) 모달 =====
+        $(document).on('click', '.btn-voted', function(){
+            var memberId = $(this).data('member-id');
+            var label = $(this).data('member-label') || '';
+            VotedModal.open({{ $event->id }}, memberId, label + ' 님이 선택/매칭한 상대');
+        });
+
         // ===== 상세: 보낸 메시지 모달 (특정 회원이 보낸 것만) =====
         $(document).on('click', '.btn-sent-messages', function(){
             var memberId = $(this).data('member-id');
@@ -449,6 +490,7 @@
     @include('admin.rotation._matchesModal')
     @include('admin.rotation._matchedModal')
     @include('admin.rotation._votersModal')
+    @include('admin.rotation._votedModal')
     @include('admin.rotation._requestsModal')
 @endif
 @endsection

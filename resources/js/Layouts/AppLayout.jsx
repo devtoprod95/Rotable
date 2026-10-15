@@ -136,15 +136,27 @@ export default function AppLayout({
     );
 }
 
-const NAV_ITEMS = [
+const WINE_NAV_ITEMS = [
     { href: "/home", label: "홈", icon: HeartIcon },
     { href: "/chats", label: "메시지함", icon: ChatIcon },
     { href: "/votes", label: "매칭하기", icon: VoteIcon },
     { href: "/requests", label: "요청하기", icon: RequestIcon },
 ];
 
+// 1:1 로테이션: 매칭 선택은 홈에서만, 결과는 종료 후에만.
+// 메시지함/요청하기는 노출하지 않고, 매칭 탭은 "매칭 결과"로만 둔다.
+const ONE_TO_ONE_NAV_ITEMS = [
+    { href: "/home", label: "홈", icon: HeartIcon },
+    { href: "/votes", label: "매칭 결과", icon: VoteIcon },
+];
+
+function navItemsFor(eventType) {
+    return eventType === "one" ? ONE_TO_ONE_NAV_ITEMS : WINE_NAV_ITEMS;
+}
+
 function BottomNav() {
     const { url, props } = usePage();
+    const navItems = navItemsFor(props.eventType);
     const sharedUnread = props.unreadCount ?? 0;
     const memberId = props.auth?.user?.id ?? null;
 
@@ -175,7 +187,7 @@ function BottomNav() {
         <div className="fixed inset-x-0 bottom-0 z-30">
             <div className="mx-auto w-full max-w-[480px]">
                 <nav className="flex items-stretch justify-around rounded-t-3xl border-t-2 border-primary-200 bg-white px-2 pt-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] shadow-[0_-4px_16px_-6px_rgba(207,47,76,0.25)]">
-                    {NAV_ITEMS.map((item) => {
+                    {navItems.map((item) => {
                         const active = url.startsWith(item.href);
                         const Icon = item.icon;
                         const badge = item.href === "/chats" ? unreadCount : 0;

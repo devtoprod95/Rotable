@@ -42,15 +42,20 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $member ? [
-                    'id'     => $member->id,
-                    'name'   => $member->name,
-                    'phone'  => $member->phone,
-                    'gender' => $member->gender,
+                    'id'       => $member->id,
+                    'name'     => $member->name,
+                    'phone'    => $member->phone,
+                    'gender'   => $member->gender,
+                    'event_id' => $member->event_id,
                 ] : null,
             ],
             // 상단 header 표시용 - 로그인 회원이 참여한 행사명.
             'eventName' => fn () => $member
                 ? \App\Models\EventRound::whereKey($member->event_id)->value('title')
+                : null,
+            // 프론트 nav/문구 분기용 - 행사 타입(wine: 와인파티, one: 1:1).
+            'eventType' => fn () => $member
+                ? \App\Models\EventRound::whereKey($member->event_id)->value('type')
                 : null,
             // 하단 nav 메시지함 뱃지용 - 나에게 온 안읽은 메시지 개수.
             'unreadCount' => fn () => $member

@@ -122,4 +122,37 @@ class VisitStatService
 
         return $map;
     }
+
+    /**
+     * 전화번호별 "행사 유형별 누적 방문 횟수"를 집계한다.
+     *
+     * - 한 전화번호가 와인파티/1:1 각각 몇 번 참여했는지(회원 레코드 수)를 센다.
+     * - 반환 맵의 키는 전화번호, 값은 [행사타입 => 횟수] 배열. (예: ['wine' => 3, 'one' => 2])
+     *   타입이 null 인(행사 미연결) 레코드는 집계에서 제외한다.
+     *
+     * @param array<int, string> $phones 대상 전화번호들
+     * @return array<string, array<string, int>> phone => [type => count]
+     */
+    public function visitCountsByType(array $phones): array
+    {
+        $phones = array_values(array_unique(array_filter($phones)));
+        if (empty($phones)) {
+            return [];
+        }
+
+        $rows = Member::query()
+            ->leftJoin('event_rounds', 'event_rounds.id', '=', 'members.event_id')
+            ->whereIn('members.phone', $phones)
+            ->whereNotNull('event_rounds.type')
+            ->selectRaw('members.phone as phone, event_rounds.type as event_type, COUNT(*) as cnt')
+            ->groupBy('members.phone', 'event_rounds.type')
+            ->get();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[$row->phone][$row->event_type] = (int) $row->cnt;
+        }
+
+        return $map;
+    }
 }

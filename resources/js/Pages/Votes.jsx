@@ -1,7 +1,8 @@
 import { Head, router, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import Placeholder from '@/Components/Placeholder';
+import echo from '@/echo';
 
 function birthYearText(birthYear) {
     if (!birthYear) return null;
@@ -81,7 +82,14 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
                     </span>
                 )}
 
-                {closed && !candidate.is_match && (
+                {/* 상호매칭은 아니지만 나를 선택해준 상대 (1:1에서 번호 공개 대상) */}
+                {closed && !candidate.is_match && candidate.voted_for_me && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
+                        ⭐ 나를 선택함
+                    </span>
+                )}
+
+                {closed && !candidate.is_match && !candidate.voted_for_me && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-bold text-gray-500">
                         💔 매칭 실패
                     </span>
@@ -113,12 +121,17 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
                 ))}
             </div>
 
-            {/* 종료 후 상호 매칭된 상대의 연락처 공개 */}
-            {isMatched && candidate.phone && (
+            {/* 종료 후 연락처 공개:
+                - 와인파티: 상호 매칭된 상대만 (서버가 phone 을 내려줌)
+                - 1:1: 상호 매칭 + 나를 선택해준 상대까지 (서버가 phone 을 내려줌)
+                프론트는 서버가 공개를 결정한 candidate.phone 유무로만 판단한다. */}
+            {closed && candidate.phone && (
                 <div className="relative mt-2.5 flex items-center gap-2 rounded-xl bg-white px-3 py-2 shadow-sm ring-1 ring-rose-100">
                     <span className="text-base">📞</span>
                     <div className="leading-tight">
-                        <p className="text-[10px] font-semibold text-rose-400">먼저 연락해 보세요!</p>
+                        <p className="text-[10px] font-semibold text-rose-400">
+                            {candidate.is_match ? '서로 선택했어요! 먼저 연락해 보세요!' : '이 분이 당신을 선택했어요!'}
+                        </p>
                         <span
                             role="button"
                             tabIndex={0}
@@ -145,6 +158,8 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
 
 export default function Votes() {
     const {
+        auth,
+        isOneToOne = false,
         canVote = false,
         isClosed = false,
         votingEnded = false,
@@ -191,15 +206,43 @@ export default function Votes() {
         );
     };
 
-    const matches = candidates.filter((c) => c.is_match);
+    // 실시간: 관리자가 매칭종료(X)하면 이 화면을 리로드해 결과를 바로 보여준다.
+    // (와인파티는 자동 마감 → X 전환, 1:1은 관리자가 직접 종료)
+    const eventId = auth?.user?.event_id ?? null;
+    useEffect(() => {
+        if (!eventId) {
+            return undefined;
+        }
+        const channelName = `event-rotation.${eventId}`;
+        const channel = echo.private(channelName);
 
-    // 종료 후에는 "내가 선택한 사람"만 리스트에 노출한다. (투표중에는 전체 후보)
-    // 종료 시: 내가 선택한 사람만, 매칭 성공한 상대가 먼저 오도록 정렬.
+        channel.listen('.event.closed', () => {
+            router.reload();
+        });
+        // 로테이션 진행으로 상태/후보가 바뀌는 경우(와인파티 투표중 등)도 갱신.
+        channel.listen('.rotation.updated', () => {
+            router.reload();
+        });
+
+        return () => {
+            echo.leave(`private-${channelName}`);
+        };
+    }, [eventId]);
+
+    const matches = candidates.filter((c) => c.is_match);
+    // 나를 선택해준 사람(종료 후 공개). 1:1에서 번호 공개 대상.
+    const votedForMe = candidates.filter((c) => c.voted_for_me);
+
+    // 종료 후 노출 목록:
+    //  - 와인파티: 내가 선택한 사람만
+    //  - 1:1: 내가 선택한 사람 + 나를 선택해준 사람 (번호 공개 대상)
+    // 정렬: 상호매칭 → 나를 선택함 → 그 외.
+    const rank = (c) => (c.is_match ? 2 : c.voted_for_me ? 1 : 0);
     const displayList = isClosed
         ? candidates
-              .filter((c) => c.voted)
+              .filter((c) => (isOneToOne ? c.voted || c.voted_for_me : c.voted))
               .slice()
-              .sort((a, b) => (b.is_match ? 1 : 0) - (a.is_match ? 1 : 0))
+              .sort((a, b) => rank(b) - rank(a))
         : candidates;
 
     // 매칭중(V)이지만 마감 시각이 지나 투표만 닫힌 '결과 집계 대기' 상태
@@ -231,14 +274,24 @@ export default function Votes() {
                 <Head title="Rotable" />
                 <div className="flex w-full flex-col bg-gray-50 p-4">
                     <Placeholder
-                        icon="💝"
-                        title="매칭하기"
+                        icon={isOneToOne ? '💌' : '💝'}
+                        title={isOneToOne ? '로테이블 진행중' : '매칭하기'}
                         desc={
-                            <>
-                                아직 매칭 투표가 열리지 않았어요.
-                                <br />
-                                로테이션이 끝나면 시작됩니다.
-                            </>
+                            isOneToOne ? (
+                                <>
+                                    매칭 선택은 <b>홈</b>에서 할 수 있어요.
+                                    <br />
+                                    모든 로테이션이 끝나고 관리자가 매칭을 마감하면
+                                    <br />
+                                    이곳에서 결과를 확인할 수 있어요.
+                                </>
+                            ) : (
+                                <>
+                                    아직 매칭 투표가 열리지 않았어요.
+                                    <br />
+                                    로테이션이 끝나면 시작됩니다.
+                                </>
+                            )
                         }
                     />
                 </div>
@@ -306,8 +359,8 @@ export default function Votes() {
                     </div>
                 )}
 
-                {/* 종료 + 매칭 없음: 위로 메시지를 남은 공간 전체를 채워 중앙에 배치 */}
-                {isClosed && matches.length === 0 && (
+                {/* 종료 + 매칭(및 1:1의 받은 선택)도 없음: 위로 메시지를 중앙 배치 */}
+                {isClosed && matches.length === 0 && (!isOneToOne || votedForMe.length === 0) && (
                     <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-3xl border border-rose-100 bg-white px-5 py-12 text-center shadow-sm">
                         <p className="text-5xl">🍀</p>
                         <p className="mt-4 text-lg font-extrabold text-secondary-700">
@@ -324,10 +377,10 @@ export default function Votes() {
                     </div>
                 )}
 
-                {/* 목록: 투표중=전체 후보 / 종료=내가 선택한 사람 (홈 카드 UI와 동일) */}
+                {/* 목록: 투표중=전체 후보 / 종료=결과(홈 카드 UI와 동일) */}
                 {isClosed && displayList.length > 0 && (
                     <p className="mt-5 mb-2 text-sm font-bold text-secondary-700">
-                        내가 선택한 사람 💌
+                        {isOneToOne ? '내 매칭 결과 💌' : '내가 선택한 사람 💌'}
                     </p>
                 )}
                 {displayList.length > 0 ? (

@@ -1,7 +1,8 @@
-import { Head, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { SendModal } from '@/Components/MessageSender';
+import echo from '@/echo';
 
 const ROUND_STATUS = {
     P: { label: '대기', cls: 'bg-amber-100 text-amber-700' },
@@ -15,8 +16,23 @@ function birthYearText(birthYear) {
     return `${String(birthYear).slice(-2)}년생`;
 }
 
-/** 한 명의 회원 칩 (members 전체 정보 노출) */
-function MemberChip({ member, tone, onSend, sendDisabled }) {
+/**
+ * 한 명의 회원 칩 (members 전체 정보 노출).
+ *
+ * - 와인파티: onSend(💌 전달) 버튼 노출.
+ * - 1:1: selectable 이면 매칭 선택 토글(✓) 노출. 종료 전까지 자유롭게 선택/해제.
+ */
+function MemberChip({
+    member,
+    tone,
+    onSend,
+    sendDisabled,
+    selectable = false,
+    selected = false,
+    selectDisabled = false,
+    onToggleSelect,
+    votedBadge = false,
+}) {
     const specs = [
         birthYearText(member.birth_year),
         member.job,
@@ -31,11 +47,40 @@ function MemberChip({ member, tone, onSend, sendDisabled }) {
             ? 'border-rose-100 bg-rose-50'
             : 'border-sky-100 bg-sky-50';
 
+    // 1:1 선택 가능 카드: 카드 전체 클릭으로 토글. 선택 시 primary 링 강조.
+    const clickable = selectable && !(selectDisabled && !selected);
+    const Wrapper = selectable ? 'button' : 'div';
+    const wrapperProps = selectable
+        ? {
+              type: 'button',
+              'aria-disabled': !clickable,
+              onClick: () => {
+                  if (clickable) {
+                      onToggleSelect(member.id);
+                  }
+              },
+          }
+        : {};
+
     return (
-        <div className={`rounded-xl border p-3 ${toneCls}`}>
+        <Wrapper
+            {...wrapperProps}
+            className={
+                `block w-full rounded-xl border p-3 text-left transition ${toneCls}` +
+                (selectable && selected ? ' ring-2 ring-primary ring-offset-1' : '') +
+                (!selectable && votedBadge ? ' ring-2 ring-primary ring-offset-1' : '') +
+                (selectable ? (clickable ? ' active:scale-[0.99]' : ' opacity-50') : '')
+            }
+        >
             <div className="flex items-center gap-2">
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
                 <span className="font-bold">{member.name}</span>
+                {/* 종료 후: 내가 선택했던 상대 표시 */}
+                {!selectable && votedBadge && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
+                        💘 내가 선택함
+                    </span>
+                )}
                 {onSend && (
                     <button
                         type="button"
@@ -45,6 +90,18 @@ function MemberChip({ member, tone, onSend, sendDisabled }) {
                     >
                         💌 전달
                     </button>
+                )}
+                {selectable && (
+                    <span
+                        className={
+                            'ml-auto flex h-6 w-6 items-center justify-center rounded-full border text-sm font-bold ' +
+                            (selected
+                                ? 'border-primary bg-primary text-white'
+                                : 'border-secondary-200 text-transparent')
+                        }
+                    >
+                        ✓
+                    </span>
                 )}
             </div>
             <div className="mt-1.5 flex flex-wrap gap-1">
@@ -57,34 +114,43 @@ function MemberChip({ member, tone, onSend, sendDisabled }) {
                     </span>
                 ))}
             </div>
-        </div>
+        </Wrapper>
     );
 }
 
 /** 로테이션 턴 섹션: 이 턴에 만난 상대들을 카드 그룹으로 표시 */
-function RoundSection({ round, partnerGender, onSend, sendDisabled, showTable = false }) {
-    const status = ROUND_STATUS[round.status] ?? ROUND_STATUS.P;
+function RoundSection({
+    round,
+    partnerGender,
+    onSend,
+    sendDisabled,
+    showTable = false,
+    hideCount = false,
+    selectable = false,
+    selectedIds = [],
+    selectDisabled = false,
+    onToggleSelect,
+    votedIds = [],
+}) {
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const partners = round.partners ?? [];
 
     return (
         <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-            {/* 턴 헤더: 좌측 컬러바 + 턴 번호 + 상태 뱃지 */}
+            {/* 턴 헤더: 좌측 컬러바 + 턴 번호 */}
             <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/80 px-4 py-3">
                 <div className="flex items-center gap-2.5">
                     <span className="flex h-8 min-w-8 items-center justify-center rounded-lg bg-primary px-2 text-sm font-extrabold text-white">
                         {round.is_last ? '마지막 로테이션' : `${round.round_no}번 째 로테이션`}
                         {showTable && round.table_no ? ` (${round.table_no}번 테이블)` : ''}
                     </span>
-                    {/* <span className="text-base font-extrabold text-gray-800">{round.round_no}턴</span> */}
                 </div>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-gray-400">
-                        만난 상대 {partners.length}명
-                    </span>
-                    {/* <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${status.cls}`}>
-                        {status.label}
-                    </span> */}
+                    {!hideCount && (
+                        <span className="text-xs font-medium text-gray-400">
+                            만난 상대 {partners.length}명
+                        </span>
+                    )}
                 </div>
             </div>
 
@@ -99,6 +165,11 @@ function RoundSection({ round, partnerGender, onSend, sendDisabled, showTable = 
                                 tone={tone}
                                 onSend={onSend}
                                 sendDisabled={sendDisabled}
+                                selectable={selectable}
+                                selected={selectedIds.includes(m.id)}
+                                selectDisabled={selectDisabled}
+                                onToggleSelect={onToggleSelect}
+                                votedBadge={!selectable && votedIds.includes(m.id)}
                             />
                         ))}
                     </div>
@@ -113,7 +184,21 @@ function RoundSection({ round, partnerGender, onSend, sendDisabled, showTable = 
 }
 
 export default function Home() {
-    const { auth, rotations = [], partnerGender, sendLimit, eventTitle, eventTime, eventStatus, canSendMessage = false } = usePage().props;
+    const {
+        auth,
+        rotations = [],
+        partnerGender,
+        sendLimit,
+        eventTitle,
+        eventTime,
+        eventStatus,
+        canSendMessage = false,
+        // 1:1 매칭 선택용
+        isOneToOne = false,
+        matchSelectable = false,
+        myVotedIds = [],
+        maxVotes = 3,
+    } = usePage().props;
 
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const remaining = sendLimit?.remaining ?? null;
@@ -121,11 +206,82 @@ export default function Home() {
 
     const [target, setTarget] = useState(null);
 
+    // ── 1:1 매칭 선택 상태 ──
+    const [selected, setSelected] = useState(() => myVotedIds.map(Number));
+    const [saving, setSaving] = useState(false);
+
+    // 서버 선택값이 바뀌면(저장 후 리로드/실시간 갱신) 동기화.
+    useEffect(() => {
+        setSelected(myVotedIds.map(Number));
+    }, [myVotedIds.join(',')]);
+
+    const toggleSelect = (id) => {
+        setSelected((prev) => {
+            if (prev.includes(id)) {
+                return prev.filter((x) => x !== id);
+            }
+            if (prev.length >= maxVotes) {
+                return prev;
+            }
+            return [...prev, id];
+        });
+    };
+
+    const dirty = useMemo(() => {
+        const a = [...selected].sort().join(',');
+        const b = [...myVotedIds.map(Number)].sort().join(',');
+        return a !== b;
+    }, [selected, myVotedIds]);
+
+    const saveMatch = () => {
+        setSaving(true);
+        router.post(
+            '/votes',
+            { target_ids: selected },
+            {
+                preserveScroll: true,
+                onFinish: () => setSaving(false),
+            },
+        );
+    };
+
+    // ── 실시간: 관리자가 로테이션 진행/종료 시 홈을 부분 리로드 ──
+    const eventId = auth?.user?.event_id ?? null;
+    useEffect(() => {
+        if (!eventId) {
+            return undefined;
+        }
+        const channelName = `event-rotation.${eventId}`;
+        const channel = echo.private(channelName);
+
+        // 좌석/턴이 갱신되면 홈 데이터만 다시 받아온다. (전체 새로고침 없이)
+        channel.listen('.rotation.updated', () => {
+            router.reload({
+                only: ['rotations', 'eventStatus', 'matchSelectable', 'myVotedIds'],
+            });
+        });
+        // 매칭이 종료되면 상태만 갱신(선택 UI가 닫히고 "매칭 결과" 탭에서 결과 확인).
+        channel.listen('.event.closed', () => {
+            router.reload({ only: ['eventStatus', 'matchSelectable'] });
+        });
+
+        return () => {
+            echo.leave(`private-${channelName}`);
+        };
+    }, [eventId]);
+
+    const showSelectBar = isOneToOne && matchSelectable;
+
     return (
         <AppLayout>
             <Head title="Rotable" />
 
-            <div className="flex min-h-full flex-col bg-gray-50 px-4 py-5">
+            <div
+                className={
+                    'flex min-h-full flex-col bg-gray-50 px-4 py-5 ' +
+                    (showSelectBar ? 'pb-24' : '')
+                }
+            >
                 {eventTitle && (
                     <div className="mb-2 flex flex-wrap items-center gap-1.5">
                         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
@@ -148,16 +304,48 @@ export default function Home() {
                 <h1 className="mt-2 text-xl font-extrabold">
                     {auth?.user?.name}님, 로테이션 기록표예요 👋
                 </h1>
-                <p className="mt-1.5 text-sm text-gray-500">
-                    {canSendMessage ? (
-                        <>
-                            만난 상대 카드의 <b className="text-primary">💌 전달</b> 버튼으로 익명 메시지를 보낼 수 있어요.
-                        </>
-                    ) : (
-                        <span>로테이션 진행 중부터 매칭 기간까지 만난 상대에게<br />익명 메시지를 보낼 수 있어요.</span>
-                    )}
-                </p>
-                {canSendMessage && sendLimit && (
+
+                {/* 안내 문구: 1:1(매칭 선택) vs 와인파티(메시지 전달) */}
+                {isOneToOne ? (
+                    <p className="mt-1.5 text-sm text-gray-500">
+                        {matchSelectable ? (
+                            <>
+                                만난 상대 카드를 눌러 <b className="text-primary">마음에 든 상대</b>를 최대{' '}
+                                <b className="text-primary">{maxVotes}명</b>까지 선택하세요.
+                                <br />
+                                로테이션이 종료되기 전까지 자유롭게 바꿀 수 있어요. 💘
+                            </>
+                        ) : (
+                            <span>
+                                매칭 결과는 모든 로테이션이 끝난 뒤
+                                <br />
+                                <b className="text-primary">매칭 결과</b> 탭에서 확인할 수 있어요.
+                            </span>
+                        )}
+                    </p>
+                ) : (
+                    <p className="mt-1.5 text-sm text-gray-500">
+                        {canSendMessage ? (
+                            <>
+                                만난 상대 카드의 <b className="text-primary">💌 전달</b> 버튼으로 익명 메시지를 보낼 수 있어요.
+                            </>
+                        ) : (
+                            <span>로테이션 진행 중부터 매칭 기간까지 만난 상대에게<br />익명 메시지를 보낼 수 있어요.</span>
+                        )}
+                    </p>
+                )}
+
+                {/* 1:1 선택 수 안내 */}
+                {showSelectBar && (
+                    <div className="mt-2">
+                        <span className="inline-block shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+                            선택한 상대 {selected.length}/{maxVotes}명
+                        </span>
+                    </div>
+                )}
+
+                {/* 와인파티 메시지 전송 횟수 안내 */}
+                {!isOneToOne && canSendMessage && sendLimit && (
                     <div className="mt-2">
                         <span
                             className={
@@ -178,8 +366,14 @@ export default function Home() {
                                 round={round}
                                 partnerGender={partnerGender}
                                 showTable={auth?.user?.gender === 'M'}
-                                onSend={canSendMessage ? setTarget : null}
+                                hideCount={isOneToOne}
+                                onSend={!isOneToOne && canSendMessage ? setTarget : null}
                                 sendDisabled={limitReached}
+                                selectable={showSelectBar}
+                                selectedIds={selected}
+                                selectDisabled={selected.length >= maxVotes}
+                                onToggleSelect={toggleSelect}
+                                votedIds={isOneToOne ? myVotedIds.map(Number) : []}
                             />
                         ))}
                     </div>
@@ -197,12 +391,34 @@ export default function Home() {
                 )}
             </div>
 
-            <SendModal
-                target={target}
-                tone={tone}
-                remaining={remaining}
-                onClose={() => setTarget(null)}
-            />
+            {/* 1:1: 매칭 선택 저장 바 (하단 nav 바로 위 고정) */}
+            {showSelectBar && (
+                <div className="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-40 mx-auto w-full max-w-[480px] px-4">
+                    <button
+                        type="button"
+                        onClick={saveMatch}
+                        disabled={!dirty || saving}
+                        className={
+                            'w-full rounded-2xl py-3 text-center text-sm font-bold shadow-lg transition ' +
+                            (dirty && !saving
+                                ? 'bg-primary text-white hover:bg-primary-600 active:scale-[0.99]'
+                                : 'cursor-not-allowed bg-secondary-200 text-secondary-400')
+                        }
+                    >
+                        {saving ? '저장 중...' : `매칭 선택 저장 (${selected.length}/${maxVotes})`}
+                    </button>
+                </div>
+            )}
+
+            {/* 와인파티 메시지 전송 모달 */}
+            {!isOneToOne && (
+                <SendModal
+                    target={target}
+                    tone={tone}
+                    remaining={remaining}
+                    onClose={() => setTarget(null)}
+                />
+            )}
         </AppLayout>
     );
 }

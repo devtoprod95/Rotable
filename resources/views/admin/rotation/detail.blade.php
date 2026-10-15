@@ -5,6 +5,10 @@
 @section('content')
 {{-- 이미지 다운로드용 html2canvas (레이아웃의 html2pdf 번들은 전역 html2canvas 를 노출하지 않아 별도 로드) --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+{{-- 상세페이지용 웹폰트: @import 보다 빠르게 로드되도록 link 로 선로드 (캡처 시 폰트 적용 보장) --}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap" rel="stylesheet">
 <div class="row row-cards mt-2">
     <div class="col-12">
         <div class="card">
@@ -12,13 +16,29 @@
                 <h3 class="card-title mb-0">
                     <i class="ti ti-sparkles text-pink me-1"></i> 상세페이지 제작
                 </h3>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                    {{-- 샘플 유형 선택 --}}
+                    <div class="btn-group" role="group" aria-label="샘플 유형">
+                        <input type="radio" class="btn-check" name="sampleType" id="sampleTypeWine" value="wine" autocomplete="off" checked>
+                        <label class="btn btn-outline-pink" for="sampleTypeWine">
+                            <i class="ti ti-glass-full me-1"></i> 와인파티
+                        </label>
+                        <input type="radio" class="btn-check" name="sampleType" id="sampleTypeSolo" value="solo" autocomplete="off">
+                        <label class="btn btn-outline-pink" for="sampleTypeSolo">
+                            <i class="ti ti-users me-1"></i> 1:1 소개팅
+                        </label>
+                    </div>
+
+                    {{-- 열 수 샘플 불러오기 --}}
                     <button type="button" class="btn btn-outline-secondary btn-sample-one">
                         <i class="ti ti-layout-rows me-1"></i> 1열 샘플
                     </button>
                     <button type="button" class="btn btn-outline-secondary btn-sample-two">
                         <i class="ti ti-layout-columns me-1"></i> 2열 샘플
                     </button>
+
+                    <span class="vr d-none d-md-inline"></span>
+
                     <button type="button" class="btn btn-azure btn-open-preview">
                         <i class="ti ti-eye me-1"></i> 미리보기
                     </button>
@@ -32,11 +52,12 @@
             </div>
             <div class="card-body">
                 <small class="form-hint text-muted d-block mb-3">
-                    HTML 에디터로 자유롭게 꾸미고 [저장]하면 유지됩니다. 우측 하단 <b>미리보기</b> 버튼으로 결과를 확인하세요.
-                    모임이 1개면 <b>1열 샘플</b>, 여러 개면 <b>2열 샘플</b>을 눌러 시작하세요.
+                    <b>유형(와인파티 / 1:1 소개팅)</b>을 먼저 고른 뒤 <b>1열 / 2열 샘플</b>을 누르면 해당 유형의 샘플이 적용됩니다.
+                    유형별로 상단 이미지와 로테이블 포인트가 다릅니다. 이후 HTML 에디터로 자유롭게 꾸미고 [저장]하면 유지됩니다.
+                    우측 하단 <b>미리보기</b> 버튼으로 결과를 확인하세요.
                 </small>
                 <label class="form-label">상세페이지 작성 (HTML)</label>
-                <textarea id="detailHtmlEditor">{!! $savedHtml !!}</textarea>
+                <textarea id="detailHtmlEditor">{!! $savedWine !!}</textarea>
             </div>
         </div>
     </div>
@@ -78,8 +99,29 @@
 
 <script>
     $(document).ready(function(){
-        var SAMPLE_ONE = {!! json_encode($sampleOne) !!};
-        var SAMPLE_TWO = {!! json_encode($sampleTwo) !!};
+        var SAMPLES = {
+            wine: {
+                1: {!! json_encode($wineOne) !!},
+                2: {!! json_encode($wineTwo) !!}
+            },
+            solo: {
+                1: {!! json_encode($soloOne) !!},
+                2: {!! json_encode($soloTwo) !!}
+            }
+        };
+
+        // 유형별 저장본(에디터 작업 내용을 유형별로 메모리에 보관)
+        var SAVED = {
+            wine: {!! json_encode($savedWine) !!},
+            solo: {!! json_encode($savedSolo) !!}
+        };
+
+        // 현재 에디터에 올라와 있는 유형 (초기값: 와인)
+        var activeType = 'wine';
+
+        function currentType(){
+            return $('input[name="sampleType"]:checked').val() === 'solo' ? 'solo' : 'wine';
+        }
 
         var previewModal = null;
 
@@ -131,7 +173,7 @@
                 toolbar: 'undo redo | blocks fontsize | bold italic underline forecolor backcolor | '
                     + 'alignleft aligncenter alignright | bullist numlist | link image media table | emoticons | code fullscreen',
                 toolbar_mode: 'wrap',
-                content_style: "body{font-family:'Pretendard','Apple SD Gothic Neo',sans-serif; font-size:14px;}"
+                content_style: "@import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap'); body{font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; font-size:14px;}"
             });
         }
 
@@ -142,28 +184,47 @@
             if (m) { m.show(); }
         });
 
-        // 1열 샘플
+        // 유형 전환: 현재 작업 내용을 활성 유형에 보관하고, 대상 유형 저장본을 에디터에 로드
+        $('input[name="sampleType"]').on('change', function(){
+            var next = currentType();
+            if (next === activeType) { return; }
+            SAVED[activeType] = getHtml();   // 현재 편집 내용 보관
+            setHtml(SAVED[next] || '');      // 대상 유형 내용 로드
+            activeType = next;
+        });
+
+        // 1열 샘플 (선택한 유형 기준)
         $('.btn-sample-one').on('click', async function(){
-            if(await salert({text: '현재 작성 내용을 1열 샘플로 교체하시겠습니까?'})){
-                setHtml(SAMPLE_ONE);
+            var type = currentType();
+            var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
+            if(await salert({text: '현재 작성 내용을 [' + label + '] 1열 샘플로 교체하시겠습니까?'})){
+                setHtml(SAMPLES[type][1]);
             }
         });
 
-        // 2열 샘플
+        // 2열 샘플 (선택한 유형 기준)
         $('.btn-sample-two').on('click', async function(){
-            if(await salert({text: '현재 작성 내용을 2열 샘플로 교체하시겠습니까?'})){
-                setHtml(SAMPLE_TWO);
+            var type = currentType();
+            var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
+            if(await salert({text: '현재 작성 내용을 [' + label + '] 2열 샘플로 교체하시겠습니까?'})){
+                setHtml(SAMPLES[type][2]);
             }
         });
 
-        // 저장 (storage 파일에 기록)
+        // 저장 (유형별 storage 파일에 기록)
         $('.btn-detail-save').on('click', async function(){
-            if(await salert({text: '상세페이지를 저장하시겠습니까?'})){
+            var type  = currentType();
+            var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
+            if(await salert({text: '[' + label + '] 상세페이지를 저장하시겠습니까?'})){
+                var html = getHtml();
                 $.ajax({
                     url: "{{ route('admin.rotation.detail.save') }}",
                     type: 'POST',
-                    data: { html: getHtml() },
-                    success: function(res){ alert(res?.msg); },
+                    data: { html: html, type: type },
+                    success: function(res){
+                        SAVED[type] = html;   // 저장 성공 시 보관본 갱신
+                        alert(res?.msg);
+                    },
                     error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
                 });
             }
@@ -209,6 +270,19 @@
                         img.onerror = resolve;
                     });
                 }));
+
+                // 폰트가 캡처 전에 완전히 로드되도록 명시적으로 기다린다. (미로드 시 폴백 폰트로 찍히는 문제 방지)
+                if (document.fonts && document.fonts.load) {
+                    try {
+                        await Promise.all([
+                            document.fonts.load("400 44px 'Jua'"),
+                            document.fonts.load("700 22px 'Gothic A1'"),
+                            document.fonts.load("800 22px 'Gothic A1'"),
+                            document.fonts.load("900 22px 'Gothic A1'")
+                        ]);
+                        await document.fonts.ready;
+                    } catch (fe) { /* 폰트 로드 실패해도 캡처는 진행 */ }
+                }
 
                 var canvas = await html2canvas(holder, {
                     backgroundColor: '#ffffff',

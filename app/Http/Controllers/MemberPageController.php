@@ -76,6 +76,9 @@ class MemberPageController extends Controller
         // 테이블 수 = 마지막 로테이션 판정 기준 (round_no >= 테이블 수면 마지막).
         $tableCount = \App\Models\RotationTable::where('event_id', $me->event_id)->count();
 
+        // 1:1 소개팅 여부 (홈에서 매칭 선택 UI/투표 로직을 노출할지 결정).
+        $isOneToOne = $event !== null && $event->isOneToOne();
+
         $rotations = $rounds->map(function (RotationRound $round) use ($eventStatus, $myId, $oppositeGen, $tableCount) {
             // 이번 턴에 내가 앉은 좌석(테이블).
             $mySeating = $round->seatings->firstWhere('member_id', $myId);
@@ -107,7 +110,6 @@ class MemberPageController extends Controller
         //  - matchSelectable: 지금 선택/수정이 가능한 기간인지(진행 S / 매칭중 V, 종료 전)
         //  - myVotedIds: 내가 이미 선택한 상대 id (카드 선택 상태 표시)
         //  - maxVotes: 최대 선택 가능 수
-        $isOneToOne = $event !== null && $event->isOneToOne();
         $myVotedIds = [];
         if ($isOneToOne) {
             $myVotedIds = Vote::query()
@@ -132,7 +134,7 @@ class MemberPageController extends Controller
     }
 
     /**
-     * 기록 노출용 회원 정보 (members 전체 컬럼).
+     * 기록 노출용 회원 정보 (members 전체 컬럼 + 공통 추가 프로필).
      *
      * @return array<string, mixed>
      */
@@ -148,6 +150,11 @@ class MemberPageController extends Controller
             'mbti'       => $member->mbti,
             'region'     => $member->region,
             'is_smoker'  => $member->is_smoker,
+            // 추가 프로필 (모든 유형 공통) — 상대 카드 상세 모달용
+            'ideal_type' => $member->ideal_type,
+            'merit'      => $member->merit,
+            'hobby'      => $member->hobby,
+            'tmi'        => $member->tmi,
         ];
     }
 
@@ -165,13 +172,24 @@ class MemberPageController extends Controller
             ? Member::GENDER_FEMALE
             : Member::GENDER_MALE;
 
+        // 상대별 "만난 턴/테이블" 이력을 미리 계산한다.
+        // 만남 = 같은 턴, 같은 테이블에 나와 함께 앉은 이성.
+        // 0턴(세팅용)은 제외한다.
+        $meetMap = $this->meetingHistoryByPartner($me);
+
         $partners = Member::query()
             ->where('event_id', $me->event_id)
             ->where('gender', $oppositeGen)
             ->where('id', '!=', $me->id)
             ->orderBy('name')
             ->get()
-            ->map(fn (Member $member) => $this->transformMember($member))
+            ->map(function (Member $member) use ($meetMap): array {
+                $data = $this->transformMember($member);
+                // 이 상대와 만난 (턴, 테이블) 이력. 턴 오름차순.
+                $data['meetings'] = $meetMap[$member->id] ?? [];
+
+                return $data;
+            })
             ->values();
 
         $used = Message::where('event_id', $me->event_id)
@@ -193,6 +211,60 @@ class MemberPageController extends Controller
                 'remaining' => max(0, $max - $used),
             ],
         ];
+    }
+
+    /**
+     * 나와 각 이성 상대가 "만난" 턴/테이블 이력을 상대 id 기준으로 모은다.
+     *
+     * 만남 = 같은 턴(0턴 제외) · 같은 테이블에 나와 함께 앉은 이성.
+     * 좌석을 한 번에 eager load 하여 N+1 없이 메모리에서 집계한다.
+     *
+     * @return array<int, list<array{round_no: int, table_no: int|null}>>
+     *         상대 member_id => [ {round_no, table_no}, ... ] (턴 오름차순)
+     */
+    private function meetingHistoryByPartner(Member $me): array
+    {
+        $myId        = $me->id;
+        $oppositeGen = $me->gender === Member::GENDER_MALE
+            ? Member::GENDER_FEMALE
+            : Member::GENDER_MALE;
+
+        $rounds = RotationRound::query()
+            ->where('event_id', $me->event_id)
+            ->where('round_no', '>', 0)
+            ->with(['seatings' => function ($query): void {
+                $query->with(['table', 'member']);
+            }])
+            ->orderBy('round_no')
+            ->get();
+
+        $map = [];
+        foreach ($rounds as $round) {
+            // 이번 턴에 내가 앉은 테이블.
+            $mySeating = $round->seatings->firstWhere('member_id', $myId);
+            $myTableId = $mySeating?->rotation_table_id;
+            if ($myTableId === null) {
+                continue;
+            }
+
+            // 그 테이블의 이성 상대들과 "이번 턴에 만났다"고 기록.
+            foreach ($round->seatings as $seat) {
+                if ($seat->rotation_table_id !== $myTableId) {
+                    continue;
+                }
+                if ($seat->member?->gender !== $oppositeGen) {
+                    continue;
+                }
+
+                $map[$seat->member_id] ??= [];
+                $map[$seat->member_id][] = [
+                    'round_no' => $round->round_no,
+                    'table_no' => $seat->table?->table_no,
+                ];
+            }
+        }
+
+        return $map;
     }
 
     /**

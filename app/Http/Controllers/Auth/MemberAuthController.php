@@ -104,7 +104,7 @@ class MemberAuthController extends Controller
         // 하이픈 등 비숫자 제거 후 검증한다. (예: 010-1234-5678 → 01012345678)
         $request->merge(['phone' => $this->normalizePhone($request->input('phone'))]);
 
-        $validated = $request->validate([
+        $rules = [
             'event_id' => ['required', 'integer', 'exists:event_rounds,id'],
             'phone'    => [
                 'required',
@@ -123,7 +123,14 @@ class MemberAuthController extends Controller
             'mbti'       => ['required', 'string', 'size:4'],
             'region'     => ['required', 'string', 'max:50'],
             'is_smoker'  => ['required', 'boolean'],
-        ], [
+            // 추가 프로필 (모든 유형 공통 필수) — 이상형/장점/취미/TMI
+            'ideal_type' => ['required', 'string', 'max:100'],
+            'merit'      => ['required', 'string', 'max:100'],
+            'hobby'      => ['required', 'string', 'max:100'],
+            'tmi'        => ['required', 'string', 'max:100'],
+        ];
+
+        $validated = $request->validate($rules, [
             'event_id.required'   => '회차를 선택해주세요.',
             'event_id.exists'     => '선택한 회차가 올바르지 않습니다.',
             'phone.required'      => '핸드폰 번호를 입력해주세요.',
@@ -143,6 +150,10 @@ class MemberAuthController extends Controller
             'mbti.size'           => 'MBTI는 4글자로 입력해주세요.',
             'region.required'     => '지역/거주지를 입력해주세요.',
             'is_smoker.required'  => '흡연 여부를 선택해주세요.',
+            'ideal_type.required' => '이상형을 입력해주세요.',
+            'merit.required'      => '나의 장점을 입력해주세요.',
+            'hobby.required'      => '취미/요즘 빠진 것을 입력해주세요.',
+            'tmi.required'        => 'TMI를 입력해주세요.',
         ]);
 
         $member = Member::create([
@@ -157,6 +168,11 @@ class MemberAuthController extends Controller
             'mbti'       => strtoupper($validated['mbti']),
             'region'     => $validated['region'],
             'is_smoker'  => $validated['is_smoker'],
+            // 추가 프로필 (공통)
+            'ideal_type' => $validated['ideal_type'],
+            'merit'      => $validated['merit'],
+            'hobby'      => $validated['hobby'],
+            'tmi'        => $validated['tmi'],
         ]);
 
         Auth::guard('web')->login($member);

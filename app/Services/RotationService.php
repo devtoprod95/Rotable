@@ -963,6 +963,9 @@ class RotationService
             $event->voting_opened_at = now();
             $event->save();
 
+            // 참가자 화면을 실시간으로 갱신하여 '매칭하기' 탭을 바로 노출. 와인파티·1:1 공통.
+            broadcast(new \App\Events\EventVotingOpened($event->id));
+
             $returnMsg = helpersSuccessMessage('매칭을 시작했습니다.');
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());

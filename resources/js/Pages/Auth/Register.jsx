@@ -29,6 +29,10 @@ const AUTOFILL = {
     mbti: 'ENFP',
     region: '강남구',
     is_smoker: '0',
+    merit: '잘 웃고 리액션이 좋아요',
+    ideal_type: '유머러스하고 다정한 사람',
+    hobby: '요즘 러닝에 빠졌어요',
+    tmi: '민트초코 파입니다',
 };
 
 export default function Register() {
@@ -45,6 +49,11 @@ export default function Register() {
         mbti: '',
         region: '',
         is_smoker: '',
+        // 추가 프로필 (모든 유형 공통) — 장점/이상형/취미/TMI
+        merit: '',
+        ideal_type: '',
+        hobby: '',
+        tmi: '',
     });
 
     // 회차(event_id)는 유지하고 나머지 필드를 AUTOFILL 값으로 채운다.
@@ -109,20 +118,12 @@ export default function Register() {
                             placeholder="닉네임을 입력해주세요."
                             error={errors.name}
                         />
-                        <SelectField
-                            label="출생연도"
-                            value={data.birth_year}
-                            onChange={(v) => setData('birth_year', v)}
-                            options={birthYears}
-                            placeholder="출생연도를 선택해주세요"
-                            error={errors.birth_year}
-                        />
                         <TextField
                             label="핸드폰 번호"
                             type="tel"
                             value={data.phone}
                             onChange={(v) => setData('phone', v)}
-                            placeholder="01012345678"
+                            placeholder="01012345678 (로그인할 때 필요합니다)"
                             error={errors.phone}
                         />
                         <TextField
@@ -130,9 +131,17 @@ export default function Register() {
                             type="password"
                             value={data.password}
                             onChange={(v) => setData('password', v)}
-                            placeholder="비밀번호 4자리"
+                            placeholder="비밀번호 4자리 (로그인할 때 필요합니다)"
                             error={errors.password}
                             maxLength={4}
+                        />
+                        <SelectField
+                            label="출생연도"
+                            value={data.birth_year}
+                            onChange={(v) => setData('birth_year', v)}
+                            options={birthYears}
+                            placeholder="출생연도를 선택해주세요"
+                            error={errors.birth_year}
                         />
                         <TextField
                             label="지역/거주지"
@@ -162,6 +171,34 @@ export default function Register() {
                             onChange={(v) => setData('mbti', v.toUpperCase())}
                             placeholder="예: ENFP"
                             error={errors.mbti}
+                        />
+                        <TextField
+                            label="이상형"
+                            value={data.ideal_type}
+                            onChange={(v) => setData('ideal_type', v)}
+                            placeholder="예: 유머러스하고 다정한 사람"
+                            error={errors.ideal_type}
+                        />
+                        <TextField
+                            label="나의 장점"
+                            value={data.merit}
+                            onChange={(v) => setData('merit', v)}
+                            placeholder="예: 잘 웃고 리액션이 좋아요"
+                            error={errors.merit}
+                        />
+                        <TextField
+                            label="취미 / 요즘 빠진 것"
+                            value={data.hobby}
+                            onChange={(v) => setData('hobby', v)}
+                            placeholder="예: 요즘 러닝에 빠졌어요"
+                            error={errors.hobby}
+                        />
+                        <TextField
+                            label="TMI"
+                            value={data.tmi}
+                            onChange={(v) => setData('tmi', v)}
+                            placeholder="예: 민트초코 파입니다 🍫"
+                            error={errors.tmi}
                         />
                         <RadioField
                             label="흡연 여부"

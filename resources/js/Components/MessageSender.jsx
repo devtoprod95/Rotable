@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useForm } from '@inertiajs/react';
+import useBodyScrollLock from '@/useBodyScrollLock';
+import ProfileDetailModal from '@/Components/ProfileDetailModal';
 
 function birthYearText(birthYear) {
     if (!birthYear) return null;
@@ -19,7 +21,7 @@ function memberSpecs(member) {
 }
 
 /** 이성 회원 한 명. 전달 버튼을 이름 바로 오른쪽에 붙인다. */
-function PartnerRow({ member, tone, onSelect, disabled }) {
+function PartnerRow({ member, tone, onSelect, onDetail, disabled }) {
     const toneCls = tone === 'female' ? 'border-rose-100 bg-rose-50' : 'border-sky-100 bg-sky-50';
     const specs = memberSpecs(member);
 
@@ -28,6 +30,16 @@ function PartnerRow({ member, tone, onSelect, disabled }) {
             <div className="flex items-center gap-2">
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
                 <span className="truncate font-bold">{member.name}</span>
+                {onDetail && (
+                    <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => onDetail(member)}
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-secondary-100 px-2 py-0.5 text-[11px] font-bold text-secondary-600 transition hover:bg-secondary-200"
+                    >
+                        ℹ️ 상세
+                    </span>
+                )}
                 <button
                     type="button"
                     onClick={() => onSelect(member)}
@@ -58,38 +70,16 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
         body: '',
     });
 
-    const panelRef = useRef(null);
     const [confirming, setConfirming] = useState(false);
+
+    // 모달이 열려 있는 동안(= target 이 있을 때) 배경 스크롤을 잠근다. (공용 훅)
+    useBodyScrollLock(!!target);
 
     useEffect(() => {
         setData('receiver_id', target?.id ?? '');
         setConfirming(false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [target?.id]);
-
-    // 모달이 열려 있는 동안 배경 스크롤만 차단한다.
-    // 레이아웃을 건드리지 않으므로(position:fixed 미사용) 배경 스크롤 위치가 유지된다.
-    // 모달 패널 내부에서 발생한 스크롤(textarea 등)은 허용한다.
-    useEffect(() => {
-        if (!target) return undefined;
-
-        const isInsidePanel = (node) => !!panelRef.current && panelRef.current.contains(node);
-
-        const blockIfOutside = (e) => {
-            if (!isInsidePanel(e.target)) {
-                e.preventDefault();
-            }
-        };
-
-        // touchmove / wheel 을 non-passive 로 등록해야 preventDefault 가 동작한다.
-        document.addEventListener('touchmove', blockIfOutside, { passive: false });
-        document.addEventListener('wheel', blockIfOutside, { passive: false });
-
-        return () => {
-            document.removeEventListener('touchmove', blockIfOutside);
-            document.removeEventListener('wheel', blockIfOutside);
-        };
-    }, [target]);
 
     if (!target) return null;
 
@@ -116,7 +106,6 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
             onClick={onClose}
         >
             <div
-                ref={panelRef}
                 className="w-full max-w-[420px] rounded-3xl bg-white p-5 shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
@@ -239,6 +228,8 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
 export default function MessageSender({ partners = [], partnerGender, sendLimit, canSend = true, onSent }) {
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const [target, setTarget] = useState(null);
+    // 상대 프로필 상세 모달 대상 (null 이면 닫힘)
+    const [detailMember, setDetailMember] = useState(null);
 
     const remaining = sendLimit?.remaining ?? null;
     const limitReached = typeof remaining === 'number' && remaining <= 0;
@@ -294,6 +285,7 @@ export default function MessageSender({ partners = [], partnerGender, sendLimit,
                             member={m}
                             tone={tone}
                             onSelect={setTarget}
+                            onDetail={setDetailMember}
                             disabled={limitReached}
                         />
                     ))
@@ -311,6 +303,15 @@ export default function MessageSender({ partners = [], partnerGender, sendLimit,
                 onClose={() => setTarget(null)}
                 onSent={onSent}
             />
+
+            {/* 상대 프로필 상세 모달 (메시지 리스트는 턴/테이블 맥락이 없으므로 context 생략) */}
+            {detailMember && (
+                <ProfileDetailModal
+                    member={detailMember}
+                    tone={tone}
+                    onClose={() => setDetailMember(null)}
+                />
+            )}
         </section>
     );
 }

@@ -39,6 +39,11 @@ class Member extends Authenticatable
         'mbti',
         'region',
         'is_smoker',
+        // 추가 프로필 (모든 유형 공통) — 장점/이상형/취미/TMI
+        'merit',
+        'ideal_type',
+        'hobby',
+        'tmi',
     ];
 
     /** @var list<string> */

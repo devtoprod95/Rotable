@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { SendModal } from '@/Components/MessageSender';
+import ProfileDetailModal from '@/Components/ProfileDetailModal';
 import echo from '@/echo';
 
 const ROUND_STATUS = {
@@ -32,6 +33,8 @@ function MemberChip({
     selectDisabled = false,
     onToggleSelect,
     votedBadge = false,
+    onDetail,
+    detailContext,
 }) {
     const specs = [
         birthYearText(member.birth_year),
@@ -75,6 +78,19 @@ function MemberChip({
             <div className="flex items-center gap-2">
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
                 <span className="font-bold">{member.name}</span>
+                {onDetail && (
+                    <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDetail(member, detailContext);
+                        }}
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-secondary-100 px-2 py-0.5 text-[11px] font-bold text-secondary-600 transition hover:bg-secondary-200"
+                    >
+                        ℹ️ 상세
+                    </span>
+                )}
                 {/* 종료 후: 내가 선택했던 상대 표시 */}
                 {!selectable && votedBadge && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-primary px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
@@ -131,6 +147,7 @@ function RoundSection({
     selectDisabled = false,
     onToggleSelect,
     votedIds = [],
+    onDetail,
 }) {
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const partners = round.partners ?? [];
@@ -170,6 +187,8 @@ function RoundSection({
                                 selectDisabled={selectDisabled}
                                 onToggleSelect={onToggleSelect}
                                 votedBadge={!selectable && votedIds.includes(m.id)}
+                                onDetail={onDetail}
+                                detailContext={{ round_no: round.round_no, table_no: round.table_no }}
                             />
                         ))}
                     </div>
@@ -205,6 +224,9 @@ export default function Home() {
     const limitReached = typeof remaining === 'number' && remaining <= 0;
 
     const [target, setTarget] = useState(null);
+
+    // 상대 프로필 상세 모달 대상 (null 이면 닫힘)
+    const [detailMember, setDetailMember] = useState(null);
 
     // ── 1:1 매칭 선택 상태 ──
     const [selected, setSelected] = useState(() => myVotedIds.map(Number));
@@ -263,6 +285,10 @@ export default function Home() {
         // 매칭이 종료되면 상태만 갱신(선택 UI가 닫히고 "매칭 결과" 탭에서 결과 확인).
         channel.listen('.event.closed', () => {
             router.reload({ only: ['eventStatus', 'matchSelectable'] });
+        });
+        // 관리자가 '매칭 시작(V)'하면 선택 UI가 열리도록 상태를 갱신한다.
+        channel.listen('.event.voting.opened', () => {
+            router.reload({ only: ['eventStatus', 'matchSelectable', 'myVotedIds'] });
         });
 
         return () => {
@@ -385,6 +411,7 @@ export default function Home() {
                                 selectDisabled={selected.length >= maxVotes}
                                 onToggleSelect={toggleSelect}
                                 votedIds={isOneToOne ? myVotedIds.map(Number) : []}
+                                onDetail={(m, ctx) => setDetailMember({ member: m, context: ctx })}
                             />
                         ))}
                     </div>
@@ -428,6 +455,16 @@ export default function Home() {
                     tone={tone}
                     remaining={remaining}
                     onClose={() => setTarget(null)}
+                />
+            )}
+
+            {/* 상대 프로필 상세 모달 */}
+            {detailMember && (
+                <ProfileDetailModal
+                    member={detailMember.member}
+                    context={detailMember.context}
+                    tone={tone}
+                    onClose={() => setDetailMember(null)}
                 />
             )}
         </AppLayout>

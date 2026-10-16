@@ -219,6 +219,10 @@ export default function Votes() {
         channel.listen('.event.closed', () => {
             router.reload();
         });
+        // 관리자가 '매칭 시작(V)'하면 이 화면을 리로드해 '매칭하기'를 바로 노출한다.
+        channel.listen('.event.voting.opened', () => {
+            router.reload();
+        });
         // 로테이션 진행으로 상태/후보가 바뀌는 경우(와인파티 투표중 등)도 갱신.
         channel.listen('.rotation.updated', () => {
             router.reload();
@@ -320,20 +324,34 @@ export default function Votes() {
                 {/* 종료(결과): 따뜻한 헤더 + 이번 행사 커플 수 안내 */}
                 {isClosed && (
                     <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-rose-400 via-pink-400 to-rose-500 p-5 text-center text-white shadow-lg shadow-rose-200">
-                        <p className="text-3xl">💕</p>
-                        <h1 className="mt-1 text-xl font-extrabold tracking-tight">매칭 결과가 나왔어요!</h1>
+                        <p className="text-3xl">{coupleCount > 0 ? '💕' : '😳'}</p>
+                        <h1 className="mt-1 text-xl font-extrabold tracking-tight">
+                            {coupleCount > 0 ? '매칭 결과가 나왔어요!' : '어...? 이게 무슨 일이죠?!'}
+                        </h1>
                         <p className="mt-1 text-[13px] leading-relaxed text-white/90">
-                            설레는 시간을 함께해 주셔서 고마워요.<br />
-                            이번 로테이블에서 이렇게 많은 인연이 피어났답니다 🌸
+                            {coupleCount > 0 ? (
+                                <>
+                                    설레는 시간을 함께해 주셔서 고마워요.<br />
+                                    이번 로테이블에서 이렇게 인연이 피어났답니다 🌸
+                                </>
+                            ) : (
+                                <>
+                                    믿기지 않지만… 이번 회차는 <b>단 한 커플도</b> 탄생하지 않았어요 🫢<br />
+                                    이런 일은 정말 드문데, 큐피드가 오늘 하루 월차를 냈나 봐요 🏹💤<br />
+                                    다음 로테이블에서는 분명 반전이 기다리고 있을 거예요 🔥
+                                </>
+                            )}
                         </p>
-                        <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
-                            <span className="text-lg">{isOneToOne ? '💑' : '🥂'}</span>
-                            <span className="text-sm font-semibold">
-                                이번 로테이블에서{' '}
-                                <span className="text-lg font-extrabold">{coupleCount}</span>
-                                커플이 탄생했어요
-                            </span>
-                        </div>
+                        {coupleCount > 0 && (
+                            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
+                                <span className="text-lg">{isOneToOne ? '💑' : '🥂'}</span>
+                                <span className="text-sm font-semibold">
+                                    이번 로테이블에서{' '}
+                                    <span className="text-lg font-extrabold">{coupleCount}</span>
+                                    커플이 탄생했어요
+                                </span>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -362,8 +380,8 @@ export default function Votes() {
                     </div>
                 )}
 
-                {/* 종료 + 매칭(및 1:1의 받은 선택)도 없음: 위로 메시지를 중앙 배치 */}
-                {isClosed && matches.length === 0 && (!isOneToOne || votedForMe.length === 0) && (
+                {/* 종료 + 내 매칭(쌍방) 없음: 위로 메시지를 중앙 배치 (매칭 0이면 무조건 노출) */}
+                {isClosed && matches.length === 0 && (
                     <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-3xl border border-rose-100 bg-white px-5 py-12 text-center shadow-sm">
                         <p className="text-5xl">🍀</p>
                         <p className="mt-4 text-lg font-extrabold text-secondary-700">
@@ -445,9 +463,9 @@ export default function Votes() {
                             </div>
                         ) : (
                             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-center text-xs leading-relaxed text-rose-500/90 shadow-sm">
-                                <p className="mb-1 text-xl">🌱</p>
-                                아직 나를 선택해준 분이 없어요.<br />
-                                다음 로테이블에서 좋은 인연을 만나보세요 😊
+                                뭐… 어차피 제 눈에 차는 분이 없었잖아요~ 😌<br />
+                                보는 눈 있는 사람은 다음에 나타나는 법이죠.<br />
+                                아까운 건 저 말고 선택 안 한 상대랍니다 💁
                             </div>
                         )}
                     </>

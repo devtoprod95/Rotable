@@ -193,6 +193,7 @@
         const STATUS_LABEL = @json($statuses);
         const STATUS_COLOR = { 'P': 'bg-secondary', 'S': 'bg-blue', 'V': 'bg-green', 'X': 'bg-dark' };
         const detailBase   = "{{ url('admin/rotation/event') }}";
+        const seatingBase  = "{{ route('admin.rotation.seating.index') }}";
 
         $('.btn-remove').click(async function(){
             let ids = getSelectedIds();
@@ -282,6 +283,11 @@
                             .text("상세")
                             .on("click", function(){ location.href = detailBase + "/" + data.id; });
                         $wrap.append($edit);
+                        var $seating = $("<button>")
+                            .addClass("btn btn-sm btn-outline-azure w-100")
+                            .html('로테이션 설정')
+                            .on("click", function(){ location.href = seatingBase + "?eventId=" + data.id; });
+                        $wrap.append($seating);
                         if((data.messages_count ?? 0) >= 1){
                             var $msg = $("<button>")
                                 .addClass("btn btn-sm btn-outline-primary w-100")

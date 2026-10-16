@@ -12,7 +12,7 @@ class MemberSeeder extends Seeder
      * 회원을 생성할 대상 행사(event_rounds.id).
      * 이 id의 행사에만 샘플 회원을 생성한다.
      */
-    private const TARGET_EVENT_ID = 6;
+    private const TARGET_EVENT_ID = 2;
 
     /**
      * 샘플 회원 데이터 시딩.
@@ -42,7 +42,7 @@ class MemberSeeder extends Seeder
         $maleShuffled   = collect($maleNames)->shuffle()->values();
         $femaleShuffled = collect($femaleNames)->shuffle()->values();
 
-        // 남성 10명, 여성 10명 생성.
+        // 남성 10명, 여성 10명 생성. (추가 프로필은 팩토리 definition 에서 공통 생성)
         for ($i = 0; $i < 10; $i++) {
             Member::factory()
                 ->male()

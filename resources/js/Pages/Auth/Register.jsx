@@ -14,26 +14,48 @@ const SMOKER_OPTIONS = [
     { id: '0', label: '비흡연' },
 ];
 
+/** 랜덤 유틸 */
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+const MBTI_OPTIONS = [
+    'ISTJ', 'ISFJ', 'INFJ', 'INTJ', 'ISTP', 'ISFP', 'INFP', 'INTP',
+    'ESTP', 'ESFP', 'ENFP', 'ENTP', 'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ',
+];
+const JOB_SAMPLES = ['개발자', '디자이너', '마케터', '간호사', '교사', '회계사', '요리사', '승무원', '약사', '건축가'];
+const REGION_SAMPLES = ['강남구', '서초구', '송파구', '마포구', '용산구', '성동구', '분당구', '수원시', '인천 연수구', '부산 해운대구'];
+const MERIT_SAMPLES = ['잘 웃고 리액션이 좋아요', '배려심이 깊어요', '성실하고 꾸준해요', '유머감각이 있어요', '긍정적이에요', '경청을 잘해요'];
+const IDEAL_SAMPLES = ['유머러스하고 다정한 사람', '대화가 잘 통하는 사람', '성실한 사람', '취미가 비슷한 사람', '배려심 있는 사람', '솔직한 사람'];
+const HOBBY_SAMPLES = ['요즘 러닝에 빠졌어요', '등산을 좋아해요', '전시 보러 다녀요', '요리에 재미 붙였어요', '헬스 중이에요', '여행 다니는 걸 좋아해요'];
+const TMI_SAMPLES = ['민트초코 파입니다', '물을 하루 2L 마셔요', '길치예요', '커피 없으면 못 살아요', '아침형 인간입니다', '매운 걸 잘 못 먹어요'];
+
 /**
- * 개발 편의용 자동 입력 값. (production 이 아닐 때만 사용)
- * 회차(event_id)는 제외하고 나머지 필드만 채운다. 값은 자유롭게 커스텀하면 된다.
+ * 개발 편의용 자동 입력 값 생성. (production 이 아닐 때만 사용)
+ * 회차(event_id)는 제외하고 나머지 필드를 매번 랜덤으로 채운다.
+ * 출생연도는 실제 선택 가능한 값(birthYears)에서 뽑는다.
  */
-const AUTOFILL = {
-    phone: '01025466499',
-    name: '김도한',
-    password: 'qqqq',
-    gender: 'M',
-    birth_year: '1995',
-    job: '개발자',
-    height: '181',
-    mbti: 'ENFP',
-    region: '강남구',
-    is_smoker: '0',
-    merit: '잘 웃고 리액션이 좋아요',
-    ideal_type: '유머러스하고 다정한 사람',
-    hobby: '요즘 러닝에 빠졌어요',
-    tmi: '민트초코 파입니다',
-};
+function buildAutofill(birthYears) {
+    const birthYearIds = birthYears.map((y) => (typeof y === 'object' ? y.id : y));
+
+    return {
+        // 닉네임~비밀번호는 기존 고정값 유지
+        phone: '01025466499',
+        name: '김도한',
+        password: 'qqqq',
+        gender: 'M',
+        // 출생연도~흡연 여부는 매번 랜덤
+        birth_year: birthYearIds.length ? String(pick(birthYearIds)) : String(randInt(1985, 2004)),
+        job: pick(JOB_SAMPLES),
+        height: String(randInt(155, 190)),
+        mbti: pick(MBTI_OPTIONS),
+        region: pick(REGION_SAMPLES),
+        is_smoker: pick(['0', '1']),
+        merit: pick(MERIT_SAMPLES),
+        ideal_type: pick(IDEAL_SAMPLES),
+        hobby: pick(HOBBY_SAMPLES),
+        tmi: pick(TMI_SAMPLES),
+    };
+}
 
 export default function Register() {
     const { rounds = [], birthYears = [], isProduction = true } = usePage().props;
@@ -63,9 +85,9 @@ export default function Register() {
         tmi: '',
     });
 
-    // 회차(event_id)는 유지하고 나머지 필드를 AUTOFILL 값으로 채운다.
+    // 회차(event_id)는 유지하고 나머지 필드를 매번 랜덤으로 채운다.
     function autofill() {
-        Object.entries(AUTOFILL).forEach(([key, value]) => {
+        Object.entries(buildAutofill(birthYears)).forEach(([key, value]) => {
             setData(key, value);
         });
     }

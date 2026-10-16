@@ -61,6 +61,13 @@ Route::middleware('role')->group(function () {
                 Route::post('/save', [RotationController::class, 'detailSave'])->name('save');
             });
 
+            // QR 코드 설정 — 연결 대상 URL 을 등록하면 공개 주소(/qr/{code})가 발급된다.
+            Route::prefix('qr')->name('qr.')->group(function () {
+                Route::get('/', [RotationController::class, 'qrIndex'])->name('index');
+                Route::post('/store', [RotationController::class, 'qrStore'])->name('store');
+                Route::delete('/delete', [RotationController::class, 'qrDelete'])->name('delete');
+            });
+
             // 만남 이력 조회 — 전화번호(정확 일치) 기준. 만남 = 같은 행사 공동 참여.
             Route::prefix('history')->name('history.')->group(function () {
                 // 만남 이력 기본 조회 (번호 1개 → 함께 참여한 상대)

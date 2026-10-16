@@ -113,7 +113,7 @@
                                 <thead>
                                     <tr>
                                         <th class="w-1">No</th>
-                                        <th>회원 정보</th>
+                                        <th style="width: 120px;">회원 정보</th>
                                         <th class="text-center">방문 횟수</th>
                                         <th>직업 / 키 / MBTI</th>
                                         <th>지역 / 흡연</th>
@@ -127,7 +127,14 @@
                                         <tr>
                                             <td>{{ $i + 1 }}</td>
                                             <td>
-                                                <div>
+                                                @php
+                                                    $memberData = $member->toArray();
+                                                    if ($isSuperAdmin) {
+                                                        $memberData['password'] = $member->password;
+                                                    }
+                                                    $memberData['age'] = $member->birth_year ? (now()->year - $member->birth_year + 1) : null;
+                                                @endphp
+                                                <div class="d-flex align-items-center gap-2">
                                                     <span class="fw-bold">{{ $member->name }}</span>
                                                     @if ($member->gender === 'F')
                                                         <span class="badge bg-pink-lt">여</span>
@@ -135,7 +142,12 @@
                                                         <span class="badge bg-blue-lt">남</span>
                                                     @endif
                                                 </div>
-                                                <div class="text-muted" style="font-size: 0.85em;">
+                                                <button type="button"
+                                                        class="btn btn-sm btn-outline-azure py-1 px-3 mt-1 btn-member-detail"
+                                                        data-member='@json($memberData)'>
+                                                    상세보기
+                                                </button>
+                                                <div class="fw-bold" style="font-size: 0.85em;">
                                                     {{ $member->phone ?? '-' }}
                                                 </div>
                                                 <div class="text-muted" style="font-size: 0.85em;">
@@ -409,6 +421,12 @@
             RequestsModal.open({{ $event->id }}, label + ' 님이 보낸 요청', { memberId: memberId });
         });
 
+        // ===== 상세: 회원 상세정보 모달 =====
+        $(document).on('click', '.btn-member-detail', function(){
+            var member = $(this).data('member');
+            MemberDetailModal.open(member);
+        });
+
         // ===== 상세: 행사 정보 수정 =====
         $('.btn-update').click(async function(){
             let $f = $('#eventForm');
@@ -495,5 +513,6 @@
     @include('admin.rotation._votersModal')
     @include('admin.rotation._votedModal')
     @include('admin.rotation._requestsModal')
+    @include('admin.rotation._memberDetailModal')
 @endif
 @endsection

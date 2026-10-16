@@ -37,6 +37,13 @@ const AUTOFILL = {
 
 export default function Register() {
     const { rounds = [], birthYears = [], isProduction = true } = usePage().props;
+
+    // 자동 입력 버튼 노출 조건:
+    //  - 비프로덕션 환경이거나
+    //  - URL 쿼리에 ?dev=... 처럼 dev 키에 값이 있을 때 (프로덕션에서도 임시 노출용)
+    const showAutofill =
+        !isProduction ||
+        (typeof window !== 'undefined' && !!new URLSearchParams(window.location.search).get('dev'));
     const { data, setData, post, processing, errors } = useForm({
         event_id: '',
         phone: '',
@@ -86,7 +93,7 @@ export default function Register() {
                     </p>
 
                     <form onSubmit={submit} className="mt-7 flex flex-col gap-4">
-                        {!isProduction && (
+                        {showAutofill && (
                             <button
                                 type="button"
                                 onClick={autofill}

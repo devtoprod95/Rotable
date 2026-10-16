@@ -14,6 +14,11 @@ use Illuminate\Support\Facades\Route;
 // 소개팅 랜딩 (게스트 포함 누구나)
 Route::get('/', [MemberPageController::class, 'landing'])->name('landing');
 
+// QR 코드 공개 리다이렉트 — 관리자가 설정한 대상 URL 로 이동한다. (게스트 포함 누구나)
+Route::get('/qr/{code}', [\App\Http\Controllers\QrRedirectController::class, 'redirect'])
+    ->where('code', '[A-Za-z0-9]+')
+    ->name('qr.redirect');
+
 // 입장/입장등록 화면.
 // 이미 등록(로그인)된 회원은 메인(홈)으로 보낸다. (단, 예외 이름 회원은 접근 허용)
 Route::middleware(RedirectIfRegistered::class)->group(function () {

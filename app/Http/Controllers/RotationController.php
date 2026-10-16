@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Dtos\RotationTableListRequestDto;
 use App\Http\Requests\Admin\RotationSeatingStoreRequest;
 use App\Models\EventRound;
+use App\Models\QrLink;
 use App\Services\RotationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -300,6 +301,78 @@ class RotationController extends Controller
         );
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /* ======================================================================
+     | QR 코드 설정 — 연결 대상 URL 을 등록하면 공개 주소(/qr/{code}) 가 발급된다.
+     | 그 공개 주소를 QR 로 만들어 배포하고, 접근 시 대상 URL 로 리다이렉트한다.
+     * ==================================================================== */
+
+    /**
+     * QR 코드 설정 화면 (목록 + 생성 폼).
+     */
+    public function qrIndex(): View
+    {
+        return view('admin.rotation.qr', [
+            'links' => QrLink::orderByDesc('id')->get(),
+        ]);
+    }
+
+    /**
+     * QR 링크 생성/수정.
+     * - id 가 있으면 수정, 없으면 신규 생성(코드 자동 발급).
+     */
+    public function qrStore(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'id'         => 'nullable|integer|exists:qr_links,id',
+            'title'      => 'required|string|max:255',
+            'target_url' => 'required|string|max:2048|url',
+            'is_active'  => 'nullable|boolean',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $id = (int) $this->request->input('id', 0);
+
+        $data = [
+            'title'      => $this->request->input('title'),
+            'target_url' => $this->request->input('target_url'),
+            'is_active'  => $this->request->boolean('is_active', true),
+        ];
+
+        if ($id > 0) {
+            $link = QrLink::findOrFail($id);
+            $link->update($data);
+        } else {
+            $data['code']       = QrLink::generateUniqueCode();
+            $data['created_by'] = auth('admin')->id();
+            $link = QrLink::create($data);
+        }
+
+        return apiRes(Response::HTTP_OK, [
+            'data' => [
+                'id'         => $link->id,
+                'code'       => $link->code,
+                'public_url' => $link->public_url,
+            ],
+            'msg'  => '저장되었습니다.',
+        ]);
+    }
+
+    /**
+     * QR 링크 삭제 (벌크).
+     */
+    public function qrDelete(): JsonResponse
+    {
+        if ($this->invalidIds()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
+        }
+
+        QrLink::whereIn('id', $this->request->input('ids'))->delete();
+
+        return apiRes(Response::HTTP_OK, ['msg' => '삭제되었습니다.']);
     }
 
     /* ======================================================================

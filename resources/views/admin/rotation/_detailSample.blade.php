@@ -18,13 +18,16 @@
             'title'    => 'ROTABLE 와인파티 안내',
             'subtitle' => '이번 회차 참여자를 확인하세요',
             'eventName'=> '와인파티',
+            // 핵심 매력 — 아이콘 카드 그리드로 노출 (icon / title / desc)
             'points'   => [
-                '와인 &amp; 핑거푸드가 무제한! 맛있게 드시면서 편하게 대화해요 🍷',
-                '남녀 화장실이 따로 준비되어 있어요. 걱정 마세요!',
-                '역에서 가까운 접근성 좋은 장소에서 진행돼요 🚶',
-                '로테이블만의 간편 매칭 소개팅 웹! 투표부터 매칭까지 스마트폰으로 간편하게 📱',
-                '투표는 100% 비밀이에요. 매칭된 상대에게만 살짝 공유됩니다 🤫',
-                '서로 선택하면 매칭 성사! 결과는 다음 날 오전에 알려드려요 💘',
+                ['icon' => '📍', 'title' => '선릉역 도보 4분', 'desc' => '접근성 좋은 역세권에서 진행돼요'],
+                ['icon' => '🍷', 'title' => '와인·푸드 무제한', 'desc' => '핑거푸드와 와인을 즐기며 편하게 대화'],
+                ['icon' => '✍️', 'title' => '글작성 X', 'desc' => '종이·설문 없이 스마트폰 터치 몇 번이면 끝'],
+                ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
+                ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
+                ['icon' => '🎉', 'title' => '2차 비용 0원', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
+                ['icon' => '🤫', 'title' => '100% 비밀 투표', 'desc' => '매칭된 상대에게만 살짝 공유돼요'],
+                ['icon' => '💘', 'title' => '다음 날 오전 발표', 'desc' => '서로 선택하면 매칭 성사!'],
             ],
         ],
         'solo' => [
@@ -34,13 +37,16 @@
             'title'    => 'ROTABLE 1:1 소개팅 안내',
             'subtitle' => '이번 회차 참여자를 확인하세요',
             'eventName'=> '1:1 소개팅',
+            // 핵심 매력 — 아이콘 카드 그리드로 노출 (icon / title / desc)
             'points'   => [
-                '로테이블이 끝나면 그 자리에서 바로! 매칭 결과를 알려드려요. 다음 날까지 두근두근 기다리지 않아도 돼요 ⏱️💘',
-                '나를 선택해 준 상대의 정보도 함께 공유해드려요. 그래서 행사 뒤에도 편하게 연락을 이어갈 수 있어요 💌',
-                '"그 사람이 누구였더라?" 헷갈릴 걱정 없어요. 만난 상대의 정보를 스마트폰으로 한눈에 다시 확인할 수 있답니다 📱',
-                '쪽지를 몰래 건네거나 번호를 물어보며 민망해지는 순간, 로테이블엔 없어요. 모든 선택은 스마트폰에서 조용하고 깔끔하게 🤫',
-                '투표는 100% 비밀! 서로 선택한 경우에만 매칭 사실이 공유되니 마음 편히 솔직하게 고르세요 🤍',
-                '첫 만남부터 매칭·연락까지 로테이블 하나로. 복잡한 과정 없이 좋은 인연에만 집중하시면 돼요 😊',
+                ['icon' => '📍', 'title' => '선릉역 도보 4분', 'desc' => '접근성 좋은 역세권에서 진행돼요'],
+                ['icon' => '⏱️', 'title' => '현장 바로 발표', 'desc' => '끝나면 그 자리에서 매칭 결과 확인'],
+                ['icon' => '✍️', 'title' => '글작성 X', 'desc' => '종이·설문 없이 스마트폰 터치 몇 번이면 끝'],
+                ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
+                ['icon' => '💌', 'title' => '연락처 공유', 'desc' => '선택해 준 상대 정보로 편하게 연락 이어가기'],
+                ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
+                ['icon' => '🎉', 'title' => '2차 비용 0원', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
+                ['icon' => '🤍', 'title' => '100% 비밀 투표', 'desc' => '서로 선택한 경우에만 매칭 사실 공유'],
             ],
         ],
     ][$type];
@@ -78,6 +84,23 @@
     $cellInfoSize    = $columns === 1 ? '19px' : '14px'; // 키·직업·나이
     $cellHeight      = $columns === 1 ? '84px' : '70px'; // 셀 높이
     $cellPadding     = $columns === 1 ? '10px' : '6px';  // 셀 패딩
+
+    // 이용안내 스텝 (유형별) — 번호 카드 그리드로 노출
+    $steps = $type === 'solo'
+        ? [
+            ['icon' => '🎫', 'title' => '입장 & 닉네임', 'desc' => '도착하면 나만의 닉네임을 받고 지정 자리에 착석'],
+            ['icon' => '☕', 'title' => '1:1 로테이션 대화', 'desc' => '한 분씩 마주 앉아 대화하고, 시간이 되면 자리 이동'],
+            ['icon' => '🤫', 'title' => '스마트폰 비밀 투표', 'desc' => '마음에 든 상대를 조용히·비공개로 선택하면 끝'],
+            ['icon' => '💘', 'title' => '바로 매칭 발표', 'desc' => '끝나면 그 자리에서 결과 확인, 기다릴 필요 없어요'],
+            ['icon' => '💌', 'title' => '상대 정보 & 연락', 'desc' => '선택해 준 상대 정보를 폰으로 확인해 연락 이어가기'],
+        ]
+        : [
+            ['icon' => '🎫', 'title' => '입장 & 닉네임', 'desc' => '도착하면 나만의 닉네임을 받고 지정 테이블에 착석'],
+            ['icon' => '🔄', 'title' => '로테이션 대화', 'desc' => '테이블 단위로 만나고, 시간이 되면 자리 이동'],
+            ['icon' => '💌', 'title' => '메시지 & 비밀 투표', 'desc' => '대화 중 살짝 메시지, 끝나면 마음에 든 상대 선택'],
+            ['icon' => '🍷', 'title' => '자유 대화 (2차)', 'desc' => '마음에 드는 분과 자유롭게 앉아 더 깊은 대화'],
+            ['icon' => '💘', 'title' => '매칭 발표', 'desc' => '서로 선택했다면 성사! 결과는 다음 날 오전 발표'],
+        ];
 @endphp
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap');
@@ -93,6 +116,28 @@
     <div style="text-align:center; margin-bottom:24px;">
         <div style="font-family:'Jua',sans-serif; font-size:64px; font-weight:400; color:#e86aa6; letter-spacing:0.5px;">{{ $typeConfig['title'] }}</div>
         <div style="font-size:34px; color:#9ca3af; margin-top:2px;">{{ $typeConfig['subtitle'] }}</div>
+    </div>
+
+    {{-- 한 줄 요약 배너 (후킹) --}}
+    <div style="background:linear-gradient(135deg,#ec4899,#8b5cf6); border-radius:14px; padding:18px 14px; margin-bottom:22px; text-align:center; color:#ffffff;">
+        <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; letter-spacing:0.5px;">선릉역 4분 · 글작성 X · 2차 0원</div>
+        <div style="font-size:29px; margin-top:4px; opacity:0.95;">부담 없이, 스마트폰으로 깔끔하게 즐기는 로테이션 소개팅 💘</div>
+    </div>
+
+    {{-- 핵심 매력 카드 그리드 --}}
+    <div style="margin-bottom:26px;">
+        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#ec4899; text-align:center; letter-spacing:0.5px; margin-bottom:14px;">💗 왜 로테이블일까요?</div>
+        <div style="display:flex; flex-wrap:wrap;">
+            @foreach ($typeConfig['points'] as $pt)
+                <div style="width:50%; box-sizing:border-box; padding:6px;">
+                    <div style="height:100%; border:1px solid #f3d6e6; border-radius:14px; background:#fdf2f8; padding:16px 12px; text-align:center; box-sizing:border-box;">
+                        <div style="font-size:52px; line-height:1;">{{ $pt['icon'] }}</div>
+                        <div style="font-size:30px; font-weight:900; color:#be185d; margin-top:8px; word-break:keep-all;">{{ $pt['title'] }}</div>
+                        <div style="font-size:24px; color:#6b7280; margin-top:4px; line-height:1.4; word-break:keep-all;">{{ $pt['desc'] }}</div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
     </div>
 
     {{-- 실시간 명단 업데이트 안내 --}}
@@ -182,18 +227,6 @@
         </div>
     </div>
 
-    {{-- 로테이블 포인트 --}}
-    <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#ec4899; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
-            💗 로테이블 포인트
-        </div>
-        <div style="background:#fdf2f8; padding:10px; text-align:center; font-size:31px; color:#374151; line-height:2.0;">
-            @foreach ($typeConfig['points'] as $point)
-                <div>- {!! $point !!}</div>
-            @endforeach
-        </div>
-    </div>
-
     {{-- 참여 조건 --}}
     <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
         <div style="background:#3b82f6; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
@@ -207,6 +240,21 @@
             <div>- 신분 확인(신분증)에 동의해 주실 수 있는 분</div>
             <div>- 서로를 존중하며 매너 있게 대화할 수 있는 분</div>
         </div>
+        {{-- 남성 자격요건 / 우선 승인 안내 --}}
+        <div style="background:#dbeafe; border-top:2px solid #bfdbfe; padding:14px 12px; text-align:center; font-size:30px; color:#1e3a8a; line-height:1.9;">
+            <div style="font-weight:900; font-size:33px; margin-bottom:4px;">👔 남성 참가 자격요건</div>
+            <div>- 신장 <b>175cm 이상</b></div>
+            <div>- <b>대기업 · 공기업 · 전문직</b> <b>우선 승인</b></div>
+            <div>- 공무원 · 교사 · 금융권 · 사업체 운영 · 사무직 등 안정적인 전문 직군 우대</div>
+            <div style="color:#2563eb; font-size:27px; margin-top:4px;">※ 자격요건은 신청자 현황에 따라 조정될 수 있으며, 재직·신분 확인에 협조해 주셔야 해요.</div>
+        </div>
+        {{-- 여성 자격요건 (외적 요소 위주) --}}
+        <div style="background:#fce7f3; border-top:2px solid #f9a8d4; padding:14px 12px; text-align:center; font-size:30px; color:#9d174d; line-height:1.9;">
+            <div style="font-weight:900; font-size:33px; margin-bottom:4px;">💄 여성 참가 자격요건</div>
+            <div>- 밝고 호감 가는 <b>단정한 외모</b>와 분위기를 지니신 분</div>
+            <div>- 자기관리가 잘 되어 있고 <b>스타일 감각</b>이 있으신 분</div>
+            <div>- 긍정적이고 <b>대화 매너</b>가 좋은 분</div>
+        </div>
     </div>
 
     {{-- 로테이블 이용안내 --}}
@@ -214,20 +262,20 @@
         <div style="background:#10b981; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             로테이블 이용안내
         </div>
-        <div style="background:#ecfdf5; padding:10px; font-size:31px; color:#374151; line-height:1.7; text-align:center;">
-            @if ($type === 'solo')
-                <div style="margin-bottom:6px;"><b>1. 입장 &amp; 닉네임 확인</b><br>도착하시면 나만의 닉네임을 받고 지정 자리에 착석해요.</div>
-                <div style="margin-bottom:6px;"><b>2. 1:1 로테이션 대화</b><br>한 분씩 마주 앉아 1:1로 대화해요 ☕<br>시간이 지나면 자리를 옮겨 모든 상대와 차례로 만나요.</div>
-                <div style="margin-bottom:6px;"><b>3. 스마트폰 비밀 투표</b><br>쪽지도, 어색하게 번호를 묻는 순간도 없어요 🙂<br>마음에 든 상대를 스마트폰에서 조용히, 비공개로 선택하면 끝!</div>
-                <div style="margin-bottom:6px;"><b>4. 바로 매칭 발표</b><br>로테이션이 끝나면 그 자리에서 바로 매칭 결과를 알려드려요 💘<br>다음 날까지 기다리지 않아도 돼요.</div>
-                <div><b>5. 상대 정보 공유 &amp; 연락</b><br>나를 선택해 준 상대의 정보를 스마트폰으로 확인할 수 있어요 📱<br>헷갈릴 걱정 없이, 행사 뒤에도 편하게 연락을 이어가세요 😊</div>
-            @else
-                <div style="margin-bottom:6px;"><b>1. 입장 &amp; 닉네임 확인</b><br>도착하시면 나만의 닉네임을 받고 지정 테이블에 착석해요.</div>
-                <div style="margin-bottom:6px;"><b>2. 로테이션 대화</b><br>회차 타입에 따라 테이블 단위(3:3, 4:4, 3:2 등)로 함께 또는 1:1로 만나요.<br>시간이 지나면 자리를 이동하며 여러 분과 자연스럽게 대화해요.</div>
-                <div style="margin-bottom:6px;"><b>3. 메시지 &amp; 비밀 투표</b><br>대화 중 마음이 가는 분께 살짝 메시지도 보낼 수 있어요 💌<br>로테이션이 끝나면 마음에 든 상대를 비공개로 선택해요.</div>
-                <div style="margin-bottom:6px;"><b>4. 자유 대화 시간 (2차)</b><br>투표가 끝난 뒤에는, 마음에 드는 분과 자유롭게 앉아<br>더 깊은 이야기를 나눌 수 있는 시간을 드려요 ☕</div>
-                <div><b>5. 매칭 발표</b><br>서로 선택했다면 매칭 성사! 결과는 <b>다음 날 오전</b>에 알려드려요 😊</div>
-            @endif
+        <div style="background:#ecfdf5; padding:14px 10px;">
+            @foreach ($steps as $i => $step)
+                <div style="display:flex; align-items:center; background:#ffffff; border:1px solid #d1fae5; border-radius:14px; padding:12px 14px; margin-bottom:{{ $loop->last ? '0' : '10px' }};">
+                    {{-- 번호 뱃지 --}}
+                    <div style="flex:0 0 auto; width:64px; height:64px; border-radius:50%; background:#10b981; color:#ffffff; font-family:'Jua',sans-serif; font-weight:400; font-size:38px; line-height:64px; text-align:center;">{{ $i + 1 }}</div>
+                    {{-- 아이콘 --}}
+                    <div style="flex:0 0 auto; font-size:46px; margin:0 14px;">{{ $step['icon'] }}</div>
+                    {{-- 내용 --}}
+                    <div style="flex:1 1 auto; text-align:left;">
+                        <div style="font-size:31px; font-weight:900; color:#065f46; word-break:keep-all;">{{ $step['title'] }}</div>
+                        <div style="font-size:25px; color:#6b7280; margin-top:2px; line-height:1.4; word-break:keep-all;">{{ $step['desc'] }}</div>
+                    </div>
+                </div>
+            @endforeach
         </div>
     </div>
 
@@ -268,5 +316,12 @@
                 <div style="color:#6b7280;">네, 안심하셔도 돼요! 🤍<br>투표 결과와 연락처는 서로 매칭된 상대에게만 공유되고,<br>그 외에는 어디에도 공개되지 않아요.<br>소중한 개인정보는 저희가 책임지고 안전하게 지켜드릴게요.</div>
             </div>
         </div>
+    </div>
+
+    {{-- 마감 임박 CTA 배너 --}}
+    <div style="margin-top:30px; border-radius:16px; overflow:hidden; background:linear-gradient(135deg,#f43f5e,#ec4899,#8b5cf6); padding:26px 18px; text-align:center; color:#ffffff;">
+        <div style="display:inline-block; background:rgba(255,255,255,0.22); border-radius:999px; padding:6px 18px; font-size:26px; font-weight:800; margin-bottom:10px;">🔥 이번 회차 마감 임박</div>
+        <div style="font-family:'Jua',sans-serif; font-size:48px; font-weight:400; letter-spacing:0.5px; line-height:1.3;">지금 바로 신청하세요!</div>
+        <div style="font-size:29px; margin-top:8px; opacity:0.95; line-height:1.5;">성비 밸런스를 맞춰 선착순으로 마감돼요.<br>좋은 인연, 망설이는 사이 자리가 찹니다 💘</div>
     </div>
 </div>

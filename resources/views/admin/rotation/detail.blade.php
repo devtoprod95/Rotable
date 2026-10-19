@@ -292,20 +292,70 @@
                     logging: false
                 });
 
-                canvas.toBlob(function(blob){
-                    if (!blob) {
-                        salert({text: '이미지 생성에 실패했습니다. 상단 이미지의 접근 권한(CORS)을 확인해주세요.', cancel: false});
-                        return;
+                // ===== 10MB 용량 제한 처리 =====
+                // PNG 는 무손실이라 용량 조절이 어렵다.
+                // 1) 먼저 PNG 로 만들어 10MB 이하이면 그대로 저장.
+                // 2) 10MB 를 넘으면 JPEG 로 전환해 품질을 단계적으로 낮춰 10MB 아래로 맞춘다.
+                // 3) 최저 품질로도 못 맞추면 캔버스 해상도를 줄여 재시도한다.
+                var MAX_BYTES = 10 * 1024 * 1024; // 10MB
+
+                // canvas.toBlob 을 Promise 로 감싼다.
+                function toBlob(cv, type, quality){
+                    return new Promise(function(resolve){
+                        cv.toBlob(function(b){ resolve(b); }, type, quality);
+                    });
+                }
+
+                // 주어진 캔버스에서 10MB 이하 blob 과 확장자를 구한다. (못 맞추면 null)
+                async function makeUnderLimit(cv){
+                    // 1) PNG 우선
+                    var pngBlob = await toBlob(cv, 'image/png');
+                    if (pngBlob && pngBlob.size <= MAX_BYTES) {
+                        return { blob: pngBlob, ext: 'png' };
                     }
-                    var url = URL.createObjectURL(blob);
-                    var link = document.createElement('a');
-                    link.download = 'rotable_상세페이지.png';
-                    link.href = url;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                }, 'image/png');
+
+                    // 2) JPEG 품질을 단계적으로 낮춰가며 시도
+                    var qualities = [0.92, 0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25];
+                    for (var i = 0; i < qualities.length; i++) {
+                        var jpgBlob = await toBlob(cv, 'image/jpeg', qualities[i]);
+                        if (jpgBlob && jpgBlob.size <= MAX_BYTES) {
+                            return { blob: jpgBlob, ext: 'jpg' };
+                        }
+                    }
+                    return null;
+                }
+
+                var result = await makeUnderLimit(canvas);
+
+                // 3) 그래도 10MB 를 못 맞추면 캔버스 크기를 줄여 재시도 (최대 3회)
+                var scaleCanvas = canvas;
+                var shrinkTries = 0;
+                while (result === null && shrinkTries < 3) {
+                    shrinkTries++;
+                    var scaled = document.createElement('canvas');
+                    scaled.width  = Math.max(1, Math.round(scaleCanvas.width  * 0.8));
+                    scaled.height = Math.max(1, Math.round(scaleCanvas.height * 0.8));
+                    var ctx = scaled.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, scaled.width, scaled.height);
+                    ctx.drawImage(scaleCanvas, 0, 0, scaled.width, scaled.height);
+                    scaleCanvas = scaled;
+                    result = await makeUnderLimit(scaleCanvas);
+                }
+
+                if (!result || !result.blob) {
+                    await salert({text: '이미지를 10MB 이하로 저장하지 못했습니다. 내용을 줄인 뒤 다시 시도해주세요.', cancel: false});
+                    return;
+                }
+
+                var url = URL.createObjectURL(result.blob);
+                var link = document.createElement('a');
+                link.download = 'rotable_상세페이지.' + result.ext;
+                link.href = url;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
             }

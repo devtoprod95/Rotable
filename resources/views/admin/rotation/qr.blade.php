@@ -37,11 +37,11 @@
 
                 <div class="mb-3">
                     <label class="form-label required">연결 대상 URL</label>
-                    <input type="url" class="form-control" id="qrTarget"
+                    <input type="text" class="form-control" id="qrTarget"
                            value="{{ rtrim($siteDomain, '/') }}/" placeholder="https://example.com/apply">
                     <small class="form-hint">
                         기본값으로 현재 사이트 도메인이 채워져 있습니다. 뒤에 경로를 붙이거나,
-                        전체를 지우고 <b>외부 URL</b>을 넣어도 됩니다. (http:// 또는 https:// 로 시작하는 전체 주소)
+                        전체를 지우고 <b>외부 URL</b>을 넣어도 됩니다. (<code>https://</code> 를 생략하면 자동으로 붙습니다)
                     </small>
                 </div>
 

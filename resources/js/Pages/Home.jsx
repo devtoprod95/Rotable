@@ -277,9 +277,18 @@ export default function Home() {
         const channel = echo.private(channelName);
 
         // 좌석/턴이 갱신되면 홈 데이터만 다시 받아온다. (전체 새로고침 없이)
+        // 로테이션 시작(P→S) 시 와인파티 '💌 전달' 버튼이 바로 보이도록
+        // canSendMessage/sendLimit 도 함께 갱신한다.
         channel.listen('.rotation.updated', () => {
             router.reload({
-                only: ['rotations', 'eventStatus', 'matchSelectable', 'myVotedIds'],
+                only: [
+                    'rotations',
+                    'eventStatus',
+                    'matchSelectable',
+                    'myVotedIds',
+                    'canSendMessage',
+                    'sendLimit',
+                ],
             });
         });
         // 매칭이 종료되면 상태만 갱신(선택 UI가 닫히고 "매칭 결과" 탭에서 결과 확인).
@@ -287,8 +296,17 @@ export default function Home() {
             router.reload({ only: ['eventStatus', 'matchSelectable'] });
         });
         // 관리자가 '매칭 시작(V)'하면 선택 UI가 열리도록 상태를 갱신한다.
+        // 와인파티는 V 상태에서도 메시지 전송이 가능하므로 함께 갱신한다.
         channel.listen('.event.voting.opened', () => {
-            router.reload({ only: ['eventStatus', 'matchSelectable', 'myVotedIds'] });
+            router.reload({
+                only: [
+                    'eventStatus',
+                    'matchSelectable',
+                    'myVotedIds',
+                    'canSendMessage',
+                    'sendLimit',
+                ],
+            });
         });
 
         return () => {

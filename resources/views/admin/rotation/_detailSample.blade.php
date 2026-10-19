@@ -227,6 +227,34 @@
         </div>
     </div>
 
+    {{-- 파티 진행시간 안내 --}}
+    <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#7c3aed; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+            🕖 파티 진행시간
+        </div>
+        <div style="background:#f5f3ff; padding:16px 10px;">
+            <div style="display:flex; align-items:stretch;">
+                {{-- 1차 --}}
+                <div style="width:50%; box-sizing:border-box; padding:0 6px;">
+                    <div style="height:100%; background:#ffffff; border:2px solid #c4b5fd; border-radius:14px; padding:18px 12px; text-align:center;">
+                        <div style="display:inline-block; background:#7c3aed; color:#ffffff; border-radius:999px; padding:4px 18px; font-size:26px; font-weight:900;">1차</div>
+                        <div style="font-family:'Jua',sans-serif; font-size:44px; font-weight:400; color:#5b21b6; margin-top:10px;">19:30</div>
+                        <div style="font-size:26px; color:#6b7280; margin-top:4px; line-height:1.5;">로테이션 대화<br>+ 비밀 투표</div>
+                    </div>
+                </div>
+                {{-- 2차 --}}
+                <div style="width:50%; box-sizing:border-box; padding:0 6px;">
+                    <div style="height:100%; background:#ffffff; border:2px solid #f9a8d4; border-radius:14px; padding:18px 12px; text-align:center;">
+                        <div style="display:inline-block; background:#ec4899; color:#ffffff; border-radius:999px; padding:4px 18px; font-size:26px; font-weight:900;">2차</div>
+                        <div style="font-family:'Jua',sans-serif; font-size:44px; font-weight:400; color:#be185d; margin-top:10px;">~ 00:00</div>
+                        <div style="font-size:26px; color:#6b7280; margin-top:4px; line-height:1.5;">자유 대화 시간<br><b style="color:#be185d;">추가 비용 0원</b></div>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align:center; font-size:25px; color:#7c3aed; margin-top:12px;">※ 진행시간은 당일 상황에 따라 소폭 변동될 수 있어요</div>
+        </div>
+    </div>
+
     {{-- 참여 조건 --}}
     <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
         <div style="background:#3b82f6; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">

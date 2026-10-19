@@ -122,6 +122,13 @@
         <div style="font-size:34px; color:#9ca3af; margin-top:2px;">{{ $typeConfig['subtitle'] }}</div>
     </div>
 
+    {{-- 오픈 기념 할인 배너 (최상단 강조) --}}
+    <div style="background:#fff7ed; border:3px solid #fb923c; border-radius:16px; padding:16px 14px; margin-bottom:16px; text-align:center;">
+        <div style="display:inline-block; background:#ea580c; color:#ffffff; border-radius:999px; padding:5px 20px; font-size:28px; font-weight:900; margin-bottom:8px;">🎉 OPEN EVENT</div>
+        <div style="font-family:'Jua',sans-serif; font-size:46px; font-weight:400; color:#c2410c; letter-spacing:0.5px; line-height:1.25;">오픈 기념 할인 진행 중!</div>
+        <div style="font-size:28px; color:#9a3412; margin-top:6px; line-height:1.5;">지금 신청하시면 <b>오픈 특가</b>로 참여하실 수 있어요.<br>할인 혜택은 <b>조기 마감</b>될 수 있으니 서둘러 주세요 🔥</div>
+    </div>
+
     {{-- 한 줄 요약 배너 (후킹) --}}
     <div style="background:linear-gradient(135deg,#ec4899,#8b5cf6); border-radius:14px; padding:18px 14px; margin-bottom:22px; text-align:center; color:#ffffff;">
         <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; letter-spacing:0.5px;">선릉역 4분 · 글작성 X · 2차 0원</div>
@@ -362,8 +369,8 @@
 
     {{-- 마감 임박 CTA 배너 --}}
     <div style="margin-top:30px; border-radius:16px; overflow:hidden; background:linear-gradient(135deg,#f43f5e,#ec4899,#8b5cf6); padding:26px 18px; text-align:center; color:#ffffff;">
-        <div style="display:inline-block; background:rgba(255,255,255,0.22); border-radius:999px; padding:6px 18px; font-size:26px; font-weight:800; margin-bottom:10px;">🔥 이번 회차 마감 임박</div>
+        <div style="display:inline-block; background:rgba(255,255,255,0.22); border-radius:999px; padding:6px 18px; font-size:26px; font-weight:800; margin-bottom:10px;">🔥 오픈 기념 할인 · 마감 임박</div>
         <div style="font-family:'Jua',sans-serif; font-size:48px; font-weight:400; letter-spacing:0.5px; line-height:1.3;">지금 바로 신청하세요!</div>
-        <div style="font-size:29px; margin-top:8px; opacity:0.95; line-height:1.5;">성비 밸런스를 맞춰 선착순으로 마감돼요.<br>좋은 인연, 망설이는 사이 자리가 찹니다 💘</div>
+        <div style="font-size:29px; margin-top:8px; opacity:0.95; line-height:1.5;">오픈 특가는 조기 마감될 수 있어요.<br>좋은 인연, 망설이는 사이 자리가 찹니다 💘</div>
     </div>
 </div>

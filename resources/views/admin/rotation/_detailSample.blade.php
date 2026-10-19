@@ -27,6 +27,8 @@
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
                 ['icon' => '🎉', 'title' => '2차 비용 0원', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
                 ['icon' => '🤫', 'title' => '100% 비밀 투표', 'desc' => '매칭된 상대에게만 살짝 공유돼요'],
+                ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
+                ['icon' => '🚫', 'title' => '주차 불가', 'desc' => '전용 주차가 없어요. 대중교통 이용을 부탁해요'],
                 ['icon' => '💘', 'title' => '다음 날 오전 발표', 'desc' => '서로 선택하면 매칭 성사!'],
             ],
         ],
@@ -46,6 +48,8 @@
                 ['icon' => '💌', 'title' => '연락처 공유', 'desc' => '선택해 준 상대 정보로 편하게 연락 이어가기'],
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
                 ['icon' => '🎉', 'title' => '2차 비용 0원', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
+                ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
+                ['icon' => '🙂', 'title' => '번호 교환 X', 'desc' => '민망하게 번호 묻는 순간 없이 깔끔하게'],
                 ['icon' => '🤍', 'title' => '100% 비밀 투표', 'desc' => '서로 선택한 경우에만 매칭 사실 공유'],
             ],
         ],
@@ -69,8 +73,8 @@
 
     // 더미 행사
     $sampleEvents = [
-        ['title' => '1회 ' . $typeConfig['eventName'], 'date' => '2026.01.17(토) 19:00'],
-        ['title' => '2회 ' . $typeConfig['eventName'], 'date' => '2026.02.14(토) 18:00'],
+        ['title' => '1회 ' . $typeConfig['eventName'], 'date' => '2026.11.07(토) 19:30'],
+        ['title' => '2회 ' . $typeConfig['eventName'], 'date' => '2026.12.14(토) 19:30'],
     ];
     if ($columns === 1) {
         $sampleEvents = array_slice($sampleEvents, 0, 1);
@@ -147,6 +151,10 @@
             아래 참여자 명단은 신청 현황에 따라 수시로 갱신됩니다.<br>
             <b>마지막 업데이트: {{ now()->format('n월 j일 H:i') }}</b> 기준
         </div>
+        <div style="font-size:26px; color:#7c3aed; margin-top:8px; padding-top:8px; border-top:1px dashed #c4b5fd; line-height:1.5;">
+            📢 <b>여러 플랫폼에서 함께 모집 중</b>이에요!<br>
+            아래 명단이 전부가 아니며, 실제 참여 인원은 더 많을 수 있어요.
+        </div>
     </div>
 
     {{-- 행사 그리드 --}}
@@ -190,6 +198,12 @@
                 </div>
             </div>
         @endforeach
+    </div>
+
+    {{-- 좌석/성비 안내 --}}
+    <div style="margin-top:12px; background:#eff6ff; border:1px dashed #93c5fd; border-radius:12px; padding:12px 14px; text-align:center; font-size:27px; color:#1d4ed8; line-height:1.55;">
+        🪑 자리는 <b>3:3 · 4:4</b> 등 최대한 <b>성비를 맞춰</b> 배정해요.<br>
+        <span style="font-size:24px; color:#2563eb;">다만 당일 참석 현황에 따라 일부 테이블은 3:2 등으로 조정될 수 있어요.</span>
     </div>
 
     {{-- 이전 로테이블 기록 --}}

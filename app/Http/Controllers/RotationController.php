@@ -29,14 +29,14 @@ class RotationController extends Controller
     public function eventIndex(): View
     {
         $params = [
-            'page'     => $this->request->input('page') ?: 1,
-            'size'     => $this->request->input('size') ?: 30,
-            'sort'     => $this->request->input('sort')[0] ?? ['field' => 'id', 'dir' => 'desc'],
+            'page'       => $this->request->input('page') ?: 1,
+            'size'       => $this->request->input('size') ?: 30,
+            'sort'       => $this->request->input('sort')[0] ?? ['field' => 'id', 'dir' => 'desc'],
             'searchText' => $this->request->input('searchText') ?: '',
-            'type'     => $this->request->input('type') ?: '',
-            'status'   => $this->request->input('status') ?: '',
-            'types'    => EventRound::typeOptions(),
-            'statuses' => EventRound::statusOptions(),
+            'type'       => $this->request->input('type') ?: '',
+            'status'     => $this->request->input('status') ?: '',
+            'types'      => EventRound::typeOptions(),
+            'statuses'   => EventRound::statusOptions(),
             // 방문 통계: 가장 최근 자정 스냅샷 1건. (없으면 null)
             'visitSnapshot' => \App\Models\EventVisitSnapshot::orderByDesc('snapshot_date')->first(),
         ];
@@ -324,6 +324,12 @@ class RotationController extends Controller
      */
     public function qrStore(): JsonResponse
     {
+        // 스킴(http/https)이 없으면 https:// 를 자동으로 붙여 정규화한다. (예: naver.com → https://naver.com)
+        // 검증(|url) 전에 보정해야 사용자가 스킴 없이 입력해도 저장된다.
+        $this->request->merge([
+            'target_url' => $this->normalizeTargetUrl((string) $this->request->input('target_url', '')),
+        ]);
+
         $validator = Validator::make($this->request->all(), [
             'id'         => 'nullable|integer|exists:qr_links,id',
             'title'      => 'required|string|max:255',
@@ -362,8 +368,32 @@ class RotationController extends Controller
     }
 
     /**
-     * QR 링크 삭제 (벌크).
+     * 연결 대상 URL 정규화.
+     *
+     * - 스킴(http:// 또는 https://)이 없으면 https:// 를 앞에 붙인다. (예: naver.com → https://naver.com)
+     * - `//naver.com` 처럼 스킴만 생략된 프로토콜-상대 URL 도 https 로 보정한다.
+     * - 앞뒤 공백은 제거한다. 빈 값이면 그대로 반환한다. (required 검증에서 걸러짐)
      */
+    private function normalizeTargetUrl(string $url): string
+    {
+        $url = trim($url);
+
+        if ($url === '') {
+            return $url;
+        }
+
+        // 이미 http:// 또는 https:// 로 시작하면 그대로 둔다. (대소문자 무시)
+        if (preg_match('#^https?://#i', $url) === 1) {
+            return $url;
+        }
+
+        // 프로토콜-상대(//host) 는 앞의 슬래시를 떼고 https 를 붙인다.
+        $url = ltrim($url, '/');
+
+        return 'https://' . $url;
+    }
+
+
     public function qrDelete(): JsonResponse
     {
         if ($this->invalidIds()) {

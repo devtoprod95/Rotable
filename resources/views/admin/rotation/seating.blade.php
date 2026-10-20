@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '로테이션 설정')
+@section('title', '좌석 배정')
 
 @section('content')
 <style>
@@ -24,7 +24,7 @@
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center gap-2">
-                    <h3 class="card-title mb-0">로테이션 설정</h3>
+                    <h3 class="card-title mb-0">좌석 배정</h3>
                     <span class="badge d-none" id="eventStatusBadge"></span>
                 </div>
                 <div class="d-flex align-items-center gap-2">

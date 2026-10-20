@@ -18,7 +18,7 @@
                 <div class="d-flex gap-2">
                     @if ($isEdit)
                         <a href="{{ route('admin.rotation.seating.index', ['eventId' => $event->id]) }}" class="btn btn-azure px-4">
-                            <i class="ti ti-layout-grid me-1"></i> 로테이션 설정
+                            <i class="ti ti-layout-grid me-1"></i> 좌석 배정
                         </a>
                         <button type="button" id="goMatchesBtn" class="btn btn-outline-pink px-4">
                             <i class="ti ti-heart me-1"></i> 전체 매칭

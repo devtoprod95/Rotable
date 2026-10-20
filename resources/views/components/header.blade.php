@@ -104,7 +104,7 @@
                                     <i class="ti ti-calendar-event me-2"></i> 1. 행사 관리
                                 </button>
                                 <button type="button" class="list-group-item list-group-item-action" data-guide="seating">
-                                    <i class="ti ti-armchair me-2"></i> 2. 로테이션 설정(좌석)
+                                    <i class="ti ti-armchair me-2"></i> 2. 좌석 배정
                                 </button>
                                 <button type="button" class="list-group-item list-group-item-action" data-guide="progress">
                                     <i class="ti ti-rotate me-2"></i> 3. 로테이션 진행 / 투표
@@ -138,7 +138,7 @@
                             </div>
 
                             <div class="guide-panel d-none" data-panel="seating">
-                                <h4 class="mb-1"><i class="ti ti-armchair me-1"></i> 2. 로테이션 설정 (좌석 배정)</h4>
+                                <h4 class="mb-1"><i class="ti ti-armchair me-1"></i> 2. 좌석 배정</h4>
                                 <p class="text-muted">누가 어느 테이블에 앉을지 <b>턴(0턴)</b> 단위로 배치합니다.</p>
                                 <div class="fw-bold text-blue mb-1"><i class="ti ti-user-cog me-1"></i> 관리자가 하는 일</div>
                                 <ul class="lh-lg">
@@ -153,7 +153,7 @@
                                 <ul class="lh-lg">
                                     <li>자신에게 배정된 <b>테이블/자리</b>를 안내받아 해당 자리에 착석합니다.</li>
                                 </ul>
-                                <a href="{{ route('admin.rotation.seating.index') }}" class="btn btn-primary btn-sm"><i class="ti ti-external-link me-1"></i> 로테이션 설정으로 이동</a>
+                                <a href="{{ route('admin.rotation.seating.index') }}" class="btn btn-primary btn-sm"><i class="ti ti-external-link me-1"></i> 좌석 배정으로 이동</a>
                             </div>
 
                             <div class="guide-panel d-none" data-panel="progress">

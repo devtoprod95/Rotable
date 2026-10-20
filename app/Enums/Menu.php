@@ -21,15 +21,27 @@ enum Menu: string
                 'pattern' => 'admin.dashboard*',
             ],
             self::Rotation->value => [
-                'name'     => '로테이션',
-                'icon'     => 'rotate',
+                'name'     => '행사',
+                'icon'     => 'calendar-event',
                 'pattern'  => 'admin.rotation*',
                 'children' => [
                     ['name' => '행사 관리', 'route' => 'admin.rotation.event.index', 'pattern' => 'admin.rotation.event*'],
-                    ['name' => '로테이션 설정', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
-                    ['name' => '상세페이지 제작', 'route' => 'admin.rotation.detail.index', 'pattern' => 'admin.rotation.detail*'],
-                    ['name' => 'QR코드 설정', 'route' => 'admin.rotation.qr.index', 'pattern' => 'admin.rotation.qr*'],
-                    ['name' => '참가자 안내', 'route' => 'admin.rotation.guide.index', 'pattern' => 'admin.rotation.guide*'],
+                    ['name' => '좌석 배정', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
+                    [
+                        'name'     => '홍보',
+                        'pattern'  => ['admin.rotation.detail*', 'admin.rotation.qr*'],
+                        'children' => [
+                            ['name' => '상세페이지 제작', 'route' => 'admin.rotation.detail.index', 'pattern' => 'admin.rotation.detail*'],
+                            ['name' => 'QR코드 설정', 'route' => 'admin.rotation.qr.index', 'pattern' => 'admin.rotation.qr*'],
+                        ],
+                    ],
+                    [
+                        'name'     => '현장 안내',
+                        'pattern'  => 'admin.rotation.guide*',
+                        'children' => [
+                            ['name' => '안내 슬라이드', 'route' => 'admin.rotation.guide.index', 'pattern' => 'admin.rotation.guide*'],
+                        ],
+                    ],
                     [
                         'name'     => '만남 이력',
                         'pattern'  => 'admin.rotation.history*',
@@ -136,10 +148,11 @@ enum Menu: string
             return false;
         }
 
+        // pattern 은 문자열 또는 배열(여러 패턴 중 하나라도 일치). Str::is 는 배열을 그대로 지원한다.
         // route name 기준과 실제 URL 기준을 둘 다 허용한다.
         return Str::is($pattern, $routeName)
             || Str::is($pattern, $path)
-            || Str::is(ltrim($pattern, '/'), $path)
-            || Str::is($pattern, '/' . $path);
+            || Str::is(is_array($pattern) ? array_map(fn ($p) => ltrim($p, '/'), $pattern) : ltrim($pattern, '/'), $path)
+            || Str::is(is_array($pattern) ? array_map(fn ($p) => '/' . $p, $pattern) : '/' . $pattern, $path);
     }
 }

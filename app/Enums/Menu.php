@@ -29,6 +29,7 @@ enum Menu: string
                     ['name' => '로테이션 설정', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
                     ['name' => '상세페이지 제작', 'route' => 'admin.rotation.detail.index', 'pattern' => 'admin.rotation.detail*'],
                     ['name' => 'QR코드 설정', 'route' => 'admin.rotation.qr.index', 'pattern' => 'admin.rotation.qr*'],
+                    ['name' => '참가자 안내', 'route' => 'admin.rotation.guide.index', 'pattern' => 'admin.rotation.guide*'],
                     [
                         'name'     => '만남 이력',
                         'pattern'  => 'admin.rotation.history*',

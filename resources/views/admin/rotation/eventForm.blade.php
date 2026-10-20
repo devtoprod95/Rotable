@@ -147,6 +147,13 @@
                                                         data-member='@json($memberData)'>
                                                     상세보기
                                                 </button>
+                                                @if ($isSuperAdmin && $member->phone)
+                                                    <a href="{{ route('admin.rotation.history.index', ['phone' => $member->phone]) }}"
+                                                       target="_blank" rel="noopener"
+                                                       class="btn btn-sm btn-outline-teal py-1 px-3 mt-1">
+                                                        만남 이력
+                                                    </a>
+                                                @endif
                                                 <div class="fw-bold" style="font-size: 0.85em;">
                                                     {{ $member->phone ?? '-' }}
                                                 </div>

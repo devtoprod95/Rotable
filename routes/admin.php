@@ -68,6 +68,11 @@ Route::middleware('role')->group(function () {
                 Route::delete('/delete', [RotationController::class, 'qrDelete'])->name('delete');
             });
 
+            // 참가자 안내 슬라이드 — 행사장에서 PPT 처럼 띄워 서비스 이용안내/룰/대화 주제를 안내한다.
+            Route::prefix('guide')->name('guide.')->group(function () {
+                Route::get('/', [RotationController::class, 'guideIndex'])->name('index');
+            });
+
             // 만남 이력 조회 — 전화번호(정확 일치) 기준. 만남 = 같은 행사 공동 참여.
             Route::prefix('history')->name('history.')->group(function () {
                 // 만남 이력 기본 조회 (번호 1개 → 함께 참여한 상대)

@@ -19,6 +19,11 @@ Route::get('/qr/{code}', [\App\Http\Controllers\QrRedirectController::class, 're
     ->where('code', '[A-Za-z0-9]+')
     ->name('qr.redirect');
 
+// 참가자 안내 슬라이드 공개 페이지 — 비인증(누구나). /guide 또는 /guide/{type}(wine|solo)
+Route::get('/guide/{type?}', [\App\Http\Controllers\RotationController::class, 'guidePublic'])
+    ->where('type', 'wine|solo')
+    ->name('public.guide');
+
 // 입장/입장등록 화면.
 // 이미 등록(로그인)된 회원은 메인(홈)으로 보낸다. (단, 예외 이름 회원은 접근 허용)
 Route::middleware(RedirectIfRegistered::class)->group(function () {

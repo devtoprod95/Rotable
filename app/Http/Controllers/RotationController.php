@@ -417,6 +417,18 @@ class RotationController extends Controller
         return view('admin.rotation.guide');
     }
 
+    /**
+     * 참가자 안내 슬라이드 — 외부 공개용(비인증). 관리자 페이지와 동일한 덱(partial)을 쓴다.
+     *
+     * @param  string|null  $type  'wine'(와인파티) | 'solo'(1:1). 없거나 그 외 값이면 와인으로 시작.
+     */
+    public function guidePublic(?string $type = null): View
+    {
+        return view('public.guide', [
+            'initialType' => $type === 'solo' ? 'solo' : 'wine',
+        ]);
+    }
+
     /* ======================================================================
      | 만남 이력 조회 — 전화번호(정확 일치) 기준. 만남 = 같은 행사 공동 참여.
      * ==================================================================== */

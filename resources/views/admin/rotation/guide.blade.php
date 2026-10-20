@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '참가자 안내')
+@section('title', '안내 슬라이드')
 
 @section('content')
 {{--
@@ -12,7 +12,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex align-items-center flex-wrap gap-2">
-                <h3 class="card-title mb-0"><i class="ti ti-presentation me-1"></i> 참가자 안내 슬라이드</h3>
+                <h3 class="card-title mb-0"><i class="ti ti-presentation me-1"></i> 안내 슬라이드</h3>
                 <a href="{{ route('public.guide') }}" target="_blank" rel="noopener"
                    class="btn btn-sm btn-outline-teal ms-2">
                     <i class="ti ti-external-link me-1"></i> 공개 페이지 열기

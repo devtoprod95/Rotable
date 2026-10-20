@@ -285,7 +285,7 @@
                         $wrap.append($edit);
                         var $seating = $("<button>")
                             .addClass("btn btn-sm btn-outline-azure w-100")
-                            .html('로테이션 설정')
+                            .html('좌석 배정')
                             .on("click", function(){ location.href = seatingBase + "?eventId=" + data.id; });
                         $wrap.append($seating);
                         if((data.messages_count ?? 0) >= 1){

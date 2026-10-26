@@ -84,7 +84,7 @@
             <div class="modal-body bg-light">
                 <div class="d-flex justify-content-center">
                     {{-- 이 영역이 그대로 이미지로 캡처됩니다. --}}
-                    <div id="detailPreview" style="width: 1080px; max-width: 100%; background:#ffffff; padding:12px; border-radius:8px;"></div>
+                    <div id="detailPreview" style="width: 1080px; max-width: 100%; background:#ffffff; border-radius:8px;"></div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -254,7 +254,7 @@
                 holder.style.top = '0';
                 holder.style.width = '1080px';
                 holder.style.background = '#ffffff';
-                holder.style.padding = '12px';
+                holder.style.padding = '0';
                 document.body.appendChild(holder);
             }
             holder.innerHTML = html;

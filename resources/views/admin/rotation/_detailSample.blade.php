@@ -27,7 +27,7 @@
                 ['icon' => '✍️', 'title' => '글작성 X', 'desc' => '종이·설문 없이 스마트폰 터치 몇 번이면 끝'],
                 ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
-                ['icon' => '🎉', 'title' => '2차 비용 0원', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
+                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
                 ['icon' => '🤫', 'title' => '100% 비밀 투표', 'desc' => '매칭된 상대에게만 살짝 공유돼요'],
                 ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
                 ['icon' => '🚫', 'title' => '주차 불가', 'desc' => '전용 주차가 없어요. 대중교통 이용을 부탁해요'],
@@ -49,7 +49,7 @@
                 ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
                 ['icon' => '💌', 'title' => '연락처 공유', 'desc' => '선택해 준 상대 정보로 편하게 연락 이어가기'],
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
-                ['icon' => '🎉', 'title' => '2차 비용 0원', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
+                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
                 ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
                 ['icon' => '🤍', 'title' => '100% 비밀 투표', 'desc' => '서로 선택한 경우에만 매칭 사실 공유'],
             ],
@@ -114,22 +114,22 @@
 <div style="font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; color:#4b4453; line-height:1.35; width:100%;">
 
     {{-- 최상단 상세 이미지 --}}
-    <div style="text-align:center; margin-bottom:24px;">
+    <div style="text-align:center; margin-bottom:36px;">
         <img src="{{ $typeConfig['image'] }}" alt="상세 이미지"
              style="display:block; width:100%; max-width:100%; height:auto; border-radius:12px;">
     </div>
 
-    <div style="text-align:center; margin-bottom:24px;">
+    <div style="text-align:center; margin-bottom:32px;">
         <div style="font-family:'Jua',sans-serif; font-size:64px; font-weight:400; color:#e86aa6; letter-spacing:0.5px;">{{ $typeConfig['title'] }}</div>
-        <div style="font-size:34px; color:#9ca3af; margin-top:2px;">{{ $typeConfig['subtitle'] }}</div>
+        <div style="font-size:34px; color:#9ca3af; margin-top:10px;">{{ $typeConfig['subtitle'] }}</div>
     </div>
 
     {{-- 오픈 기념 할인 배너 (최상단 강조) --}}
-    <div style="background:#fff7ed; border:3px solid #fb923c; border-radius:16px; padding:16px 14px; margin-bottom:16px; text-align:center;">
-        <div style="display:inline-block; background:#ea580c; color:#ffffff; border-radius:999px; padding:5px 20px; font-size:28px; font-weight:900; margin-bottom:8px;">🎉 OPEN EVENT</div>
-        <div style="font-family:'Jua',sans-serif; font-size:46px; font-weight:400; color:#c2410c; letter-spacing:0.5px; line-height:1.25;">오픈 기념 할인 진행 중!</div>
-        <div style="font-size:28px; color:#9a3412; margin-top:6px; line-height:1.5;">지금 신청하시면 <b>오픈 특가</b>로 참여하실 수 있어요.<br>할인 혜택은 <b>조기 마감</b>될 수 있으니 서둘러 주세요 🔥</div>
-        <div style="background:#ffedd5; border:2px dashed #fb923c; border-radius:12px; padding:12px 10px; margin-top:12px; font-size:26px; color:#9a3412; line-height:1.6;">
+    <div style="background:#fff7ed; border:3px solid #fb923c; border-radius:16px; padding:24px 16px; margin-bottom:16px; text-align:center;">
+        <div style="display:inline-block; background:#ea580c; color:#ffffff; border-radius:999px; padding:5px 20px; font-size:28px; font-weight:900; margin-bottom:14px;">🎉 OPEN EVENT</div>
+        <div style="font-family:'Jua',sans-serif; font-size:46px; font-weight:400; color:#c2410c; letter-spacing:0.5px; line-height:1.3;">오픈 기념 할인 진행 중!</div>
+        <div style="font-size:28px; color:#9a3412; margin-top:14px; line-height:1.6;">지금 신청하시면 <b>오픈 특가</b>로 참여하실 수 있어요.<br>할인 혜택은 <b>조기 마감</b>될 수 있으니 서둘러 주세요 🔥</div>
+        <div style="background:#ffedd5; border:2px dashed #fb923c; border-radius:12px; padding:18px 12px; margin-top:18px; font-size:26px; color:#9a3412; line-height:1.7;">
             ⭐ <b>오픈 기념 할인 행사</b>예요!<br>
             할인 혜택 적용을 위해 참여 후
             <span style="background:linear-gradient(transparent 55%, #fdba74 55%); padding:0 4px; font-weight:900; color:#7c2d12;">리뷰 작성이 필수</span>입니다.
@@ -137,21 +137,31 @@
     </div>
 
     {{-- 한 줄 요약 배너 (후킹) --}}
-    <div style="background:linear-gradient(135deg,#ec4899,#8b5cf6); border-radius:14px; padding:18px 14px; margin-bottom:22px; text-align:center; color:#ffffff;">
-        <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; letter-spacing:0.5px;">선릉역 4분 · 글작성 X · 2차 0원</div>
-        <div style="font-size:29px; margin-top:4px; opacity:0.95;">부담 없이, 스마트폰으로 깔끔하게 즐기는 로테이션 소개팅 💘</div>
+    <div style="background:linear-gradient(135deg,#ec4899,#8b5cf6); border-radius:14px; padding:28px 20px; margin-top:20px; margin-bottom:40px; text-align:center; color:#ffffff;">
+        <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; letter-spacing:0.5px;">선릉역 4분 · 글작성 X · 2차 무료</div>
+        <div style="font-size:32px; font-weight:800; margin-top:8px; opacity:0.98; line-height:1.7;">
+            지금까지 소개팅에서 프로필을 직접 적고,<br>
+            상대방 이름과 정보를 외우느라 힘드셨죠?<br>
+            로테이블은 그 모든 과정을 <b>스마트폰 하나로</b> 해결했어요.<br>
+            내 프로필 등록부터 상대 정보 확인, 마음에 드는 분 선택,<br>
+            그리고 매칭 결과까지 — 전부 폰 안에서 <b>간편하게</b> 진행됩니다.<br>
+            복잡한 절차와 어색한 순간은 덜어내고, 대화에만 집중하실 수 있도록<br>
+            <b>깔끔하고 세련된 방식</b>으로 준비했어요.<br>
+            물론 <b>2차까지 전부 무료</b>랍니다 💘<br>
+            <span style="display:inline-block; margin-top:10px;">🔋 모든 진행이 스마트폰으로 이뤄지니, <b>배터리는 꼭 넉넉히 충전</b>해서 와 주세요!</span>
+        </div>
     </div>
 
     {{-- 핵심 매력 카드 그리드 --}}
-    <div style="margin-bottom:26px;">
-        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#ec4899; text-align:center; letter-spacing:0.5px; margin-bottom:14px;">💗 왜 로테이블일까요?</div>
+    <div style="margin-bottom:44px;">
+        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#ec4899; text-align:center; letter-spacing:0.5px; margin-bottom:24px;">💗 왜 로테이블일까요?</div>
         <div style="display:flex; flex-wrap:wrap;">
             @foreach ($typeConfig['points'] as $pt)
-                <div style="width:50%; box-sizing:border-box; padding:6px;">
-                    <div style="height:100%; border:1px solid #f3d6e6; border-radius:14px; background:#fdf2f8; padding:16px 12px; text-align:center; box-sizing:border-box;">
+                <div style="width:50%; box-sizing:border-box; padding:10px;">
+                    <div style="height:100%; border:1px solid #f3d6e6; border-radius:14px; background:#fdf2f8; padding:24px 16px; text-align:center; box-sizing:border-box;">
                         <div style="font-size:52px; line-height:1;">{{ $pt['icon'] }}</div>
-                        <div style="font-size:30px; font-weight:900; color:#be185d; margin-top:8px; word-break:keep-all;">{{ $pt['title'] }}</div>
-                        <div style="font-size:24px; color:#6b7280; margin-top:4px; line-height:1.4; word-break:keep-all;">{{ $pt['desc'] }}</div>
+                        <div style="font-size:30px; font-weight:900; color:#be185d; margin-top:14px; word-break:keep-all;">{{ $pt['title'] }}</div>
+                        <div style="font-size:28px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; word-break:keep-all;">{{ $pt['desc'] }}</div>
                     </div>
                 </div>
             @endforeach
@@ -159,13 +169,13 @@
     </div>
 
     {{-- 실시간 명단 업데이트 안내 --}}
-    <div style="background:#ede9fe; border:2px solid #c4b5fd; border-radius:12px; padding:9px 11px; margin-bottom:11px; text-align:center;">
+    <div style="background:#ede9fe; border:2px solid #c4b5fd; border-radius:12px; padding:18px 16px; margin-bottom:18px; text-align:center;">
         <div style="font-family:'Jua',sans-serif; font-size:35px; font-weight:400; color:#7e22ce; letter-spacing:0.5px;">실시간 명단 업데이트 중</div>
-        <div style="font-size:29px; color:#6b21a8; margin-top:2px;">
+        <div style="font-size:29px; color:#6b21a8; margin-top:10px; line-height:1.5;">
             아래 참여자 명단은 신청 현황에 따라 수시로 갱신됩니다.<br>
             <b>마지막 업데이트: {{ now()->format('n월 j일 H:i') }}</b> 기준
         </div>
-        <div style="font-size:26px; color:#7c3aed; margin-top:8px; padding-top:8px; border-top:1px dashed #c4b5fd; line-height:1.5;">
+        <div style="font-size:26px; color:#7c3aed; margin-top:14px; padding-top:14px; border-top:1px dashed #c4b5fd; line-height:1.6;">
             📢 <b>여러 플랫폼에서 함께 모집 중</b>이에요!<br>
             아래 명단이 전부가 아니며, 실제 참여 인원은 더 많을 수 있어요.
         </div>
@@ -215,17 +225,17 @@
     </div>
 
     {{-- 좌석/성비 안내 --}}
-    <div style="margin-top:12px; background:#eff6ff; border:1px dashed #93c5fd; border-radius:12px; padding:12px 14px; text-align:center; font-size:27px; color:#1d4ed8; line-height:1.55;">
+    <div style="margin-top:20px; background:#eff6ff; border:1px dashed #93c5fd; border-radius:12px; padding:20px 16px; text-align:center; font-size:27px; color:#1d4ed8; line-height:1.7;">
         🪑 자리는 <b>3:3 · 4:4</b> 등 최대한 <b>성비를 맞춰</b> 배정해요.<br>
         <span style="font-size:24px; color:#2563eb;">다만 당일 참석 현황에 따라 일부 테이블은 3:2 등으로 조정될 수 있어요.</span>
     </div>
 
     {{-- 이전 로테이블 기록 --}}
-    <div style="margin-top:30px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#0ea5e9; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#0ea5e9; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             이전 로테이블 기록
         </div>
-        <div style="background:#f0f9ff; padding:14px 16px; text-align:center;">
+        <div style="background:#f0f9ff; padding:22px 18px; text-align:center;">
             {{-- 헤더 --}}
             <div style="display:flex; font-size:28px; font-weight:800; color:#6b7280; border-bottom:2px solid #cbd5e1; padding-bottom:10px; margin-bottom:4px;">
                 <div style="width:28%; border-right:1px solid #cbd5e1;">날짜</div>
@@ -256,39 +266,39 @@
     </div>
 
     {{-- 파티 진행시간 안내 --}}
-    <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#7c3aed; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#7c3aed; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             🕖 파티 진행시간
         </div>
-        <div style="background:#f5f3ff; padding:16px 10px;">
+        <div style="background:#f5f3ff; padding:24px 14px;">
             <div style="display:flex; align-items:stretch;">
                 {{-- 1차 --}}
-                <div style="width:50%; box-sizing:border-box; padding:0 6px;">
-                    <div style="height:100%; background:#ffffff; border:2px solid #c4b5fd; border-radius:14px; padding:18px 12px; text-align:center;">
+                <div style="width:50%; box-sizing:border-box; padding:0 8px;">
+                    <div style="height:100%; background:#ffffff; border:2px solid #c4b5fd; border-radius:14px; padding:24px 14px; text-align:center;">
                         <div style="display:inline-block; background:#7c3aed; color:#ffffff; border-radius:999px; padding:4px 18px; font-size:26px; font-weight:900;">1차</div>
-                        <div style="font-family:'Jua',sans-serif; font-size:44px; font-weight:400; color:#5b21b6; margin-top:10px;">19:30</div>
-                        <div style="font-size:26px; color:#6b7280; margin-top:4px; line-height:1.5;">로테이션 대화<br>+ 비밀 투표</div>
+                        <div style="font-family:'Jua',sans-serif; font-size:44px; font-weight:400; color:#5b21b6; margin-top:14px;">19:30</div>
+                        <div style="font-size:26px; color:#6b7280; margin-top:10px; line-height:1.6;">로테이션 대화<br>+ 비밀 투표</div>
                     </div>
                 </div>
                 {{-- 2차 --}}
-                <div style="width:50%; box-sizing:border-box; padding:0 6px;">
-                    <div style="height:100%; background:#ffffff; border:2px solid #f9a8d4; border-radius:14px; padding:18px 12px; text-align:center;">
+                <div style="width:50%; box-sizing:border-box; padding:0 8px;">
+                    <div style="height:100%; background:#ffffff; border:2px solid #f9a8d4; border-radius:14px; padding:24px 14px; text-align:center;">
                         <div style="display:inline-block; background:#ec4899; color:#ffffff; border-radius:999px; padding:4px 18px; font-size:26px; font-weight:900;">2차</div>
-                        <div style="font-family:'Jua',sans-serif; font-size:44px; font-weight:400; color:#be185d; margin-top:10px;">~ 00:00</div>
-                        <div style="font-size:26px; color:#6b7280; margin-top:4px; line-height:1.5;">자유 대화 시간<br><b style="color:#be185d;">추가 비용 0원</b></div>
+                        <div style="font-family:'Jua',sans-serif; font-size:44px; font-weight:400; color:#be185d; margin-top:14px;">~ 00:00</div>
+                        <div style="font-size:26px; color:#6b7280; margin-top:10px; line-height:1.6;">자유 대화 시간<br><b style="color:#be185d;">추가 비용 무료</b></div>
                     </div>
                 </div>
             </div>
-            <div style="text-align:center; font-size:25px; color:#7c3aed; margin-top:12px;">※ 진행시간은 당일 상황에 따라 소폭 변동될 수 있어요</div>
+            <div style="text-align:center; font-size:25px; color:#7c3aed; margin-top:18px;">※ 진행시간은 당일 상황에 따라 소폭 변동될 수 있어요</div>
         </div>
     </div>
 
     {{-- 참여 조건 --}}
-    <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#3b82f6; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#3b82f6; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             참여 조건
         </div>
-        <div style="background:#eff6ff; padding:10px; text-align:center; font-size:31px; color:#374151; line-height:2.0;">
+        <div style="background:#eff6ff; padding:22px 14px; text-align:center; font-size:31px; color:#374151; line-height:2.2;">
             <div>- 남성 00~88년생 / 여성 02~88년생</div>
             <div>- 미혼이신 분 (돌싱·기혼은 참여가 어려워요)</div>
             <div>- 안정적인 직업과 경제력을 갖추신 분 (신분·재직 확인에 협조해 주세요)</div>
@@ -297,16 +307,20 @@
             <div>- 서로를 존중하며 매너 있게 대화할 수 있는 분</div>
         </div>
         {{-- 남성 자격요건 / 우선 승인 안내 --}}
-        <div style="background:#dbeafe; border-top:2px solid #bfdbfe; padding:14px 12px; text-align:center; font-size:30px; color:#1e3a8a; line-height:1.9;">
-            <div style="font-weight:900; font-size:33px; margin-bottom:4px;">👔 남성 참가 자격요건</div>
+        <div style="background:#dbeafe; border-top:2px solid #bfdbfe; padding:22px 14px; text-align:center; font-size:30px; color:#1e3a8a; line-height:2.0;">
+            <div style="font-weight:900; font-size:33px; margin-bottom:12px;">👔 남성 참가 자격요건</div>
             <div>- 신장 <b>175cm 이상</b></div>
             <div>- <b>대기업 · 공기업 · 전문직</b> <b>우선 승인</b></div>
             <div>- 공무원 · 교사 · 금융권 · 사업체 운영 · 사무직 등 안정적인 전문 직군 우대</div>
-            <div style="color:#2563eb; font-size:27px; margin-top:4px;">※ 자격요건은 신청자 현황에 따라 조정될 수 있으며, 재직·신분 확인에 협조해 주셔야 해요.</div>
+            <div style="background:#bfdbfe; border-radius:10px; padding:16px 10px; margin-top:16px; font-size:28px; color:#1e3a8a; line-height:1.6;">
+                📇 <b>남성분은 직업 확인이 가능한 서류</b>(명함 또는 재직증명서 등)를<br>
+                <b style="background:linear-gradient(transparent 55%, #93c5fd 55%); padding:0 4px;">현장에 꼭 지참</b>해 주세요!
+            </div>
+            <div style="color:#2563eb; font-size:27px; margin-top:14px; line-height:1.5;">※ 자격요건은 신청자 현황에 따라 조정될 수 있으며, 재직·신분 확인에 협조해 주셔야 해요.</div>
         </div>
         {{-- 여성 자격요건 (외적 요소 위주) --}}
-        <div style="background:#fce7f3; border-top:2px solid #f9a8d4; padding:14px 12px; text-align:center; font-size:30px; color:#9d174d; line-height:1.9;">
-            <div style="font-weight:900; font-size:33px; margin-bottom:4px;">💄 여성 참가 자격요건</div>
+        <div style="background:#fce7f3; border-top:2px solid #f9a8d4; padding:22px 14px; text-align:center; font-size:30px; color:#9d174d; line-height:2.0;">
+            <div style="font-weight:900; font-size:33px; margin-bottom:12px;">💄 여성 참가 자격요건</div>
             <div>- 밝고 호감 가는 <b>단정한 외모</b>와 분위기를 지니신 분</div>
             <div>- 자기관리가 잘 되어 있고 <b>스타일 감각</b>이 있으신 분</div>
             <div>- 긍정적이고 <b>대화 매너</b>가 좋은 분</div>
@@ -314,21 +328,21 @@
     </div>
 
     {{-- 로테이블 이용안내 --}}
-    <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#10b981; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#10b981; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             로테이블 이용안내
         </div>
-        <div style="background:#ecfdf5; padding:14px 10px;">
+        <div style="background:#ecfdf5; padding:22px 14px;">
             @foreach ($steps as $i => $step)
-                <div style="display:flex; align-items:center; background:#ffffff; border:1px solid #d1fae5; border-radius:14px; padding:12px 14px; margin-bottom:{{ $loop->last ? '0' : '10px' }};">
+                <div style="display:flex; align-items:center; background:#ffffff; border:1px solid #d1fae5; border-radius:14px; padding:20px 18px; margin-bottom:{{ $loop->last ? '0' : '16px' }};">
                     {{-- 번호 뱃지 --}}
                     <div style="flex:0 0 auto; width:64px; height:64px; border-radius:50%; background:#10b981; color:#ffffff; font-family:'Jua',sans-serif; font-weight:400; font-size:38px; line-height:64px; text-align:center;">{{ $i + 1 }}</div>
                     {{-- 아이콘 --}}
-                    <div style="flex:0 0 auto; font-size:46px; margin:0 14px;">{{ $step['icon'] }}</div>
+                    <div style="flex:0 0 auto; font-size:46px; margin:0 18px;">{{ $step['icon'] }}</div>
                     {{-- 내용 --}}
                     <div style="flex:1 1 auto; text-align:left;">
                         <div style="font-size:31px; font-weight:900; color:#065f46; word-break:keep-all;">{{ $step['title'] }}</div>
-                        <div style="font-size:25px; color:#6b7280; margin-top:2px; line-height:1.4; word-break:keep-all;">{{ $step['desc'] }}</div>
+                        <div style="font-size:29px; font-weight:700; color:#4b5563; margin-top:8px; line-height:1.55; word-break:keep-all;">{{ $step['desc'] }}</div>
                     </div>
                 </div>
             @endforeach
@@ -337,11 +351,11 @@
 
     @if ($type === 'solo')
     {{-- 1:1 소개팅 연락처 공개 유의 안내 --}}
-    <div style="margin-top:28px; border:2px solid #fca5a5; border-radius:12px; overflow:hidden;">
-        <div style="background:#ef4444; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+    <div style="margin-top:48px; border:2px solid #fca5a5; border-radius:12px; overflow:hidden;">
+        <div style="background:#ef4444; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             ⚠️ 매칭 선택 전 유의사항
         </div>
-        <div style="background:#fef2f2; padding:16px; font-size:31px; color:#b91c1c; line-height:1.7; text-align:center;">
+        <div style="background:#fef2f2; padding:26px 16px; font-size:31px; color:#b91c1c; line-height:1.9; text-align:center;">
             내가 선택한 상대에게는 <b>서로 매칭되지 않더라도</b><br>
             내 연락처가 공개될 수 있어요.<br>
             마음에 드는 분을 <b>신중하게</b> 선택해 주세요 🙏
@@ -350,34 +364,34 @@
     @endif
 
     {{-- 자주 묻는 질문 --}}
-    <div style="margin-top:28px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
-        <div style="background:#f59e0b; padding:7px 10px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#f59e0b; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             자주 묻는 질문
         </div>
-        <div style="background:#fffbeb; padding:10px; font-size:31px; color:#374151; line-height:1.7; text-align:center;">
-            <div style="margin-bottom:8px;">
+        <div style="background:#fffbeb; padding:24px 16px; font-size:31px; color:#374151; line-height:1.8; text-align:center;">
+            <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 혼자 가도 괜찮나요?</div>
-                <div style="color:#6b7280;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다.<br>전문 호스트가 처음부터 끝까지 분위기를 부드럽게 이끌어 드리고,<br>자연스럽게 대화가 이어지도록 도와드리니 편한 마음으로 오세요.</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다.<br>전문 호스트가 처음부터 끝까지 분위기를 부드럽게 이끌어 드리고,<br>자연스럽게 대화가 이어지도록 도와드리니 편한 마음으로 오세요.</div>
             </div>
-            <div style="margin-bottom:8px;">
+            <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 술을 못 마시면 어떡해요?</div>
-                <div style="color:#6b7280;">걱정 마세요! 술은 전혀 필수가 아니랍니다 🙂<br>와인 대신 음료도 준비되어 있으니 편하게 즐기시면 돼요.<br>중요한 건 술이 아니라 서로를 알아가는 즐거운 대화니까요.<br>못 마셔도 충분히 즐겁게 참여하실 수 있어요!</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">걱정 마세요! 술은 전혀 필수가 아니랍니다 🙂<br>와인 대신 음료도 준비되어 있으니 편하게 즐기시면 돼요.<br>중요한 건 술이 아니라 서로를 알아가는 즐거운 대화니까요.<br>못 마셔도 충분히 즐겁게 참여하실 수 있어요!</div>
             </div>
-            <div style="margin-bottom:8px;">
+            <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 친구랑 같이 앉을 수 있나요?</div>
-                <div style="color:#6b7280;">함께 오시는 건 언제나 환영이에요! 👯<br>다만 로테이션 특성상 자리는 서로 다른 테이블로 배정될 수 있어요.<br>더 많은 분과 새로운 인연을 만나실 수 있도록 돕기 위함이니 이해 부탁드려요.<br>행사가 끝난 뒤에는 다시 만나 후기를 나누는 재미도 쏠쏠하답니다 😉</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">함께 오시는 건 언제나 환영이에요! 👯<br>다만 로테이션 특성상 자리는 서로 다른 테이블로 배정될 수 있어요.<br>더 많은 분과 새로운 인연을 만나실 수 있도록 돕기 위함이니 이해 부탁드려요.<br>행사가 끝난 뒤에는 다시 만나 후기를 나누는 재미도 쏠쏠하답니다 😉</div>
             </div>
             <div>
                 <div style="font-weight:900;">Q. 개인정보는 안전한가요?</div>
-                <div style="color:#6b7280;">네, 안심하셔도 돼요! 🤍<br>투표 결과와 연락처는 서로 매칭된 상대에게만 공유되고,<br>그 외에는 어디에도 공개되지 않아요.<br>소중한 개인정보는 저희가 책임지고 안전하게 지켜드릴게요.</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">네, 안심하셔도 돼요! 🤍<br>투표 결과와 연락처는 서로 매칭된 상대에게만 공유되고,<br>그 외에는 어디에도 공개되지 않아요.<br>소중한 개인정보는 저희가 책임지고 안전하게 지켜드릴게요.</div>
             </div>
         </div>
     </div>
 
     {{-- 마감 임박 CTA 배너 --}}
-    <div style="margin-top:30px; border-radius:16px; overflow:hidden; background:linear-gradient(135deg,#f43f5e,#ec4899,#8b5cf6); padding:26px 18px; text-align:center; color:#ffffff;">
-        <div style="display:inline-block; background:rgba(255,255,255,0.22); border-radius:999px; padding:6px 18px; font-size:26px; font-weight:800; margin-bottom:10px;">🔥 오픈 기념 할인 · 마감 임박</div>
+    <div style="margin-top:48px; border-radius:16px; overflow:hidden; background:linear-gradient(135deg,#f43f5e,#ec4899,#8b5cf6); padding:36px 20px; text-align:center; color:#ffffff;">
+        <div style="display:inline-block; background:rgba(255,255,255,0.22); border-radius:999px; padding:6px 18px; font-size:26px; font-weight:800; margin-bottom:16px;">🔥 오픈 기념 할인 · 마감 임박</div>
         <div style="font-family:'Jua',sans-serif; font-size:48px; font-weight:400; letter-spacing:0.5px; line-height:1.3;">지금 바로 신청하세요!</div>
-        <div style="font-size:29px; margin-top:8px; opacity:0.95; line-height:1.5;">오픈 특가는 조기 마감될 수 있어요.<br>좋은 인연, 망설이는 사이 자리가 찹니다 💘</div>
+        <div style="font-size:29px; margin-top:14px; opacity:0.95; line-height:1.6;">오픈 특가는 조기 마감될 수 있어요.<br>좋은 인연, 망설이는 사이 자리가 찹니다 💘</div>
     </div>
 </div>

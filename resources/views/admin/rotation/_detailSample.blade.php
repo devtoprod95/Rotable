@@ -129,6 +129,11 @@
         <div style="display:inline-block; background:#ea580c; color:#ffffff; border-radius:999px; padding:5px 20px; font-size:28px; font-weight:900; margin-bottom:8px;">🎉 OPEN EVENT</div>
         <div style="font-family:'Jua',sans-serif; font-size:46px; font-weight:400; color:#c2410c; letter-spacing:0.5px; line-height:1.25;">오픈 기념 할인 진행 중!</div>
         <div style="font-size:28px; color:#9a3412; margin-top:6px; line-height:1.5;">지금 신청하시면 <b>오픈 특가</b>로 참여하실 수 있어요.<br>할인 혜택은 <b>조기 마감</b>될 수 있으니 서둘러 주세요 🔥</div>
+        <div style="background:#ffedd5; border:2px dashed #fb923c; border-radius:12px; padding:12px 10px; margin-top:12px; font-size:26px; color:#9a3412; line-height:1.6;">
+            ⭐ <b>오픈 기념 할인 행사</b>예요!<br>
+            할인 혜택 적용을 위해 참여 후
+            <span style="background:linear-gradient(transparent 55%, #fdba74 55%); padding:0 4px; font-weight:900; color:#7c2d12;">리뷰 작성이 필수</span>입니다.
+        </div>
     </div>
 
     {{-- 한 줄 요약 배너 (후킹) --}}

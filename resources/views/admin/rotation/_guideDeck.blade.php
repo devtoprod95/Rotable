@@ -313,7 +313,7 @@
                 <div class="guide-note">
                     <i class="ti ti-info-circle"></i>
                     <span>미니게임은 <b>필수가 아니에요.</b> 대화가 어색할 때 <b>테이블끼리 자유롭게</b> 즐기면 돼요.
-                    (자유롭게 앉는 2차에서는 할 수 없어요)</span>
+                    다만 <b>2차는 마음에 드는 분과 더 깊이 대화하는 자리</b>라, 대화에 집중하실 수 있도록 게임은 열지 않아요. 양해 부탁드려요 🙏</span>
                 </div>
                 <div class="guide-flow">${wineGamesRows}</div>
             </div>`;

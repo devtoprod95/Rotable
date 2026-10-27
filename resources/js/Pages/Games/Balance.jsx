@@ -140,7 +140,7 @@ export default function Balance() {
                 </div>
 
                 {/* 안내 + 선택지 (중앙 정렬, 안내는 선택지 바로 위에 붙임) */}
-                <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                <div className="flex flex-col items-center gap-4">
                     <div className="w-full rounded-2xl border border-sky-200 bg-sky-50/60 p-3.5">
                         <p className="text-xs font-medium leading-relaxed text-secondary-500">
                             <span className="font-bold text-sky-600">💡 Tip</span>

@@ -121,7 +121,7 @@ export default function ImageMild() {
                 </div>
 
                 {/* 플레이 안내 + 질문 카드 (중앙 정렬, 안내는 질문 바로 위에 붙임) */}
-                <div className="flex flex-1 flex-col items-center justify-center gap-4">
+                <div className="flex flex-col items-center gap-4">
                     <div className="w-full rounded-2xl border border-amber-200 bg-amber-50/60 p-3.5">
                         <p className="text-xs font-medium leading-relaxed text-secondary-500">
                             <span className="font-bold text-amber-600">💡 Tip</span>

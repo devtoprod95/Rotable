@@ -270,7 +270,7 @@ export default function TablePoll({
                             같은 테이블끼리 <span className="font-bold">익명</span>으로 투표해요.
                             누가 뭘 골랐는지는 아무도 몰라요. 솔직하게 눌러주세요! 😉
                             <span className="font-bold text-red-500">
-                                ※ 옆사람 화면은 절대 보지 마세요! ※
+                                🙈 옆사람 화면 보지 말고, 내 화면도 보여주지 마세요!
                             </span>
                         </p>
                     </div>

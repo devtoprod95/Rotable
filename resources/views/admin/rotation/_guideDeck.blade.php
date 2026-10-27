@@ -109,6 +109,17 @@
     .guide-step .step-body { display: flex; flex-direction: column; justify-content: center; }
     .guide-step .step-desc { color: #aeb2d6; font-size: .78em; margin-top: 6px; line-height: 1.55; }
 
+    /* 상단 안내 띠 (예: 미니게임 '필수 아님' 안내) */
+    .guide-note {
+        display: flex; align-items: center; gap: 14px;
+        background: rgba(13,166,120,.14); border: 1px solid rgba(13,166,120,.35);
+        border-radius: 14px; padding: clamp(14px, 2vh, 22px) clamp(18px, 2.4vw, 28px);
+        margin-bottom: clamp(20px, 3vh, 34px);
+        color: #d7f7ec; font-size: clamp(.95rem, 1.8vw, 1.3rem); line-height: 1.6;
+    }
+    .guide-note .ti { font-size: 1.5em; flex: 0 0 auto; color: #2fe0b0; }
+    .guide-note b { color: #fff; }
+
     /* 룰/유의 */
     .guide-rules { display: flex; flex-direction: column; gap: clamp(16px, 2.4vh, 26px); }
     .guide-rule {
@@ -278,12 +289,34 @@
         ]);
 
         // 미니게임 안내 (와인파티 전용) — 로테이션(진행중)에 하단 '게임' 탭에서 즐길 수 있다.
-        var wineGames = slideFlow('🎮 틈틈이 미니게임', 'bg-teal-lt text-teal', '대화가 어색할 땐, 게임으로 분위기 UP!', [
+        // 미니게임 안내 (와인파티 전용) — 상단에 "필수 아님 / 1차 전용" 안내 띠를 두고
+        // 그 아래 게임 목록(스텝)을 보여준다. slideFlow 빌더엔 상단 안내 자리가 없어 직접 조립.
+        var wineGamesSteps = [
             { icon: '🙋', title: 'Yes or No', desc: '같은 테이블끼리 익명으로 예/아니오 투표! 결과가 실시간으로 집계돼요. (옆사람 화면은 가려주세요 🙈)' },
             { icon: '🍯', title: '순한맛 이미지게임', desc: '"~한 사람?" 질문에 어울리는 이성을 다같이 손가락으로 지목! 가볍게 첫인상 몸풀기.' },
             { icon: '🌶️', title: '매운맛 이미지게임', desc: '조금 더 아찔하고 솔직한 질문으로 분위기를 확 달구는 지목 게임.' },
             { icon: '⚖️', title: '밸런스 게임', desc: 'A vs B 둘 중 끌리는 쪽을 엄지 업/다운으로! 서로의 연애관과 취향을 알아봐요.' },
-        ]);
+        ];
+        var wineGamesRows = wineGamesSteps.map(function (s, i) {
+            return `<div class="guide-step">
+                        <span class="guide-step__no">${i + 1}</span>
+                        <span class="guide-step__ico">${s.icon}</span>
+                        <div class="step-body"><div class="fw-bold">${esc(s.title)}</div>
+                             <div class="step-desc">${esc(s.desc)}</div></div>
+                    </div>`;
+        }).join('');
+        var wineGames = `<div class="guide-slide__inner">
+                <div class="guide-head">
+                    <div class="guide-badge bg-teal-lt text-teal">🎮 틈틈이 미니게임</div>
+                    <h2 class="guide-h2">대화가 어색할 땐, 게임으로 분위기 UP!</h2>
+                </div>
+                <div class="guide-note">
+                    <i class="ti ti-info-circle"></i>
+                    <span>미니게임은 <b>필수가 아니에요.</b> 대화가 어색할 때 <b>테이블끼리 자유롭게</b> 즐기면 돼요.
+                    (자유롭게 앉는 2차에서는 할 수 없어요)</span>
+                </div>
+                <div class="guide-flow">${wineGamesRows}</div>
+            </div>`;
 
         /* ---------------------------------------------------------------
          | 타입별 슬라이드 세트

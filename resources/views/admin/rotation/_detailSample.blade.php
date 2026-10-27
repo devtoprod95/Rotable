@@ -30,7 +30,7 @@
                 ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
                 ['icon' => '🤫', 'title' => '100% 비밀 투표', 'desc' => '매칭된 상대에게만 살짝 공유돼요'],
                 ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
-                ['icon' => '🚫', 'title' => '주차 불가', 'desc' => '전용 주차가 없어요. 대중교통 이용을 부탁해요'],
+                ['icon' => '🎮', 'title' => '미니게임 제공', 'desc' => '테이블끼리 즐기는 미니게임으로 어색함을 날려요'],
                 ['icon' => '💘', 'title' => '다음 날 오전 발표', 'desc' => '서로 선택하면 매칭 성사!'],
             ],
         ],
@@ -152,24 +152,8 @@
         </div>
     </div>
 
-    {{-- 핵심 매력 카드 그리드 --}}
-    <div style="margin-bottom:44px;">
-        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#ec4899; text-align:center; letter-spacing:0.5px; margin-bottom:24px;">💗 왜 로테이블일까요?</div>
-        <div style="display:flex; flex-wrap:wrap;">
-            @foreach ($typeConfig['points'] as $pt)
-                <div style="width:50%; box-sizing:border-box; padding:10px;">
-                    <div style="height:100%; border:1px solid #f3d6e6; border-radius:14px; background:#fdf2f8; padding:24px 16px; text-align:center; box-sizing:border-box;">
-                        <div style="font-size:52px; line-height:1;">{{ $pt['icon'] }}</div>
-                        <div style="font-size:30px; font-weight:900; color:#be185d; margin-top:14px; word-break:keep-all;">{{ $pt['title'] }}</div>
-                        <div style="font-size:28px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; word-break:keep-all;">{{ $pt['desc'] }}</div>
-                    </div>
-                </div>
-            @endforeach
-        </div>
-    </div>
-
     {{-- 실시간 명단 업데이트 안내 --}}
-    <div style="background:#ede9fe; border:2px solid #c4b5fd; border-radius:12px; padding:18px 16px; margin-bottom:18px; text-align:center;">
+    <div style="background:#ede9fe; border:2px solid #c4b5fd; border-radius:12px; padding:18px 16px; margin-bottom:40px; text-align:center;">
         <div style="font-family:'Jua',sans-serif; font-size:35px; font-weight:400; color:#7e22ce; letter-spacing:0.5px;">실시간 명단 업데이트 중</div>
         <div style="font-size:29px; color:#6b21a8; margin-top:10px; line-height:1.5;">
             아래 참여자 명단은 신청 현황에 따라 수시로 갱신됩니다.<br>
@@ -231,7 +215,7 @@
     </div>
 
     {{-- 이전 로테이블 기록 --}}
-    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+    <div style="margin-top: 20px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
         <div style="background:#0ea5e9; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             이전 로테이블 기록
         </div>
@@ -264,6 +248,78 @@
             </div>
         </div>
     </div>
+
+    {{-- 핵심 매력 카드 그리드 --}}
+    <div style="margin:44px 0;">
+        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#ec4899; text-align:center; letter-spacing:0.5px; margin-bottom:24px;">💗 왜 로테이블일까요?</div>
+        <div style="display:flex; flex-wrap:wrap;">
+            @foreach ($typeConfig['points'] as $pt)
+                <div style="width:50%; box-sizing:border-box; padding:10px;">
+                    <div style="height:100%; border:1px solid #f3d6e6; border-radius:14px; background:#fdf2f8; padding:24px 16px; text-align:center; box-sizing:border-box;">
+                        <div style="font-size:52px; line-height:1;">{{ $pt['icon'] }}</div>
+                        <div style="font-size:30px; font-weight:900; color:#be185d; margin-top:14px; word-break:keep-all;">{{ $pt['title'] }}</div>
+                        <div style="font-size:28px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; word-break:keep-all;">{{ $pt['desc'] }}</div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    @if ($type === 'wine')
+    {{-- 미니게임 콘텐츠 소개 (와인파티 전용) --}}
+    <div style="margin-top:4px; margin-bottom:44px;">
+        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#7c3aed; text-align:center; letter-spacing:0.5px; margin-bottom:8px;">🎮 대화가 어색할 틈이 없어요</div>
+        <div style="font-size:30px; color:#6b7280; text-align:center; margin-bottom:24px; line-height:1.6;">
+            로테이션 중, 같은 테이블끼리 즐기는 <b style="color:#7c3aed;">미니게임</b>을 폰으로 바로!<br>
+            처음 만난 사이도 금세 웃음꽃이 피는 아이스브레이킹 콘텐츠예요.
+        </div>
+
+        {{-- 게임 이미지 (존재하는 game1~5.png 를 2열로 자동 노출) --}}
+        @php
+            $gameImgs = [];
+            foreach (range(1, 6) as $n) {
+                if (file_exists(public_path("images/game{$n}.png"))) {
+                    $gameImgs[] = asset("images/game{$n}.png");
+                }
+            }
+        @endphp
+        @if (count($gameImgs) > 0)
+            <div style="display:flex; flex-wrap:wrap; margin-bottom:20px;">
+                @foreach ($gameImgs as $idx => $src)
+                    <div style="width:50%; box-sizing:border-box; padding:8px;">
+                        <img src="{{ $src }}" alt="미니게임 예시 {{ $idx + 1 }}"
+                             style="display:block; width:100%; height:auto; border-radius:14px; border:1px solid #e5e7eb;">
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        {{-- 게임 종류 카드 --}}
+        <div style="display:flex; flex-wrap:wrap;">
+            @php
+                $games = [
+                    ['icon' => '🙋', 'title' => 'Yes or No',   'desc' => '같은 테이블끼리 익명으로 예/아니오 투표! 결과가 실시간으로 집계돼요'],
+                    ['icon' => '🍯', 'title' => '순한맛 이미지게임', 'desc' => '“~한 사람?” 질문에 어울리는 이성을 다같이 지목하는 가벼운 몸풀기'],
+                    ['icon' => '🌶️', 'title' => '매운맛 이미지게임', 'desc' => '조금 더 아찔하고 솔직한 질문으로 분위기를 확 달궈요'],
+                    ['icon' => '⚖️', 'title' => '밸런스 게임',   'desc' => 'A vs B 둘 중 끌리는 쪽을 엄지로! 서로의 연애관·취향을 알아가요'],
+                ];
+            @endphp
+            @foreach ($games as $g)
+                <div style="width:50%; box-sizing:border-box; padding:10px;">
+                    <div style="height:100%; border:1px solid #ddd6fe; border-radius:14px; background:#f5f3ff; padding:24px 16px; text-align:center; box-sizing:border-box;">
+                        <div style="font-size:52px; line-height:1;">{{ $g['icon'] }}</div>
+                        <div style="font-size:30px; font-weight:900; color:#6d28d9; margin-top:14px; word-break:keep-all;">{{ $g['title'] }}</div>
+                        <div style="font-size:27px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; word-break:keep-all;">{{ $g['desc'] }}</div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <div style="background:#f5f3ff; border:1px dashed #c4b5fd; border-radius:12px; padding:18px 14px; margin-top:16px; text-align:center; font-size:26px; color:#6d28d9; line-height:1.6;">
+            🍷 게임 벌칙은 테이블끼리 자유롭게! 가볍게 한 잔으로 분위기를 더 띄워 보세요
+        </div>
+    </div>
+    @endif
 
     {{-- 파티 진행시간 안내 --}}
     <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
@@ -324,6 +380,7 @@
             <div>- 밝고 호감 가는 <b>단정한 외모</b>와 분위기를 지니신 분</div>
             <div>- 자기관리가 잘 되어 있고 <b>스타일 감각</b>이 있으신 분</div>
             <div>- 긍정적이고 <b>대화 매너</b>가 좋은 분</div>
+            <div>- 안정적으로 <b>경제 활동</b>을 하고 계신 분</div>
         </div>
     </div>
 
@@ -371,7 +428,7 @@
         <div style="background:#fffbeb; padding:24px 16px; font-size:31px; color:#374151; line-height:1.8; text-align:center;">
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 혼자 가도 괜찮나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다.<br>전문 호스트가 처음부터 끝까지 분위기를 부드럽게 이끌어 드리고,<br>자연스럽게 대화가 이어지도록 도와드리니 편한 마음으로 오세요.</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다.<br>정해진 로테이션 순서와 대화 주제·미니게임이 자연스럽게 분위기를 이끌어 주고,<br>모든 진행이 스마트폰 안내를 따라 흘러가니 편한 마음으로 오세요.</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 술을 못 마시면 어떡해요?</div>
@@ -380,6 +437,10 @@
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 친구랑 같이 앉을 수 있나요?</div>
                 <div style="color:#4b5563; font-weight:700; margin-top:6px;">함께 오시는 건 언제나 환영이에요! 👯<br>다만 로테이션 특성상 자리는 서로 다른 테이블로 배정될 수 있어요.<br>더 많은 분과 새로운 인연을 만나실 수 있도록 돕기 위함이니 이해 부탁드려요.<br>행사가 끝난 뒤에는 다시 만나 후기를 나누는 재미도 쏠쏠하답니다 😉</div>
+            </div>
+            <div style="margin-bottom:24px;">
+                <div style="font-weight:900;">Q. 주차가 되나요?</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">아쉽지만 전용 주차 공간은 없어요 🙏<br>선릉역에서 도보 4분 거리라 접근성이 좋으니<br>가급적 대중교통 이용을 부탁드려요!</div>
             </div>
             <div>
                 <div style="font-weight:900;">Q. 개인정보는 안전한가요?</div>

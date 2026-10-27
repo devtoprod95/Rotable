@@ -138,9 +138,10 @@ export default function AppLayout({
 
 const WINE_NAV_ITEMS = [
     { href: "/home", label: "홈", icon: HeartIcon },
-    { href: "/chats", label: "메시지함", icon: ChatIcon },
+    { href: "/chats", label: "쪽지", icon: ChatIcon },
     { href: "/votes", label: "매칭하기", icon: VoteIcon },
-    { href: "/requests", label: "요청하기", icon: RequestIcon },
+    { href: "/requests", label: "요청", icon: RequestIcon },
+    { href: "/games", label: "게임", icon: GameIcon },
 ];
 
 // 1:1 로테이션: 매칭 선택은 홈에서만, 결과는 종료 후에만.
@@ -322,6 +323,26 @@ function VoteIcon({ active }) {
                 stroke="none"
             />
             <path d="M8 9V6a4 4 0 0 1 8 0v3" />
+        </svg>
+    );
+}
+
+function GameIcon({ active }) {
+    return (
+        <svg
+            width={active ? 24 : 23}
+            height={active ? 24 : 23}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={active ? 2.4 : 1.9}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            {/* 게임패드 */}
+            <path d="M6 12h4m-2-2v4" />
+            <path d="M15 11.5h.01M18 13.5h.01" />
+            <path d="M17.5 6h-11A4.5 4.5 0 0 0 2 10.5v3A4.5 4.5 0 0 0 6.5 18c1.5 0 2.3-.6 3-1.4l.6-.6h3.8l.6.6c.7.8 1.5 1.4 3 1.4a4.5 4.5 0 0 0 4.5-4.5v-3A4.5 4.5 0 0 0 17.5 6z" />
         </svg>
     );
 }

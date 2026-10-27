@@ -154,4 +154,32 @@ class Member extends Authenticatable
 
         return $seating?->table?->table_no;
     }
+
+    /**
+     * 현재(가장 최신 턴 기준) 내가 앉아 있는 테이블의 총 인원수.
+     * 좌석 기록이 없으면 0 을 반환한다.
+     *
+     * "테이블 전원이 투표했는지" 판정 등 테이블 단위 집계에 쓰인다.
+     */
+    public function currentTableSeatCount(): int
+    {
+        // 내 최신 좌석(턴 + 테이블)을 먼저 찾는다.
+        $mySeating = RotationSeating::query()
+            ->whereHas('round', fn ($q) => $q->where('event_id', $this->event_id))
+            ->where('member_id', $this->id)
+            ->join('rotation_rounds', 'rotation_rounds.id', '=', 'rotation_seatings.rotation_round_id')
+            ->orderByDesc('rotation_rounds.round_no')
+            ->select('rotation_seatings.*')
+            ->first();
+
+        if ($mySeating === null) {
+            return 0;
+        }
+
+        // 같은 턴 + 같은 테이블에 앉은 모든 좌석 수.
+        return RotationSeating::query()
+            ->where('rotation_round_id', $mySeating->rotation_round_id)
+            ->where('rotation_table_id', $mySeating->rotation_table_id)
+            ->count();
+    }
 }

@@ -44,6 +44,17 @@ Route::middleware('auth:web')->group(function () {
         ->middleware('throttle:20,1')
         ->name('votes.save');
     Route::get('/requests', [MemberPageController::class, 'requests'])->name('requests');
+    Route::get('/games', [MemberPageController::class, 'games'])->name('games');
+    Route::get('/games/{slug}', [MemberPageController::class, 'gameShow'])
+        ->where('slug', '[a-z0-9-]+')
+        ->name('games.show');
+    // 테이블 익명 Yes/No 투표 게임 - 저장 없는 실시간 신호(브로드캐스트)만 발생.
+    Route::post('/games/table-poll/vote', [MemberPageController::class, 'tablePollVote'])
+        ->middleware('throttle:60,1')
+        ->name('games.table-poll.vote');
+    Route::post('/games/table-poll/next', [MemberPageController::class, 'tablePollNext'])
+        ->middleware('throttle:60,1')
+        ->name('games.table-poll.next');
     Route::post('/requests', [MemberPageController::class, 'sendRequest'])
         ->middleware('throttle:5,1')
         ->name('requests.send');

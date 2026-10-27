@@ -19,3 +19,11 @@ Broadcast::channel('chat.{memberId}', function (Member $member, int $memberId) {
 Broadcast::channel('event-rotation.{eventId}', function (Member $member, int $eventId) {
     return (int) $member->event_id === $eventId;
 }, ['guards' => ['web']]);
+
+// 테이블 단위 익명 Yes/No 투표 게임 채널.
+// 같은 행사 && "지금 그 테이블에 앉아 있는" 회원만 구독할 수 있다.
+// (투표 신호만 오가며 서버에 저장하지 않는 휘발성 데이터)
+Broadcast::channel('table-poll.{eventId}.{tableNo}', function (Member $member, int $eventId, int $tableNo) {
+    return (int) $member->event_id === $eventId
+        && $member->currentTableNo() === $tableNo;
+}, ['guards' => ['web']]);

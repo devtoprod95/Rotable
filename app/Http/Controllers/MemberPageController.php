@@ -13,11 +13,17 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 class MemberPageController extends Controller
 {
+    /**
+     * 테이블 투표 게임 집계(Redis)의 TTL(초). 안전한 자동 청소용 — 한 행사 길이보다 넉넉히.
+     */
+    private const TABLE_POLL_TTL = 21600; // 6시간
+
     /**
      * 루트(/) 진입점.
      * - 비로그인: 로그인 페이지로 이동
@@ -623,6 +629,167 @@ class MemberPageController extends Controller
             'requests'   => $requests,
             'eventClosed' => $isClosed,
         ]);
+    }
+
+    /**
+     * 게임 목록(선택) 화면. (와인파티 진행중에 참가자들이 즐기는 간단한 게임들)
+     */
+    public function games(): InertiaResponse
+    {
+        return Inertia::render('Games', []);
+    }
+
+    /**
+     * 개별 게임 플레이 화면.
+     *
+     * slug ↔ Inertia 페이지 매핑. 아직 미구현 게임은 목록으로 되돌린다.
+     */
+    public function gameShow(string $slug): InertiaResponse|RedirectResponse
+    {
+        $pages = [
+            'image-mild'  => 'Games/ImageMild',
+            'image-spicy' => 'Games/ImageSpicy',
+            'balance'     => 'Games/Balance',
+            'table-poll'  => 'Games/TablePoll',
+        ];
+
+        if (! isset($pages[$slug])) {
+            return redirect()->route('games');
+        }
+
+        // 테이블 투표 게임은 "현재 테이블"에 묶여야 하므로 행사/테이블 정보를 함께 내려준다.
+        $props = [];
+        if ($slug === 'table-poll') {
+            /** @var \App\Models\Member $me */
+            $me = Auth::guard('web')->user();
+
+            $tableNo = $me->currentTableNo();
+
+            // 아직 좌석(테이블)이 배정되지 않았으면 플레이할 수 없다 → 목록으로.
+            if ($tableNo === null) {
+                return redirect()->route('games')
+                    ->with('error', '아직 테이블이 배정되지 않았어요. 자리에 앉은 뒤 다시 시도해 주세요.');
+            }
+
+            // 현재 테이블의 진행 상태(진행 중인 질문/집계)를 Redis 에서 읽어 함께 내려준다.
+            // → 중간에 들어오거나 다른 페이지 갔다 온 사람도 현재 현황을 그대로 본다.
+            $eventId = (int) $me->event_id;
+            $state   = Redis::hgetall($this->tablePollKey($eventId, $tableNo));
+
+            $props = [
+                'eventId'      => $eventId,
+                'tableNo'      => $tableNo,
+                'seatCount'    => $me->currentTableSeatCount(),
+                // 저장된 진행 상태가 없으면 null → 프론트는 0번 질문부터 시작.
+                'initialState' => $state === []
+                    ? null
+                    : [
+                        'questionIndex' => (int) ($state['q'] ?? 0),
+                        'counts'        => [
+                            'yes' => (int) ($state['yes'] ?? 0),
+                            'no'  => (int) ($state['no'] ?? 0),
+                        ],
+                    ],
+            ];
+        }
+
+        return Inertia::render($pages[$slug], $props);
+    }
+
+    /**
+     * 테이블 투표 게임 - 익명 Yes/No 한 표를 처리한다.
+     *
+     * 현재 집계는 Redis 해시에 보관(휘발성)하여, 중간에 들어온 사람도
+     * "지금까지 몇 명이 YES/NO 를 눌렀는지" 정확히 볼 수 있게 한다.
+     * 누가 눌렀는지는 저장하지 않으므로 익명성은 유지된다.
+     * 어떤 테이블에 던지는지는 서버가 "요청자의 현재 테이블" 로 직접 판정한다.
+     */
+    public function tablePollVote(Request $request): RedirectResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me = Auth::guard('web')->user();
+
+        $validated = $request->validate([
+            'question_index' => ['required', 'integer', 'min:0'],
+            'answer'         => ['required', 'in:yes,no'],
+        ]);
+
+        $tableNo = $me->currentTableNo();
+        if ($tableNo === null) {
+            return back();
+        }
+
+        $eventId       = (int) $me->event_id;
+        $questionIndex = (int) $validated['question_index'];
+        $answer        = $validated['answer'];
+        $key           = $this->tablePollKey($eventId, $tableNo);
+
+        // 현재 진행 중인 질문과 일치할 때만 집계한다. (지난 질문의 늦은 표 무시)
+        $currentQuestion = Redis::hget($key, 'q');
+        if ($currentQuestion !== null && (int) $currentQuestion !== $questionIndex) {
+            return back();
+        }
+
+        // 첫 표라면 질문 인덱스를 함께 기록한다.
+        if ($currentQuestion === null) {
+            Redis::hset($key, 'q', $questionIndex);
+        }
+        Redis::hincrby($key, $answer, 1);
+        Redis::expire($key, self::TABLE_POLL_TTL);
+
+        broadcast(new \App\Events\TablePollVoted(
+            $eventId,
+            $tableNo,
+            $questionIndex,
+            $answer,
+        ));
+
+        return back();
+    }
+
+    /**
+     * 테이블 투표 게임 - "다음 질문" 으로 넘겼음을 처리한다.
+     *
+     * 새 질문으로 집계를 리셋(Redis 해시 초기화)하고 같은 테이블에 브로드캐스트한다.
+     */
+    public function tablePollNext(Request $request): RedirectResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me = Auth::guard('web')->user();
+
+        $validated = $request->validate([
+            'question_index' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $tableNo = $me->currentTableNo();
+        if ($tableNo === null) {
+            return back();
+        }
+
+        $eventId       = (int) $me->event_id;
+        $questionIndex = (int) $validated['question_index'];
+        $key           = $this->tablePollKey($eventId, $tableNo);
+
+        // 집계를 새 질문으로 초기화한다. (이전 질문 데이터는 사라짐)
+        Redis::del($key);
+        Redis::hset($key, 'q', $questionIndex);
+        Redis::hset($key, 'yes', 0);
+        Redis::hset($key, 'no', 0);
+        Redis::expire($key, self::TABLE_POLL_TTL);
+
+        broadcast(new \App\Events\TablePollQuestionChanged(
+            $eventId,
+            $tableNo,
+            $questionIndex,
+        ));
+
+        return back();
+    }
+
+    /** 테이블 투표 게임의 현재 집계를 담는 Redis 해시 키. */
+    private function tablePollKey(int $eventId, int $tableNo): string
+    {
+        return "table-poll:{$eventId}:{$tableNo}";
     }
 
     /**

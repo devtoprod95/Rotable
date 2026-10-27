@@ -2,6 +2,7 @@ import { Link, router, usePage } from "@inertiajs/react";
 import { useEffect, useRef, useState } from "react";
 import useRealtimeChat from "@/useRealtimeChat";
 import NavigationLoader from "@/Components/NavigationLoader";
+import echo from "@/echo";
 
 /**
  * 유저(회원) 영역 공통 모바일 레이아웃.
@@ -18,6 +19,41 @@ export default function AppLayout({
     const page = usePage();
     const { auth, eventName } = page.props;
     const url = page.url;
+
+    // 게임 탭/화면 접근은 "와인파티 && 진행중(S)" 에서만 허용된다.
+    // 관리자가 매칭 시작(V)/종료(X) 등으로 상태를 바꾸면 실시간으로 반영해야 하므로,
+    // 행사 채널을 구독해 상태 변동 시 nav 상태를 갱신하고,
+    // 게임 화면에 머물러 있으면 홈으로 내보낸다.
+    const eventId = auth?.user?.event_id ?? null;
+    useEffect(() => {
+        if (!eventId) {
+            return undefined;
+        }
+
+        const channelName = `event-rotation.${eventId}`;
+        const channel = echo.private(channelName);
+
+        // 매칭 시작(S→V)·종료(→X): 더 이상 진행중(S)이 아니므로 게임을 닫는다.
+        const closeGames = () => {
+            // nav 의 게임 탭 노출 조건(gameTabVisible)을 최신화.
+            router.reload({ only: ["gameTabVisible"] });
+            // 게임 관련 화면에 있으면 즉시 홈으로 이동.
+            if (window.location.pathname.startsWith("/games")) {
+                router.visit("/home");
+            }
+        };
+
+        channel.listen(".event.voting.opened", closeGames);
+        channel.listen(".event.closed", closeGames);
+        // 로테이션 진행(P→S 포함)으로 상태가 바뀌면 탭 노출 조건만 갱신.
+        channel.listen(".rotation.updated", () => {
+            router.reload({ only: ["gameTabVisible"] });
+        });
+
+        return () => {
+            echo.leave(`private-${channelName}`);
+        };
+    }, [eventId]);
 
     // 헤더의 "~님" 버튼을 2번 연속 터치하면 로그아웃되는 숨김 제스처.
     const logoutTapRef = useRef({ count: 0, timer: null });
@@ -141,8 +177,10 @@ const WINE_NAV_ITEMS = [
     { href: "/chats", label: "쪽지", icon: ChatIcon },
     { href: "/votes", label: "매칭하기", icon: VoteIcon },
     { href: "/requests", label: "요청", icon: RequestIcon },
-    { href: "/games", label: "게임", icon: GameIcon },
 ];
+
+// 게임 탭. 와인파티가 "진행중(S)" 일 때만 노출한다.
+const GAME_NAV_ITEM = { href: "/games", label: "게임", icon: GameIcon };
 
 // 1:1 로테이션: 매칭 선택은 홈에서만, 결과는 종료 후에만.
 // 메시지함/요청하기는 노출하지 않고, 매칭 탭은 "매칭 결과"로만 둔다.
@@ -151,13 +189,21 @@ const ONE_TO_ONE_NAV_ITEMS = [
     { href: "/votes", label: "매칭 결과", icon: VoteIcon },
 ];
 
-function navItemsFor(eventType) {
-    return eventType === "one" ? ONE_TO_ONE_NAV_ITEMS : WINE_NAV_ITEMS;
+/**
+ * 하단 nav 항목을 구성한다.
+ * - 1:1: 고정 2개.
+ * - 와인파티: 기본 4개 + (게임 탭 노출 조건 충족 시) 게임 탭.
+ */
+function navItemsFor(eventType, gameTabVisible) {
+    if (eventType === "one") {
+        return ONE_TO_ONE_NAV_ITEMS;
+    }
+    return gameTabVisible ? [...WINE_NAV_ITEMS, GAME_NAV_ITEM] : WINE_NAV_ITEMS;
 }
 
 function BottomNav() {
     const { url, props } = usePage();
-    const navItems = navItemsFor(props.eventType);
+    const navItems = navItemsFor(props.eventType, props.gameTabVisible);
     const sharedUnread = props.unreadCount ?? 0;
     const memberId = props.auth?.user?.id ?? null;
 

@@ -337,11 +337,6 @@ export default function TablePoll({
                             NO
                         </button>
                     </div>
-                    {myAnswer && (
-                        <p className="text-xs font-semibold text-violet-500">
-                            투표 완료! 다른 사람들의 결과를 기다려 보세요 👀
-                        </p>
-                    )}
                 </div>
 
                 {/* 다음 질문 버튼 */}

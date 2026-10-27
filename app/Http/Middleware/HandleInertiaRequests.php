@@ -38,6 +38,16 @@ class HandleInertiaRequests extends Middleware
         /** @var \App\Models\Member|null $member */
         $member = $request->user('web');
 
+        // nav 분기용 행사 정보(타입/상태)를 한 번만 조회한다.
+        $event = $member
+            ? \App\Models\EventRound::whereKey($member->event_id)->first(['title', 'type', 'status'])
+            : null;
+
+        // 게임 탭 노출 조건: 와인파티(wine) && 진행중(S).
+        $gameTabVisible = $event !== null
+            && $event->type === \App\Models\EventRound::TYPE_WINE
+            && $event->status === \App\Models\EventRound::STATUS_STARTED;
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -50,13 +60,11 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             // 상단 header 표시용 - 로그인 회원이 참여한 행사명.
-            'eventName' => fn () => $member
-                ? \App\Models\EventRound::whereKey($member->event_id)->value('title')
-                : null,
+            'eventName' => $event?->title,
             // 프론트 nav/문구 분기용 - 행사 타입(wine: 와인파티, one: 1:1).
-            'eventType' => fn () => $member
-                ? \App\Models\EventRound::whereKey($member->event_id)->value('type')
-                : null,
+            'eventType' => $event?->type,
+            // 프론트 nav 분기용 - 게임 탭을 보여줄지 여부. (서버에서 판정)
+            'gameTabVisible' => $gameTabVisible,
             // 하단 nav 메시지함 뱃지용 - 나에게 온 안읽은 메시지 개수.
             'unreadCount' => fn () => $member
                 ? \App\Models\Message::where('receiver_id', $member->id)->whereNull('read_at')->count()

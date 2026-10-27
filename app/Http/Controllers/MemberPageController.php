@@ -632,10 +632,17 @@ class MemberPageController extends Controller
     }
 
     /**
-     * 게임 목록(선택) 화면. (와인파티 진행중에 참가자들이 즐기는 간단한 게임들)
+     * 게임 목록(선택) 화면.
+     *
+     * 와인파티(wine)이면서 진행중(S)·매칭중(V) 일 때만 접근 가능하다.
+     * (대기/종료 상태이거나 1:1 타입이면 홈으로 돌려보낸다)
      */
-    public function games(): InertiaResponse
+    public function games(): InertiaResponse|RedirectResponse
     {
+        if (! $this->isGamePlayable()) {
+            return redirect()->route('home');
+        }
+
         return Inertia::render('Games', []);
     }
 
@@ -643,9 +650,14 @@ class MemberPageController extends Controller
      * 개별 게임 플레이 화면.
      *
      * slug ↔ Inertia 페이지 매핑. 아직 미구현 게임은 목록으로 되돌린다.
+     * 와인파티 진행중(S/V)이 아니면 접근을 막는다.
      */
     public function gameShow(string $slug): InertiaResponse|RedirectResponse
     {
+        if (! $this->isGamePlayable()) {
+            return redirect()->route('home');
+        }
+
         $pages = [
             'image-mild'  => 'Games/ImageMild',
             'image-spicy' => 'Games/ImageSpicy',
@@ -706,6 +718,10 @@ class MemberPageController extends Controller
      */
     public function tablePollVote(Request $request): RedirectResponse
     {
+        if (! $this->isGamePlayable()) {
+            return back();
+        }
+
         /** @var \App\Models\Member $me */
         $me = Auth::guard('web')->user();
 
@@ -754,6 +770,10 @@ class MemberPageController extends Controller
      */
     public function tablePollNext(Request $request): RedirectResponse
     {
+        if (! $this->isGamePlayable()) {
+            return back();
+        }
+
         /** @var \App\Models\Member $me */
         $me = Auth::guard('web')->user();
 
@@ -790,6 +810,28 @@ class MemberPageController extends Controller
     private function tablePollKey(int $eventId, int $tableNo): string
     {
         return "table-poll:{$eventId}:{$tableNo}";
+    }
+
+    /**
+     * 게임을 즐길 수 있는 상태인지 판정한다.
+     * - 와인파티(wine) 타입이면서
+     * - 진행중(S) 상태일 때만 true. (매칭중 V·종료 X 등은 불가)
+     */
+    private function isGamePlayable(): bool
+    {
+        /** @var \App\Models\Member|null $me */
+        $me = Auth::guard('web')->user();
+        if ($me === null) {
+            return false;
+        }
+
+        $event = EventRound::find($me->event_id);
+        if ($event === null) {
+            return false;
+        }
+
+        return $event->type === EventRound::TYPE_WINE
+            && $event->status === EventRound::STATUS_STARTED;
     }
 
     /**

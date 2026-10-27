@@ -428,7 +428,7 @@
         <div style="background:#fffbeb; padding:24px 16px; font-size:31px; color:#374151; line-height:1.8; text-align:center;">
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 혼자 가도 괜찮나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다.<br>정해진 로테이션 순서와 대화 주제·미니게임이 자연스럽게 분위기를 이끌어 주고,<br>모든 진행이 스마트폰 안내를 따라 흘러가니 편한 마음으로 오세요.</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다. 정해진 로테이션 순서와 대화 주제·미니게임이 자연스럽게 분위기를 이끌어 주고, 모든 진행이 스마트폰 안내를 따라 흘러가니 편한 마음으로 오세요.</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 술을 못 마시면 어떡해요?</div>
@@ -436,7 +436,7 @@
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 친구랑 같이 앉을 수 있나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">함께 오시는 건 언제나 환영이에요! 👯<br>다만 로테이션 특성상 자리는 서로 다른 테이블로 배정될 수 있어요.<br>더 많은 분과 새로운 인연을 만나실 수 있도록 돕기 위함이니 이해 부탁드려요.<br>행사가 끝난 뒤에는 다시 만나 후기를 나누는 재미도 쏠쏠하답니다 😉</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">함께 오시는 건 언제나 환영이에요! 👯<br>다만 로테이션 특성상 자리는 서로 다른 테이블로 배정될 수 있어요. 더 많은 분과 새로운 인연을 만나실 수 있도록 돕기 위함이니 이해 부탁드려요. 행사가 끝난 뒤에는 다시 만나 후기를 나누는 재미도 쏠쏠하답니다 😉</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 주차가 되나요?</div>

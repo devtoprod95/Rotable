@@ -52,10 +52,16 @@ class PublicGameController extends Controller
     public function show(string $slug): InertiaResponse|RedirectResponse
     {
         $pages = [
+            // 소개팅
             'image-mild'  => 'Public/ImageMild',
             'image-spicy' => 'Public/ImageSpicy',
             'balance'     => 'Public/Balance',
             'poll'        => 'Public/Poll',
+            // 술게임 (🔞 성인) — 1~4번 구현분
+            'drink-balance'    => 'Public/DrinkBalance',
+            'kings-game'       => 'Public/KingsGame',
+            'drink-image'      => 'Public/DrinkImage',
+            'penalty-roulette' => 'Public/PenaltyRoulette',
         ];
 
         if (! isset($pages[$slug])) {

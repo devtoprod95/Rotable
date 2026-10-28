@@ -98,7 +98,7 @@ const GAMES = [
     {
         slug: "drink-image",
         category: "drink",
-        title: "이미지게임 (취했을 때) 🔞",
+        title: "이미지게임 🔞",
         players: "3인 이상",
         emoji: "🥵",
         desc: "수위 확 올린 \"~할 것 같은 사람?\" 지목 게임. 지목 1위가 벌주 한 잔!",
@@ -107,37 +107,26 @@ const GAMES = [
         ready: true,
     },
     {
-        slug: "penalty-roulette",
+        slug: "truth-game",
         category: "drink",
-        title: "랜덤 벌칙 룰렛 🔞",
+        title: "진실게임 🔞",
         players: "2인 이상",
-        emoji: "🎯",
-        desc: "룰렛을 돌려 당첨된 벌칙 수행! 원샷·러브샷·애교·흑기사… 무엇이 걸릴까?",
+        emoji: "🎭",
+        desc: "온도를 서서히 올리는 단계별 질문! 솔직하게 답하거나, 못 하면 벌칙.",
         spice: 3,
-        tone: "from-indigo-100 to-purple-100 border-indigo-300",
+        tone: "from-teal-100 to-emerald-100 border-teal-300",
         ready: true,
     },
     {
-        slug: "tension-talk",
+        slug: "spin-bottle",
         category: "drink",
-        title: "텐션 토크 🔞",
-        players: "2인 이상",
-        emoji: "💬",
-        desc: "수위 높은 질문에 솔직하게! 답 못하면 벌주. (준비중)",
+        title: "병돌리기 🔞",
+        players: "3인 이상",
+        emoji: "🍾",
+        desc: "병을 돌려 멈춘 방향의 사람과! 무엇을 할지는 운명에 맡겨요.",
         spice: 3,
-        tone: "from-rose-100 to-orange-100 border-rose-300",
-        ready: false,
-    },
-    {
-        slug: "truth-or-dare",
-        category: "drink",
-        title: "진실 혹은 벌칙 🔞",
-        players: "2인 이상",
-        emoji: "🎭",
-        desc: "진실 or 도전 중 택1! 못 하면 원샷. (준비중)",
-        spice: 3,
-        tone: "from-teal-100 to-emerald-100 border-teal-300",
-        ready: false,
+        tone: "from-rose-100 to-pink-100 border-rose-300",
+        ready: true,
     },
 ];
 
@@ -216,7 +205,9 @@ function GameCard({ game, index }) {
                     {game.desc}
                 </span>
                 <span className="flex items-center gap-2">
-                    <SpiceLevel level={game.spice} />
+                    {game.category !== "drink" && (
+                        <SpiceLevel level={game.spice} />
+                    )}
                     {game.players && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-bold text-secondary-500 shadow-inner">
                             👥 {game.players}
@@ -251,7 +242,15 @@ export default function Games() {
         );
     };
 
-    const visibleGames = GAMES.filter((game) => game.category === tab);
+    // 적정 인원에서 최소 인원 수를 뽑는다. (예: "2인 이상" → 2)
+    const minPlayers = (game) => {
+        const m = /\d+/.exec(game.players ?? "");
+        return m ? Number(m[0]) : 99;
+    };
+
+    const visibleGames = GAMES.filter((game) => game.category === tab).sort(
+        (a, b) => minPlayers(a) - minPlayers(b),
+    );
     const isDrink = tab === "drink";
 
     // 공용 '현재 벌칙' — 상단 룰렛으로 정하면 모든 술게임에서 공유된다.

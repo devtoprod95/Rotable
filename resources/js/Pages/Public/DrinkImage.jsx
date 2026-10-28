@@ -90,7 +90,7 @@ function DrinkImageGame() {
                 <div className="flex items-center gap-1.5">
                     <span className="text-xl">🥵</span>
                     <h1 className="text-lg font-extrabold text-secondary-700">
-                        이미지게임 (취했을 때)
+                        이미지게임
                     </h1>
                 </div>
                 <span className="ml-auto rounded-full bg-fuchsia-100 px-2.5 py-1 text-xs font-bold text-fuchsia-500">
@@ -138,7 +138,7 @@ function DrinkImageGame() {
 export default function DrinkImage() {
     return (
         <PublicLayout>
-            <Head title="이미지게임 (취했을 때)" />
+            <Head title="이미지게임" />
             <DrinkImageGame />
         </PublicLayout>
     );

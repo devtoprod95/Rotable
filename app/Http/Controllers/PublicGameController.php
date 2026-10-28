@@ -57,11 +57,12 @@ class PublicGameController extends Controller
             'image-spicy' => 'Public/ImageSpicy',
             'balance'     => 'Public/Balance',
             'poll'        => 'Public/Poll',
-            // 술게임 (🔞 성인) — 1~4번 구현분
+            // 술게임 (🔞 성인)
             'drink-balance'    => 'Public/DrinkBalance',
             'kings-game'       => 'Public/KingsGame',
             'drink-image'      => 'Public/DrinkImage',
-            'penalty-roulette' => 'Public/PenaltyRoulette',
+            'truth-game'       => 'Public/TruthGame',
+            'spin-bottle'      => 'Public/SpinBottle',
         ];
 
         if (! isset($pages[$slug])) {

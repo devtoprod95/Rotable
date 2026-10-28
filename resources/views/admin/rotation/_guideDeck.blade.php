@@ -91,6 +91,18 @@
     .guide-lead { font-size: clamp(1.1rem, 2.6vw, 1.7rem); color: #c7cae6; line-height: 1.85; margin: 0; }
     .guide-hint { color: #aeb2d6; font-size: clamp(1rem, 1.9vw, 1.3rem); }
 
+    /* 커버 슬라이드 미디어 (QR 등) — 리드 아래 가운데에 또렷하게 */
+    .guide-cover-media { margin-top: clamp(20px, 3.4vh, 40px); display: flex; flex-direction: column; align-items: center; gap: clamp(10px, 1.6vh, 18px); }
+    .guide-cover-img {
+        width: clamp(140px, 22vh, 260px); height: auto; aspect-ratio: 1 / 1;
+        background: #fff; padding: clamp(8px, 1.2vh, 14px); border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.35); object-fit: contain;
+    }
+    .guide-cover-caption {
+        font-weight: 700; font-size: clamp(1rem, 2vw, 1.4rem); color: #fff;
+        background: rgba(207,47,76,.85); padding: 10px 22px; border-radius: 999px;
+    }
+
     /* 제목(배지+h2)과 본문 사이 간격 — 전체화면 기준으로 넉넉하게 */
     .guide-head { margin-bottom: clamp(28px, 5vh, 64px); }
     .guide-head .guide-badge { margin-bottom: clamp(14px, 2.4vh, 28px); }
@@ -192,11 +204,19 @@
         /* ---------------------------------------------------------------
          | 슬라이드 조각 빌더 — 각 슬라이드를 HTML 문자열로 만든다.
          * ------------------------------------------------------------- */
-        function slideCover(badge, badgeCls, title, lead) {
+        function slideCover(badge, badgeCls, title, lead, media) {
+            // media: (선택) { src, caption } — 리드 문구 아래에 이미지(QR 등)를 크게 보여준다.
+            var mediaHtml = media && media.src
+                ? `<div class="guide-cover-media">
+                        <img src="${media.src}" alt="${esc(media.caption || '')}" class="guide-cover-img">
+                        ${media.caption ? `<div class="guide-cover-caption">${esc(media.caption)}</div>` : ''}
+                   </div>`
+                : '';
             return `<div class="guide-slide__inner text-center">
                         <div class="guide-badge ${badgeCls} mb-4">${esc(badge)}</div>
                         <h1 class="guide-title">${title}</h1>
                         <p class="guide-lead">${lead}</p>
+                        ${mediaHtml}
                     </div>`;
         }
         function slideFlow(badge, badgeCls, h2, steps) {
@@ -330,7 +350,8 @@
 
                 slideCover('ROTABLE · 로테이블', 'bg-pink-lt text-pink',
                     '로테이블에 오신 걸 환영합니다 🍷',
-                    '좋은 인연은 서두르지 않아도, 반드시 찾아와요.<br>오늘 이 자리에서 당신의 소중한 인연이 시작되길, 진심으로 응원할게요 🤍'),
+                    '좋은 인연은 서두르지 않아도, 반드시 찾아와요.<br>오늘 이 자리에서 당신의 소중한 인연이 시작되길, 진심으로 응원할게요 🤍',
+                    { src: '{{ asset('images/qr_입장등록.png') }}', caption: '📷 QR을 찍고 입장등록부터 해주세요!' }),
 
                 slideFlow('1. 서비스 이용안내', 'bg-blue-lt text-blue', '오늘은 이렇게 흘러가요', [
                     { icon: '🎫', title: '입장 & 닉네임', desc: '도착하시면 나만의 닉네임을 받고, 안내해 드리는 테이블에 편하게 앉으시면 돼요.' },
@@ -363,7 +384,8 @@
             solo: [
                 slideCover('ROTABLE · 로테이블', 'bg-pink-lt text-pink',
                     '로테이블에 오신 걸 환영합니다 💗',
-                    '한 사람 한 사람, 마음을 다해 마주해 보세요.<br>오늘의 만남이 당신의 소중한 인연으로 이어지길, 진심으로 응원할게요 🤍'),
+                    '한 사람 한 사람, 마음을 다해 마주해 보세요.<br>오늘의 만남이 당신의 소중한 인연으로 이어지길, 진심으로 응원할게요 🤍',
+                    { src: '{{ asset('images/qr_입장등록.png') }}', caption: '📷 QR을 찍고 입장등록부터 해주세요!' }),
 
                 slideFlow('1. 서비스 이용안내', 'bg-blue-lt text-blue', '오늘은 이렇게 흘러가요', [
                     { icon: '🎫', title: '입장 & 닉네임', desc: '도착하시면 나만의 닉네임을 받고, 안내해 드리는 자리에 편하게 앉으시면 돼요.' },

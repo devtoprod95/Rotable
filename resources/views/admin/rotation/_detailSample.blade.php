@@ -274,7 +274,7 @@
             처음 만난 사이도 금세 웃음꽃이 피는 아이스브레이킹 콘텐츠예요.
         </div>
 
-        {{-- 게임 이미지 (존재하는 game1~5.png 를 2열로 자동 노출) --}}
+        {{-- 게임 이미지 (존재하는 game1~6.png 를 카드화해 또렷이 구분) --}}
         @php
             $gameImgs = [];
             foreach (range(1, 6) as $n) {
@@ -282,13 +282,29 @@
                     $gameImgs[] = asset("images/game{$n}.png");
                 }
             }
+            // 카드별로 번갈아 쓰는 포인트 색 (테두리/뱃지 배경)
+            $gameTones = [
+                ['bd' => '#c4b5fd', 'bg' => '#f5f3ff', 'badge' => '#7c3aed'], // 보라
+                ['bd' => '#fbcfe8', 'bg' => '#fdf2f8', 'badge' => '#db2777'], // 핑크
+                ['bd' => '#fde68a', 'bg' => '#fffbeb', 'badge' => '#d97706'], // 앰버
+                ['bd' => '#bae6fd', 'bg' => '#f0f9ff', 'badge' => '#0284c7'], // 스카이
+                ['bd' => '#bbf7d0', 'bg' => '#f0fdf4', 'badge' => '#16a34a'], // 그린
+                ['bd' => '#fecaca', 'bg' => '#fef2f2', 'badge' => '#dc2626'], // 레드
+            ];
         @endphp
         @if (count($gameImgs) > 0)
-            <div style="display:flex; flex-wrap:wrap; margin-bottom:20px;">
+            <div style="display:flex; flex-wrap:wrap; padding:0 6px; margin-bottom:24px;">
                 @foreach ($gameImgs as $idx => $src)
-                    <div style="width:50%; box-sizing:border-box; padding:8px;">
-                        <img src="{{ $src }}" alt="미니게임 예시 {{ $idx + 1 }}"
-                             style="display:block; width:100%; height:auto; border-radius:14px; border:1px solid #e5e7eb;">
+                    @php $tone = $gameTones[$idx % count($gameTones)]; @endphp
+                    <div style="width:50%; box-sizing:border-box; padding:18px 14px;">
+                        <div style="position:relative; border:2px solid {{ $tone['bd'] }}; background:{{ $tone['bg'] }}; border-radius:18px; padding:16px; box-sizing:border-box; box-shadow:0 6px 18px -8px rgba(0,0,0,0.18);">
+                            {{-- 번호 뱃지 --}}
+                            <div style="position:absolute; top:-14px; left:16px; background:{{ $tone['badge'] }}; color:#ffffff; font-family:'Jua',sans-serif; font-size:26px; font-weight:400; line-height:1; padding:9px 18px; border-radius:999px; box-shadow:0 4px 10px -3px rgba(0,0,0,0.3); letter-spacing:0.5px;">
+                                GAME {{ $idx + 1 }}
+                            </div>
+                            <img src="{{ $src }}" alt="미니게임 예시 {{ $idx + 1 }}"
+                                 style="display:block; width:100%; height:auto; border-radius:12px; margin-top:10px;">
+                        </div>
                     </div>
                 @endforeach
             </div>

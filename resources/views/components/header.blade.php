@@ -13,6 +13,24 @@
             <div class="navbar-nav flex-row order-md-last">
 
                 @if( !empty(auth('admin')->user()) )
+                        @php
+                            $isSuperAdmin = auth('admin')->user()?->hasRole(\App\Enums\Role::SuperAdmin->value) ?? false;
+                        @endphp
+                        @if ($isSuperAdmin)
+                            <div class="nav-item dropdown d-flex align-items-center me-2">
+                                <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-bold" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="ti ti-device-gamepad-2 me-1"></i> 미니게임 · 안내
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end">
+                                    <a href="{{ url('/public/games') }}" target="_blank" rel="noopener" class="dropdown-item">
+                                        <i class="ti ti-device-gamepad-2 me-2 fs-2"></i> 공개 게임 열기
+                                    </a>
+                                    <a href="{{ route('public.guide') }}" target="_blank" rel="noopener" class="dropdown-item">
+                                        <i class="ti ti-slideshow me-2 fs-2"></i> 안내 슬라이드
+                                    </a>
+                                </div>
+                            </div>
+                        @endif
                         <div class="nav-item d-flex align-items-center me-2">
                             <button type="button" class="btn btn-danger btn-sm px-3 fw-bold" id="adminGuideOpenBtn">
                                 <i class="ti ti-help-circle me-1"></i> 사용 설명서

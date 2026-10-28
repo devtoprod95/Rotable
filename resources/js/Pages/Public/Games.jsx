@@ -2,7 +2,7 @@ import { Head, router, usePage } from "@inertiajs/react";
 import { useEffect, useState } from "react";
 import PublicLayout from "@/Layouts/PublicLayout";
 import PenaltyRouletteModal from "@/Components/Public/PenaltyRouletteModal";
-import { getCurrentPenalty, PENALTY_EVENT } from "@/publicPenalty";
+import { getCurrentPenalty, PENALTY_EVENT, PENALTY_FAIL } from "@/publicPenalty";
 
 /**
  * 공개(비로그인) 게임 목록.
@@ -64,7 +64,7 @@ const GAMES = [
         slug: "balance",
         category: "dating",
         title: "밸런스 게임",
-        players: "2인 이상",
+        players: "3인 이상",
         emoji: "⚖️",
         desc: "A vs B 둘 중 끌리는 쪽을 엄지로! 서로의 연애관·취향을 알아봐요.",
         spice: 2,
@@ -77,7 +77,7 @@ const GAMES = [
         slug: "drink-balance",
         category: "drink",
         title: "밸런스 게임 🔞",
-        players: "2인 이상",
+        players: "3인 이상",
         emoji: "⚖️",
         desc: "A vs B 중 끌리는 쪽을 엄지로! 수위를 확 올린 19금 밸런스 게임.",
         spice: 3,
@@ -126,6 +126,17 @@ const GAMES = [
         desc: "병을 돌려 멈춘 방향의 사람과! 무엇을 할지는 운명에 맡겨요.",
         spice: 3,
         tone: "from-rose-100 to-pink-100 border-rose-300",
+        ready: true,
+    },
+    {
+        slug: "timing-stop",
+        category: "drink",
+        title: "타이밍 스톱 ⏱️",
+        players: "2인 이상",
+        emoji: "⏱️",
+        desc: "목표 시간에 딱 맞춰 멈춰라! 돌아가며 기록을 쌓고, 오차 가장 큰 사람이 벌칙!",
+        spice: 2,
+        tone: "from-sky-100 to-cyan-100 border-sky-300",
         ready: true,
     },
 ];
@@ -269,10 +280,22 @@ export default function Games() {
             <Head title="공개 게임" />
 
             <div className="flex flex-1 flex-col gap-4 px-4 py-5">
-                <div className="flex flex-col gap-1">
-                    <h1 className="text-xl font-extrabold text-secondary-700">
-                        🎮 게임하기
-                    </h1>
+                {/* 히어로 배너 */}
+                <div className="relative overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-primary/10 via-rose-50 to-fuchsia-50 px-5 py-5">
+                    <span
+                        aria-hidden="true"
+                        className="pointer-events-none absolute -right-2 -top-3 text-7xl opacity-15"
+                    >
+                        🎉
+                    </span>
+                    <div className="relative z-10 flex flex-col gap-1.5">
+                        <span className="inline-flex w-fit items-center gap-1 rounded-full bg-white/70 px-2.5 py-0.5 text-[11px] font-black text-primary shadow-inner">
+                            🎮 ROTABLE MINI GAMES
+                        </span>
+                        <p className="text-sm font-medium text-secondary-500">
+                            설레는 분위기를 만드는 한 판! 함께 즐길 게임을 골라보세요.
+                        </p>
+                    </div>
                 </div>
 
                 {/* 분류 탭 */}
@@ -323,9 +346,14 @@ export default function Games() {
                                     이번 벌칙
                                 </p>
                                 {penalty ? (
-                                    <p className="truncate text-sm font-extrabold text-secondary-800">
-                                        {penalty.emoji} {penalty.text}
-                                    </p>
+                                    <>
+                                        <p className="truncate text-sm font-extrabold text-secondary-800">
+                                            {penalty.text}
+                                        </p>
+                                        <p className="text-[11px] font-bold text-red-500">
+                                            {PENALTY_FAIL}
+                                        </p>
+                                    </>
                                 ) : (
                                     <p className="text-sm font-medium text-secondary-400">
                                         아직 안 정했어요. 룰렛을 돌려보세요!

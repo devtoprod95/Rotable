@@ -1,6 +1,6 @@
 import { Link } from "@inertiajs/react";
 import { useEffect, useState } from "react";
-import { getCurrentPenalty, PENALTY_EVENT } from "@/publicPenalty";
+import { getCurrentPenalty, PENALTY_EVENT, PENALTY_FAIL } from "@/publicPenalty";
 
 /**
  * '이번 벌칙' 배너.
@@ -24,11 +24,12 @@ export default function PenaltyBanner() {
             <div className="mb-4 flex items-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/70 px-3.5 py-3">
                 <span className="text-lg leading-none">🎯</span>
                 <div className="min-w-0 flex-1">
-                    <p className="text-[11px] font-bold text-indigo-500">
-                        진 사람은 이번 벌칙!
-                    </p>
+                    <p className="text-[11px] font-bold text-indigo-500">이번 미션</p>
                     <p className="truncate text-sm font-extrabold text-secondary-800">
-                        {penalty.emoji} {penalty.text}
+                        {penalty.text}
+                    </p>
+                    <p className="text-[11px] font-bold text-red-500">
+                        {PENALTY_FAIL}
                     </p>
                 </div>
             </div>

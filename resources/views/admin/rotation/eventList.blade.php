@@ -28,37 +28,8 @@
 </style>
 <div class="row row-cards mt-2">
 
-    {{-- 공개 게임 바로가기 (최고관리자 전용) --}}
-    @php
-        $isSuperAdmin = auth('admin')->user()?->hasRole(\App\Enums\Role::SuperAdmin->value) ?? false;
-    @endphp
-    @if ($isSuperAdmin)
-        <div class="col-12">
-            <div class="card border-primary">
-                <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge bg-pink-lt text-pink">최고관리자</span>
-                        <div>
-                            <div class="fw-bold">🎮 공개 미니게임</div>
-                            <div class="text-muted" style="font-size:0.88em;">
-                                로그인 없이 누구나 접속해 즐기는 공개 게임 페이지예요. (새 탭으로 열립니다)
-                            </div>
-                        </div>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a href="{{ url('/public/games') }}" target="_blank" rel="noopener"
-                           class="btn btn-primary">
-                            <i class="ti ti-device-gamepad-2 me-1"></i> 공개 게임 열기
-                        </a>
-                        <a href="{{ route('public.guide') }}" target="_blank" rel="noopener"
-                           class="btn btn-outline-primary">
-                            <i class="ti ti-slideshow me-1"></i> 안내 슬라이드
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endif
+    {{-- 공개 게임/안내 슬라이드 바로가기는 상단 헤더(사용 설명서 옆)로 이동했다. --}}
+
 
     {{-- 방문 통계 (매일 자정 스냅샷) --}}
     <div class="col-12">

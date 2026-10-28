@@ -63,6 +63,7 @@ class PublicGameController extends Controller
             'drink-image'      => 'Public/DrinkImage',
             'truth-game'       => 'Public/TruthGame',
             'spin-bottle'      => 'Public/SpinBottle',
+            'timing-stop'      => 'Public/TimingStop',
         ];
 
         if (! isset($pages[$slug])) {

@@ -82,7 +82,7 @@ function TruthGameInner() {
                         <span className="font-bold text-teal-600">🎭 룰</span>
                         <br />
                         돌아가며 질문에 <span className="font-bold">솔직하게</span> 답해요.
-                        <span className="font-bold text-red-500"> 답 못하면 벌칙!</span> 😈
+                        <span className="font-bold text-red-500"> 5초 안에 답 못하면 진 걸로 간주, 벌칙!</span> 😈
                     </p>
                 </div>
 
@@ -97,7 +97,7 @@ function TruthGameInner() {
                 </div>
 
                 <p className="text-sm font-medium text-secondary-400">
-                    솔직하게 답하거나, 못 하면 벌칙! 😈
+                    5초 안에 솔직하게 답하거나, 못 하면 벌칙! 😈
                 </p>
             </div>
 

@@ -24,16 +24,33 @@ export default function PublicLayout({ children }) {
                                 </span>
                             </Link>
                             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-                                공개 게임
+                                미니게임
                             </span>
                         </div>
                     </div>
                 </header>
 
                 {/* 컨텐츠 (상단 header 높이만큼 패딩) */}
-                <main className="flex flex-1 flex-col bg-gray-50 pt-[calc(var(--spacing-header)+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)]">
+                <main className="flex flex-1 flex-col bg-gray-50 pt-[calc(var(--spacing-header)+env(safe-area-inset-top))]">
                     {children}
                 </main>
+
+                {/* 푸터 — 만든이 크레딧 */}
+                <footer className="bg-gray-50 px-4 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 text-center">
+                    <div className="mx-auto mb-3 h-px w-10 bg-secondary-200" />
+                    <p className="text-[11px] font-medium tracking-wide text-secondary-400">
+                        made with <span className="text-primary">♥</span> by{" "}
+                        <span className="font-bold tracking-normal text-secondary-600">
+                            Hando Kim
+                        </span>
+                    </p>
+                    <a
+                        href="mailto:devtoproduction@gmail.com"
+                        className="mt-1 inline-block text-[11px] font-medium tracking-wide text-secondary-400 underline-offset-2 hover:text-primary hover:underline"
+                    >
+                        devtoproduction@gmail.com
+                    </a>
+                </footer>
             </div>
         </div>
     );

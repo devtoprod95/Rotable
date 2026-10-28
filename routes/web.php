@@ -19,10 +19,33 @@ Route::get('/qr/{code}', [\App\Http\Controllers\QrRedirectController::class, 're
     ->where('code', '[A-Za-z0-9]+')
     ->name('qr.redirect');
 
-// 참가자 안내 슬라이드 공개 페이지 — 비인증(누구나). /guide 또는 /guide/{type}(wine|solo)
-Route::get('/guide/{type?}', [\App\Http\Controllers\RotationController::class, 'guidePublic'])
-    ->where('type', 'wine|solo')
-    ->name('public.guide');
+// 참가자 안내 슬라이드 공개 페이지 (비인증) — /public/guide 또는 /public/guide/{type}(wine|solo)
+// 공개 미니게임 — 로그인/테이블 없이 "지금 이 페이지에 접속한 사람들"끼리 즐기는 버전.
+Route::prefix('public')->name('public.')->group(function () {
+    Route::get('/guide/{type?}', [\App\Http\Controllers\RotationController::class, 'guidePublic'])
+        ->where('type', 'wine|solo')
+        ->name('guide');
+
+    Route::get('/games', [\App\Http\Controllers\PublicGameController::class, 'index'])->name('games');
+    Route::get('/games/{slug}', [\App\Http\Controllers\PublicGameController::class, 'show'])
+        ->where('slug', '[a-z0-9-]+')
+        ->name('games.show');
+
+    // 공개 Yes/No — 저장 없는 휘발성 집계(Redis) + public 채널 브로드캐스트.
+    Route::post('/games/poll/vote', [\App\Http\Controllers\PublicGameController::class, 'pollVote'])
+        ->middleware('throttle:120,1')->name('games.poll.vote');
+    Route::post('/games/poll/next', [\App\Http\Controllers\PublicGameController::class, 'pollNext'])
+        ->middleware('throttle:120,1')->name('games.poll.next');
+    // 접속자 수 하트비트(presence 대체) — 클라가 주기적으로 핑.
+    Route::post('/games/poll/heartbeat', [\App\Http\Controllers\PublicGameController::class, 'pollHeartbeat'])
+        ->middleware('throttle:120,1')->name('games.poll.heartbeat');
+});
+
+// (구) /guide → /public/guide 로 영구 이동. 기존 QR/링크 보존용 리다이렉트.
+Route::permanentRedirect('/guide', '/public/guide');
+Route::get('/guide/{type}', function (string $type) {
+    return redirect()->route('public.guide', ['type' => $type], 301);
+})->where('type', 'wine|solo');
 
 // 입장/입장등록 화면.
 // 이미 등록(로그인)된 회원은 메인(홈)으로 보낸다. (단, 예외 이름 회원은 접근 허용)

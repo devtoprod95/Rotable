@@ -11,6 +11,6 @@ class TestCron extends Command
 
     public function handle()
     {
-        channelLog(message: '테스트 크론 실행', channel: 'cron');
+        channelLog(message: '[cron:test_cron] 테스트 크론 실행', channel: 'cron');
     }
 }

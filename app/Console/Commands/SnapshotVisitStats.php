@@ -47,7 +47,7 @@ class SnapshotVisitStats extends Command
         );
 
         channelLog(
-            message: "방문 통계 스냅샷 적재 ({$snapshotDate}): 총 {$stats['total_visits']}건",
+            message: "[rotation:snapshot-visit-stats] 방문 통계 스냅샷 적재 ({$snapshotDate}): 총 {$stats['total_visits']}건",
             channel: 'cron',
         );
 

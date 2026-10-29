@@ -38,7 +38,7 @@ class CloseVoting extends Command
             if (($result['isSuccess'] ?? false) === true) {
                 $closed++;
                 channelLog(
-                    message: "행사(id={$event->id}, {$event->title}) 매칭 자동 마감",
+                    message: "[rotation:close-voting] 행사(id={$event->id}, {$event->title}) 매칭 자동 마감",
                     channel: 'cron',
                 );
             }

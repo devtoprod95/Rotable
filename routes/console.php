@@ -20,4 +20,10 @@ Schedule::command('rotation:snapshot-visit-stats')
     ->withoutOverlapping()
     ->description('방문 통계 일일 스냅샷 적재 (매일 자정)');
 
+// 사이트 통계 집계 + 오래된 방문 로그 정리: 매일 자정에 visitor_logs 를 집계해 통계를 갱신하고 7일 지난 로그를 삭제.
+Schedule::command('stats:snapshot-site')
+    ->dailyAt('00:00')
+    ->withoutOverlapping()
+    ->description('사이트 통계 집계 + 오래된 방문 로그 정리 (매일 자정)');
+
 // Schedule::command('cron:test_cron')->description('테스트 크론')->cron('* * * * *');

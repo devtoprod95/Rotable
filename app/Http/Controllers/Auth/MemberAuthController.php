@@ -18,7 +18,7 @@ class MemberAuthController extends Controller
     /**
      * 입장/등록 가능한 회차 목록을 셀렉트박스 옵션 형태로 반환.
      * - $statuses 에 해당하는 상태의 회차를 노출한다.
-     * - $includeRecentClosed=true 이면 종료(X) 회차 중 event_time이 최근 일주일 이내인 것도 추가로 노출한다.
+     * - $includeRecentClosed=true 이면 종료(X) 회차 중 event_time이 최근 2일 이내인 것도 추가로 노출한다.
      *
      * @param  array<int, string>  $statuses
      * @return array<int, array{id: int, label: string}>
@@ -32,7 +32,7 @@ class MemberAuthController extends Controller
                 if ($includeRecentClosed) {
                     $query->orWhere(function ($q) {
                         $q->where('status', EventRound::STATUS_CLOSED)
-                            ->where('event_time', '>=', now()->subWeek());
+                            ->where('event_time', '>=', now()->subDays(2));
                     });
                 }
             })

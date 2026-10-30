@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\EventRound;
 use App\Models\Member;
+use App\Models\RotationSeat;
+use App\Models\RotationTable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -91,9 +93,30 @@ class MemberAuthController extends Controller
     public function showRegister(): InertiaResponse
     {
         return Inertia::render('Auth/Register', [
-            'rounds'      => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING]),
-            'birthYears'  => $this->birthYearOptions(),
+            'rounds'         => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING]),
+            'birthYears'     => $this->birthYearOptions(),
+            'tablesByEvent'  => $this->tablesByEvent(),
         ]);
+    }
+
+    /**
+     * 입장/등록 가능한 회차별 테이블(자리) 옵션 맵.
+     * 참가자가 입장등록 시 자기 자리를 직접 고르도록 제공한다.
+     *
+     * @return array<int, array<int, array{id: int, label: string}>>  event_id => [{id, label}, ...]
+     */
+    private function tablesByEvent(): array
+    {
+        return RotationTable::query()
+            ->orderBy('event_id')
+            ->orderBy('table_no')
+            ->get()
+            ->groupBy('event_id')
+            ->map(fn ($tables) => $tables->map(fn (RotationTable $t): array => [
+                'id'    => $t->id,
+                'label' => $t->table_no . '번 테이블',
+            ])->values()->all())
+            ->all();
     }
 
     /**
@@ -123,6 +146,14 @@ class MemberAuthController extends Controller
             'mbti'       => ['required', 'string', 'size:4'],
             'region'     => ['required', 'string', 'max:50'],
             'is_smoker'  => ['required', 'boolean'],
+            // 참가자가 직접 고르는 기준(홈) 테이블. 선택한 회차의 테이블이어야 한다.
+            'rotation_table_id' => [
+                'required',
+                'integer',
+                Rule::exists('rotation_tables', 'id')->where(
+                    fn ($query) => $query->where('event_id', $request->input('event_id'))
+                ),
+            ],
             // 추가 프로필 (모든 유형 공통 필수) — 이상형/장점/취미/TMI
             'ideal_type' => ['required', 'string', 'max:100'],
             'merit'      => ['required', 'string', 'max:100'],
@@ -131,29 +162,31 @@ class MemberAuthController extends Controller
         ];
 
         $validated = $request->validate($rules, [
-            'event_id.required'   => '회차를 선택해주세요.',
-            'event_id.exists'     => '선택한 회차가 올바르지 않습니다.',
-            'phone.required'      => '핸드폰 번호를 입력해주세요.',
-            'phone.regex'         => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
-            'phone.unique'        => '해당 회차에 이미 등록된 핸드폰 번호입니다.',
-            'name.required'       => '닉네임을 입력해주세요.',
-            'password.required'   => '비밀번호를 입력해주세요.',
-            'password.size'       => '비밀번호는 4자리로 입력해주세요.',
-            'gender.required'     => '성별을 선택해주세요.',
-            'gender.in'           => '성별 선택이 올바르지 않습니다.',
-            'birth_year.required' => '출생연도를 선택해주세요.',
-            'birth_year.between'  => '출생연도 선택이 올바르지 않습니다.',
-            'job.required'        => '직업을 입력해주세요.',
-            'height.required'     => '키를 입력해주세요.',
-            'height.between'      => '키는 100~250cm 사이로 입력해주세요.',
-            'mbti.required'       => 'MBTI를 입력해주세요.',
-            'mbti.size'           => 'MBTI는 4글자로 입력해주세요.',
-            'region.required'     => '지역/거주지를 입력해주세요.',
-            'is_smoker.required'  => '흡연 여부를 선택해주세요.',
-            'ideal_type.required' => '이상형을 입력해주세요.',
-            'merit.required'      => '나의 장점을 입력해주세요.',
-            'hobby.required'      => '취미/요즘 빠진 것을 입력해주세요.',
-            'tmi.required'        => 'TMI를 입력해주세요.',
+            'event_id.required'          => '회차를 선택해주세요.',
+            'event_id.exists'            => '선택한 회차가 올바르지 않습니다.',
+            'phone.required'             => '핸드폰 번호를 입력해주세요.',
+            'phone.regex'                => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
+            'phone.unique'               => '해당 회차에 이미 등록된 핸드폰 번호입니다.',
+            'name.required'              => '닉네임을 입력해주세요.',
+            'password.required'          => '비밀번호를 입력해주세요.',
+            'password.size'              => '비밀번호는 4자리로 입력해주세요.',
+            'gender.required'            => '성별을 선택해주세요.',
+            'gender.in'                  => '성별 선택이 올바르지 않습니다.',
+            'birth_year.required'        => '출생연도를 선택해주세요.',
+            'birth_year.between'         => '출생연도 선택이 올바르지 않습니다.',
+            'job.required'               => '직업을 입력해주세요.',
+            'height.required'            => '키를 입력해주세요.',
+            'height.between'             => '키는 100~250cm 사이로 입력해주세요.',
+            'mbti.required'              => 'MBTI를 입력해주세요.',
+            'mbti.size'                  => 'MBTI는 4글자로 입력해주세요.',
+            'region.required'            => '지역/거주지를 입력해주세요.',
+            'is_smoker.required'         => '흡연 여부를 선택해주세요.',
+            'rotation_table_id.required' => '앉으실 테이블을 선택해주세요.',
+            'rotation_table_id.exists'   => '선택한 테이블이 올바르지 않습니다.',
+            'ideal_type.required'        => '이상형을 입력해주세요.',
+            'merit.required'             => '나의 장점을 입력해주세요.',
+            'hobby.required'             => '취미/요즘 빠진 것을 입력해주세요.',
+            'tmi.required'               => 'TMI를 입력해주세요.',
         ]);
 
         $member = Member::create([
@@ -173,6 +206,15 @@ class MemberAuthController extends Controller
             'merit'      => $validated['merit'],
             'hobby'      => $validated['hobby'],
             'tmi'        => $validated['tmi'],
+        ]);
+
+        // 참가자가 고른 기준(홈) 좌석을 생성한다.
+        // 새 좌석 모델은 current_round 공식으로 턴 자리를 계산하므로,
+        // 로테이션이 이미 시작된(S/V) 뒤 중간 입장이어도 이 좌석이 현재 턴부터 자동 반영된다.
+        RotationSeat::create([
+            'event_id'          => $validated['event_id'],
+            'member_id'         => $member->id,
+            'rotation_table_id' => $validated['rotation_table_id'],
         ]);
 
         Auth::guard('web')->login($member);

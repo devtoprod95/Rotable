@@ -24,14 +24,14 @@ class MemberPurgeTest extends TestCase
     public function test_purge_all_members(): void
     {
         // members 를 FK 로 참조하는 자식 테이블부터 삭제한다. (선행 삭제 순서)
-        //  - event_votes       : voter_id, target_id
-        //  - messages          : sender_id, receiver_id
-        //  - rotation_seatings  : member_id
-        //  - admin_requests     : member_id
+        //  - event_votes     : voter_id, target_id
+        //  - messages        : sender_id, receiver_id
+        //  - rotation_seats  : member_id
+        //  - admin_requests  : member_id
         $childTables = [
             'event_votes',
             'messages',
-            'rotation_seatings',
+            'rotation_seats',
             'admin_requests',
         ];
 
@@ -55,13 +55,12 @@ class MemberPurgeTest extends TestCase
      *
      * 대상 테이블 (FK 의존 그래프):
      *   event_rounds (최상위)
-     *     ├─ event_votes       (event_id, members FK)
-     *     ├─ messages          (event_id, members FK)
-     *     ├─ admin_requests    (event_id, members FK)
-     *     ├─ members           (event_id, onDelete=restrict → event_rounds 보다 먼저 삭제 필요)
-     *     ├─ rotation_tables   (event_id)
-     *     ├─ rotation_rounds   (event_id)
-     *     └─ rotation_seatings (rotation_round_id, rotation_table_id, member_id)
+     *     ├─ event_votes     (event_id, members FK)
+     *     ├─ messages        (event_id, members FK)
+     *     ├─ admin_requests  (event_id, members FK)
+     *     ├─ members         (event_id, onDelete=restrict → event_rounds 보다 먼저 삭제 필요)
+     *     ├─ rotation_tables (event_id)
+     *     └─ rotation_seats  (event_id, rotation_table_id, member_id)
      *
      * 자식 → 부모 순서로 삭제하여 FK 위반을 피한다. (제약을 끄지 않음)
      * pgsql 은 TRUNCATE ... RESTART IDENTITY CASCADE 로 id 까지 초기화, 그 외 드라이버는 truncate 사용.
@@ -79,8 +78,7 @@ class MemberPurgeTest extends TestCase
             'event_votes',
             'messages',
             'admin_requests',
-            'rotation_seatings',
-            'rotation_rounds',
+            'rotation_seats',
             'rotation_tables',
             'members',
             'event_rounds',

@@ -52,7 +52,7 @@ class PurgeData extends Command
                 // members 를 FK 로 참조하는 자식 테이블부터 삭제 후 members 삭제. (행사/테이블은 유지)
                 'event_votes',
                 'messages',
-                'rotation_seatings',
+                'rotation_seats',
                 'admin_requests',
                 'members',
             ],
@@ -65,8 +65,7 @@ class PurgeData extends Command
                 'event_votes',
                 'messages',
                 'admin_requests',
-                'rotation_seatings',
-                'rotation_rounds',
+                'rotation_seats',
                 'rotation_tables',
                 'members',
                 'event_rounds',

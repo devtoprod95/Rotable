@@ -7,7 +7,8 @@ use App\Events\MessageSent;
 use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\Message;
-use App\Models\RotationRound;
+use App\Models\RotationSeat;
+use App\Models\RotationTable;
 use App\Models\Vote;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -63,53 +64,107 @@ class MemberPageController extends Controller
             $eventTime = $t->format('Y/n/j H:i') . ' ' . $weekdays[(int) $t->format('w')];
         }
 
-        // 같은 행사 회차의 모든 턴 + 각 턴의 좌석(회원 포함)을 로드.
-        // 0턴(세팅용)은 사용자 페이지에 노출하지 않는다.
-        $rounds = RotationRound::query()
-            ->where('event_id', $me->event_id)
-            ->where('round_no', '>', 0)
-            ->with(['seatings' => function ($query) {
-                $query->with(['table', 'member'])
-                    ->orderBy('rotation_table_id')
-                    ->orderBy('member_id');
-            }])
-            ->orderByDesc('round_no')
-            ->get();
-
         $myId        = $me->id;
         $oppositeGen = $me->gender === Member::GENDER_MALE ? Member::GENDER_FEMALE : Member::GENDER_MALE;
 
-        // 테이블 수 = 마지막 로테이션 판정 기준 (round_no >= 테이블 수면 마지막).
-        $tableCount = \App\Models\RotationTable::where('event_id', $me->event_id)->count();
+        // 테이블 번호 목록(오름차순) — 남자 이동 공식 기준. 테이블 수 = 마지막 턴 판정 기준.
+        $tableNos   = RotationTable::where('event_id', $me->event_id)
+            ->orderBy('table_no')
+            ->pluck('table_no')
+            ->map(fn ($n) => (int) $n)
+            ->all();
+        $tableCount = count($tableNos);
+
+        // 현재 턴(0이면 아직 로테이션 시작 전 → 노출할 턴 없음).
+        $currentRound = (int) ($event?->current_round ?? 0);
+
+        // 이 행사의 기준(홈) 좌석 전부. (턴별 자리는 공식으로 계산)
+        /** @var \Illuminate\Database\Eloquent\Collection<int, RotationSeat> $seats */
+        $seats = RotationSeat::query()
+            ->with(['member', 'table'])
+            ->where('event_id', $me->event_id)
+            ->get();
+
+        // 각 좌석의 홈 테이블 번호 캐시.
+        $homeTableNoByMember = [];
+        foreach ($seats as $seat) {
+            if ($seat->member_id !== null && $seat->table) {
+                /** @var object $table */
+                /** @var object $seat */
+                $table = $seat->table;
+                $homeTableNoByMember[$seat->member_id] = (int) ($table->table_no);
+            }
+        }
+
+        // 현재 턴 기준 각 회원의 테이블 번호 (상세 모달 "현재 테이블" 표기용).
+        $currentTableNoByMember = [];
+        if ($currentRound >= 1) {
+            foreach ($seats as $seat) {
+                $homeNo = $homeTableNoByMember[$seat->member_id] ?? null;
+                if ($homeNo === null) {
+                    continue;
+                }
+                $currentTableNoByMember[$seat->member_id] = EventRound::seatedTableNoFor(
+                    round: $currentRound,
+                    isFemale: $seat->member?->gender === Member::GENDER_FEMALE,
+                    homeTableNo: $homeNo,
+                    tableNos: $tableNos,
+                );
+            }
+        }
 
         // 1:1 소개팅 여부 (홈에서 매칭 선택 UI/투표 로직을 노출할지 결정).
         $isOneToOne = $event !== null && $event->isOneToOne();
 
-        $rotations = $rounds->map(function (RotationRound $round) use ($eventStatus, $myId, $oppositeGen, $tableCount) {
-            // 이번 턴에 내가 앉은 좌석(테이블).
-            $mySeating = $round->seatings->firstWhere('member_id', $myId);
-            $myTableId = $mySeating?->rotation_table_id;
-            $myTableNo = $mySeating?->table?->table_no;
+        // 1턴부터 현재 턴까지 각 턴을 공식으로 계산해 최신 턴이 위로 오도록 내림차순 구성.
+        $rotations = collect(range($currentRound, 1))
+            ->filter(fn ($t) => $t >= 1) // currentRound=0 이면 빈 목록
+            ->map(function (int $round) use ($seats, $homeTableNoByMember, $currentTableNoByMember, $myId, $oppositeGen, $tableNos, $tableCount, $eventStatus) {
+                $myHome = $homeTableNoByMember[$myId] ?? null;
+                $myTableNo = $myHome === null
+                    ? null
+                    : EventRound::seatedTableNoFor(
+                        round: $round,
+                        isFemale: $oppositeGen === Member::GENDER_MALE, // 내가 여자면 상대가 남자
+                        homeTableNo: $myHome,
+                        tableNos: $tableNos,
+                    );
 
-            // 그 테이블에서 나와 만난 상대 성별 회원만 추린다.
-            $partners = collect();
-            if ($myTableId !== null) {
-                $partners = $round->seatings
-                    ->where('rotation_table_id', $myTableId)
-                    ->filter(fn ($s) => $s->member?->gender === $oppositeGen)
-                    ->map(fn ($s) => $this->transformMember($s->member))
-                    ->values();
-            }
+                // 이번 턴에 내 테이블에 앉는 이성 상대들.
+                $partners = collect();
+                if ($myTableNo !== null) {
+                    $partners = $seats
+                        ->filter(function ($s) use ($round, $oppositeGen, $tableNos, $homeTableNoByMember, $myTableNo) {
+                            if ($s->member?->gender !== $oppositeGen) {
+                                return false;
+                            }
+                            $home = $homeTableNoByMember[$s->member_id] ?? null;
+                            if ($home === null) {
+                                return false;
+                            }
+                            $seated = EventRound::seatedTableNoFor(
+                                round: $round,
+                                isFemale: $s->member?->gender === Member::GENDER_FEMALE,
+                                homeTableNo: $home,
+                                tableNos: $tableNos,
+                            );
 
-            return [
-                'id'       => $round->id,
-                'round_no' => $round->round_no,
-                'table_no' => $myTableNo,
-                'status'   => $eventStatus,
-                'partners' => $partners,
-                'is_last'  => $tableCount > 0 && $round->round_no >= $tableCount,
-            ];
-        });
+                            return $seated === $myTableNo;
+                        })
+                        ->map(fn ($s) => $this->transformMember($s->member, $currentTableNoByMember[$s->member_id] ?? null))
+                        ->values();
+                }
+
+                return [
+                    'id'       => $round,          // 턴 번호를 식별자로 사용 (저장 행이 없으므로)
+                    'round_no' => $round,
+                    'table_no' => $myTableNo,
+                    'status'   => $eventStatus,
+                    'partners' => $partners,
+                    'is_last'  => $tableCount > 0 && $round >= $tableCount,
+                ];
+            })
+            ->values();
 
         // 1:1 로테이션: 매칭 선택을 '홈'에서 수행한다.
         //  - isOneToOne: 프론트에서 선택 UI 노출 분기
@@ -144,7 +199,7 @@ class MemberPageController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function transformMember(Member $member): array
+    private function transformMember(Member $member, ?int $currentTableNo = null): array
     {
         return [
             'id'         => $member->id,
@@ -156,12 +211,60 @@ class MemberPageController extends Controller
             'mbti'       => $member->mbti,
             'region'     => $member->region,
             'is_smoker'  => $member->is_smoker,
+            // 현재 턴 기준 상대가 앉아 있는 테이블 번호 (로테이션 시작 전/미배정이면 null)
+            'current_table_no' => $currentTableNo,
             // 추가 프로필 (모든 유형 공통) — 상대 카드 상세 모달용
             'ideal_type' => $member->ideal_type,
             'merit'      => $member->merit,
             'hobby'      => $member->hobby,
             'tmi'        => $member->tmi,
         ];
+    }
+
+    /**
+     * 현재 턴(event_rounds.current_round) 기준으로 행사 내 모든 회원의 테이블 번호 맵.
+     * 턴별 자리는 저장하지 않고 기준자리 + current_round 공식으로 계산한다.
+     * 로테이션 시작 전(current_round<1)이면 빈 맵.
+     *
+     * @return array<int, int> member_id => 현재 테이블 번호
+     */
+    private function currentTableNoMap(int $eventId): array
+    {
+        $event = EventRound::find($eventId);
+        $round = (int) ($event?->current_round ?? 0);
+
+        // 로테이션 시작 전(round<1)이거나 매칭이 종료(X)된 뒤에는 "현재 테이블"을 노출하지 않는다.
+        if ($round < 1 || $event?->status === EventRound::STATUS_CLOSED) {
+            return [];
+        }
+
+        $tableNos = RotationTable::where('event_id', $eventId)
+            ->orderBy('table_no')
+            ->pluck('table_no')
+            ->map(fn ($n) => (int) $n)
+            ->all();
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, RotationSeat> $seats */
+        $seats = RotationSeat::query()
+            ->with(['member:id,gender', 'table:id,table_no'])
+            ->where('event_id', $eventId)
+            ->get();
+
+        $map = [];
+        foreach ($seats as $seat) {
+            $homeNo = $seat->table?->table_no;
+            if ($homeNo === null || $seat->member_id === null) {
+                continue;
+            }
+            $map[$seat->member_id] = EventRound::seatedTableNoFor(
+                round: $round,
+                isFemale: $seat->member?->gender === Member::GENDER_FEMALE,
+                homeTableNo: (int) $homeNo,
+                tableNos: $tableNos,
+            );
+        }
+
+        return $map;
     }
 
     /**
@@ -178,10 +281,8 @@ class MemberPageController extends Controller
             ? Member::GENDER_FEMALE
             : Member::GENDER_MALE;
 
-        // 상대별 "만난 턴/테이블" 이력을 미리 계산한다.
-        // 만남 = 같은 턴, 같은 테이블에 나와 함께 앉은 이성.
-        // 0턴(세팅용)은 제외한다.
-        $meetMap = $this->meetingHistoryByPartner($me);
+        // 현재 턴 기준 각 회원의 테이블 번호. (상세 모달 "현재 테이블" 표기용)
+        $currentTableNoByMember = $this->currentTableNoMap($me->event_id);
 
         $partners = Member::query()
             ->where('event_id', $me->event_id)
@@ -189,13 +290,10 @@ class MemberPageController extends Controller
             ->where('id', '!=', $me->id)
             ->orderBy('name')
             ->get()
-            ->map(function (Member $member) use ($meetMap): array {
-                $data = $this->transformMember($member);
-                // 이 상대와 만난 (턴, 테이블) 이력. 턴 오름차순.
-                $data['meetings'] = $meetMap[$member->id] ?? [];
-
-                return $data;
-            })
+            ->map(fn (Member $member): array => $this->transformMember(
+                $member,
+                $currentTableNoByMember[$member->id] ?? null,
+            ))
             ->values();
 
         $used = Message::where('event_id', $me->event_id)
@@ -217,60 +315,6 @@ class MemberPageController extends Controller
                 'remaining' => max(0, $max - $used),
             ],
         ];
-    }
-
-    /**
-     * 나와 각 이성 상대가 "만난" 턴/테이블 이력을 상대 id 기준으로 모은다.
-     *
-     * 만남 = 같은 턴(0턴 제외) · 같은 테이블에 나와 함께 앉은 이성.
-     * 좌석을 한 번에 eager load 하여 N+1 없이 메모리에서 집계한다.
-     *
-     * @return array<int, list<array{round_no: int, table_no: int|null}>>
-     *         상대 member_id => [ {round_no, table_no}, ... ] (턴 오름차순)
-     */
-    private function meetingHistoryByPartner(Member $me): array
-    {
-        $myId        = $me->id;
-        $oppositeGen = $me->gender === Member::GENDER_MALE
-            ? Member::GENDER_FEMALE
-            : Member::GENDER_MALE;
-
-        $rounds = RotationRound::query()
-            ->where('event_id', $me->event_id)
-            ->where('round_no', '>', 0)
-            ->with(['seatings' => function ($query): void {
-                $query->with(['table', 'member']);
-            }])
-            ->orderBy('round_no')
-            ->get();
-
-        $map = [];
-        foreach ($rounds as $round) {
-            // 이번 턴에 내가 앉은 테이블.
-            $mySeating = $round->seatings->firstWhere('member_id', $myId);
-            $myTableId = $mySeating?->rotation_table_id;
-            if ($myTableId === null) {
-                continue;
-            }
-
-            // 그 테이블의 이성 상대들과 "이번 턴에 만났다"고 기록.
-            foreach ($round->seatings as $seat) {
-                if ($seat->rotation_table_id !== $myTableId) {
-                    continue;
-                }
-                if ($seat->member?->gender !== $oppositeGen) {
-                    continue;
-                }
-
-                $map[$seat->member_id] ??= [];
-                $map[$seat->member_id][] = [
-                    'round_no' => $round->round_no,
-                    'table_no' => $seat->table?->table_no,
-                ];
-            }
-        }
-
-        return $map;
     }
 
     /**
@@ -485,8 +529,11 @@ class MemberPageController extends Controller
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        $candidateList = $candidates->map(function (Member $c) use ($myVotedIds, $votedForMeIds, $isClosed, $isOneToOne) {
-            $data        = $this->transformMember($c);
+        // 현재 턴 기준 각 회원이 앉아 있는 테이블 번호 맵. (상세 모달에 "현재 테이블" 표기)
+        $currentTableNoByMember = $this->currentTableNoMap($me->event_id);
+
+        $candidateList = $candidates->map(function (Member $c) use ($myVotedIds, $votedForMeIds, $isClosed, $isOneToOne, $currentTableNoByMember) {
+            $data        = $this->transformMember($c, $currentTableNoByMember[$c->id] ?? null);
             $iVotedThem  = in_array($c->id, $myVotedIds, true);
             $theyVotedMe = in_array($c->id, $votedForMeIds, true);
             // 매칭 여부는 종료(X) 후에만 공개한다. 매칭중(V)에는 쌍방이어도 노출하지 않는다.

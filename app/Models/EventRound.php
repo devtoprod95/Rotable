@@ -53,7 +53,7 @@ class EventRound extends Model
     protected $table = 'event_rounds';
 
     /** @var list<string> */
-    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'created_by'];
+    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'current_round', 'created_by'];
 
     /**
      * @return array<string, string>
@@ -63,6 +63,7 @@ class EventRound extends Model
         return [
             'event_time'       => 'datetime',
             'voting_opened_at' => 'datetime',
+            'current_round'    => 'integer',
         ];
     }
 
@@ -94,6 +95,16 @@ class EventRound extends Model
     public function rotationTables(): HasMany
     {
         return $this->hasMany(RotationTable::class, 'event_id');
+    }
+
+    /**
+     * 이 회차의 로테이션 기준(홈) 좌석들. (회원당 1행)
+     *
+     * @return HasMany<RotationSeat>
+     */
+    public function rotationSeats(): HasMany
+    {
+        return $this->hasMany(RotationSeat::class, 'event_id');
     }
 
     /**
@@ -195,5 +206,57 @@ class EventRound extends Model
             . $weekdays[(int) $time->format('w')];
 
         return "{$this->title} ({$formatted})";
+    }
+
+    /* ======================================================================
+     | 로테이션 턴 공식 — 턴별 좌석을 저장하지 않고 기준자리 + current_round 로 계산.
+     |
+     | 규칙(README):
+     |  - 1턴은 기준자리 그대로.
+     |  - 2턴부터 남자만 table_no 오름차순 다음 테이블로 +1 이동(마지막→첫번째 순환), 여자는 고정.
+     |  - 테이블이 N개면 N턴이 마지막(남자가 제자리 복귀).
+     | 여기서 current_round=0 은 "로테이션 시작 전"을 뜻한다. (관리자가 진행하면 1부터 시작)
+     * ==================================================================== */
+
+    /**
+     * 주어진 턴(round)에서, 기준 테이블(홈)에 있는 회원이 실제로 앉는 테이블을 계산한다.
+     *
+     * @param  int                 $round        조회할 턴 (1-based). 0 이하이면 기준 자리 그대로.
+     * @param  bool                $isFemale     여자 여부 (여자는 항상 고정).
+     * @param  int                 $homeTableNo  기준(홈) 테이블 번호.
+     * @param  list<int>           $tableNos     이 행사의 테이블 번호들(오름차순, 중복 없음).
+     * @return int 실제 착석 테이블 번호. 매핑 불가 시 기준 테이블 번호를 반환.
+     */
+    public static function seatedTableNoFor(int $round, bool $isFemale, int $homeTableNo, array $tableNos): int
+    {
+        $count = count($tableNos);
+        if ($count === 0) {
+            return $homeTableNo;
+        }
+
+        // 여자 고정 / 1턴 이하이면 기준 자리 그대로.
+        if ($isFemale || $round <= 1) {
+            return $homeTableNo;
+        }
+
+        $index = array_search($homeTableNo, $tableNos, true);
+        if ($index === false) {
+            return $homeTableNo;
+        }
+
+        // 2턴부터 남자 +1 이동. (round-1 칸 이동, 마지막→첫번째 순환)
+        $nextIndex = ($index + ($round - 1)) % $count;
+
+        return $tableNos[$nextIndex];
+    }
+
+    /**
+     * 현재 턴이 마지막 턴인지 여부. (테이블 N개면 N턴에서 남자가 제자리 복귀)
+     */
+    public function isLastRound(): bool
+    {
+        $tableCount = $this->rotationTables()->count();
+
+        return $tableCount > 0 && $this->current_round >= $tableCount;
     }
 }

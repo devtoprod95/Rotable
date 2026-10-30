@@ -6,6 +6,7 @@ export default function SelectField({
     placeholder = '선택해주세요',
     error,
     autoFocus = false,
+    disabled = false,
 }) {
     return (
         <label className="flex flex-col gap-1.5">
@@ -14,10 +15,12 @@ export default function SelectField({
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 autoFocus={autoFocus}
+                disabled={disabled}
                 className={
                     'rounded-lg border bg-white px-3.5 py-3 text-base outline-none transition focus:ring-2 focus:ring-primary-200 ' +
                     (error ? 'border-red-500' : 'border-gray-300') +
-                    (value ? ' text-gray-900' : ' text-gray-400')
+                    (value ? ' text-gray-900' : ' text-gray-400') +
+                    (disabled ? ' cursor-not-allowed opacity-60' : '')
                 }
             >
                 <option value="" disabled>

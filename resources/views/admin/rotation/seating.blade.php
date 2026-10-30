@@ -88,6 +88,10 @@
                                 최신 턴에서만 로테이션을 진행할 수 있습니다.
                             </div>
                         </div>
+                        {{-- 로테이션 되돌리기 (실수로 한 번 더 진행했을 때). 진행 중(S)·1턴 이상에서만 노출 --}}
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 d-none" id="rotateBackBtn">
+                            <i class="ti ti-arrow-back-up me-1"></i>로테이션 되돌리기 (이전 턴)
+                        </button>
                         <small class="form-hint text-muted mt-2 d-block" id="actionHint"></small>
                     </div>
                 </div>
@@ -106,6 +110,7 @@
         const storeUrl   = "{{ route('admin.rotation.seating.store') }}";
         const deleteUrl  = "{{ route('admin.rotation.seating.delete') }}";
         const rotateUrl  = "{{ route('admin.rotation.seating.rotate') }}";
+        const rotateBackUrl = "{{ route('admin.rotation.seating.rotateBack') }}";
         const finishUrl  = "{{ route('admin.rotation.seating.finish') }}";
         const closeVotingUrl = "{{ route('admin.rotation.seating.closeVoting') }}";
         const matchesUrlTemplate = "{{ route('admin.rotation.event.matches.list', ['id' => '__ID__']) }}";
@@ -206,6 +211,7 @@
         //  - 과거 턴을 볼 때는 진행/종료 버튼 숨김
         function renderActions(meta){
             let $rotate = $('#rotateBtn').addClass('d-none');
+            let $rotateBack = $('#rotateBackBtn').addClass('d-none');
             let $finish = $('#finishBtn').addClass('d-none');
             let $closeVoting = $('#closeVotingBtn').addClass('d-none');
             let $closed = $('#closedBtn').addClass('d-none');
@@ -241,7 +247,14 @@
             $('#roundNext').prop('disabled', viewRound >= currentRound);
 
             let isLatest = (viewRound === currentRound);
-            $roundHint.text(isLatest ? '최신 턴입니다.' : '이전 턴을 보는 중입니다. (인원 추가/삭제 가능)');
+            let isBaseView = (viewRound <= 1);
+            if(isBaseView){
+                $roundHint.html(currentRound === 0
+                    ? '기준 자리 배치 화면입니다. (회원 추가/삭제/이동 가능)'
+                    : '1턴(기준) 화면입니다. 진행 중에도 여기서 자리를 옮기면 <b>모든 턴에 바로 반영</b>돼요.');
+            } else {
+                $roundHint.html('조회 전용 화면입니다. 자리를 옮기려면 <b>1턴(기준)</b>으로 이동하세요.');
+            }
 
             // 생성된 테이블이 없으면 액션 버튼을 노출하지 않는다.
             if(!meta.table_count){
@@ -289,6 +302,12 @@
                     $hint.text('다음 턴을 자동 생성합니다. (여자 고정 / 남자 이동)');
                 }
             }
+
+            // 로테이션 되돌리기: 진행이 1턴 이상 됐고(= 되돌릴 게 있음) 최신 턴을 볼 때만 노출.
+            // (투표중/종료는 위에서 이미 return 되므로 여기까지 오지 않는다)
+            if(currentRound >= 1){
+                $rotateBack.removeClass('d-none');
+            }
         }
 
         function renderBoard(data){
@@ -307,6 +326,11 @@
                 t.members.forEach(function(m){ assignedIds.add(m.member_id); });
             });
 
+            // 좌석(기준자리) 편집은 "기준 뷰"(1턴 이하)에서만 허용한다.
+            // 2턴 이상에서 보이는 자리는 공식으로 계산된 '이동 결과'이므로,
+            // 그 자리에 추가하면 홈 테이블이 잘못 지정된다. → 편집 비활성.
+            let isBaseView = !isClosed && (viewRound === null || viewRound <= 1);
+
             data.tables.forEach(function(t){
                 let chips = t.members.map(function(m){
                     // 이름 옆에 출생연도/직업을 작은 글씨로 표기한다.
@@ -316,14 +340,23 @@
                     let infoText = info.length
                         ? ` <span style="font-weight:400;opacity:0.7;font-size:0.85em;">${info.join(' · ')}</span>`
                         : '';
-                    return `<span class="badge ${genderBadgeClass(m.gender)} me-1 mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1">
-                                <span>${m.name}${infoText}</span>
-                                <a href="#" class="chip-remove d-inline-flex align-items-center justify-content-center text-danger"
+                    // 기준 뷰에서만 제거(x) 버튼 노출.
+                    let removeBtn = isBaseView
+                        ? `<a href="#" class="chip-remove d-inline-flex align-items-center justify-content-center text-danger"
                                    data-seating-id="${m.seating_id}"
                                    title="제거"
-                                   style="width:1.4rem;height:1.4rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.95rem;line-height:1;"></i></a>
+                                   style="width:1.4rem;height:1.4rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.95rem;line-height:1;"></i></a>`
+                        : '';
+                    return `<span class="badge ${genderBadgeClass(m.gender)} me-1 mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1">
+                                <span>${m.name}${infoText}</span>
+                                ${removeBtn}
                             </span>`;
                 }).join('');
+
+                // 기준 뷰에서만 '회원 추가' 셀렉트 노출. 아니면 안내 문구.
+                let adder = isBaseView
+                    ? `<select class="form-select form-select-sm seat-add" data-table-id="${t.id}">${memberOptions(assignedIds)}</select>`
+                    : `<div class="text-muted small"><i class="ti ti-info-circle me-1"></i>좌석 편집은 1턴(기준) 화면에서만 가능합니다.</div>`;
 
                 let card = `
                     <div class="col-md-4 col-sm-6">
@@ -332,7 +365,7 @@
                                 <span class="text-muted ms-1">(${t.members.length}명)</span></div>
                             <div class="card-body py-2">
                                 <div class="mb-2 seat-chips">${chips || '<span class="text-muted">비어있음</span>'}</div>
-                                <select class="form-select form-select-sm seat-add" data-table-id="${t.id}" ${isClosed ? 'disabled' : ''}>${memberOptions(assignedIds)}</select>
+                                ${adder}
                             </div>
                         </div>
                     </div>`;
@@ -386,7 +419,6 @@
                 type: 'POST',
                 data: {
                     event_id: $('#eventSelect').val(),
-                    round_no: (viewRound === null ? $('#roundInput').val() : viewRound),
                     rotation_table_id: tableId,
                     member_id: memberId
                 },
@@ -427,6 +459,22 @@
                 data: { event_id: $('#eventSelect').val() },
                 success: function(res){
                     // 진행 후 최신 턴을 보도록 viewRound를 리셋하고, 보드 갱신이 끝난 뒤 알림.
+                    viewRound = null;
+                    $.when(loadData()).always(function(){ alert(res?.msg); });
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            });
+        });
+
+        // 로테이션 되돌리기: 현재 턴을 한 단계 이전으로 복구 (실수로 한 번 더 진행했을 때)
+        $('#rotateBackBtn').on('click', async function(){
+            if(!(await salert({html: '로테이션을 <b>이전 턴으로 되돌리시겠습니까?</b><br>실수로 한 번 더 진행한 경우에만 사용하세요.'}))) return;
+
+            $.ajax({
+                url: rotateBackUrl,
+                type: 'POST',
+                data: { event_id: $('#eventSelect').val() },
+                success: function(res){
                     viewRound = null;
                     $.when(loadData()).always(function(){ alert(res?.msg); });
                 },

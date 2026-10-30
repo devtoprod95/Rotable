@@ -50,6 +50,7 @@ Route::middleware('role')->group(function () {
                 Route::get('/members', [RotationController::class, 'seatingMembers'])->name('members');
                 Route::post('/store', [RotationController::class, 'seatingStore'])->name('store');
                 Route::post('/rotate', [RotationController::class, 'seatingRotate'])->name('rotate');
+                Route::post('/rotate-back', [RotationController::class, 'seatingRotateBack'])->name('rotateBack');
                 Route::post('/finish', [RotationController::class, 'seatingFinish'])->name('finish');
                 Route::post('/close-voting', [RotationController::class, 'seatingCloseVoting'])->name('closeVoting');
                 Route::delete('/delete', [RotationController::class, 'seatingDelete'])->name('delete');
@@ -71,6 +72,8 @@ Route::middleware('role')->group(function () {
             // 참가자 안내 슬라이드 — 행사장에서 PPT 처럼 띄워 서비스 이용안내/룰/대화 주제를 안내한다.
             Route::prefix('guide')->name('guide.')->group(function () {
                 Route::get('/', [RotationController::class, 'guideIndex'])->name('index');
+                // 예외 상황 대처 설명서 (별도 페이지)
+                Route::get('/exception', [RotationController::class, 'guideException'])->name('exception');
             });
 
             // 만남 이력 조회 — 전화번호(정확 일치) 기준. 만남 = 같은 행사 공동 참여.

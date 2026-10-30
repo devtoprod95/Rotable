@@ -17,7 +17,6 @@ class RotationSeatingStoreRequest extends FormRequest
     {
         return [
             'event_id'          => 'required|integer|exists:event_rounds,id',
-            'round_no'          => 'required|integer|min:0',
             'rotation_table_id' => 'required|integer|exists:rotation_tables,id',
             'member_id'         => 'required|integer|exists:members,id',
         ];
@@ -37,7 +36,6 @@ class RotationSeatingStoreRequest extends FormRequest
     {
         return [
             'event_id'          => '행사',
-            'round_no'          => '턴',
             'rotation_table_id' => '테이블',
             'member_id'         => '회원',
         ];

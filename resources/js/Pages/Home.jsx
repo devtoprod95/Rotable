@@ -34,7 +34,6 @@ function MemberChip({
     onToggleSelect,
     votedBadge = false,
     onDetail,
-    detailContext,
 }) {
     const specs = [
         birthYearText(member.birth_year),
@@ -84,7 +83,7 @@ function MemberChip({
                         tabIndex={0}
                         onClick={(e) => {
                             e.stopPropagation();
-                            onDetail(member, detailContext);
+                            onDetail(member);
                         }}
                         className="flex shrink-0 items-center gap-1 rounded-full bg-secondary-100 px-2 py-0.5 text-[11px] font-bold text-secondary-600 transition hover:bg-secondary-200"
                     >
@@ -188,7 +187,6 @@ function RoundSection({
                                 onToggleSelect={onToggleSelect}
                                 votedBadge={!selectable && votedIds.includes(m.id)}
                                 onDetail={onDetail}
-                                detailContext={{ round_no: round.round_no, table_no: round.table_no }}
                             />
                         ))}
                     </div>
@@ -429,7 +427,7 @@ export default function Home() {
                                 selectDisabled={selected.length >= maxVotes}
                                 onToggleSelect={toggleSelect}
                                 votedIds={isOneToOne ? myVotedIds.map(Number) : []}
-                                onDetail={(m, ctx) => setDetailMember({ member: m, context: ctx })}
+                                onDetail={(m) => setDetailMember(m)}
                             />
                         ))}
                     </div>
@@ -479,8 +477,7 @@ export default function Home() {
             {/* 상대 프로필 상세 모달 */}
             {detailMember && (
                 <ProfileDetailModal
-                    member={detailMember.member}
-                    context={detailMember.context}
+                    member={detailMember}
                     tone={tone}
                     onClose={() => setDetailMember(null)}
                 />

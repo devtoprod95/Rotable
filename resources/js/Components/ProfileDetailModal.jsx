@@ -7,14 +7,13 @@ function birthYearText(birthYear) {
 
 /**
  * 상대 프로필 상세 모달.
- * 기본 스펙 + 추가 정보(장점/이상형/취미/TMI)를 보여준다. (모든 유형 공통)
+ * 기본 스펙 + 추가 정보(장점/이상형/취미/TMI) + 현재 테이블을 보여준다. (모든 유형 공통)
  *
  * @param {object}  member   상대 회원 정보 (transformMember 결과)
- * @param {object=} context  { round_no, table_no } — 와인파티 등에서는 생략 가능
  * @param {'female'|'male'} tone 상대 성별 톤 (female: 여자 상대, male: 남자 상대)
  * @param {Function} onClose 닫기 핸들러
  */
-export default function ProfileDetailModal({ member, context, tone, onClose }) {
+export default function ProfileDetailModal({ member, tone, onClose }) {
     // 모달이 열려 있는 동안 배경 스크롤을 잠근다. (공용 훅)
     useBodyScrollLock(true);
 
@@ -39,9 +38,6 @@ export default function ProfileDetailModal({ member, context, tone, onClose }) {
 
     const headCls = tone === 'female' ? 'bg-rose-50' : 'bg-sky-100';
 
-    // 메시지 리스트에서 열릴 때: 상대와 만난 전체 턴/테이블 이력(턴 오름차순).
-    const meetings = Array.isArray(member.meetings) ? member.meetings : [];
-
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
@@ -65,41 +61,14 @@ export default function ProfileDetailModal({ member, context, tone, onClose }) {
                             ✕
                         </button>
                     </div>
-                    {/* 현재 로테이션(턴) / 테이블 번호
-                        - 여자는 자리 고정, 남자가 이동한다. 여자 시점에서는 남자가 내 자리로 찾아오므로
-                          테이블 번호가 매 턴 동일하게 보인다. 따라서 남자 상대(tone==='male') 모달에서는
-                          테이블 뱃지를 숨긴다.
-                        - context: 단일 턴 맥락(홈). meetings: 상대와 만난 전체 턴/테이블 이력(메시지 리스트). */}
-                    {context && (context.round_no != null || (tone !== 'male' && context.table_no != null)) && (
+                    {/* 현재 테이블 — 남녀 공통으로 "지금 어느 테이블에 있는지"만 표시.
+                        current_table_no 는 현재 턴(current_round) 기준으로 서버가 계산해 내려준다.
+                        (턴 번호는 혼동을 주므로 표시하지 않는다.) */}
+                    {member.current_table_no != null && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                            {context.round_no != null && (
-                                <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-bold text-secondary-700">
-                                    🔄 {context.round_no}턴
-                                </span>
-                            )}
-                            {tone !== 'male' && context.table_no != null && (
-                                <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-bold text-secondary-700">
-                                    🪑 {context.table_no}번 테이블
-                                </span>
-                            )}
-                        </div>
-                    )}
-                    {!context && meetings.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                            {meetings.map((m, i) => (
-                                <span key={i} className="inline-flex flex-wrap gap-1.5">
-                                    {m.round_no != null && (
-                                        <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-bold text-secondary-700">
-                                            🔄 {m.round_no}턴
-                                        </span>
-                                    )}
-                                    {tone !== 'male' && m.table_no != null && (
-                                        <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-bold text-secondary-700">
-                                            🪑 {m.table_no}번 테이블
-                                        </span>
-                                    )}
-                                </span>
-                            ))}
+                            <span className="rounded-full bg-white/80 px-2.5 py-0.5 text-[11px] font-bold text-secondary-700">
+                                🪑 현재 {member.current_table_no}번 테이블
+                            </span>
                         </div>
                     )}
                 </div>

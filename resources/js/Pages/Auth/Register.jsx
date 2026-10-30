@@ -1,4 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
@@ -58,7 +59,10 @@ function buildAutofill(birthYears) {
 }
 
 export default function Register() {
-    const { rounds = [], birthYears = [], isProduction = true } = usePage().props;
+    const { rounds = [], birthYears = [], tablesByEvent = {}, isProduction = true } = usePage().props;
+
+    // 제출 전 최종 확인 모달 노출 여부.
+    const [confirmOpen, setConfirmOpen] = useState(false);
 
     // 자동 입력 버튼 노출 조건:
     //  - 비프로덕션 환경이거나
@@ -68,6 +72,7 @@ export default function Register() {
         (typeof window !== 'undefined' && !!new URLSearchParams(window.location.search).get('dev'));
     const { data, setData, post, processing, errors } = useForm({
         event_id: '',
+        rotation_table_id: '',
         phone: '',
         name: '',
         password: '',
@@ -85,6 +90,24 @@ export default function Register() {
         tmi: '',
     });
 
+    // 선택한 회차(event_id)에 해당하는 테이블 옵션.
+    const tableOptions = useMemo(
+        () => (data.event_id ? (tablesByEvent[data.event_id] ?? []) : []),
+        [data.event_id, tablesByEvent],
+    );
+
+    // 회차가 바뀌면 이전에 고른 테이블 선택을 초기화한다.
+    function changeEvent(v) {
+        setData('event_id', v);
+        setData('rotation_table_id', '');
+    }
+
+    // 선택한 테이블 라벨 (확인 모달 표시용).
+    const selectedTableLabel = useMemo(() => {
+        const found = tableOptions.find((t) => String(t.id) === String(data.rotation_table_id));
+        return found ? found.label : '';
+    }, [tableOptions, data.rotation_table_id]);
+
     // 회차(event_id)는 유지하고 나머지 필드를 매번 랜덤으로 채운다.
     function autofill() {
         Object.entries(buildAutofill(birthYears)).forEach(([key, value]) => {
@@ -92,8 +115,15 @@ export default function Register() {
         });
     }
 
+    // 제출 버튼 → 최종 확인 모달 열기.
     function submit(e) {
         e.preventDefault();
+        setConfirmOpen(true);
+    }
+
+    // 모달에서 최종 확인 → 실제 등록 요청.
+    function confirmSubmit() {
+        setConfirmOpen(false);
         post('/register');
     }
 
@@ -127,11 +157,20 @@ export default function Register() {
                         <SelectField
                             label="회차"
                             value={data.event_id}
-                            onChange={(v) => setData('event_id', v)}
+                            onChange={(v) => changeEvent(v)}
                             options={rounds}
                             placeholder="회차를 선택해주세요"
                             error={errors.event_id}
                             autoFocus
+                        />
+                        <SelectField
+                            label="테이블 (자리)"
+                            value={data.rotation_table_id}
+                            onChange={(v) => setData('rotation_table_id', v)}
+                            options={tableOptions}
+                            placeholder={data.event_id ? '앉으실 테이블을 선택해주세요' : '회차를 먼저 선택해주세요'}
+                            error={errors.rotation_table_id}
+                            disabled={!data.event_id || tableOptions.length === 0}
                         />
                         <RadioField
                             label="성별"
@@ -254,6 +293,49 @@ export default function Register() {
                     </p>
                 </div>
             </div>
+
+            {/* 제출 전 최종 확인 모달 — 닉네임/테이블을 다시 확인시킨다. */}
+            {confirmOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
+                    onClick={() => setConfirmOpen(false)}
+                >
+                    <div
+                        className="w-full max-w-sm rounded-3xl bg-white p-7 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="text-center text-xl font-extrabold text-secondary-800">입장 전 확인</h2>
+                        <p className="mt-4 text-center text-base leading-relaxed text-secondary-600">
+                            <span className="font-bold text-primary">{data.name || '회원'}</span>님,
+                            <br />
+                            <span className="font-bold text-primary">
+                                {selectedTableLabel || '선택한 테이블'}
+                            </span>
+                            이 맞으신가요?
+                        </p>
+                        <p className="mt-2 text-center text-sm text-secondary-400">
+                            선택하신 테이블로 자리가 배정됩니다.
+                        </p>
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmOpen(false)}
+                                className="flex-1 rounded-full border border-secondary-200 py-3 text-base font-bold text-secondary-600 transition hover:bg-secondary-50"
+                            >
+                                다시 확인
+                            </button>
+                            <button
+                                type="button"
+                                onClick={confirmSubmit}
+                                disabled={processing}
+                                className="flex-1 rounded-full bg-primary py-3 text-base font-bold text-white transition hover:bg-primary-600 disabled:opacity-60"
+                            >
+                                {processing ? '입장 중…' : '네, 맞아요'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AppLayout>
     );
 }

@@ -40,7 +40,7 @@ class Vote extends Model
 | 도메인 | prefix | 예시 |
 |---|---|---|
 | 행사(소개팅 회차) 및 그 하위 데이터 | `event_` | `event_rounds`, `event_votes` |
-| 로테이션(좌석 배치) | `rotation_` | `rotation_tables`, `rotation_rounds`, `rotation_seatings` |
+| 로테이션(좌석 배치) | `rotation_` | `rotation_tables`, `rotation_seats` |
 
 - 회원 간 **투표**는 행사(event)에 종속되므로 테이블명은 **`event_votes`**.
 - 행사에 종속되는 테이블을 더 추가할 때도 `event_` prefix를 쓴다. (예: `event_notices`, `event_prizes`)

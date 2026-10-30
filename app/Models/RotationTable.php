@@ -38,12 +38,12 @@ class RotationTable extends Model
     }
 
     /**
-     * 이 테이블에서 발생한 모든 좌석 기록 (모든 턴).
+     * 이 테이블을 기준(홈) 자리로 가진 좌석들.
      *
-     * @return HasMany<RotationSeating>
+     * @return HasMany<RotationSeat>
      */
-    public function seatings(): HasMany
+    public function seats(): HasMany
     {
-        return $this->hasMany(RotationSeating::class, 'rotation_table_id');
+        return $this->hasMany(RotationSeat::class, 'rotation_table_id');
     }
 }

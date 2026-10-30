@@ -418,6 +418,14 @@ class RotationController extends Controller
     }
 
     /**
+     * 예외 상황 대처 설명서 — 현장 돌발 상황별 처리 방법. (별도 페이지)
+     */
+    public function guideException(): View
+    {
+        return view('admin.rotation.guideException');
+    }
+
+    /**
      * 참가자 안내 슬라이드 — 외부 공개용(비인증). 관리자 페이지와 동일한 덱(partial)을 쓴다.
      *
      * @param  string|null  $type  'wine'(와인파티) | 'solo'(1:1). 없거나 그 외 값이면 와인으로 시작.
@@ -723,8 +731,22 @@ class RotationController extends Controller
     }
 
     /**
-     * 투표 시작: 로테이션이 끝난 행사의 상태를 '투표중(V)'으로 전환한다.
+     * 로테이션 되돌리기: 현재 턴을 한 단계 이전으로 되돌린다.
+     * (실수로 "로테이션 진행"을 한 번 더 눌렀을 때 복구용)
      */
+    public function seatingRotateBack(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'event_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
+        }
+
+        $result = $this->rotationService->rotateBack((int) $this->request->input('event_id'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
     public function seatingFinish(): JsonResponse
     {
         $validator = Validator::make($this->request->all(), [

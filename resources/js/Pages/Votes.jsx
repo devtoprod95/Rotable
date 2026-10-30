@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import Placeholder from '@/Components/Placeholder';
+import ProfileDetailModal from '@/Components/ProfileDetailModal';
 import echo from '@/echo';
 
 function birthYearText(birthYear) {
@@ -15,7 +16,7 @@ function birthYearText(birthYear) {
  * - 투표중: 클릭으로 선택/해제 (최대 maxVotes명)
  * - 종료 후: 상호 매칭된 상대는 연락처(phone) 공개
  */
-function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }) {
+function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle, onDetail }) {
     const [copied, setCopied] = useState(false);
 
     const copyPhone = (e) => {
@@ -75,6 +76,21 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle }
             <div className="flex items-center gap-2">
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
                 <span className="font-bold">{candidate.name}</span>
+
+                {onDetail && (
+                    <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            onDetail(candidate);
+                        }}
+                        className="flex shrink-0 items-center gap-1 rounded-full bg-secondary-100 px-2 py-0.5 text-[11px] font-bold text-secondary-600 transition hover:bg-secondary-200"
+                    >
+                        ℹ️ 상세
+                    </span>
+                )}
 
                 {isMatched && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 px-2 py-0.5 text-[10px] font-extrabold text-white shadow-sm">
@@ -175,6 +191,9 @@ export default function Votes() {
 
     const [selected, setSelected] = useState(() => myVotedIds.map(Number));
     const [saving, setSaving] = useState(false);
+
+    // 상대 프로필 상세 모달 대상 (null 이면 닫힘)
+    const [detailMember, setDetailMember] = useState(null);
 
     const toggle = (id) => {
         setSelected((prev) => {
@@ -415,6 +434,7 @@ export default function Votes() {
                                 disabled={selected.length >= maxVotes}
                                 closed={isClosed}
                                 onToggle={toggle}
+                                onDetail={(m) => setDetailMember(m)}
                             />
                         ))}
                     </div>
@@ -458,6 +478,7 @@ export default function Votes() {
                                         disabled={true}
                                         closed={isClosed}
                                         onToggle={toggle}
+                                        onDetail={(m) => setDetailMember(m)}
                                     />
                                 ))}
                             </div>
@@ -490,6 +511,15 @@ export default function Votes() {
                     </div>
                 )}
             </div>
+
+            {/* 상대 프로필 상세 모달 */}
+            {detailMember && (
+                <ProfileDetailModal
+                    member={detailMember}
+                    tone={tone}
+                    onClose={() => setDetailMember(null)}
+                />
+            )}
         </AppLayout>
     );
 }

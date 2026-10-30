@@ -75,14 +75,13 @@ class Member extends Authenticatable
     }
 
     /**
-     * 이 회원의 모든 좌석 기록 (턴별 어느 테이블에 앉았는지).
-     * 성별과 무관하게 모든 좌석이 여기에 기록된다.
+     * 이 회원의 로테이션 기준(홈) 좌석. (회원당 1행)
      *
-     * @return HasMany<RotationSeating>
+     * @return HasMany<RotationSeat>
      */
-    public function seatings(): HasMany
+    public function rotationSeats(): HasMany
     {
-        return $this->hasMany(RotationSeating::class, 'member_id');
+        return $this->hasMany(RotationSeat::class, 'member_id');
     }
 
     /**
@@ -136,50 +135,87 @@ class Member extends Authenticatable
     }
 
     /**
-     * 현재(가장 최신 턴 기준) 이 회원이 앉아 있는 테이블 번호.
-     * 좌석 기록이 없으면 null 을 반환한다.
+     * 현재 턴(event_rounds.current_round) 기준으로 이 회원이 앉아 있는 테이블 번호.
+     * 기준 좌석이 없거나 로테이션 시작 전(current_round=0)이면 null.
      */
     public function currentTableNo(): ?int
     {
-        // 가장 최신 턴(round_no 역순) 1건만 DB에서 바로 가져온다.
-        // (전체 좌석을 메모리에 올려 PHP로 정렬하지 않도록 join + orderBy 로 처리)
-        $seating = RotationSeating::query()
+        $event = $this->eventRound;
+        if ($event === null || (int) $event->current_round < 1) {
+            return null;
+        }
+
+        $seat = RotationSeat::query()
             ->with('table')
-            ->whereHas('round', fn ($q) => $q->where('event_id', $this->event_id))
+            ->where('event_id', $this->event_id)
             ->where('member_id', $this->id)
-            ->join('rotation_rounds', 'rotation_rounds.id', '=', 'rotation_seatings.rotation_round_id')
-            ->orderByDesc('rotation_rounds.round_no')
-            ->select('rotation_seatings.*')
             ->first();
 
-        return $seating?->table?->table_no;
+        $homeTableNo = $seat?->table?->table_no;
+        if ($homeTableNo === null) {
+            return null;
+        }
+
+        $tableNos = RotationTable::where('event_id', $this->event_id)
+            ->orderBy('table_no')
+            ->pluck('table_no')
+            ->all();
+
+        return EventRound::seatedTableNoFor(
+            round: (int) $event->current_round,
+            isFemale: $this->gender === self::GENDER_FEMALE,
+            homeTableNo: (int) $homeTableNo,
+            tableNos: array_map('intval', $tableNos),
+        );
     }
 
     /**
-     * 현재(가장 최신 턴 기준) 내가 앉아 있는 테이블의 총 인원수.
-     * 좌석 기록이 없으면 0 을 반환한다.
+     * 현재 턴 기준으로 내가 앉은 테이블의 총 인원수.
+     * 좌석이 없거나 로테이션 시작 전이면 0.
      *
      * "테이블 전원이 투표했는지" 판정 등 테이블 단위 집계에 쓰인다.
      */
     public function currentTableSeatCount(): int
     {
-        // 내 최신 좌석(턴 + 테이블)을 먼저 찾는다.
-        $mySeating = RotationSeating::query()
-            ->whereHas('round', fn ($q) => $q->where('event_id', $this->event_id))
-            ->where('member_id', $this->id)
-            ->join('rotation_rounds', 'rotation_rounds.id', '=', 'rotation_seatings.rotation_round_id')
-            ->orderByDesc('rotation_rounds.round_no')
-            ->select('rotation_seatings.*')
-            ->first();
-
-        if ($mySeating === null) {
+        $myTableNo = $this->currentTableNo();
+        if ($myTableNo === null) {
             return 0;
         }
 
-        // 같은 턴 + 같은 테이블에 앉은 모든 좌석 수.
-        return RotationSeating::query()
-            ->where('rotation_round_id', $mySeating->rotation_round_id)
-            ->where('rotation_table_id', $mySeating->rotation_table_id)
-            ->count();
+        $event = $this->eventRound;
+        $round = (int) ($event?->current_round ?? 0);
+
+        $tableNos = RotationTable::where('event_id', $this->event_id)
+            ->orderBy('table_no')
+            ->pluck('table_no')
+            ->all();
+        $tableNos = array_map('intval', $tableNos);
+
+        // 같은 행사의 모든 기준 좌석을 현재 턴 공식으로 돌려, 내 테이블에 앉는 인원을 센다.
+        $seats = RotationSeat::query()
+            ->with(['member:id,gender', 'table:id,table_no'])
+            ->where('event_id', $this->event_id)
+            ->get();
+
+        $count = 0;
+        foreach ($seats as $seat) {
+            $homeTableNo = $seat->table?->table_no;
+            if ($homeTableNo === null) {
+                continue;
+            }
+
+            $seatedNo = EventRound::seatedTableNoFor(
+                round: $round,
+                isFemale: $seat->member?->gender === self::GENDER_FEMALE,
+                homeTableNo: (int) $homeTableNo,
+                tableNos: $tableNos,
+            );
+
+            if ($seatedNo === $myTableNo) {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 }

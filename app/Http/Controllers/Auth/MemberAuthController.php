@@ -103,19 +103,50 @@ class MemberAuthController extends Controller
      * 입장/등록 가능한 회차별 테이블(자리) 옵션 맵.
      * 참가자가 입장등록 시 자기 자리를 직접 고르도록 제공한다.
      *
-     * @return array<int, array<int, array{id: int, label: string}>>  event_id => [{id, label}, ...]
+     * 1:1 소개팅(one)은 테이블당 남/여 각 1명이 원칙이므로, 각 테이블에
+     * "이미 남/여가 앉았는지"(taken_male / taken_female)와 행사 타입(is_one)을 함께 내려
+     * 프론트에서 같은 성별이 찬 테이블을 선택지에서 제외할 수 있게 한다.
+     *
+     * @return array<int, array<int, array{id: int, label: string, is_one: bool, taken_male: bool, taken_female: bool}>>
      */
     private function tablesByEvent(): array
     {
+        // 노출 대상 행사(대기/진행/투표중)만 대상으로 한다.
+        $events = EventRound::query()
+            ->whereIn('status', [EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING])
+            ->get()
+            ->keyBy('id');
+
+        // 각 테이블에 이미 앉은 성별 집합. rotation_seats + members.gender 로 집계.
+        // 결과: [rotation_table_id => ['M' => bool, 'F' => bool]]
+        $occupancy = RotationSeat::query()
+            ->with('member:id,gender')
+            ->get()
+            ->groupBy('rotation_table_id')
+            ->map(function ($seats) {
+                return [
+                    'M' => $seats->contains(fn ($s) => $s->member?->gender === Member::GENDER_MALE),
+                    'F' => $seats->contains(fn ($s) => $s->member?->gender === Member::GENDER_FEMALE),
+                ];
+            });
+
         return RotationTable::query()
             ->orderBy('event_id')
             ->orderBy('table_no')
             ->get()
             ->groupBy('event_id')
-            ->map(fn ($tables) => $tables->map(fn (RotationTable $t): array => [
-                'id'    => $t->id,
-                'label' => $t->table_no . '번 테이블',
-            ])->values()->all())
+            ->map(fn ($tables, $eventId) => $tables->map(function (RotationTable $t) use ($events, $occupancy): array {
+                $isOne = ($events[$t->event_id] ?? null)?->isOneToOne() ?? false;
+                $occ   = $occupancy[$t->id] ?? ['M' => false, 'F' => false];
+
+                return [
+                    'id'           => $t->id,
+                    'label'        => $t->table_no . '번 테이블',
+                    'is_one'       => $isOne,
+                    'taken_male'   => (bool) $occ['M'],
+                    'taken_female' => (bool) $occ['F'],
+                ];
+            })->values()->all())
             ->all();
     }
 
@@ -153,6 +184,23 @@ class MemberAuthController extends Controller
                 Rule::exists('rotation_tables', 'id')->where(
                     fn ($query) => $query->where('event_id', $request->input('event_id'))
                 ),
+                // 1:1 소개팅은 테이블당 남/여 각 1명이 원칙. 같은 성별이 이미 앉은 테이블은 선택 불가.
+                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
+                    $event = EventRound::find($request->input('event_id'));
+                    if ($event === null || ! $event->isOneToOne()) {
+                        return; // 1:1 이 아니면 제한 없음.
+                    }
+
+                    $gender = $request->input('gender');
+                    $exists = RotationSeat::query()
+                        ->where('rotation_table_id', $value)
+                        ->whereHas('member', fn ($q) => $q->where('gender', $gender))
+                        ->exists();
+
+                    if ($exists) {
+                        $fail('이미 같은 성별이 앉은 테이블입니다. 다른 테이블을 선택해주세요.');
+                    }
+                },
             ],
             // 추가 프로필 (모든 유형 공통 필수) — 이상형/장점/취미/TMI
             'ideal_type' => ['required', 'string', 'max:100'],
@@ -181,7 +229,7 @@ class MemberAuthController extends Controller
             'mbti.size'                  => 'MBTI는 4글자로 입력해주세요.',
             'region.required'            => '지역/거주지를 입력해주세요.',
             'is_smoker.required'         => '흡연 여부를 선택해주세요.',
-            'rotation_table_id.required' => '앉고 계신 테이블을 선택해주세요.',
+            'rotation_table_id.required' => '앉아 계신 테이블을 선택해주세요.',
             'rotation_table_id.exists'   => '선택한 테이블이 올바르지 않습니다.',
             'ideal_type.required'        => '이상형을 입력해주세요.',
             'merit.required'             => '나의 장점을 입력해주세요.',

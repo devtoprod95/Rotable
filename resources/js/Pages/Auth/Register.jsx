@@ -1,5 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
@@ -64,13 +64,16 @@ export default function Register() {
     // 제출 전 최종 확인 모달 노출 여부.
     const [confirmOpen, setConfirmOpen] = useState(false);
 
+    // 필수 선택 누락 시 상단(회차/테이블)으로 스크롤하기 위한 ref.
+    const topRef = useRef(null);
+
     // 자동 입력 버튼 노출 조건:
     //  - 비프로덕션 환경이거나
     //  - URL 쿼리에 ?dev=... 처럼 dev 키에 값이 있을 때 (프로덕션에서도 임시 노출용)
     const showAutofill =
         !isProduction ||
         (typeof window !== 'undefined' && !!new URLSearchParams(window.location.search).get('dev'));
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, setError, clearErrors } = useForm({
         event_id: '',
         rotation_table_id: '',
         phone: '',
@@ -91,14 +94,32 @@ export default function Register() {
     });
 
     // 선택한 회차(event_id)에 해당하는 테이블 옵션.
-    const tableOptions = useMemo(
-        () => (data.event_id ? (tablesByEvent[data.event_id] ?? []) : []),
-        [data.event_id, tablesByEvent],
-    );
+    // 1:1 소개팅(is_one)은 테이블당 남/여 각 1명이므로, 내 성별이 이미 앉은 테이블은 제외한다.
+    const tableOptions = useMemo(() => {
+        const all = data.event_id ? (tablesByEvent[data.event_id] ?? []) : [];
+        return all.filter((t) => {
+            if (!t.is_one) {
+                return true; // 와인파티 등은 정원 제한 없음
+            }
+            if (data.gender === 'M' && t.taken_male) {
+                return false;
+            }
+            if (data.gender === 'F' && t.taken_female) {
+                return false;
+            }
+            return true;
+        });
+    }, [data.event_id, data.gender, tablesByEvent]);
 
     // 회차가 바뀌면 이전에 고른 테이블 선택을 초기화한다.
     function changeEvent(v) {
         setData('event_id', v);
+        setData('rotation_table_id', '');
+    }
+
+    // 성별이 바뀌면(1:1에서 선택 가능한 테이블이 달라지므로) 테이블 선택을 초기화한다.
+    function changeGender(v) {
+        setData('gender', v);
         setData('rotation_table_id', '');
     }
 
@@ -115,9 +136,27 @@ export default function Register() {
         });
     }
 
-    // 제출 버튼 → 최종 확인 모달 열기.
+    // 제출 버튼 → 모달 열기 전에 필수 선택(회차·테이블)을 먼저 확인한다.
     function submit(e) {
         e.preventDefault();
+
+        if (!data.gender) {
+            setError('gender', '성별을 선택해주세요.');
+            topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+        if (!data.event_id) {
+            setError('event_id', '회차를 선택해주세요.');
+            topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+        if (!data.rotation_table_id) {
+            setError('rotation_table_id', '앉아 계신 테이블을 선택해주세요.');
+            topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+
+        clearErrors('gender', 'event_id', 'rotation_table_id');
         setConfirmOpen(true);
     }
 
@@ -145,6 +184,7 @@ export default function Register() {
                     </p>
 
                     <form onSubmit={submit} className="mt-7 flex flex-col gap-4">
+                        <div ref={topRef} aria-hidden="true"></div>
                         {showAutofill && (
                             <button
                                 type="button"
@@ -154,6 +194,13 @@ export default function Register() {
                                 ⚡ 자동 입력 (회차 제외)
                             </button>
                         )}
+                        <RadioField
+                            label="성별"
+                            value={data.gender}
+                            onChange={(v) => changeGender(v)}
+                            options={GENDER_OPTIONS}
+                            error={errors.gender}
+                        />
                         <SelectField
                             label="회차"
                             value={data.event_id}
@@ -168,16 +215,17 @@ export default function Register() {
                             value={data.rotation_table_id}
                             onChange={(v) => setData('rotation_table_id', v)}
                             options={tableOptions}
-                            placeholder={data.event_id ? '앉고 계신 테이블을 선택해주세요' : '회차를 먼저 선택해주세요'}
+                            placeholder={
+                                !data.gender
+                                    ? '성별을 먼저 선택해주세요'
+                                    : !data.event_id
+                                        ? '회차를 먼저 선택해주세요'
+                                        : tableOptions.length === 0
+                                            ? '선택 가능한 테이블이 없어요'
+                                            : '앉아 계신 테이블을 선택해주세요'
+                            }
                             error={errors.rotation_table_id}
-                            disabled={!data.event_id || tableOptions.length === 0}
-                        />
-                        <RadioField
-                            label="성별"
-                            value={data.gender}
-                            onChange={(v) => setData('gender', v)}
-                            options={GENDER_OPTIONS}
-                            error={errors.gender}
+                            disabled={!data.gender || !data.event_id || tableOptions.length === 0}
                         />
                         <TextField
                             label="닉네임"

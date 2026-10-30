@@ -26,6 +26,11 @@ Route::prefix('public')->name('public.')->group(function () {
         ->where('type', 'wine|solo')
         ->name('guide');
 
+    // 호스트 발표 멘트(대본) — 안내 슬라이드를 보며 읽는 진행 멘트. 핸드폰으로 보기 좋은 단일 페이지.
+    Route::get('/script/{type?}', [\App\Http\Controllers\RotationController::class, 'scriptPublic'])
+        ->where('type', 'wine|solo')
+        ->name('script');
+
     Route::get('/games', [\App\Http\Controllers\PublicGameController::class, 'index'])->name('games');
     Route::get('/games/{slug}', [\App\Http\Controllers\PublicGameController::class, 'show'])
         ->where('slug', '[a-z0-9-]+')

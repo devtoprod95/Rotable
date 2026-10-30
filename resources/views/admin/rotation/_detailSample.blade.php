@@ -144,9 +144,25 @@
             매칭 결과까지 <b>스마트폰 하나로</b> 간편하게.<br>
             복잡한 절차는 덜어내고 <b>대화에만 집중</b>하세요 💘<br>
             물론 <b>2차까지 전부 무료</b>랍니다.<br>
-            <span style="display:inline-block; margin-top:10px;">🔋 모든 진행이 스마트폰으로 이뤄지니, <b>배터리는 꼭 넉넉히 충전</b>해서 와 주세요!</span>
+            <span style="display:inline-block; margin-top:10px;">🔋 모든 진행이 스마트폰으로 이뤄지니,<br><b>배터리는 꼭 넉넉히 충전</b>해서 와 주세요!</span>
         </div>
     </div>
+
+    @if ($type === 'wine')
+    {{-- 진정성 어필 배너 (와인파티 전용) — '도파민 만남'이 아닌 소개팅 목적임을 강조 --}}
+    <div style="background:#fdf2f8; border:2px solid #f9a8d4; border-radius:16px; padding:28px 20px; margin-bottom:40px; text-align:center;">
+        <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; color:#be185d; letter-spacing:0.5px; line-height:1.3;">🍷 진정성을 가지고 좋은 인연을 찾는 자리예요</div>
+        <div style="font-size:30px; font-weight:700; color:#4b5563; margin-top:16px; line-height:1.9;">
+            로테이블 와인파티는 <b style="color:#be185d; background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">진짜 좋은 인연을 찾는 소개팅</b>이 목적인 자리예요.<br>
+            순간의 재미나 자극만 좇는 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">단순한 도파민 만남</b>이 아니라,<br>
+            서로를 차분히 알아가며 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">진정성 있는 대화</b>를 나눌 수 있도록 준비했어요.<br>
+            그래서 호스트가 앞에 나와 억지로 게임을 진행하거나 분위기를 띄우지 않아요.
+            대신 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">가벼운 대화 주제</b>와 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">테이블끼리 즐기는 미니게임</b>을 살짝 건네드려,<br>
+            어색한 순간을 자연스럽게 풀어가실 수 있도록 도와드립니다.<br>
+            <span style="display:inline-block; margin-top:12px; color:#9d174d;">무리한 게임이나 과한 텐션을 요구하는 자리가 아니니,<br>부담없이 편안하게 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">사람에 집중</b>하시면 돼요 💘</span>
+        </div>
+    </div>
+    @endif
 
     {{-- 실시간 명단 업데이트 안내 --}}
     <div style="background:#ede9fe; border:2px solid #c4b5fd; border-radius:12px; padding:18px 16px; margin-bottom:40px; text-align:center;">
@@ -268,18 +284,6 @@
         <div style="font-size:30px; color:#6b7280; text-align:center; margin-bottom:24px; line-height:1.6;">
             로테이션 중, 같은 테이블끼리 즐기는 <b style="color:#7c3aed;">미니게임</b>을 바로!<br>
             처음 만난 사이도 금세 웃음꽃이 피는 아이스브레이킹 콘텐츠예요.
-        </div>
-
-        {{-- 진행 방식 안내 — 부담 없는 자리임을 친절하게 --}}
-        <div style="background:#faf5ff; border:2px solid #e9d5ff; border-radius:16px; padding:26px 20px; margin-bottom:24px; text-align:center;">
-            <div style="font-family:'Jua',sans-serif; font-size:34px; font-weight:400; color:#7c3aed; letter-spacing:0.5px; margin-bottom:14px;">🍷 편안하게 대화에 집중하는 자리예요</div>
-            <div style="font-size:28px; font-weight:700; color:#4b5563; line-height:1.75;">
-                와인파티는 <b style="color:#7c3aed;">좋은 인연을 찾는 소개팅</b>이 목적인 자리라,<br>
-                호스트가 앞에 나와 게임을 진행하거나 분위기를 억지로 띄우지 않아요.<br>
-                대신 <b>가벼운 대화 주제</b>와 <b>테이블끼리 즐기는 미니게임</b>을 살짝 건네드려,<br>
-                어색한 순간을 자연스럽게 풀어가실 수 있도록 도와드립니다.<br>
-                <span style="display:inline-block; margin-top:12px; color:#6d28d9;">무리한 게임이나 과한 텐션을 요구하는 자리가 아니니,<br>부담없이 편안하게 서로를 알아가는 데 집중하시면 돼요 😊</span>
-            </div>
         </div>
 
         {{-- 게임 이미지 (존재하는 game1~6.png 를 카드화해 또렷이 구분) --}}

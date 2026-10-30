@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Dtos\RotationTableListRequestDto;
+use App\Events\EventClosed;
+use App\Jobs\SendCloseVotingReportJob;
 use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\RotationRound;
@@ -994,10 +996,10 @@ class RotationService
             $event->save();
 
             // 참가자 화면을 실시간으로 갱신하여 매칭 결과를 바로 노출. 와인파티·1:1 공통.
-            broadcast(new \App\Events\EventClosed($event->id));
+            broadcast(new EventClosed($event->id));
 
-            // 운영진 텔레그램 요약 리포트. 실패해도 마감 처리는 막지 않는다.
-            $this->sendCloseVotingReport($event, $trigger);
+            // 운영진 텔레그램 요약 리포트는 비동기(Job)로 전송한다. (마감 응답을 지연시키지 않음)
+            SendCloseVotingReportJob::dispatch($event->id, $trigger);
 
             $returnMsg = helpersSuccessMessage('매칭을 마감했습니다.');
         } catch (\Throwable $th) {
@@ -1009,16 +1011,23 @@ class RotationService
 
     /**
      * 투표(매칭) 종료 시 운영진 텔레그램으로 요약 리포트를 보낸다.
-     * 전송 자체가 실패하더라도 마감 처리에는 영향을 주지 않도록 예외를 삼킨다.
+     * SendCloseVotingReportJob(비동기 큐)에서 호출된다.
+     * 전송 자체가 실패하더라도 예외를 삼켜 Job 이 과도하게 재시도하지 않도록 한다.
      *
+     * @param  int     $eventId  종료된 행사 id
      * @param  string  $trigger  마감 트리거: 'manual'(수동) | 'auto'(자동 9시 마감)
      */
-    private function sendCloseVotingReport(EventRound $event, string $trigger): void
+    public function sendCloseVotingReport(int $eventId, string $trigger): void
     {
         try {
             $notifier = TelegramNotifier::fromConfig();
             if (! $notifier->isConfigured()) {
                 return; // 미설정이면 조립 비용 없이 건너뛴다.
+            }
+
+            $event = EventRound::find($eventId);
+            if ($event === null) {
+                return; // 큐 처리 시점에 행사가 사라졌으면 조용히 종료.
             }
 
             $notifier->send($this->buildCloseVotingReport($event, $trigger));

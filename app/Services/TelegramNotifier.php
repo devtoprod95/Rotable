@@ -84,4 +84,79 @@ class TelegramNotifier
             return false;
         }
     }
+
+    /**
+     * 시스템 예외/에러를 운영진 채팅방으로 보낸다.
+     *
+     * @param  string                                           $exceptionClass  예외 클래스명
+     * @param  string                                           $message         예외 메시지
+     * @param  string                                           $file            발생 파일 경로
+     * @param  int                                              $line            발생 라인
+     * @param  array{method?:string, url?:string, ip?:string}   $context         요청 컨텍스트(선택)
+     * @param  string|null                                      $environment     앱 환경
+     */
+    public function sendErrorAlert(
+        string $exceptionClass,
+        string $message,
+        string $file,
+        int $line,
+        array $context = [],
+        ?string $environment = null,
+    ): bool {
+        if (! $this->isConfigured()) {
+            return false;
+        }
+
+        return $this->send($this->buildErrorAlert(
+            $exceptionClass,
+            $message,
+            $file,
+            $line,
+            $context,
+            $environment,
+        ));
+    }
+
+    /**
+     * 에러 알림 본문(텔레그램 HTML)을 조립한다.
+     * 메시지가 과도하게 길면 텔레그램 한도를 넘지 않도록 잘라낸다.
+     *
+     * @param  array{method?:string, url?:string, ip?:string}  $context
+     */
+    private function buildErrorAlert(
+        string $exceptionClass,
+        string $message,
+        string $file,
+        int $line,
+        array $context,
+        ?string $environment,
+    ): string {
+        $shortMessage = mb_strimwidth($message, 0, 500, '…');
+
+        $lines = [
+            '🚨 <b>시스템 에러 발생</b>',
+        ];
+
+        if (! empty($environment)) {
+            $lines[] = "🌐 <b>환경</b> : " . e($environment);
+        }
+
+        $lines[] = '';
+        $lines[] = "❗ <b>예외</b> : <code>" . e($exceptionClass) . "</code>";
+        $lines[] = "💬 <b>메시지</b> : " . e($shortMessage);
+        $lines[] = "📄 <b>위치</b> : " . e(basename($file)) . ":{$line}";
+
+        if (! empty($context['method']) || ! empty($context['url'])) {
+            $method = e($context['method'] ?? '');
+            $url    = e($context['url'] ?? '');
+            $lines[] = '';
+            $lines[] = "🔗 <b>요청</b> : {$method} {$url}";
+        }
+
+        if (! empty($context['ip'])) {
+            $lines[] = "📍 <b>IP</b> : " . e($context['ip']);
+        }
+
+        return implode("\n", $lines);
+    }
 }

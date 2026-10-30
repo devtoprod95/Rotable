@@ -20,14 +20,14 @@
             'eventName'=> '와인파티',
             // 핵심 매력 — 아이콘 카드 그리드로 노출 (icon / title / desc)
             'points'   => [
-                ['icon' => '📍', 'title' => '선릉역 도보 4분', 'desc' => '접근성 좋은 역세권에서 진행돼요'],
+                ['icon' => '📍', 'title' => '선릉역 도보 3분', 'desc' => '접근성 좋은 역세권에서 진행돼요'],
                 ['icon' => '🍷', 'title' => '와인 무제한', 'desc' => '다양한 와인을 무제한으로 즐겨요'],
                 ['icon' => '🧀', 'title' => '핑거푸드 무제한', 'desc' => '맛있는 핑거푸드를 마음껏 드세요'],
                 ['icon' => '🚻', 'title' => '남녀 화장실 분리', 'desc' => '남녀 화장실이 따로 준비되어 있어요'],
                 ['icon' => '✍️', 'title' => '글작성 X', 'desc' => '종이·설문 없이 스마트폰 터치 몇 번이면 끝'],
                 ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
-                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
+                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담없이 즐겨요'],
                 ['icon' => '🤫', 'title' => '100% 비밀 투표', 'desc' => '매칭된 상대에게만 살짝 공유돼요'],
                 ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
                 ['icon' => '🎮', 'title' => '미니게임 제공', 'desc' => '테이블끼리 즐기는 미니게임으로 어색함을 날려요'],
@@ -43,13 +43,13 @@
             'eventName'=> '1:1 소개팅',
             // 핵심 매력 — 아이콘 카드 그리드로 노출 (icon / title / desc)
             'points'   => [
-                ['icon' => '📍', 'title' => '선릉역 도보 4분', 'desc' => '접근성 좋은 역세권에서 진행돼요'],
+                ['icon' => '📍', 'title' => '선릉역 도보 3분', 'desc' => '접근성 좋은 역세권에서 진행돼요'],
                 ['icon' => '⏱️', 'title' => '현장 바로 발표', 'desc' => '끝나면 그 자리에서 매칭 결과 확인'],
                 ['icon' => '✍️', 'title' => '글작성 X', 'desc' => '종이·설문 없이 스마트폰 터치 몇 번이면 끝'],
                 ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
                 ['icon' => '💌', 'title' => '연락처 공유', 'desc' => '선택해 준 상대 정보로 편하게 연락 이어가기'],
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
-                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담 없이 즐겨요'],
+                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담없이 즐겨요'],
                 ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
                 ['icon' => '🤍', 'title' => '100% 비밀 투표', 'desc' => '서로 선택한 경우에만 매칭 사실 공유'],
             ],
@@ -138,16 +138,12 @@
 
     {{-- 한 줄 요약 배너 (후킹) --}}
     <div style="background:linear-gradient(135deg,#ec4899,#8b5cf6); border-radius:14px; padding:28px 20px; margin-top:20px; margin-bottom:40px; text-align:center; color:#ffffff;">
-        <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; letter-spacing:0.5px;">선릉역 4분 · 글작성 X · 2차 무료</div>
+        <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; letter-spacing:0.5px;">선릉역 3분 · 글작성 X · 2차 무료</div>
         <div style="font-size:32px; font-weight:800; margin-top:8px; opacity:0.98; line-height:1.7;">
-            지금까지 소개팅에서 프로필을 직접 적고,<br>
-            상대방 이름과 정보를 외우느라 힘드셨죠?<br>
-            로테이블은 그 모든 과정을 <b>스마트폰 하나로</b> 해결했어요.<br>
-            내 프로필 등록부터 상대 정보 확인, 마음에 드는 분 선택,<br>
-            그리고 매칭 결과까지 — 전부 폰 안에서 <b>간편하게</b> 진행됩니다.<br>
-            복잡한 절차와 어색한 순간은 덜어내고, 대화에만 집중하실 수 있도록<br>
-            <b>깔끔하고 세련된 방식</b>으로 준비했어요.<br>
-            물론 <b>2차까지 전부 무료</b>랍니다 💘<br>
+            프로필 작성부터 상대 정보 확인, 마음에 든 분 선택,<br>
+            매칭 결과까지 <b>스마트폰 하나로</b> 간편하게.<br>
+            복잡한 절차는 덜어내고 <b>대화에만 집중</b>하세요 💘<br>
+            물론 <b>2차까지 전부 무료</b>랍니다.<br>
             <span style="display:inline-block; margin-top:10px;">🔋 모든 진행이 스마트폰으로 이뤄지니, <b>배터리는 꼭 넉넉히 충전</b>해서 와 주세요!</span>
         </div>
     </div>
@@ -270,8 +266,20 @@
     <div style="margin-top:4px; margin-bottom:44px;">
         <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#7c3aed; text-align:center; letter-spacing:0.5px; margin-bottom:8px;">🎮 대화가 어색할 틈이 없어요</div>
         <div style="font-size:30px; color:#6b7280; text-align:center; margin-bottom:24px; line-height:1.6;">
-            로테이션 중, 같은 테이블끼리 즐기는 <b style="color:#7c3aed;">미니게임</b>을 폰으로 바로!<br>
+            로테이션 중, 같은 테이블끼리 즐기는 <b style="color:#7c3aed;">미니게임</b>을 바로!<br>
             처음 만난 사이도 금세 웃음꽃이 피는 아이스브레이킹 콘텐츠예요.
+        </div>
+
+        {{-- 진행 방식 안내 — 부담 없는 자리임을 친절하게 --}}
+        <div style="background:#faf5ff; border:2px solid #e9d5ff; border-radius:16px; padding:26px 20px; margin-bottom:24px; text-align:center;">
+            <div style="font-family:'Jua',sans-serif; font-size:34px; font-weight:400; color:#7c3aed; letter-spacing:0.5px; margin-bottom:14px;">🍷 편안하게 대화에 집중하는 자리예요</div>
+            <div style="font-size:28px; font-weight:700; color:#4b5563; line-height:1.75;">
+                와인파티는 <b style="color:#7c3aed;">좋은 인연을 찾는 소개팅</b>이 목적인 자리라,<br>
+                호스트가 앞에 나와 게임을 진행하거나 분위기를 억지로 띄우지 않아요.<br>
+                대신 <b>가벼운 대화 주제</b>와 <b>테이블끼리 즐기는 미니게임</b>을 살짝 건네드려,<br>
+                어색한 순간을 자연스럽게 풀어가실 수 있도록 도와드립니다.<br>
+                <span style="display:inline-block; margin-top:12px; color:#6d28d9;">무리한 게임이나 과한 텐션을 요구하는 자리가 아니니,<br>부담없이 편안하게 서로를 알아가는 데 집중하시면 돼요 😊</span>
+            </div>
         </div>
 
         {{-- 게임 이미지 (존재하는 game1~6.png 를 카드화해 또렷이 구분) --}}
@@ -456,7 +464,7 @@
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 주차가 되나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">아쉽지만 전용 주차 공간은 없어요 🙏<br>선릉역에서 도보 4분 거리라 접근성이 좋으니<br>가급적 대중교통 이용을 부탁드려요!</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">아쉽지만 전용 주차 공간은 없어요 🙏<br>선릉역에서 도보 3분 거리라 접근성이 좋으니<br>가급적 대중교통 이용을 부탁드려요!</div>
             </div>
             <div>
                 <div style="font-weight:900;">Q. 개인정보는 안전한가요?</div>

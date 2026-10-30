@@ -181,7 +181,7 @@ class MemberAuthController extends Controller
             'mbti.size'                  => 'MBTI는 4글자로 입력해주세요.',
             'region.required'            => '지역/거주지를 입력해주세요.',
             'is_smoker.required'         => '흡연 여부를 선택해주세요.',
-            'rotation_table_id.required' => '앉으실 테이블을 선택해주세요.',
+            'rotation_table_id.required' => '앉고 계신 테이블을 선택해주세요.',
             'rotation_table_id.exists'   => '선택한 테이블이 올바르지 않습니다.',
             'ideal_type.required'        => '이상형을 입력해주세요.',
             'merit.required'             => '나의 장점을 입력해주세요.',

@@ -195,6 +195,8 @@
         const TYPE_LABEL   = @json($types);
         const STATUS_LABEL = @json($statuses);
         const STATUS_COLOR = { 'P': 'bg-secondary', 'S': 'bg-blue', 'V': 'bg-green', 'X': 'bg-dark' };
+        // 타입별 뱃지 색상: 와인파티(wine)=와인색(핑크레드), 1:1 소개팅(one)=하늘색
+        const TYPE_COLOR   = { 'wine': 'bg-pink-lt', 'one': 'bg-azure-lt' };
         const detailBase   = "{{ url('admin/rotation/event') }}";
         const seatingBase  = "{{ route('admin.rotation.seating.index') }}";
 
@@ -239,8 +241,9 @@
                     formatter: function(cell){
                         var d = cell.getRow().getData();
                         var typeLabel   = TYPE_LABEL[d.type] ?? d.type ?? '-';
+                        var typeColor   = TYPE_COLOR[d.type] ?? 'bg-azure-lt';
                         var tableCount  = d.rotation_tables_count ?? 0;
-                        return `<div><span class="badge bg-azure-lt">${typeLabel}</span></div>`
+                        return `<div><span class="badge ${typeColor}">${typeLabel}</span></div>`
                             + `<div class="mt-1"><span class="badge bg-green-lt">테이블 ${tableCount}개</span></div>`;
                     }
                 },

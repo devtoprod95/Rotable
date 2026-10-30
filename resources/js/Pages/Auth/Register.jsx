@@ -168,7 +168,7 @@ export default function Register() {
                             value={data.rotation_table_id}
                             onChange={(v) => setData('rotation_table_id', v)}
                             options={tableOptions}
-                            placeholder={data.event_id ? '앉으실 테이블을 선택해주세요' : '회차를 먼저 선택해주세요'}
+                            placeholder={data.event_id ? '앉고 계신 테이블을 선택해주세요' : '회차를 먼저 선택해주세요'}
                             error={errors.rotation_table_id}
                             disabled={!data.event_id || tableOptions.length === 0}
                         />

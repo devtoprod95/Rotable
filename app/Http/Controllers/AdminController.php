@@ -20,6 +20,7 @@ use App\Models\Admin as ModelsAdmin;
 use App\Models\DeniedRoute;
 use App\Models\Role as ModelsRole;
 use App\Services\AdminService;
+use App\Services\TelegramNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -388,5 +389,23 @@ class AdminController extends Controller
         leaveAdminImpersonation($originalAdmin);
 
         return apiRes(Response::HTTP_OK, helpersSuccessMessage("기존 관리자({$originalAdmin->name}) 계정으로 복귀했습니다."));
+    }
+
+    /**
+     * 텔레그램 메시지 전달 on/off 토글. (최고관리자 전용 · superAdmin 미들웨어로 보호)
+     * 요청 body 의 enabled(bool)로 상태를 설정하고, 미지정 시 현재 상태를 반전시킨다.
+     */
+    public function toggleTelegram(Request $request): JsonResponse
+    {
+        $enabled = $request->has('enabled')
+            ? $request->boolean('enabled')
+            : ! TelegramNotifier::isEnabled();
+
+        TelegramNotifier::setEnabled($enabled);
+
+        return apiRes(Response::HTTP_OK, helpersCustomArrayMessage(true, [
+            'msg'     => $enabled ? '텔레그램 메시지 전달을 켰습니다.' : '텔레그램 메시지 전달을 껐습니다.',
+            'enabled' => $enabled,
+        ]));
     }
 }

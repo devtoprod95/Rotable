@@ -8,6 +8,7 @@ enum CacheKey: string
     case VisitorTotalUntilYesterday = 'visitor_total_until_yesterday';
     case HTTP_STATUS_COUNTS         = 'http_status_counts';
     case AdminDeniedRoutesRoles     = 'admin_denied_routes_roles';
+    case TelegramEnabled            = 'telegram_enabled';
 
      public function forToday(): string
     {

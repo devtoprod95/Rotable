@@ -114,6 +114,11 @@ Route::middleware('role')->group(function () {
             Route::get('/icons', function () {
                 return view('icons');
             })->name('icons');
+
+            // 텔레그램 메시지 전달 on/off (최고관리자 전용) — 헤더 토글에서 호출
+            Route::prefix('telegram')->name('telegram.')->middleware('superAdmin')->group(function () {
+                Route::post('/toggle', [AdminController::class, 'toggleTelegram'])->name('toggle');
+            });
             Route::get('/general', function () {
                 return view('setting-general');
             })->name('general');

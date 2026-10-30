@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Enums\CacheKey;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -10,6 +12,7 @@ use Illuminate\Support\Facades\Http;
  * - 봇 토큰/채팅 id 는 config/services.php (telegram) 에서 읽는다.
  * - 설정이 비어 있으면 전송을 조용히 건너뛴다. (본 기능 흐름을 막지 않기 위함)
  * - 전송 실패(네트워크/HTTP 오류)도 예외를 던지지 않고 로그만 남긴다.
+ * - 최고관리자가 런타임에 전송을 on/off 할 수 있다. (캐시 플래그, 기본 on)
  */
 class TelegramNotifier
 {
@@ -34,11 +37,27 @@ class TelegramNotifier
     }
 
     /**
-     * 봇 토큰과 수신 chat id 가 모두 설정되어 있어 전송 가능한 상태인지 여부.
+     * 텔레그램 메시지 전달이 (최고관리자에 의해) 켜져 있는지 여부. 기본값은 켜짐.
+     */
+    public static function isEnabled(): bool
+    {
+        return (bool) Cache::rememberForever(CacheKey::TelegramEnabled->value, fn (): bool => true);
+    }
+
+    /**
+     * 텔레그램 메시지 전달 on/off 를 설정한다. (최고관리자 전용 기능에서 호출)
+     */
+    public static function setEnabled(bool $enabled): void
+    {
+        Cache::forever(CacheKey::TelegramEnabled->value, $enabled);
+    }
+
+    /**
+     * 봇 토큰과 수신 chat id 가 모두 설정되어 있고, 전달이 켜져 있어 전송 가능한 상태인지 여부.
      */
     public function isConfigured(): bool
     {
-        return ! empty($this->botToken) && ! empty($this->defaultChatId);
+        return ! empty($this->botToken) && ! empty($this->defaultChatId) && self::isEnabled();
     }
 
     /**
@@ -54,6 +73,11 @@ class TelegramNotifier
 
         if (empty($this->botToken) || empty($chatId)) {
             // 미설정은 정상 상황으로 간주하고 조용히 건너뛴다.
+            return false;
+        }
+
+        if (! self::isEnabled()) {
+            // 최고관리자가 전달을 꺼둔 상태이면 조용히 건너뛴다.
             return false;
         }
 

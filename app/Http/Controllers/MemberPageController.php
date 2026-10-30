@@ -445,7 +445,7 @@ class MemberPageController extends Controller
 
         $isOneToOne = $event !== null && $event->isOneToOne();
 
-        // 매칭 투표 가능 여부(와인파티): 상태가 '매칭중(V)'이고 자동 마감 시각(다음 날 오전 9시) 전.
+        // 매칭 투표 가능 여부(와인파티): 상태가 '매칭중(V)'이면 열림.
         $isVotingOpen = $event !== null && $event->isVotingOpen();
         $isClosed     = $status === EventRound::STATUS_CLOSED;
 
@@ -453,11 +453,9 @@ class MemberPageController extends Controller
         // 따라서 이 화면에서의 선택 가능(canVote)은 와인파티에서만 true.
         $canVote = ! $isOneToOne && $isVotingOpen;
 
-        // 상태는 V 이지만 마감 시각이 지나 투표만 닫힌 '마감 대기' 상태(와인파티 전용).
-        // (스케줄이 아직 X로 전환하기 전의 공백 구간)
-        $isVotingEnded = ! $isOneToOne
-            && $status === EventRound::STATUS_VOTING
-            && ! $isVotingOpen;
+        // 매칭 투표가 끝난 '마감 대기' 상태는 상태를 V→X 로 전환하는 스케줄러가 처리하므로
+        // 화면에서는 별도의 시각 기반 마감 판정을 하지 않는다. (V 이면 항상 투표 가능)
+        $isVotingEnded = false;
 
         $oppositeGen = $me->gender === Member::GENDER_MALE
             ? Member::GENDER_FEMALE

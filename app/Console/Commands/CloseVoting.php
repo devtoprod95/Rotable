@@ -33,7 +33,7 @@ class CloseVoting extends Command
                 continue;
             }
 
-            $result = $this->rotationService->closeVoting($event->id);
+            $result = $this->rotationService->closeVoting($event->id, 'auto');
 
             if (($result['isSuccess'] ?? false) === true) {
                 $closed++;

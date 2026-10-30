@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    /*
+    | 텔레그램 봇 — 운영진(관리자) 알림 전송용.
+    | bot_token: @BotFather 로 발급받은 봇 토큰.
+    | admin_chat_id: 알림을 받을 운영진 채팅방(또는 개인) chat id.
+    | 둘 중 하나라도 비어 있으면 전송을 조용히 건너뛴다(본 기능은 막지 않음).
+    */
+    'telegram' => [
+        'bot_token'     => env('TELEGRAM_BOT_TOKEN'),
+        'admin_chat_id' => env('TELEGRAM_ADMIN_CHAT_ID'),
+    ],
+
 ];

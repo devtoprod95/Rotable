@@ -980,7 +980,7 @@ class RotationService
      *
      * @return array{isSuccess:bool, message?:string}
      */
-    public function closeVoting(int $eventId): array
+    public function closeVoting(int $eventId, string $trigger = 'manual'): array
     {
         $returnMsg = $this->returnMsg;
 
@@ -996,6 +996,9 @@ class RotationService
             // 참가자 화면을 실시간으로 갱신하여 매칭 결과를 바로 노출. 와인파티·1:1 공통.
             broadcast(new \App\Events\EventClosed($event->id));
 
+            // 운영진 텔레그램 요약 리포트. 실패해도 마감 처리는 막지 않는다.
+            $this->sendCloseVotingReport($event, $trigger);
+
             $returnMsg = helpersSuccessMessage('매칭을 마감했습니다.');
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
@@ -1004,9 +1007,91 @@ class RotationService
         return $returnMsg;
     }
 
-    /* ======================================================================
-     | 상세페이지 디자이너 — 공용 템플릿 HTML 1개를 storage 파일에 저장/로드
-     * ==================================================================== */
+    /**
+     * 투표(매칭) 종료 시 운영진 텔레그램으로 요약 리포트를 보낸다.
+     * 전송 자체가 실패하더라도 마감 처리에는 영향을 주지 않도록 예외를 삼킨다.
+     *
+     * @param  string  $trigger  마감 트리거: 'manual'(수동) | 'auto'(자동 9시 마감)
+     */
+    private function sendCloseVotingReport(EventRound $event, string $trigger): void
+    {
+        try {
+            $notifier = TelegramNotifier::fromConfig();
+            if (! $notifier->isConfigured()) {
+                return; // 미설정이면 조립 비용 없이 건너뛴다.
+            }
+
+            $notifier->send($this->buildCloseVotingReport($event, $trigger));
+        } catch (\Throwable $th) {
+            channelLog(message: $th, channel: 'telegram', level: 'error');
+        }
+    }
+
+    /**
+     * 종료 요약 리포트 본문(텔레그램 HTML)을 조립한다.
+     *
+     * 포함 정보: 행사명/타입/일시, 마감 방식(수동/자동), 참가 수(남/여/합계),
+     * 투표 참여자 수, 상호 매칭 쌍 수, 메시지/요청 건수.
+     *
+     * @param  string  $trigger  'manual' | 'auto'
+     */
+    private function buildCloseVotingReport(EventRound $event, string $trigger): string
+    {
+        $maleCount   = $event->members()->where('gender', Member::GENDER_MALE)->count();
+        $femaleCount = $event->members()->where('gender', Member::GENDER_FEMALE)->count();
+        $totalCount  = $maleCount + $femaleCount;
+
+        // 투표를 1표라도 한 고유 참가자 수(성별별). voter_id 를 members 와 조인해 집계한다.
+        $voterCount = Vote::query()
+            ->where('event_id', $event->id)
+            ->distinct('voter_id')
+            ->count('voter_id');
+
+        $maleVoterCount = Vote::query()
+            ->where('event_votes.event_id', $event->id)
+            ->join('members', 'members.id', '=', 'event_votes.voter_id')
+            ->where('members.gender', Member::GENDER_MALE)
+            ->distinct('event_votes.voter_id')
+            ->count('event_votes.voter_id');
+
+        $femaleVoterCount = Vote::query()
+            ->where('event_votes.event_id', $event->id)
+            ->join('members', 'members.id', '=', 'event_votes.voter_id')
+            ->where('members.gender', Member::GENDER_FEMALE)
+            ->distinct('event_votes.voter_id')
+            ->count('event_votes.voter_id');
+
+        // 상호 매칭 쌍 수 (남자 기준 1회 노출된 쌍 목록의 길이).
+        $pairCount = count($this->matchedPairList($event->id));
+
+        $messageCount = $event->messages()->count();
+        $requestCount = $event->adminRequests()->count();
+
+        $typeLabel    = EventRound::typeOptions()[$event->type] ?? $event->type;
+        $triggerLabel = $trigger === 'auto' ? '자동 마감 (오전 9시)' : '수동 마감';
+        $timeLabel    = $event->event_time
+            ? $event->event_time->format('Y-m-d H:i')
+            : '(미지정)';
+
+        $title = e($event->title);
+
+        return implode("\n", [
+            '🏁 <b>매칭 종료 알림</b>',
+            '',
+            "🍷 <b>행사명</b> : {$title}",
+            "📋 <b>행사종류</b> : {$typeLabel}",
+            "🗓 <b>행사일시</b> : {$timeLabel}",
+            "⏱ <b>마감종류</b> : {$triggerLabel}",
+            '',
+            '👥 <b>참가</b> : 총 ' . number_format($totalCount) . '명 (남 ' . number_format($maleCount) . ' / 여 ' . number_format($femaleCount) . ')',
+            '🗳 <b>투표 참여</b> : ' . number_format($voterCount) . '명 (남 ' . number_format($maleVoterCount) . ' / 여 ' . number_format($femaleVoterCount) . ')',
+            '❤️ <b>상호 매칭</b> : ' . number_format($pairCount) . '쌍',
+            '',
+            '💬 메시지 ' . number_format($messageCount) . '건 · 📨 요청 ' . number_format($requestCount) . '건',
+        ]);
+    }
+
+
 
     /** 상세페이지 HTML 저장 경로 (유형별, storage/app/private/rotation/detail_{type}.html) */
     private const DETAIL_HTML_PATH = 'rotation/detail_%s.html';

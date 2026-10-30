@@ -140,17 +140,15 @@ class EventRound extends Model
     }
 
     /**
-     * 현재 투표가 열려 있고(V), 아직 자동 마감 시각이 지나지 않았는지 여부.
+     * 현재 투표가 열려 있는지 여부. (상태가 매칭중(V)이면 열림)
+     *
+     * 과거에는 자동 마감 시각(votingClosesAt)까지 함께 따졌으나,
+     * 상태(V)만으로 단순 판정한다. 시간에 따른 실제 마감은 스케줄러(CloseVoting)가
+     * 상태를 V→X 로 전환하는 것으로 처리한다.
      */
     public function isVotingOpen(): bool
     {
-        if ($this->status !== self::STATUS_VOTING) {
-            return false;
-        }
-
-        $closesAt = $this->votingClosesAt();
-
-        return $closesAt === null || now()->lt($closesAt);
+        return $this->status === self::STATUS_VOTING;
     }
 
     /**
@@ -166,7 +164,7 @@ class EventRound extends Model
      *
      * - 1:1(one): 로테이션 진행(S)·매칭중(V) 동안 종료(X) 전까지 자유롭게 선택/수정.
      *   관리자가 "매칭종료"를 누르는 시점(X 전환)까지가 마감이며, 자동 9시 마감은 적용하지 않는다.
-     * - 와인파티(wine): 기존 로직대로 매칭중(V) + 자동 마감 시각(다음 날 오전 9시) 전까지.
+     * - 와인파티(wine): 매칭중(V) 동안. (관리자 수동 종료 또는 스케줄러가 X 로 바꾸기 전까지)
      */
     public function isMatchSelectable(): bool
     {

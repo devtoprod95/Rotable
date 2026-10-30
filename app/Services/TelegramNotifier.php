@@ -1,0 +1,87 @@
+<?php
+
+namespace App\Services;
+
+use Illuminate\Support\Facades\Http;
+
+/**
+ * 텔레그램 봇으로 운영진(관리자)에게 알림 메시지를 보낸다.
+ *
+ * - 봇 토큰/채팅 id 는 config/services.php (telegram) 에서 읽는다.
+ * - 설정이 비어 있으면 전송을 조용히 건너뛴다. (본 기능 흐름을 막지 않기 위함)
+ * - 전송 실패(네트워크/HTTP 오류)도 예외를 던지지 않고 로그만 남긴다.
+ */
+class TelegramNotifier
+{
+    /** 로그 채널명 (storage/logs/telegram/*) */
+    private const LOG_CHANNEL = 'telegram';
+
+    public function __construct(
+        private readonly ?string $botToken = null,
+        private readonly ?string $defaultChatId = null,
+    ) {
+    }
+
+    /**
+     * 설정값으로 인스턴스를 만든다.
+     */
+    public static function fromConfig(): self
+    {
+        return new self(
+            botToken: config('services.telegram.bot_token'),
+            defaultChatId: config('services.telegram.admin_chat_id'),
+        );
+    }
+
+    /**
+     * 봇 토큰과 수신 chat id 가 모두 설정되어 있어 전송 가능한 상태인지 여부.
+     */
+    public function isConfigured(): bool
+    {
+        return ! empty($this->botToken) && ! empty($this->defaultChatId);
+    }
+
+    /**
+     * 운영진 채팅방으로 메시지를 보낸다.
+     *
+     * @param  string       $text    보낼 본문 (HTML parse_mode)
+     * @param  string|null  $chatId  수신 chat id (미지정 시 기본 운영진 chat id)
+     * @return bool 전송 성공 여부 (미설정/실패 시 false)
+     */
+    public function send(string $text, ?string $chatId = null): bool
+    {
+        $chatId ??= $this->defaultChatId;
+
+        if (empty($this->botToken) || empty($chatId)) {
+            // 미설정은 정상 상황으로 간주하고 조용히 건너뛴다.
+            return false;
+        }
+
+        try {
+            $response = Http::asForm()
+                ->timeout(5)
+                ->post("https://api.telegram.org/bot{$this->botToken}/sendMessage", [
+                    'chat_id'                  => $chatId,
+                    'text'                     => $text,
+                    'parse_mode'               => 'HTML',
+                    'disable_web_page_preview' => true,
+                ]);
+
+            if ($response->failed()) {
+                channelLog(
+                    message: "[telegram] 전송 실패 status={$response->status()} body={$response->body()}",
+                    channel: self::LOG_CHANNEL,
+                    level: 'error',
+                );
+
+                return false;
+            }
+
+            return true;
+        } catch (\Throwable $th) {
+            channelLog(message: $th, channel: self::LOG_CHANNEL, level: 'error');
+
+            return false;
+        }
+    }
+}

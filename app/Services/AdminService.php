@@ -110,10 +110,24 @@ class AdminService
 
             $admin->username  = $dto->username;
             $admin->name      = $dto->name;
-            $admin->is_active = $dto->isActive;
-            $admin->save();
 
-            $admin->roles()->sync($dto->roles);
+            // 활성여부·권한(역할) 변경은 최고관리자만 가능하다.
+            // 비최고관리자는 신규 등록 불가, 수정 시에도 is_active/roles 는 기존 값을 유지한다.
+            $currentAdmin = auth('admin')->user();
+            $isSuperAdmin = $currentAdmin !== null
+                && $currentAdmin->hasRole(\App\Enums\Role::SuperAdmin->value);
+
+            if ($isSuperAdmin) {
+                $admin->is_active = $dto->isActive;
+                $admin->save();
+                $admin->roles()->sync($dto->roles);
+            } else {
+                if (! $admin->exists) {
+                    throw new Exception('관리자 신규 등록은 최고관리자만 가능합니다.');
+                }
+                // is_active/roles 는 건드리지 않고 나머지(아이디/이름/비밀번호)만 저장.
+                $admin->save();
+            }
 
             $returnMsg = helpersSuccessMessage();
         } catch (\Throwable $th) {
@@ -150,6 +164,12 @@ class AdminService
         $returnMsg = $this->returnMsg;
 
         try {
+            // 활성여부 변경은 최고관리자만 가능하다.
+            $currentAdmin = auth('admin')->user();
+            if ($currentAdmin === null || ! $currentAdmin->hasRole(\App\Enums\Role::SuperAdmin->value)) {
+                throw new Exception('활성여부 변경은 최고관리자만 가능합니다.');
+            }
+
             Admin::whereIn('id', $ids)->update(['is_active' => $isActive]);
 
             $returnMsg = helpersSuccessMessage();

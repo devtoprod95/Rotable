@@ -66,9 +66,14 @@
                                 </div>
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
-                                <a href="/profile" class="dropdown-item">
+                                <a href="{{ route('admin.view', ['id' => auth('admin')->id()]) }}" class="dropdown-item">
                                     <i class="ti ti-user me-2 fs-2"></i>프로필
                                 </a>
+                                @if (config('services.telegram.invite_link'))
+                                    <a href="{{ config('services.telegram.invite_link') }}" target="_blank" rel="noopener" class="dropdown-item">
+                                        <i class="ti ti-brand-telegram me-2 fs-2 text-azure"></i>텔레그램 알림방 입장
+                                    </a>
+                                @endif
                                 <button type="button" class="dropdown-item text-danger btn-logout">
                                     <i class="ti ti-logout me-2 fs-2"></i>로그아웃
                                 </button>

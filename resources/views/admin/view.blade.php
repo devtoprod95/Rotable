@@ -1,5 +1,6 @@
 @php
     use App\Enums\Admin;
+    $isSuperAdmin = auth('admin')->user()?->hasRole(\App\Enums\Role::SuperAdmin->value) ?? false;
 @endphp
 
 @extends('layouts.app')
@@ -64,6 +65,7 @@
                                 </div>
                             </div>
 
+                            @if ($isSuperAdmin)
                             <div class="col-md-6 mb-3">
                                 <label class="form-label required">활성여부</label>
                                 <div class="form-selectgroup">
@@ -102,6 +104,7 @@
                                     @endforeach
                                 </div>
                             </div>
+                            @endif
 
                         </div>
                     </div>
@@ -169,7 +172,7 @@
                     }
                 }
 
-                if( roles.length < 1 ){
+                if( {{ $isSuperAdmin ? 'true' : 'false' }} && roles.length < 1 ){
                     await salert({text: '권한을 최소 1개 선택해주세요.', cancel: false});
                     return false;
                 }

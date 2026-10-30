@@ -15,15 +15,20 @@ class StoreRequest extends FormRequest
 
     public function rules(): array
     {
+        // 활성여부·권한 변경은 최고관리자만 가능하다.
+        // 비최고관리자는 해당 필드를 전송하지 않으므로(화면에서 숨김) 필수 검증을 걸지 않는다.
+        $admin        = auth('admin')->user();
+        $isSuperAdmin = $admin !== null && $admin->hasRole(\App\Enums\Role::SuperAdmin->value);
+
         return [
             'id'                    => 'nullable|integer',
             'username'              => 'required|string|max:50',
             'password'              => 'nullable|string',
             'password_confirmation' => 'nullable|string',
             'name'                  => 'required|string|max:30',
-            'roles'                 => 'required|array|min:1',
+            'roles'                 => ($isSuperAdmin ? 'required|array|min:1' : 'nullable|array'),
             'roles.*'               => 'string',
-            'is_active'             => 'required|in:0,1',
+            'is_active'             => ($isSuperAdmin ? 'required|in:0,1' : 'nullable|in:0,1'),
         ];
     }
 

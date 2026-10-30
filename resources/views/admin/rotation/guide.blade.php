@@ -17,6 +17,10 @@
                    class="btn btn-sm btn-outline-teal ms-2">
                     <i class="ti ti-external-link me-1"></i> 공개 페이지 열기
                 </a>
+                <a href="{{ route('public.script') }}" target="_blank" rel="noopener"
+                   class="btn btn-sm btn-outline-pink">
+                    <i class="ti ti-microphone me-1"></i> 발표 멘트 열기
+                </a>
             </div>
 
             <div class="card-body">

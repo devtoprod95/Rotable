@@ -174,7 +174,7 @@ export default function AppLayout({
 
 const WINE_NAV_ITEMS = [
     { href: "/home", label: "홈", icon: HeartIcon },
-    { href: "/chats", label: "쪽지", icon: ChatIcon },
+    { href: "/chats", label: "메시지", icon: ChatIcon },
     { href: "/votes", label: "매칭하기", icon: VoteIcon },
     { href: "/requests", label: "요청", icon: RequestIcon },
 ];

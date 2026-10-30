@@ -186,7 +186,7 @@
                                 <div class="fw-bold text-pink mb-1"><i class="ti ti-users me-1"></i> 그러면 참가자는</div>
                                 <ul class="lh-lg">
                                     <li><b>진행</b> 중에는 턴이 바뀔 때마다 안내된 자리로 이동하며 대화하고, <b>중간에 메시지</b>를 보낼 수 있습니다.</li>
-                                    <li><b>투표중</b>이 되면 마음에 든 상대를 <mark>최대 <b class="text-red">3명</b>까지 비밀 투표</mark>할 수 있습니다.</li>
+                                    <li><b>투표중</b>이 되면 마음에 든 상대를 <mark>최대 <b class="text-red">3명</b>까지 매칭 투표</mark>할 수 있습니다.</li>
                                     <li><span class="badge bg-azure-lt">와인파티</span> 투표 후 <b>2차 자유 대화 시간</b>에 원하는 상대와 자유롭게 앉아 대화하고, 매칭 결과는 <b>다음 날 오전</b>에 발표됩니다.</li>
                                     <li><span class="badge bg-pink-lt">1:1 소개팅</span> 한 명씩 1:1로 마주 앉아 대화하고(여자 고정/남자 이동), 로테이션이 끝나면 <mark>그 자리에서 바로 매칭 결과</mark>를 확인합니다.</li>
                                 </ul>

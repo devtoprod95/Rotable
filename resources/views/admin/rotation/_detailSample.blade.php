@@ -168,16 +168,22 @@
     </div>
     @endif
 
-    {{-- 실시간 명단 업데이트 안내 --}}
-    <div style="background:#ede9fe; border:2px solid #c4b5fd; border-radius:12px; padding:18px 16px; margin-bottom:40px; text-align:center;">
-        <div style="font-family:'Jua',sans-serif; font-size:35px; font-weight:400; color:#7e22ce; letter-spacing:0.5px;">실시간 명단 업데이트 중</div>
-        <div style="font-size:29px; color:#6b21a8; margin-top:10px; line-height:1.5;">
-            아래 참여자 명단은 신청 현황에 따라 수시로 갱신됩니다.<br>
-            <b>마지막 업데이트: {{ now()->format('n월 j일 H:i') }}</b> 기준
+    {{-- 실시간 명단 업데이트 + 멀티 플랫폼 모집 안내 (마케팅 강조) --}}
+    <div style="background:#ede9fe; border:3px solid #a78bfa; border-radius:16px; padding:24px 18px; margin-bottom:40px; text-align:center;">
+        <div style="display:inline-block; background:#7c3aed; color:#ffffff; border-radius:999px; padding:6px 22px; font-size:26px; font-weight:900; margin-bottom:14px;">⚡ LIVE 모집 중</div>
+        <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; color:#6d28d9; letter-spacing:0.5px; line-height:1.3;">명단이 적어 보여도 걱정 마세요!</div>
+        <div style="font-size:30px; color:#5b21b6; margin-top:14px; line-height:1.7; word-break:keep-all;">
+            지금 이 명단은 <b style="color:#6d28d9; background:linear-gradient(transparent 55%, #ddd6fe 55%); padding:0 4px;">전체의 일부</b>일 뿐이에요.<br>
+            <b style="color:#6d28d9;">문토 · 프립 등 여러 플랫폼</b>에서 <b style="background:linear-gradient(transparent 55%, #ddd6fe 55%); padding:0 4px;">동시에 모집</b>하고 있어,<br>
+            실제 참여 인원은 <b style="color:#be185d; background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px; font-weight:900;">참여자 명단 보다 많아요.</b>
         </div>
-        <div style="font-size:26px; color:#7c3aed; margin-top:14px; padding-top:14px; border-top:1px dashed #c4b5fd; line-height:1.6;">
-            📢 <b>여러 플랫폼에서 함께 모집 중</b>이에요!<br>
-            아래 명단이 전부가 아니며, 실제 참여 인원은 더 많을 수 있어요.
+        <div style="background:#ffffff; border:2px dashed #a78bfa; border-radius:14px; padding:18px 14px; margin-top:18px; font-size:27px; color:#5b21b6; line-height:1.7; word-break:keep-all;">
+            💜 명단은 <b>신청 현황에 따라 실시간으로 채워지는 중</b>이에요.<br>
+            <span style="font-size:24px; color:#7c3aed;">마지막 업데이트 : {{ now()->format('n월 j일 H:i') }} 기준</span>
+        </div>
+        <div style="font-size:28px; font-weight:800; color:#be185d; margin-top:16px; line-height:1.6; word-break:keep-all;">
+            🔥 자리는 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">선착순 마감</b>! 망설이면 마감될 수 있어요.<br>
+            지금 바로 신청하고 좋은 인연 만나보세요 💘
         </div>
     </div>
 

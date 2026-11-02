@@ -47,7 +47,10 @@
             <div class="page-header d-print-none">
                 <div class="container-xl">
                     <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
-                        <h2 class="page-title mb-0">@yield('title', 'Dashboard')</h2>
+                        <h2 class="page-title mb-0 d-flex align-items-center flex-wrap gap-2">
+                            <span>@yield('title', 'Dashboard')</span>
+                            @yield('pageTitleExtra')
+                        </h2>
 
                         @php
                             $breadcrumbs = \App\Enums\Menu::menuPath();

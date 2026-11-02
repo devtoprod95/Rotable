@@ -274,6 +274,9 @@ class RotationController extends Controller
             // 유형별 저장본 (없으면 해당 유형 2열 샘플로 폴백)
             'savedWine'    => $this->rotationService->detailHtmlLoad('wine'),
             'savedSolo'    => $this->rotationService->detailHtmlLoad('solo'),
+            // 유형별 마지막 저장 메타(누가·언제) — 없으면 null
+            'metaWine'     => $this->rotationService->detailMetaLoad('wine'),
+            'metaSolo'     => $this->rotationService->detailMetaLoad('solo'),
             // 유형(와인파티/1:1) × 열 수(1열/2열) 조합 샘플
             'wineOne'      => $this->rotationService->detailSampleHtml(1, 'wine'),
             'wineTwo'      => $this->rotationService->detailSampleHtml(2, 'wine'),

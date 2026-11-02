@@ -2,6 +2,13 @@
 
 @section('title', '상세페이지 제작')
 
+{{-- 제목(상세페이지 제작) 옆에 표시: 마지막 저장(누가·언제). 현재 선택 유형 기준. --}}
+@section('pageTitleExtra')
+    <span id="detailSavedInfo"
+          class="badge bg-dark text-white fw-semibold align-middle"
+          style="display:none; font-size:0.8125rem; padding:0.4em 0.7em;"></span>
+@endsection
+
 @section('content')
 {{-- 이미지 다운로드용 html2canvas (레이아웃의 html2pdf 번들은 전역 html2canvas 를 노출하지 않아 별도 로드) --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -116,12 +123,35 @@
             solo: {!! json_encode($savedSolo) !!}
         };
 
+        // 유형별 마지막 저장 메타(누가·언제). 저장 이력이 없으면 null.
+        var META = {
+            wine: {!! json_encode($metaWine) !!},
+            solo: {!! json_encode($metaSolo) !!}
+        };
+
         // 현재 에디터에 올라와 있는 유형 (초기값: 와인)
         var activeType = 'wine';
 
         function currentType(){
             return $('input[name="sampleType"]:checked').val() === 'solo' ? 'solo' : 'wine';
         }
+
+        // 제목 옆 "마지막 저장" 배지를 현재 선택한 유형의 메타로 갱신한다.
+        function renderSavedInfo(){
+            var meta = META[currentType()];
+            var $info = $('#detailSavedInfo');
+            if (meta && meta.saved_at) {
+                var who = meta.saved_by || '알 수 없음';
+                $info.html('마지막 저장: '
+                    + who + ' · ' + meta.saved_at);
+                $info.show();
+            } else {
+                $info.hide().empty();
+            }
+        }
+
+        // 초기 1회 렌더(현재 유형 기준).
+        renderSavedInfo();
 
         var previewModal = null;
 
@@ -191,6 +221,7 @@
             SAVED[activeType] = getHtml();   // 현재 편집 내용 보관
             setHtml(SAVED[next] || '');      // 대상 유형 내용 로드
             activeType = next;
+            renderSavedInfo();               // 선택 유형의 저장 정보로 갱신
         });
 
         // 1열 샘플 (선택한 유형 기준)
@@ -223,6 +254,11 @@
                     data: { html: html, type: type },
                     success: function(res){
                         SAVED[type] = html;   // 저장 성공 시 보관본 갱신
+                        // 서버가 돌려준 저장 메타(누가·언제)로 제목 옆 배지 갱신
+                        if (res && res.saved) {
+                            META[type] = res.saved;
+                            if (type === currentType()) { renderSavedInfo(); }
+                        }
                         alert(res?.msg);
                     },
                     error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }

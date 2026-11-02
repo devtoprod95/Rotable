@@ -12,6 +12,7 @@ use App\Models\RotationTable;
 use App\Models\Vote;
 use Exception;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
@@ -1142,6 +1143,9 @@ class RotationService
     /** 상세페이지 HTML 저장 경로 (유형별, storage/app/private/rotation/detail_{type}.html) */
     private const DETAIL_HTML_PATH = 'rotation/detail_%s.html';
 
+    /** 상세페이지 저장 메타(누가·언제 저장했는지) 경로 (유형별 JSON) */
+    private const DETAIL_META_PATH = 'rotation/detail_%s.meta.json';
+
     /** 유형 값 정규화 ('wine' | 'solo') */
     private function detailType(?string $type): string
     {
@@ -1152,6 +1156,12 @@ class RotationService
     private function detailHtmlPath(?string $type): string
     {
         return sprintf(self::DETAIL_HTML_PATH, $this->detailType($type));
+    }
+
+    /** 유형별 저장 메타(JSON) 경로 반환 */
+    private function detailMetaPath(?string $type): string
+    {
+        return sprintf(self::DETAIL_META_PATH, $this->detailType($type));
     }
 
     /**
@@ -1172,6 +1182,36 @@ class RotationService
     }
 
     /**
+     * 상세페이지의 마지막 저장 메타(누가·언제)를 유형별로 반환한다.
+     * 저장 이력이 없으면 null.
+     *
+     * @param string $type 상세페이지 유형 ('wine' | 'solo')
+     * @return array{saved_by:string, saved_by_username:?string, saved_at:string}|null
+     */
+    public function detailMetaLoad(string $type = 'wine'): ?array
+    {
+        $path = $this->detailMetaPath($type);
+
+        if (! Storage::exists($path)) {
+            return null;
+        }
+
+        $decoded = json_decode((string) Storage::get($path), true);
+
+        if (! is_array($decoded) || ! isset($decoded['saved_at'])) {
+            return null;
+        }
+
+        return [
+            'saved_by'          => (string) ($decoded['saved_by'] ?? '알 수 없음'),
+            'saved_by_username' => isset($decoded['saved_by_username'])
+                ? (string) $decoded['saved_by_username']
+                : null,
+            'saved_at'          => (string) $decoded['saved_at'],
+        ];
+    }
+
+    /**
      * 기본 샘플 HTML 을 렌더링한다.
      * 실제 행사 데이터와 무관하게 더미 참여자(남/여 각 5명) 로 구성한다.
      *
@@ -1188,10 +1228,11 @@ class RotationService
 
     /**
      * 상세페이지 HTML 을 유형별 storage 파일에 저장한다.
+     * 함께 "누가·언제 저장했는지" 메타(JSON)도 기록하고, 그 메타를 결과에 담아 돌려준다.
      *
      * @param string $html 저장할 HTML
      * @param string $type 상세페이지 유형 ('wine' 와인파티 | 'solo' 1:1 소개팅)
-     * @return array{isSuccess:bool, message?:string}
+     * @return array{isSuccess:bool, message?:string, saved?:array{saved_by:string, saved_by_username:?string, saved_at:string}}
      */
     public function detailHtmlSave(string $html, string $type = 'wine'): array
     {
@@ -1199,7 +1240,21 @@ class RotationService
 
         try {
             Storage::put($this->detailHtmlPath($type), $html);
-            $returnMsg = helpersSuccessMessage('상세페이지를 저장했습니다.');
+
+            /** @var \App\Models\Admin|null $admin */
+            $admin = Auth::guard('admin')->user();
+            $meta  = [
+                'saved_by'          => $admin?->name ?? '알 수 없음',
+                'saved_by_username' => $admin?->username,
+                'saved_at'          => now()->format('Y-m-d H:i:s'),
+            ];
+            Storage::put(
+                $this->detailMetaPath($type),
+                json_encode($meta, JSON_UNESCAPED_UNICODE),
+            );
+
+            $returnMsg          = helpersSuccessMessage('상세페이지를 저장했습니다.');
+            $returnMsg['saved'] = $meta;
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
         }

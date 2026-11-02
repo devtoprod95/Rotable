@@ -122,6 +122,10 @@ class PublicGameController extends Controller
 
     /**
      * 공개 Yes/No - 다음 질문으로 넘긴다(집계 리셋 + 브로드캐스트).
+     *
+     * 공개방은 접속자가 수시로 드나들어(이탈/합류) "전원 투표" 판정이 신뢰할 수 없다.
+     * 그래서 서버는 인원수로 막지 않고 요청대로 넘긴다. 실수로 휙 넘기는 것을 막는
+     * 안전장치는 프론트의 "항상 확인 다이얼로그" 가 담당한다.
      */
     public function pollNext(Request $request): JsonResponse
     {

@@ -98,8 +98,11 @@ export default function Poll({ initialState = null, initialCount = 0 }) {
     );
     const [myAnswer, setMyAnswer] = useState(() => loadMyAnswer(initialIndex));
     const [presence, setPresence] = useState(initialCount);
-    // "아직 다 투표 안 했는데 넘어갈까요?" 확인 다이얼로그 표시 여부.
-    const [confirmNext, setConfirmNext] = useState(false);
+    // 전원 투표 전 '다음 질문' 확인 다이얼로그에 띄울 서버 집계 현황.
+    // null 이면 닫힘. { voted, presence } 면 표시.
+    const [confirmInfo, setConfirmInfo] = useState(null);
+    // 다음 질문 요청 중복 방지 플래그.
+    const [advancing, setAdvancing] = useState(false);
 
     // 이 브라우저를 식별하는 임의 ID (접속자 수 집계용, 익명).
     const clientId = useMemo(
@@ -130,7 +133,7 @@ export default function Poll({ initialState = null, initialCount = 0 }) {
             setQuestionIndex(nextIndex);
             setCounts({ yes: 0, no: 0 });
             setMyAnswer(loadMyAnswer(nextIndex));
-            setConfirmNext(false);
+            setConfirmInfo(null);
         });
 
         channel.listen(".public-poll.presence", (payload) => {
@@ -234,22 +237,29 @@ export default function Poll({ initialState = null, initialCount = 0 }) {
         });
     };
 
-    // 다음 질문 버튼 클릭: 접속자 전원이 투표하지 않았으면 확인 다이얼로그를 먼저 띄운다.
-    // (공개 버전은 좌석 인원 대신 "지금 접속 중인 사람 수" 를 기준으로 삼는다.)
+    // 다음 질문: 공개방은 "지금 접속한 사람"이 수시로 바뀌어(이탈/합류) 전원 투표 판정이
+    // 신뢰할 수 없다. 그래서 인원·투표수로 분기하지 않고, 실수로 휙 넘기는 것만 막기 위해
+    // "다음 질문"을 누르면 **항상** 확인 다이얼로그를 띄운다. 확인 시에만 실제로 넘긴다.
     const handleNext = () => {
-        const total = counts.yes + counts.no;
-        if (presence > 0 && total < presence) {
-            setConfirmNext(true);
-            return;
-        }
-        proceedNext();
+        setConfirmInfo({
+            yes: counts.yes,
+            no: counts.no,
+            presence,
+        });
     };
 
-    // 실제로 다음 질문으로 넘긴다. (접속자 전체에 브로드캐스트 → 내 화면도 왕복으로 반영)
-    const proceedNext = () => {
-        setConfirmNext(false);
+    // 실제로 다음 질문으로 넘긴다. (확인창의 '확인'에서만 호출)
+    const proceedNext = async () => {
+        if (advancing) {
+            return;
+        }
+        setAdvancing(true);
         const nextIndex = (questionIndex + 1) % QUESTIONS.length;
-        postJson("/public/games/poll/next", { question_index: nextIndex });
+        await postJson("/public/games/poll/next", {
+            question_index: nextIndex,
+        });
+        setAdvancing(false);
+        setConfirmInfo(null);
     };
 
     const total = counts.yes + counts.no;
@@ -367,32 +377,36 @@ export default function Poll({ initialState = null, initialCount = 0 }) {
                 </button>
             </div>
 
-            {/* 접속자 전원 투표 전 '다음 질문' 확인 다이얼로그 */}
-            {confirmNext && (
+            {/* '다음 질문' 확인 다이얼로그 (공개방은 항상 표시 — 실수 방지) */}
+            {confirmInfo && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
                     {/* 딤드 배경 */}
                     <div
                         className="absolute inset-0 bg-black/40"
-                        onClick={() => setConfirmNext(false)}
+                        onClick={() => setConfirmInfo(null)}
                     />
                     <div className="relative w-full max-w-[320px] rounded-3xl bg-white p-6 text-center shadow-2xl">
                         <span className="text-3xl">🤔</span>
                         <h2 className="mt-2 text-base font-extrabold text-secondary-800">
-                            아직 다 투표하지 않았어요
+                            다음 질문으로 넘어갈까요?
                         </h2>
                         <p className="mt-1.5 text-sm font-medium leading-relaxed text-secondary-500">
-                            접속 중 {presence}명 중{" "}
-                            <span className="font-bold text-primary">
-                                {counts.yes + counts.no}명
+                            지금까지{" "}
+                            <span className="font-bold text-blue-600">
+                                Yes {confirmInfo.yes}명
                             </span>
-                            이 투표했어요.
+                            ,{" "}
+                            <span className="font-bold text-red-500">
+                                No {confirmInfo.no}명
+                            </span>
+                            이 눌렀어요.
                             <br />
-                            그래도 다음 질문으로 넘어갈까요?
+                            넘어가면 이 질문은 끝이에요!
                         </p>
                         <div className="mt-5 flex gap-2">
                             <button
                                 type="button"
-                                onClick={() => setConfirmNext(false)}
+                                onClick={() => setConfirmInfo(null)}
                                 className="flex-1 rounded-2xl border-2 border-secondary-200 bg-white py-3 text-sm font-bold text-secondary-500 transition active:scale-[0.97]"
                             >
                                 취소

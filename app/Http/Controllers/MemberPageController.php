@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\RotationSeat;
 use App\Models\RotationTable;
 use App\Models\Vote;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -736,7 +737,6 @@ class MemberPageController extends Controller
             $props = [
                 'eventId'      => $eventId,
                 'tableNo'      => $tableNo,
-                'seatCount'    => $me->currentTableSeatCount(),
                 // 저장된 진행 상태가 없으면 null → 프론트는 0번 질문부터 시작.
                 'initialState' => $state === []
                     ? null
@@ -761,10 +761,10 @@ class MemberPageController extends Controller
      * 누가 눌렀는지는 저장하지 않으므로 익명성은 유지된다.
      * 어떤 테이블에 던지는지는 서버가 "요청자의 현재 테이블" 로 직접 판정한다.
      */
-    public function tablePollVote(Request $request): RedirectResponse
+    public function tablePollVote(Request $request): JsonResponse
     {
         if (! $this->isGamePlayable()) {
-            return back();
+            return response()->json(['ok' => false]);
         }
 
         /** @var \App\Models\Member $me */
@@ -777,7 +777,7 @@ class MemberPageController extends Controller
 
         $tableNo = $me->currentTableNo();
         if ($tableNo === null) {
-            return back();
+            return response()->json(['ok' => false]);
         }
 
         $eventId       = (int) $me->event_id;
@@ -788,7 +788,7 @@ class MemberPageController extends Controller
         // 현재 진행 중인 질문과 일치할 때만 집계한다. (지난 질문의 늦은 표 무시)
         $currentQuestion = Redis::hget($key, 'q');
         if ($currentQuestion !== null && (int) $currentQuestion !== $questionIndex) {
-            return back();
+            return response()->json(['ok' => false]);
         }
 
         // 첫 표라면 질문 인덱스를 함께 기록한다.
@@ -805,18 +805,19 @@ class MemberPageController extends Controller
             $answer,
         ));
 
-        return back();
+        return response()->json(['ok' => true]);
     }
 
     /**
-     * 테이블 투표 게임 - "다음 질문" 으로 넘겼음을 처리한다.
+     * 테이블 투표 게임 - "다음 질문" 으로 넘긴다.
      *
-     * 새 질문으로 집계를 리셋(Redis 해시 초기화)하고 같은 테이블에 브로드캐스트한다.
+     * 넘길지 말지(확인) 판단은 프론트의 "항상 확인 다이얼로그" 가 담당한다.
+     * 서버는 요청대로 새 질문으로 집계를 리셋(Redis 해시 초기화)하고 같은 테이블에 브로드캐스트한다.
      */
-    public function tablePollNext(Request $request): RedirectResponse
+    public function tablePollNext(Request $request): JsonResponse
     {
         if (! $this->isGamePlayable()) {
-            return back();
+            return response()->json(['ok' => false]);
         }
 
         /** @var \App\Models\Member $me */
@@ -828,7 +829,7 @@ class MemberPageController extends Controller
 
         $tableNo = $me->currentTableNo();
         if ($tableNo === null) {
-            return back();
+            return response()->json(['ok' => false]);
         }
 
         $eventId       = (int) $me->event_id;
@@ -848,7 +849,7 @@ class MemberPageController extends Controller
             $questionIndex,
         ));
 
-        return back();
+        return response()->json(['ok' => true]);
     }
 
     /** 테이블 투표 게임의 현재 집계를 담는 Redis 해시 키. */

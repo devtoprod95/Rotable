@@ -140,7 +140,7 @@
                 <h5 class="modal-title"><i class="ti ti-qrcode me-1"></i> QR 코드</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body text-center">
+            <div class="modal-body text-center" id="qrCaptureArea">
                 <div class="fw-bold mb-2" id="qrModalTitle"></div>
                 <div class="d-flex justify-content-center">
                     <div id="qrCanvas" style="padding:12px; background:#fff; display:inline-block;"></div>
@@ -300,24 +300,81 @@
             if (m) { m.show(); }
         });
 
-        // QR 이미지 다운로드
-        $('#btnQrDownload').on('click', function () {
+        // 다운로드: 제목 + QR + 주소를 캔버스에 직접 그려 한 장의 이미지로 저장한다.
+        // (html2canvas 는 Tabler/부트스트랩의 최신 color() 색상 표기를 파싱 못 해 오류가 나므로 사용하지 않는다.)
+        $('#btnQrDownload').on('click', async function () {
             var holder = document.getElementById('qrCanvas');
-            var img = holder.querySelector('img');
-            var canvas = holder.querySelector('canvas');
-            var dataUrl = null;
-
-            if (img && img.src) {
-                dataUrl = img.src;
-            } else if (canvas) {
-                dataUrl = canvas.toDataURL('image/png');
-            }
-
-            if (!dataUrl) {
+            var qrSrcEl = holder.querySelector('img') || holder.querySelector('canvas');
+            if (!qrSrcEl) {
                 salert({ text: 'QR 이미지를 찾을 수 없습니다.', cancel: false });
                 return;
             }
 
+            // QR 이 img 라면 로드 완료를 기다린다.
+            if (qrSrcEl.tagName === 'IMG' && !(qrSrcEl.complete && qrSrcEl.naturalWidth)) {
+                await new Promise(function (resolve) {
+                    qrSrcEl.onload = resolve;
+                    qrSrcEl.onerror = resolve;
+                });
+            }
+
+            var title = ($('#qrModalTitle').text() || '').trim();
+            var url   = ($('#qrModalUrl').text() || '').trim();
+
+            // ── 레이아웃 치수 ──
+            var scale   = 2;                 // 선명도
+            var W       = 360;               // 논리 폭
+            var pad     = 24;
+            var qrSize  = 240;
+            var titleH  = title ? 40 : 0;
+            var gapTop  = title ? 16 : 0;
+            var gapUrl  = 16;
+
+            var ctx0 = document.createElement('canvas').getContext('2d');
+            // 주소 줄바꿈 계산용 폰트
+            ctx0.font = '500 15px sans-serif';
+            var urlLines = wrapText(ctx0, url, W - pad * 2);
+            var urlLineH = 20;
+            var urlBlockH = urlLines.length * urlLineH;
+
+            var H = pad + titleH + gapTop + qrSize + gapUrl + urlBlockH + pad;
+
+            var canvas = document.createElement('canvas');
+            canvas.width  = W * scale;
+            canvas.height = H * scale;
+            var ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+
+            // 배경
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, W, H);
+
+            var y = pad;
+
+            // 제목
+            if (title) {
+                ctx.fillStyle = '#111827';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.font = "700 20px 'Gothic A1','Apple SD Gothic Neo',sans-serif";
+                ctx.fillText(fitText(ctx, title, W - pad * 2), W / 2, y + 6);
+                y += titleH + gapTop;
+            }
+
+            // QR
+            ctx.drawImage(qrSrcEl, (W - qrSize) / 2, y, qrSize, qrSize);
+            y += qrSize + gapUrl;
+
+            // 주소 (여러 줄)
+            ctx.fillStyle = '#6b7280';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            ctx.font = '500 15px sans-serif';
+            urlLines.forEach(function (line, i) {
+                ctx.fillText(line, W / 2, y + i * urlLineH);
+            });
+
+            var dataUrl = canvas.toDataURL('image/png');
             var link = document.createElement('a');
             link.download = 'qr_' + (currentQrName || 'code') + '.png';
             link.href = dataUrl;
@@ -325,6 +382,32 @@
             link.click();
             document.body.removeChild(link);
         });
+
+        // 긴 텍스트를 폭(maxW)에 맞게 여러 줄로 쪼갠다. (문자 단위 — URL 대응)
+        function wrapText(ctx, text, maxW) {
+            var lines = [], cur = '';
+            for (var i = 0; i < text.length; i++) {
+                var test = cur + text[i];
+                if (ctx.measureText(test).width > maxW && cur) {
+                    lines.push(cur);
+                    cur = text[i];
+                } else {
+                    cur = test;
+                }
+            }
+            if (cur) { lines.push(cur); }
+            return lines.length ? lines : [''];
+        }
+
+        // 한 줄 텍스트가 maxW 를 넘으면 … 로 줄인다.
+        function fitText(ctx, text, maxW) {
+            if (ctx.measureText(text).width <= maxW) { return text; }
+            var t = text;
+            while (t.length > 1 && ctx.measureText(t + '…').width > maxW) {
+                t = t.slice(0, -1);
+            }
+            return t + '…';
+        }
     });
 </script>
 @endsection

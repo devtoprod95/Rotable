@@ -46,6 +46,9 @@
 
                     <span class="vr d-none d-md-inline"></span>
 
+                    <button type="button" class="btn btn-pink btn-open-roster">
+                        <i class="ti ti-users-group me-1"></i> 참여자 명단 편집
+                    </button>
                     <button type="button" class="btn btn-azure btn-open-preview">
                         <i class="ti ti-eye me-1"></i> 미리보기
                     </button>
@@ -98,6 +101,60 @@
                 <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
                 <button type="button" class="btn btn-dark btn-detail-download">
                     <i class="ti ti-download me-1"></i> 이미지 다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- 참여자 명단 편집 모달 --}}
+<div class="modal modal-blur fade" id="detailRosterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ti ti-users-group me-1"></i> 참여자 명단 편집
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <div class="text-secondary">
+                        표에 <b>키 · 직업 · 나이</b>만 입력하면 됩니다. <b>번호(N호)와 상단 인원수(남/여)</b>는 자동으로 매겨져요.
+                        HTML 을 직접 건드릴 필요 없이, 아래에서 행을 추가/삭제한 뒤 <b>[명단 적용]</b> 을 누르세요.
+                    </div>
+                </div>
+
+                {{-- 성비 자동 맞춤 토글 --}}
+                <div class="card mb-3">
+                    <div class="card-body py-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <label class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" id="rosterBalanceToggle" checked>
+                            <span class="form-check-label fw-bold">
+                                성비 자동 맞춤
+                                <span class="text-secondary fw-normal">— 부족한 쪽을 "모집중" 자리로 채워 N:N 으로 보이게</span>
+                            </span>
+                        </label>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-secondary small">표시 문구</span>
+                            <input type="text" class="form-control form-control-sm" id="rosterRecruitLabel"
+                                   style="width:120px;" value="모집중" maxlength="10">
+                        </div>
+                    </div>
+                </div>
+                {{-- 행사 카드별 편집 영역이 여기에 동적으로 렌더링됨 --}}
+                <div id="rosterEditorBody"></div>
+                {{-- 명단 영역을 못 찾았을 때 안내 --}}
+                <div id="rosterEditorEmpty" class="text-center text-secondary py-5" style="display:none;">
+                    <i class="ti ti-alert-triangle fs-1 d-block mb-2"></i>
+                    현재 내용에서 참여자 명단 영역을 찾지 못했어요.<br>
+                    먼저 <b>1열 / 2열 샘플</b>을 불러온 뒤 다시 시도해 주세요.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary btn-roster-apply">
+                    <i class="ti ti-check me-1"></i> 명단 적용
                 </button>
             </div>
         </div>
@@ -212,6 +269,323 @@
             renderPreview();
             var m = getModal();
             if (m) { m.show(); }
+        });
+
+        /* =====================================================================
+         * 참여자 명단 편집기
+         * - 에디터 HTML 안의 명단 그리드 요소([data-roster-grid])를 찾아 표로 보여주고,
+         * - [명단 적용] 시 입력값으로 그 요소를 통째로 재생성해 되돌려 넣는다.
+         * - 번호(N호)와 상단 인원수(남/여)는 행 수로 자동 계산된다.
+         * - 요소(data 속성) 기준이라 에디터가 주석 마커를 지워도 안전하게 동작한다.
+         * =================================================================== */
+        var rosterModal = null;
+
+        function getRosterModal(){
+            if (rosterModal) { return rosterModal; }
+            var el = document.getElementById('detailRosterModal');
+            var ModalClass =
+                (window.tabler && window.tabler.Modal) ||
+                (window.tabler && window.tabler.bootstrap && window.tabler.bootstrap.Modal) ||
+                (window.bootstrap && window.bootstrap.Modal) ||
+                (window.coreui && window.coreui.Modal) ||
+                window.Modal;
+            if(!ModalClass){ console.error('Modal 클래스를 찾을 수 없습니다.'); return null; }
+            rosterModal = new ModalClass(el);
+            return rosterModal;
+        }
+
+        // HTML 전체를 분리된 DOM 으로 파싱해, 명단 그리드 요소([data-roster-grid])를 찾는다.
+        // 주석 마커가 아니라 DOM 요소 기준이라, 에디터가 주석을 지워도 안전하게 동작한다.
+        // 반환: { root: 분리된 래퍼 jQuery, $grid: 그리드 요소 jQuery } | null
+        function locateRosterGrid(html){
+            var $root = $('<div></div>').html(html);
+            var $grid = $root.find('[data-roster-grid]').first();
+            if ($grid.length === 0) { return null; }
+            return { root: $root, grid: $grid };
+        }
+
+        // 그리드 요소($grid) → 편집용 데이터 구조로 파싱.
+        // { config:{...}, cards:[ {title,date, males:[{height,job,age}], females:[...] } ] }
+        function parseRoster($grid){
+            if (!$grid || $grid.length === 0) { return null; }
+
+            var config = {};
+            try { config = JSON.parse($grid.attr('data-roster-config') || '{}'); } catch(e){ config = {}; }
+
+            var cards = [];
+            $grid.find('[data-roster-card]').each(function(){
+                var $card = $(this);
+                // 카드 구조: [data-roster-card] > div(테두리) > [행사명div, 헤더div, 명단flex div]
+                // 명단 flex div = 테두리 div 의 마지막 자식. 그 안에 남(좌)/여(우) 두 컬럼.
+                var $inner = $card.children('div').first();
+                var $cols  = $inner.children('div').last().children('div');
+                function readCol($col){
+                    var people = [];
+                    $col.children('div').each(function(){
+                        // "모집중" 자리(data-recruit)는 실제 인원이 아니므로 건너뛴다.
+                        if ($(this).attr('data-recruit')) { return; }
+                        var info = $(this).children('div').last().text(); // "177cm · 쇼핑몰 · 30대 초반"
+                        var parts = info.split('·').map(function(x){ return x.trim(); });
+                        var height = (parts[0] || '').replace(/cm$/i,'').trim();
+                        people.push({
+                            height: height,
+                            job:    parts[1] || '',
+                            age:    parts[2] || ''
+                        });
+                    });
+                    return people;
+                }
+                cards.push({
+                    title:   $card.attr('data-event-title') || '',
+                    date:    $card.attr('data-event-date') || '',
+                    males:   readCol($($cols.get(0))),
+                    females: readCol($($cols.get(1)))
+                });
+            });
+
+            return { config: config, cards: cards };
+        }
+
+        // 편집용 데이터 → 그리드 HTML 재생성 (Blade 와 동일 마크업 + data 속성 유지)
+        function buildRosterGrid(data){
+            var c = data.config || {};
+            var cardWidth     = c.cardWidth     || '100%';
+            var cellTitleSize = c.cellTitleSize || '29px';
+            var cellDateSize  = c.cellDateSize  || '21px';
+            var cellHeadSize  = c.cellHeadSize  || '21px';
+            var cellNoSize    = c.cellNoSize    || '23px';
+            var cellInfoSize  = c.cellInfoSize  || '19px';
+            var cellHeight    = c.cellHeight    || '84px';
+            var cellPadding   = c.cellPadding   || '10px';
+            var balance       = c.balance !== false; // 기본 ON
+            var recruitLabel  = (c.recruitLabel && String(c.recruitLabel).trim()) || '모집중';
+
+            function esc(s){
+                return String(s == null ? '' : s)
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+                    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+            }
+            // 실제 참여자 칸
+            function personCell(p, i, borderColor){
+                return ''
+                  + '<div style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:1px solid ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center;">'
+                  +   '<div style="font-weight:900; font-size:' + cellNoSize + ';">' + (i + 1) + '호</div>'
+                  +   '<div style="color:#6b7280; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(p.height) + 'cm · ' + esc(p.job) + ' · ' + esc(p.age) + '</div>'
+                  + '</div>';
+            }
+            // "모집중" 자리 칸 (번호는 이어서, data-recruit 로 표시해 재파싱 때 제외)
+            function recruitCell(i, borderColor){
+                return ''
+                  + '<div data-recruit="1" style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:1px dashed ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center; background:repeating-linear-gradient(45deg,#ffffff,#ffffff 8px,#fafafa 8px,#fafafa 16px);">'
+                  +   '<div style="font-weight:900; font-size:' + cellNoSize + '; color:#9ca3af;">' + (i + 1) + '호</div>'
+                  +   '<div style="color:#f472b6; font-weight:900; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(recruitLabel) + ' 💗</div>'
+                  + '</div>';
+            }
+            // 한 컬럼 렌더: 실제 인원 + (balance 시) 모집중으로 total 까지 채움
+            function columnCells(people, total, borderColor){
+                var out = '';
+                people.forEach(function(p, i){ out += personCell(p, i, borderColor); });
+                for (var i = people.length; i < total; i++) { out += recruitCell(i, borderColor); }
+                return out;
+            }
+
+            // config 를 속성(홑따옴표로 감쌈)에 안전하게 싣기 위해 작은따옴표를 엔티티로 치환.
+            var configAttr = JSON.stringify(c).replace(/'/g, '&#39;');
+            var html = '<div style="display:flex; flex-wrap:wrap;" data-roster-grid="1" data-roster-config=\'' + configAttr + '\'>';
+
+            data.cards.forEach(function(card, idx){
+                var males = card.males || [], females = card.females || [];
+                // balance 켜지면 남/여 중 많은 쪽 수에 맞춰 모집중으로 채운다.
+                var total = balance ? Math.max(males.length, females.length) : null;
+                var maleTotal   = balance ? total : males.length;
+                var femaleTotal = balance ? total : females.length;
+
+                html += '<div style="width:' + cardWidth + '; box-sizing:border-box; padding:3px;"'
+                      + ' data-roster-card="' + idx + '"'
+                      + ' data-event-title="' + esc(card.title) + '"'
+                      + ' data-event-date="' + esc(card.date) + '">';
+                html +=   '<div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; height:100%;">';
+                // 행사명 + 날짜
+                html +=     '<div style="background:#eef2f7; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">';
+                html +=       '<div style="font-size:' + cellTitleSize + '; font-weight:900; word-break:keep-all;">' + esc(card.title) + '</div>';
+                html +=       '<div style="font-size:' + cellDateSize + '; color:#6b7280; margin-top:1px;">' + esc(card.date) + '</div>';
+                html +=     '</div>';
+                // 남/여 헤더 (모집중 포함한 표시 인원수)
+                html +=     '<div style="display:flex; font-size:' + cellHeadSize + '; font-weight:900; text-align:center; border-bottom:1px solid #eee;">';
+                html +=       '<div style="width:50%; padding:4px; background:#3b82f6; color:#ffffff;">남 ' + maleTotal + '</div>';
+                html +=       '<div style="width:50%; padding:4px; background:#ec4899; color:#ffffff;">여 ' + femaleTotal + '</div>';
+                html +=     '</div>';
+                // 남/여 명단
+                html +=     '<div style="display:flex;">';
+                html +=       '<div style="width:50%; box-sizing:border-box; border-right:1px solid #c7d7ee; background:#eff6ff;">';
+                html +=         columnCells(males, maleTotal, '#d7e3ef');
+                html +=       '</div>';
+                html +=       '<div style="width:50%; box-sizing:border-box; background:#fdf2f8;">';
+                html +=         columnCells(females, femaleTotal, '#f6d9e6');
+                html +=       '</div>';
+                html +=     '</div>';
+                html +=   '</div>';
+                html += '</div>';
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        // 편집기 UI 렌더링 (행사 카드별 남/여 표)
+        function renderRosterEditor(data){
+            var $body = $('#rosterEditorBody').empty();
+
+            data.cards.forEach(function(card, ci){
+                var $card = $('<div class="card mb-3"></div>');
+                var $head = $('<div class="card-header d-flex flex-wrap gap-2 align-items-end"></div>');
+                $head.append(
+                    '<div><label class="form-label mb-1 small">행사명</label>'
+                    + '<input type="text" class="form-control form-control-sm roster-ev-title" style="min-width:200px;" value="' + $('<i>').text(card.title).html() + '"></div>'
+                );
+                $head.append(
+                    '<div><label class="form-label mb-1 small">날짜</label>'
+                    + '<input type="text" class="form-control form-control-sm roster-ev-date" style="min-width:200px;" value="' + $('<i>').text(card.date).html() + '"></div>'
+                );
+                $card.append($head);
+
+                var $grid = $('<div class="card-body"><div class="row g-3"></div></div>');
+                var $row  = $grid.find('.row');
+                $row.append(buildGenderCol('male',   '남성', 'bg-blue-lt',   card.males));
+                $row.append(buildGenderCol('female', '여성', 'bg-pink-lt',   card.females));
+                $card.append($grid);
+
+                $card.data('card-index', ci);
+                $body.append($card);
+            });
+        }
+
+        // 한 성별 표 컬럼(헤더: 인원수 live, 바디: 행들)
+        function buildGenderCol(gender, label, toneClass, people){
+            var $col = $('<div class="col-md-6"></div>');
+            $col.attr('data-gender', gender);
+            $col.append(
+                '<div class="d-flex align-items-center justify-content-between mb-2">'
+                + '<span class="badge ' + toneClass + ' fs-3">' + label + ' <b class="roster-count">' + people.length + '</b>명</span>'
+                + '<button type="button" class="btn btn-sm btn-outline-secondary roster-add"><i class="ti ti-plus"></i> 추가</button>'
+                + '</div>'
+            );
+            var $table = $(
+                '<table class="table table-sm table-vcenter mb-0">'
+                + '<thead><tr>'
+                + '<th style="width:40px;">#</th><th>키(cm)</th><th>직업</th><th>나이</th><th style="width:44px;"></th>'
+                + '</tr></thead><tbody class="roster-rows"></tbody></table>'
+            );
+            var $tbody = $table.find('.roster-rows');
+            (people || []).forEach(function(p){ $tbody.append(rosterRow(p)); });
+            $col.append($table);
+            return $col;
+        }
+
+        function rosterRow(p){
+            p = p || {};
+            return $(
+                '<tr>'
+                + '<td class="roster-no text-secondary"></td>'
+                + '<td><input type="text" class="form-control form-control-sm roster-height" value="' + $('<i>').text(p.height || '').html() + '"></td>'
+                + '<td><input type="text" class="form-control form-control-sm roster-job" value="' + $('<i>').text(p.job || '').html() + '"></td>'
+                + '<td><input type="text" class="form-control form-control-sm roster-age" value="' + $('<i>').text(p.age || '').html() + '"></td>'
+                + '<td><button type="button" class="btn btn-sm btn-ghost-danger roster-del"><i class="ti ti-trash"></i></button></td>'
+                + '</tr>'
+            );
+        }
+
+        // 각 컬럼의 번호(N호)와 인원수 뱃지를 다시 매긴다.
+        function renumberRoster($scope){
+            ($scope || $('#rosterEditorBody')).find('[data-gender]').each(function(){
+                var $col = $(this);
+                var $rows = $col.find('.roster-rows > tr');
+                $rows.each(function(i){ $(this).find('.roster-no').text((i + 1) + '호'); });
+                $col.find('.roster-count').text($rows.length);
+            });
+        }
+
+        // 편집기 → 데이터 수집
+        function collectRoster(baseConfig){
+            var cards = [];
+            $('#rosterEditorBody > .card').each(function(){
+                var $card = $(this);
+                function readCol(gender){
+                    var arr = [];
+                    $card.find('[data-gender="' + gender + '"] .roster-rows > tr').each(function(){
+                        arr.push({
+                            height: $(this).find('.roster-height').val().trim(),
+                            job:    $(this).find('.roster-job').val().trim(),
+                            age:    $(this).find('.roster-age').val().trim()
+                        });
+                    });
+                    return arr;
+                }
+                cards.push({
+                    title:   $card.find('.roster-ev-title').val(),
+                    date:    $card.find('.roster-ev-date').val(),
+                    males:   readCol('male'),
+                    females: readCol('female')
+                });
+            });
+            return { config: baseConfig, cards: cards };
+        }
+
+        var rosterBaseConfig = {};
+
+        // '참여자 명단 편집' 열기
+        $('.btn-open-roster').on('click', function(){
+            var loc  = locateRosterGrid(getHtml());
+            var data = loc ? parseRoster(loc.grid) : null;
+
+            if (!data || !data.cards.length) {
+                $('#rosterEditorBody').empty();
+                $('#rosterEditorEmpty').show();
+            } else {
+                $('#rosterEditorEmpty').hide();
+                rosterBaseConfig = data.config || {};
+                // 성비 자동 맞춤 토글/문구를 config 값으로 초기화 (기본 ON, '모집중')
+                $('#rosterBalanceToggle').prop('checked', rosterBaseConfig.balance !== false);
+                $('#rosterRecruitLabel').val(rosterBaseConfig.recruitLabel || '모집중');
+                renderRosterEditor(data);
+                renumberRoster();
+            }
+            var m = getRosterModal();
+            if (m) { m.show(); }
+        });
+
+        // 행 추가/삭제 (이벤트 위임)
+        $('#rosterEditorBody').on('click', '.roster-add', function(){
+            $(this).closest('[data-gender]').find('.roster-rows').append(rosterRow({}));
+            renumberRoster($(this).closest('.card'));
+        });
+        $('#rosterEditorBody').on('click', '.roster-del', function(){
+            var $card = $(this).closest('.card');
+            $(this).closest('tr').remove();
+            renumberRoster($card);
+        });
+
+        // [명단 적용] → 그리드 재생성해 에디터에 반영
+        $('.btn-roster-apply').on('click', async function(){
+            var loc = locateRosterGrid(getHtml());
+            if (!loc) {
+                await salert({text: '명단 영역을 찾지 못했습니다. 샘플을 먼저 불러와 주세요.', cancel: false});
+                return;
+            }
+            // 성비 자동 맞춤 토글/문구를 config 에 반영한다.
+            var cfg = Object.assign({}, rosterBaseConfig, {
+                balance:      $('#rosterBalanceToggle').is(':checked'),
+                recruitLabel: ($('#rosterRecruitLabel').val() || '모집중').trim() || '모집중'
+            });
+            var data    = collectRoster(cfg);
+            var newGrid = buildRosterGrid(data);
+            // 분리된 DOM 에서 기존 그리드 요소를 새 그리드로 교체한 뒤 전체 HTML 직렬화.
+            loc.grid.replaceWith(newGrid);
+            setHtml(loc.root.html());
+
+            var m = getRosterModal();
+            if (m) { m.hide(); }
+            await salert({text: '명단을 반영했어요. 내용을 확인한 뒤 [저장]을 눌러 주세요.', cancel: false});
         });
 
         // 유형 전환: 현재 작업 내용을 활성 유형에 보관하고, 대상 유형 저장본을 에디터에 로드

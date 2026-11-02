@@ -107,6 +107,22 @@
             ['icon' => '💘', 'title' => '매칭 발표', 'desc' => '서로 선택했다면 성사! 결과는 다음 날 오전 발표'],
             ['icon' => '⚠️', 'title' => '파손 주의', 'desc' => '내부 물품의 경우 파손 시 변상 비용이 발생할 수 있으니 주의 바랍니다.'],
         ];
+
+    // 명단 편집기가 그리드를 재생성할 때 쓰는 설정(열수/치수)을 data 속성에 담기 위한 JSON 문자열.
+    $rosterConfigJson = json_encode([
+        'columns'       => $columns,
+        'cardWidth'     => $cardWidth,
+        'cellTitleSize' => $cellTitleSize,
+        'cellDateSize'  => $cellDateSize,
+        'cellHeadSize'  => $cellHeadSize,
+        'cellNoSize'    => $cellNoSize,
+        'cellInfoSize'  => $cellInfoSize,
+        'cellHeight'    => $cellHeight,
+        'cellPadding'   => $cellPadding,
+        // 성비 자동 맞춤: 부족한 쪽을 "모집중" 자리로 채워 N:N 으로 보이게 (기본 ON)
+        'balance'       => true,
+        'recruitLabel'  => '모집중',
+    ], JSON_UNESCAPED_UNICODE);
 @endphp
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap');
@@ -178,9 +194,18 @@
     </div>
 
     {{-- 행사 그리드 --}}
-    <div style="display:flex; flex-wrap:wrap;">
+    {{-- 명단 편집기(상세페이지 제작 화면)가 이 영역을 통째로 재생성한다.
+         ROSTER_GRID 마커 사이가 "행사 카드들" 전체이며, data-roster-config 에
+         재생성에 필요한 설정(열수/치수)을 담아 둔다. HTML 을 직접 고치지 말 것. --}}
+    <!--ROSTER_GRID:start-->
+    <div style="display:flex; flex-wrap:wrap;"
+         data-roster-grid="1"
+         data-roster-config='{{ $rosterConfigJson }}'>
         @foreach ($sampleEvents as $event)
-            <div style="width:{{ $cardWidth }}; box-sizing:border-box; padding:3px;">
+            <div style="width:{{ $cardWidth }}; box-sizing:border-box; padding:3px;"
+                 data-roster-card="{{ $loop->index }}"
+                 data-event-title="{{ $event['title'] }}"
+                 data-event-date="{{ $event['date'] }}">
                 <div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; height:100%;">
                     {{-- 행사명 + 날짜 --}}
                     <div style="background:#eef2f7; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">
@@ -219,6 +244,7 @@
             </div>
         @endforeach
     </div>
+    <!--ROSTER_GRID:end-->
 
     {{-- 좌석/성비 안내 --}}
     <div style="margin-top:20px; background:#eff6ff; border:1px dashed #93c5fd; border-radius:12px; padding:20px 16px; text-align:center; font-size:27px; color:#1d4ed8; line-height:1.7;">

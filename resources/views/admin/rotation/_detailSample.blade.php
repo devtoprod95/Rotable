@@ -27,7 +27,7 @@
                 ['icon' => '✍️', 'title' => '글작성 X', 'desc' => '종이·설문 없이 스마트폰 터치 몇 번이면 끝'],
                 ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
-                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담없이 즐겨요'],
+                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간은 자율 참석! 남는 분들은 추가 부담없이 즐겨요'],
                 ['icon' => '🤫', 'title' => '100% 비밀 투표', 'desc' => '매칭된 상대에게만 살짝 공유돼요'],
                 ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
                 ['icon' => '🎮', 'title' => '미니게임 제공', 'desc' => '테이블끼리 즐기는 미니게임으로 어색함을 날려요'],
@@ -49,7 +49,7 @@
                 ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
                 ['icon' => '💌', 'title' => '연락처 공유', 'desc' => '선택해 준 상대 정보로 편하게 연락 이어가기'],
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
-                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간, 추가 부담없이 즐겨요'],
+                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간은 자율 참석! 남는 분들은 추가 부담없이 즐겨요'],
                 ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
                 ['icon' => '🤍', 'title' => '100% 비밀 투표', 'desc' => '서로 선택한 경우에만 매칭 사실 공유'],
             ],
@@ -103,7 +103,7 @@
             ['icon' => '🎫', 'title' => '입장 & 닉네임', 'desc' => '도착하면 나만의 닉네임을 받고 지정 테이블에 착석'],
             ['icon' => '🔄', 'title' => '로테이션 대화', 'desc' => '테이블 단위로 만나고, 시간이 되면 자리 이동'],
             ['icon' => '💌', 'title' => '메시지 & 비밀 투표', 'desc' => '대화 중 살짝 메시지, 끝나면 마음에 든 상대 선택'],
-            ['icon' => '🍷', 'title' => '자유 대화 (2차)', 'desc' => '마음에 드는 분과 자유롭게 앉아 더 깊은 대화'],
+            ['icon' => '🍷', 'title' => '자유 대화 (2차)', 'desc' => '마음에 드는 분과 자유롭게 앉아 더 깊은 대화 — 참석은 자율이에요'],
             ['icon' => '💘', 'title' => '매칭 발표', 'desc' => '서로 선택했다면 성사! 결과는 다음 날 오전 발표'],
             ['icon' => '⚠️', 'title' => '파손 주의', 'desc' => '내부 물품의 경우 파손 시 변상 비용이 발생할 수 있으니 주의 바랍니다.'],
         ];
@@ -429,7 +429,7 @@
                     <div style="height:100%; background:#ffffff; border:2px solid #f9a8d4; border-radius:14px; padding:24px 14px; text-align:center;">
                         <div style="display:inline-block; background:#ec4899; color:#ffffff; border-radius:999px; padding:4px 18px; font-size:26px; font-weight:900;">2차</div>
                         <div style="font-family:'Jua',sans-serif; font-size:44px; font-weight:400; color:#be185d; margin-top:14px;">~ 00:00</div>
-                        <div style="font-size:26px; color:#6b7280; margin-top:10px; line-height:1.6;">자유 대화 시간<br><b style="color:#be185d;">추가 비용 무료</b></div>
+                        <div style="font-size:26px; color:#6b7280; margin-top:10px; line-height:1.6;">자유 대화 시간<br><b style="color:#be185d;">자율 참석 · 추가 비용 무료</b></div>
                     </div>
                 </div>
             </div>

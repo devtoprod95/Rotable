@@ -1157,15 +1157,7 @@ class RotationService
      */
     public function detailHtmlLoad(string $type = 'wine'): string
     {
-        $type = $this->detailType($type);
-
-        $detail = EventPageDetail::where('type', $type)->first();
-
-        if ($detail !== null && $detail->html !== null && $detail->html !== '') {
-            return (string) $detail->html;
-        }
-
-        return $this->detailSampleHtml(2, $type);
+        return $this->detailPayload($type)['html'];
     }
 
     /**
@@ -1177,17 +1169,40 @@ class RotationService
      */
     public function detailMetaLoad(string $type = 'wine'): ?array
     {
-        $detail = EventPageDetail::where('type', $this->detailType($type))->first();
+        return $this->detailPayload($type)['meta'];
+    }
 
-        if ($detail === null || $detail->saved_at === null) {
-            return null;
-        }
+    /**
+     * 상세페이지 유형별 저장본(html)과 저장 메타(meta)를 "단 한 번의 조회"로 함께 반환한다.
+     *
+     * detailHtmlLoad / detailMetaLoad 를 각각 호출하면 같은 레코드를 유형당 2번 조회하게 되므로,
+     * 둘 다 필요한 화면(상세페이지 디자이너)에서는 이 메서드로 쿼리를 1회로 줄인다.
+     *
+     * @param string $type 상세페이지 유형 ('wine' 와인파티 | 'solo' 1:1 소개팅)
+     * @return array{
+     *     html: string,
+     *     meta: array{saved_by:string, saved_by_username:?string, saved_at:string}|null
+     * }
+     */
+    public function detailPayload(string $type = 'wine'): array
+    {
+        $type = $this->detailType($type);
 
-        return [
-            'saved_by'          => (string) ($detail->saved_by ?? '알 수 없음'),
-            'saved_by_username' => $detail->saved_by_username,
-            'saved_at'          => $detail->saved_at->format('Y-m-d H:i:s'),
-        ];
+        $detail = EventPageDetail::where('type', $type)->first();
+
+        $html = ($detail !== null && $detail->html !== null && $detail->html !== '')
+            ? (string) $detail->html
+            : $this->detailSampleHtml(2, $type);
+
+        $meta = ($detail === null || $detail->saved_at === null)
+            ? null
+            : [
+                'saved_by'          => (string) ($detail->saved_by ?? '알 수 없음'),
+                'saved_by_username' => $detail->saved_by_username,
+                'saved_at'          => $detail->saved_at->format('Y-m-d H:i:s'),
+            ];
+
+        return ['html' => $html, 'meta' => $meta];
     }
 
     /**

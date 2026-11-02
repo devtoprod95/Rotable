@@ -36,16 +36,9 @@
                         </label>
                     </div>
 
-                    {{-- 열 수 샘플 불러오기 --}}
-                    <button type="button" class="btn btn-outline-secondary btn-sample-one">
-                        <i class="ti ti-layout-rows me-1"></i> 1열 샘플
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sample-two">
-                        <i class="ti ti-layout-columns me-1"></i> 2열 샘플
-                    </button>
-
                     <span class="vr d-none d-md-inline"></span>
 
+                    {{-- 자주 쓰는 핵심 동작만 밖에 노출 --}}
                     <button type="button" class="btn btn-pink btn-open-roster">
                         <i class="ti ti-users-group me-1"></i> 참여자 명단 편집
                     </button>
@@ -55,9 +48,31 @@
                     <button type="button" class="btn btn-primary btn-detail-save">
                         <i class="ti ti-device-floppy me-1"></i> 저장
                     </button>
-                    <button type="button" class="btn btn-dark btn-detail-download">
-                        <i class="ti ti-download me-1"></i> 이미지 다운로드
-                    </button>
+
+                    {{-- 나머지(샘플 불러오기·다운로드 계열)는 더보기 드롭다운으로 접음 --}}
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="ti ti-dots me-1"></i> 더보기
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <h6 class="dropdown-header">샘플 불러오기</h6>
+                            <button type="button" class="dropdown-item btn-sample-one">
+                                <i class="ti ti-layout-rows me-2 fs-2"></i> 1열 샘플
+                            </button>
+                            <button type="button" class="dropdown-item btn-sample-two">
+                                <i class="ti ti-layout-columns me-2 fs-2"></i> 2열 샘플
+                            </button>
+                            <div class="dropdown-divider"></div>
+                            <h6 class="dropdown-header">이미지 다운로드</h6>
+                            <button type="button" class="dropdown-item btn-detail-download">
+                                <i class="ti ti-download me-2 fs-2"></i> 이미지 다운로드
+                            </button>
+                            <button type="button" class="dropdown-item btn-open-feed">
+                                <i class="ti ti-photo-down me-2 fs-2"></i> 피드 이미지 다운
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
@@ -155,6 +170,56 @@
                 <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
                 <button type="button" class="btn btn-primary btn-roster-apply">
                     <i class="ti ti-check me-1"></i> 명단 적용
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- 피드 이미지 다운로드 모달 --}}
+{{-- rotable_banner.png + 선택한 행사의 "현재 DB 참여자 명단"을 합쳐 하나의 이미지로 다운로드한다. --}}
+<div class="modal modal-blur fade" id="detailFeedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ti ti-photo-down me-1"></i> 피드 이미지 다운로드
+                    <span class="badge bg-pink-lt ms-1">배너 + 참여자 명단</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light">
+                <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+                    <div class="text-secondary small">
+                        <i class="ti ti-info-circle me-1"></i>
+                        현재 에디터의 <b>참여자 명단</b>을 그대로 이미지로 만듭니다.
+                        (명단은 <b>참여자 명단 편집</b>에서 수정하세요.)
+                    </div>
+                    <div class="form-check form-switch mb-0 ms-auto">
+                        <input class="form-check-input" type="checkbox" id="feedShowProfile" checked>
+                        <label class="form-check-label" for="feedShowProfile">프로필(키·직업·나이) 표시</label>
+                    </div>
+                </div>
+
+                <div id="feedEmpty" class="alert alert-warning mb-3" style="display:none;">
+                    현재 내용에서 참여자 명단 영역을 찾지 못했어요.
+                    먼저 <b>1열 / 2열 샘플</b>을 불러오거나 <b>참여자 명단 편집</b>으로 명단을 채워 주세요.
+                </div>
+
+                <div class="d-flex justify-content-center">
+                    {{-- 이 영역이 그대로 이미지로 캡처됩니다. (고정 폭 1080) --}}
+                    <div id="feedCapture" style="width:1080px; max-width:100%; background:#ffffff; border-radius:8px; overflow:hidden;">
+                        <img src="{{ asset('images/rotable_banner.png') }}" alt="rotable banner"
+                             crossorigin="anonymous"
+                             style="width:100%; display:block;">
+                        <div id="feedRosterArea" style="padding:28px 32px; font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-pink btn-feed-download">
+                    <i class="ti ti-download me-1"></i> 이미지 다운로드
                 </button>
             </div>
         </div>
@@ -766,6 +831,210 @@
                 link.click();
                 document.body.removeChild(link);
                 URL.revokeObjectURL(url);
+            } catch (e) {
+                await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
+            }
+        });
+
+        /* =====================================================================
+         * 피드 이미지 다운로드
+         * - rotable_banner.png + "현재 에디터의 참여자 명단"(참여자 명단 편집과 동일한 소스)을
+         *   합쳐 1장의 이미지로 저장한다.
+         * - 명단은 에디터 HTML 안의 [data-roster-grid] 를 parseRoster() 로 추출해 사용한다.
+         *   (DB 직접 조회가 아니라, 편집 화면에서 쓰는 바로 그 값)
+         * =================================================================== */
+        var feedModal = null;
+
+        function getFeedModal(){
+            if (feedModal) { return feedModal; }
+            var el = document.getElementById('detailFeedModal');
+            var ModalClass =
+                (window.tabler && window.tabler.Modal) ||
+                (window.tabler && window.tabler.bootstrap && window.tabler.bootstrap.Modal) ||
+                (window.bootstrap && window.bootstrap.Modal) ||
+                (window.coreui && window.coreui.Modal) ||
+                window.Modal;
+            if(!ModalClass){ console.error('Modal 클래스를 찾을 수 없습니다.'); return null; }
+            feedModal = new ModalClass(el);
+            return feedModal;
+        }
+
+        function feedEsc(s){
+            return $('<i>').text(s == null ? '' : String(s)).html();
+        }
+
+        // 한 사람 셀: 번호 + (옵션)프로필(키·직업·나이)
+        function feedPersonCell(p, idx, showProfile){
+            var profile = '';
+            if (showProfile) {
+                var bits = [
+                    p.height ? (p.height + 'cm') : '',
+                    p.job || '',
+                    p.age || ''
+                ].filter(Boolean);
+                // 가독성 ↑ : 진한 색(#1f2937) + 두께/크기 키움
+                profile = '<div style="color:#1f2937; font-weight:700; font-size:20px; margin-top:5px; word-break:keep-all;">'
+                        + feedEsc(bits.join(' · ')) + '</div>';
+            }
+            return ''
+              + '<div style="padding:14px 10px; border-bottom:1px solid #e5e7eb; text-align:center;">'
+              +   '<div style="font-weight:900; font-size:24px; color:#111827;">' + (idx + 1) + '호</div>'
+              +   profile
+              + '</div>';
+        }
+
+        // 한 성별 컬럼
+        function feedColumn(label, bg, people, showProfile){
+            var rows = (people || []).map(function(p, i){ return feedPersonCell(p, i, showProfile); }).join('')
+                || '<div style="padding:24px; text-align:center; color:#9ca3af;">없음</div>';
+            return ''
+              + '<div style="width:50%; box-sizing:border-box;">'
+              +   '<div style="padding:10px; text-align:center; font-weight:900; font-size:24px; color:#fff; background:' + bg + ';">'
+              +     feedEsc(label) + ' ' + ((people || []).length) + '</div>'
+              +   rows
+              + '</div>';
+        }
+
+        // 최상단 로테이블 간단 설명 (배너 아래 / 명단 위)
+        function feedIntro(){
+            return ''
+              + '<div style="text-align:center; margin-bottom:20px; padding-bottom:18px; border-bottom:2px dashed #f3c6dc;'
+              +            " font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif;\">"
+              +   '<div style="font-size:30px; font-weight:900; color:#ec4899;">ROTABLE · 로테이션 소개팅</div>'
+              +   '<div style="font-size:20px; font-weight:600; color:#374151; margin-top:8px; line-height:1.5; word-break:keep-all;">'
+              +     '한 자리에서 돌아가며 모두와 대화하고,<br>마음에 든 상대에게 비밀 투표하는 로테이션 소개팅 파티 🍷'
+              +   '</div>'
+              + '</div>';
+        }
+
+        // "이번 참여자 목록" 섹션 제목
+        function feedRosterTitle(){
+            return ''
+              + '<div style="text-align:center; margin-bottom:16px;">'
+              +   '<span style="display:inline-block; padding:8px 24px; border-radius:999px; background:#111827;'
+              +            ' color:#ffffff; font-size:26px; font-weight:900;">👥 이번 참여자 목록</span>'
+              + '</div>';
+        }
+
+        // 행사 카드 1개 렌더
+        function feedCard(card, showProfile){
+            return ''
+              + '<div style="margin-bottom:22px;">'
+              +   '<div style="text-align:center; margin-bottom:12px;">'
+              +     '<div style="font-size:28px; font-weight:900; color:#111827; word-break:keep-all;">' + feedEsc(card.title) + '</div>'
+              +     (card.date ? '<div style="font-size:19px; font-weight:600; color:#4b5563; margin-top:3px;">' + feedEsc(card.date) + '</div>' : '')
+              +   '</div>'
+              +   '<div style="display:flex; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">'
+              +     feedColumn('남', '#3b82f6', card.males, showProfile)
+              +     '<div style="width:1px; background:#e5e7eb;"></div>'
+              +     feedColumn('여', '#ec4899', card.females, showProfile)
+              +   '</div>'
+              + '</div>';
+        }
+
+        // 하단 로테이블 홍보 문구 / CTA 배너. (피드 이미지 맨 아래에 붙음)
+        function feedPromoFooter(){
+            return ''
+              + '<div style="margin-top:26px; padding:30px 28px; border-radius:16px; text-align:center;'
+              +            ' background:linear-gradient(135deg,#ec4899 0%,#f472b6 55%,#a855f7 100%); color:#ffffff;'
+              +            " font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif;\">"
+              +   '<div style="font-size:40px; font-weight:900; letter-spacing:-0.5px;">한 자리에서, 모두와 마주치다 💘</div>'
+              +   '<div style="font-size:24px; font-weight:700; margin-top:12px; line-height:1.5; word-break:keep-all;">'
+              +     '돌아가며 모두와 대화하고, 마음에 든 상대에게 비밀 투표!<br>'
+              +     '서로 선택하면 다음 날 아침 <b>매칭 발표</b> ✨'
+              +   '</div>'
+              +   '<div style="display:inline-block; margin-top:20px; padding:13px 34px; border-radius:999px;'
+              +            ' background:#ffffff; color:#ec4899; font-size:26px; font-weight:900;">'
+              +     '🍷 ROTABLE 로테이션 소개팅'
+              +   '</div>'
+              +   '<div style="font-size:20px; font-weight:600; margin-top:14px; opacity:0.95;">지금 바로 참여 신청하세요!</div>'
+              + '</div>';
+        }
+
+        // 에디터에서 추출한 roster 데이터 → 캡처 영역 렌더. (명단 없으면 false)
+        function renderFeedRoster(){
+            var loc  = locateRosterGrid(getHtml());
+            var data = loc ? parseRoster(loc.grid) : null;
+
+            if (!data || !data.cards.length) {
+                $('#feedRosterArea').empty();
+                $('#feedEmpty').show();
+                $('.btn-feed-download').prop('disabled', true);
+                return false;
+            }
+
+            $('#feedEmpty').hide();
+            var showProfile = $('#feedShowProfile').is(':checked');
+            var html = feedIntro()
+                     + feedRosterTitle()
+                     + data.cards.map(function(card){ return feedCard(card, showProfile); }).join('')
+                     + feedPromoFooter();
+            $('#feedRosterArea').html(html);
+            $('.btn-feed-download').prop('disabled', false);
+            return true;
+        }
+
+        // '피드 이미지 다운' 버튼 → 모달 열고 현재 에디터 명단으로 미리보기
+        $('.btn-open-feed').on('click', function(){
+            renderFeedRoster();
+            var m = getFeedModal();
+            if (m) { m.show(); }
+        });
+
+        // 프로필 표시 토글 → 다시 렌더
+        $('#feedShowProfile').on('change', function(){ renderFeedRoster(); });
+
+        // 피드 이미지(배너 + 명단) 다운로드
+        $('.btn-feed-download').on('click', async function(){
+            if (typeof html2canvas === 'undefined') {
+                await salert({text: '이미지 변환 모듈을 불러오지 못했습니다. 페이지를 새로고침해주세요.', cancel: false});
+                return;
+            }
+            if (!renderFeedRoster()) {
+                await salert({text: '참여자 명단 영역을 찾지 못했습니다. 샘플을 불러오거나 명단을 먼저 채워 주세요.', cancel: false});
+                return;
+            }
+
+            var target = document.getElementById('feedCapture');
+
+            try {
+                // 배너 등 이미지가 완전히 로드된 뒤 캡처 (CORS-safe)
+                var imgs = target.querySelectorAll('img');
+                await Promise.all(Array.prototype.map.call(imgs, function(img){
+                    return new Promise(function(resolve){
+                        img.setAttribute('crossorigin', 'anonymous');
+                        if (img.complete && img.naturalWidth) { resolve(); return; }
+                        img.onload = resolve;
+                        img.onerror = resolve;
+                    });
+                }));
+
+                if (document.fonts && document.fonts.ready) {
+                    try { await document.fonts.ready; } catch (fe) { /* 무시 */ }
+                }
+
+                var canvas = await html2canvas(target, {
+                    backgroundColor: '#ffffff',
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: false,
+                    logging: false
+                });
+
+                canvas.toBlob(function(blob){
+                    if (!blob) {
+                        salert({text: '이미지 생성에 실패했습니다.', cancel: false});
+                        return;
+                    }
+                    var url = URL.createObjectURL(blob);
+                    var link = document.createElement('a');
+                    link.download = 'rotable_피드.png';
+                    link.href = url;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }, 'image/png');
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
             }

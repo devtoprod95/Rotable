@@ -270,13 +270,17 @@ class RotationController extends Controller
      */
     public function detailIndex(): View
     {
+        // 유형별 저장본/메타를 "유형당 1회 조회"로 함께 가져온다. (중복 조회 제거)
+        $wine = $this->rotationService->detailPayload('wine');
+        $solo = $this->rotationService->detailPayload('solo');
+
         return view('admin.rotation.detail', [
             // 유형별 저장본 (없으면 해당 유형 2열 샘플로 폴백)
-            'savedWine'    => $this->rotationService->detailHtmlLoad('wine'),
-            'savedSolo'    => $this->rotationService->detailHtmlLoad('solo'),
+            'savedWine'    => $wine['html'],
+            'savedSolo'    => $solo['html'],
             // 유형별 마지막 저장 메타(누가·언제) — 없으면 null
-            'metaWine'     => $this->rotationService->detailMetaLoad('wine'),
-            'metaSolo'     => $this->rotationService->detailMetaLoad('solo'),
+            'metaWine'     => $wine['meta'],
+            'metaSolo'     => $solo['meta'],
             // 유형(와인파티/1:1) × 열 수(1열/2열) 조합 샘플
             'wineOne'      => $this->rotationService->detailSampleHtml(1, 'wine'),
             'wineTwo'      => $this->rotationService->detailSampleHtml(2, 'wine'),

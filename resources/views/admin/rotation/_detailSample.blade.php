@@ -152,18 +152,6 @@
         </div>
     </div>
 
-    {{-- 한 줄 요약 배너 (후킹) --}}
-    <div style="background:linear-gradient(135deg,#ec4899,#8b5cf6); border-radius:14px; padding:28px 20px; margin-top:20px; margin-bottom:40px; text-align:center; color:#ffffff;">
-        <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; letter-spacing:0.5px;">선릉역 3분 · 글작성 X · 2차 무료</div>
-        <div style="font-size:32px; font-weight:800; margin-top:8px; opacity:0.98; line-height:1.7;">
-            프로필 작성부터 상대 정보 확인, 마음에 든 분 선택,<br>
-            매칭 결과까지 <b>스마트폰 하나로</b> 간편하게.<br>
-            복잡한 절차는 덜어내고 <b>대화에만 집중</b>하세요 💘<br>
-            물론 <b>2차까지 전부 무료</b>랍니다.<br>
-            <span style="display:inline-block; margin-top:10px;">🔋 모든 진행이 스마트폰으로 이뤄지니,<br><b>배터리는 꼭 넉넉히 충전</b>해서 와 주세요!</span>
-        </div>
-    </div>
-
     @if ($type === 'wine')
     {{-- 진정성 어필 배너 (와인파티 전용) — '도파민 만남'이 아닌 소개팅 목적임을 강조 --}}
     <div style="background:#fdf2f8; border:2px solid #f9a8d4; border-radius:16px; padding:28px 20px; margin-bottom:40px; text-align:center;">
@@ -175,7 +163,7 @@
             그래서 호스트가 앞에 나와 억지로 게임을 진행하거나 분위기를 띄우지 않아요.
             대신 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">가벼운 대화 주제</b>와 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">테이블끼리 즐기는 미니게임</b>을 살짝 건네드려,<br>
             어색한 순간을 자연스럽게 풀어가실 수 있도록 도와드립니다.<br>
-            <span style="display:inline-block; margin-top:12px; color:#9d174d;">무리한 게임이나 과한 텐션을 요구하는 자리가 아니니,<br>부담없이 편안하게 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">사람에 집중</b>하시면 돼요 💘</span>
+            <span style="display:inline-block; margin-top:12px; color:#9d174d;">무리한 게임이나 과한 텐션을 요구하는 자리가 아니니,<br>부담없이 편안하게 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">이성에 집중</b>하시면 돼요 💘</span>
         </div>
     </div>
     @endif
@@ -302,6 +290,52 @@
             @endforeach
         </div>
     </div>
+
+    @if ($type === 'wine')
+    {{-- 실제 앱 화면 소개 (와인파티 전용) — 참여자가 겪는 흐름 순서로 스샷 노출 --}}
+    @php
+        // 상세페이지 제작 화면에서 넣은 스샷. 파일이 있는 것만 카드로 노출한다.
+        $appShots = [
+            ['file' => 'home.png',    'step' => 'STEP 1', 'title' => '내 테이블 · 이번 턴 상대', 'desc' => '지금 내 앞에 누가 앉았는지 폰에 바로! “누구였지?” 걱정 없이 상대 프로필을 확인해요.'],
+            ['file' => 'message.png', 'step' => 'STEP 2', 'title' => '익명 메시지',            'desc' => '대화 중 마음이 가는 상대에게 살짝 익명 메시지. 부담 없이 먼저 다가갈 수 있어요.'],
+            ['file' => 'match.png',   'step' => 'STEP 3', 'title' => '비밀 투표(매칭 선택)',    'desc' => '마음에 든 상대를 티 안 나게 조용히 선택. 100% 비공개라 솔직하게 고를 수 있어요.'],
+            ['file' => 'result.png',  'step' => 'STEP 4', 'title' => '매칭 결과 발표',          'desc' => '서로 선택했다면 매칭 성사! 결과 화면으로 설렘을 확인해요. (예시 화면)'],
+        ];
+        $appShots = array_values(array_filter($appShots, fn ($s) => file_exists(public_path('images/' . $s['file']))));
+        $appTones = [
+            ['bd' => '#bae6fd', 'bg' => '#f0f9ff', 'badge' => '#0284c7'], // 스카이
+            ['bd' => '#fbcfe8', 'bg' => '#fdf2f8', 'badge' => '#db2777'], // 핑크
+            ['bd' => '#ddd6fe', 'bg' => '#f5f3ff', 'badge' => '#7c3aed'], // 보라
+            ['bd' => '#fde68a', 'bg' => '#fffbeb', 'badge' => '#d97706'], // 앰버
+        ];
+    @endphp
+    @if (count($appShots) > 0)
+    <div style="margin-top:4px; margin-bottom:44px;">
+        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#0ea5e9; text-align:center; letter-spacing:0.5px; margin-bottom:8px;">📱 이렇게 진행돼요</div>
+        <div style="font-size:30px; color:#6b7280; text-align:center; margin-bottom:24px; line-height:1.6;">
+            모든 진행은 <b style="color:#0ea5e9;">스마트폰 하나</b>로! 아래는 <b>실제 앱 화면</b>이에요.<br>
+            글작성 없이 터치 몇 번이면 끝, 처음이어도 어렵지 않아요.
+        </div>
+        <div style="display:flex; flex-wrap:wrap; padding:0 6px;">
+            @foreach ($appShots as $idx => $shot)
+                @php $tone = $appTones[$idx % count($appTones)]; @endphp
+                <div style="width:50%; box-sizing:border-box; padding:18px 14px;">
+                    <div style="position:relative; border:2px solid {{ $tone['bd'] }}; background:{{ $tone['bg'] }}; border-radius:18px; padding:16px; box-sizing:border-box; box-shadow:0 6px 18px -8px rgba(0,0,0,0.18); height:100%;">
+                        {{-- 단계 뱃지 --}}
+                        <div style="position:absolute; top:-14px; left:16px; background:{{ $tone['badge'] }}; color:#ffffff; font-family:'Jua',sans-serif; font-size:24px; font-weight:400; line-height:1; padding:9px 18px; border-radius:999px; box-shadow:0 4px 10px -3px rgba(0,0,0,0.3); letter-spacing:0.5px;">
+                            {{ $shot['step'] }}
+                        </div>
+                        <img src="{{ asset('images/' . $shot['file']) }}" alt="{{ $shot['title'] }}"
+                             style="display:block; width:100%; height:auto; border-radius:12px; margin-top:12px; border:1px solid #e5e7eb;">
+                        <div style="font-size:30px; font-weight:900; color:#0f172a; margin-top:16px; text-align:center; word-break:keep-all;">{{ $shot['title'] }}</div>
+                        <div style="font-size:26px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; text-align:center; word-break:keep-all;">{{ $shot['desc'] }}</div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+    @endif
 
     @if ($type === 'wine')
     {{-- 미니게임 콘텐츠 소개 (와인파티 전용) --}}

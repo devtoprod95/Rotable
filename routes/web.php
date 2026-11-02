@@ -61,6 +61,12 @@ Route::middleware(RedirectIfRegistered::class)->group(function () {
     Route::post('/login', [MemberAuthController::class, 'login']);
 });
 
+// 관리자 문의하기 — 입장 가능한 회차가 없을 때 등, 게스트가 운영진에게 남기는 문의.
+// 텔레그램으로 전송된다. (스팸 방지 throttle)
+Route::post('/contact', [MemberAuthController::class, 'contact'])
+    ->middleware('throttle:5,1')
+    ->name('member.contact');
+
 // 로그인한 유저만
 Route::middleware('auth:web')->group(function () {
     Route::get('/home', [MemberPageController::class, 'home'])->name('home');

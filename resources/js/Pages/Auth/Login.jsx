@@ -2,6 +2,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
+import ContactForm from '@/Components/ContactForm';
 
 /**
  * 개발 편의용 자동 입력 값. (production 이 아닐 때만 사용)
@@ -45,6 +46,27 @@ export default function Login() {
                         <span className="h-7 w-px bg-secondary-200"></span>
                         <h1 className="text-2xl font-extrabold text-secondary-800">입장</h1>
                     </div>
+
+                    {rounds.length === 0 ? (
+                        <div className="mt-7">
+                            <div className="flex flex-col items-center gap-3 text-center">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary-100 text-3xl">
+                                    🗓️
+                                </div>
+                                <div>
+                                    <p className="text-base font-bold text-secondary-800">
+                                        지금 입장할 수 있는 회차가 없어요
+                                    </p>
+                                    <p className="mt-1.5 text-sm leading-relaxed text-secondary-400">
+                                        현재 진행 중인 행사가 없어요.<br />
+                                        궁금한 점이 있으면 운영진에게 문의해 주세요.
+                                    </p>
+                                </div>
+                            </div>
+                            <ContactForm />
+                        </div>
+                    ) : (
+                    <>
                     <p className="mt-1.5 text-center text-sm text-secondary-400">
                         회차를 선택하고 핸드폰 번호와<br></br>비밀번호를 입력해주세요.
                     </p>
@@ -94,6 +116,8 @@ export default function Login() {
                             {processing ? '입장 중…' : '입장'}
                         </button>
                     </form>
+                    </>
+                    )}
 
                     <p className="mt-6 text-center text-sm text-secondary-400">
                         아직 등록하지 않으셨나요?{' '}

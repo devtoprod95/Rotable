@@ -7,6 +7,8 @@ use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\RotationSeat;
 use App\Models\RotationTable;
+use App\Services\TelegramNotifier;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -331,5 +333,44 @@ class MemberAuthController extends Controller
         $request->session()->regenerate();
 
         return redirect()->route('landing');
+    }
+
+    /**
+     * 관리자 문의하기 — 게스트가 운영진에게 남기는 문의를 텔레그램으로 전송한다.
+     * (입장 가능한 회차가 없을 때 등, 입장/등록 화면에서 호출)
+     *
+     * 텔레그램 미설정/전송 실패 시에도 사용자에게는 접수 성공으로 응답한다.
+     * (로그로만 남기고, 외부 연동 상태를 사용자에게 노출하지 않음)
+     */
+    public function contact(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'contact' => ['required', 'string', 'max:100'],
+            'message' => ['required', 'string', 'max:1000'],
+            'name'    => ['nullable', 'string', 'max:50'],
+        ], [
+            'contact.required' => '연락 받으실 연락처를 입력해주세요.',
+            'message.required' => '문의 내용을 입력해주세요.',
+        ]);
+
+        $name    = trim((string) ($validated['name'] ?? ''));
+        $contact = trim($validated['contact']);
+        $message = trim($validated['message']);
+
+        $text = implode("\n", array_filter([
+            '📩 <b>[로테이블 문의]</b>',
+            '',
+            $name !== '' ? '🙋 <b>이름</b> : ' . e($name) : null,
+            '📞 <b>연락처</b> : ' . e($contact),
+            '💬 <b>내용</b> : ' . e($message),
+            '🕒 <b>시간</b> : ' . now()->format('Y-m-d H:i'),
+        ]));
+
+        TelegramNotifier::fromConfig()->send($text);
+
+        return response()->json([
+            'ok'  => true,
+            'msg' => '문의가 접수되었어요. 빠르게 연락드릴게요!',
+        ]);
     }
 }

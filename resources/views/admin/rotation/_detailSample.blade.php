@@ -200,15 +200,15 @@
                  data-roster-card="{{ $loop->index }}"
                  data-event-title="{{ $event['title'] }}"
                  data-event-date="{{ $event['date'] }}">
-                <div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; height:100%;">
+                <div style="border:2px solid #cbd5e1; border-radius:10px; overflow:hidden; height:100%;">
                     {{-- 행사명 + 날짜 --}}
-                    <div style="background:#eef2f7; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">
-                        <div style="font-size:{{ $cellTitleSize }}; font-weight:900; word-break:keep-all;">{{ $event['title'] }}</div>
-                        <div style="font-size:{{ $cellDateSize }}; color:#374151; font-weight:600; margin-top:1px;">{{ $event['date'] }}</div>
+                    <div style="background:#eef2f7; padding:7px 6px; border-bottom:2px solid #cbd5e1; text-align:center;">
+                        <div style="font-size:{{ $cellTitleSize }}; font-weight:900; color:#000000; word-break:keep-all;">{{ $event['title'] }}</div>
+                        <div style="font-size:{{ $cellDateSize }}; color:#374151; font-weight:700; margin-top:1px;">{{ $event['date'] }}</div>
                     </div>
 
                     {{-- 남(좌) / 여(우) 헤더 --}}
-                    <div style="display:flex; font-size:{{ $cellHeadSize }}; font-weight:900; text-align:center; border-bottom:1px solid #eee;">
+                    <div style="display:flex; font-size:{{ $cellHeadSize }}; font-weight:900; text-align:center; border-bottom:2px solid #cbd5e1;">
                         <div style="width:50%; padding:4px; background:#3b82f6; color:#ffffff;">남 {{ count($maleSample) }}</div>
                         <div style="width:50%; padding:4px; background:#ec4899; color:#ffffff;">여 {{ count($femaleSample) }}</div>
                     </div>
@@ -216,20 +216,20 @@
                     {{-- 남/여 행 맞춤 --}}
                     <div style="display:flex;">
                         {{-- 좌: 남자 --}}
-                        <div style="width:50%; box-sizing:border-box; border-right:1px solid #c7d7ee; background:#eff6ff;">
+                        <div style="width:50%; box-sizing:border-box; border-right:2px solid #c7d7ee; background:#eff6ff;">
                             @foreach ($maleSample as $m)
-                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:1px solid #d7e3ef; text-align:center; display:flex; flex-direction:column; justify-content:center;">
-                                    <div style="font-weight:900; font-size:{{ $cellNoSize }};">{{ $m['no'] }}호</div>
-                                    <div style="color:#000000; font-weight:700; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $m['height'] }}cm · {{ $m['job'] }} · {{ $m['age'] }}</div>
+                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:2px solid #c7d7ee; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                                    <div style="font-weight:900; font-size:{{ $cellNoSize }}; color:#000000;">{{ $m['no'] }}호</div>
+                                    <div style="color:#000000; font-weight:800; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $m['height'] }}cm · {{ $m['job'] }} · {{ $m['age'] }}</div>
                                 </div>
                             @endforeach
                         </div>
                         {{-- 우: 여자 --}}
                         <div style="width:50%; box-sizing:border-box; background:#fdf2f8;">
                             @foreach ($femaleSample as $f)
-                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:1px solid #f6d9e6; text-align:center; display:flex; flex-direction:column; justify-content:center;">
-                                    <div style="font-weight:900; font-size:{{ $cellNoSize }};">{{ $f['no'] }}호</div>
-                                    <div style="color:#000000; font-weight:700; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $f['height'] }}cm · {{ $f['job'] }} · {{ $f['age'] }}</div>
+                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:2px solid #f6c3da; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                                    <div style="font-weight:900; font-size:{{ $cellNoSize }}; color:#000000;">{{ $f['no'] }}호</div>
+                                    <div style="color:#000000; font-weight:800; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $f['height'] }}cm · {{ $f['job'] }} · {{ $f['age'] }}</div>
                                 </div>
                             @endforeach
                         </div>

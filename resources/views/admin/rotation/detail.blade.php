@@ -289,6 +289,20 @@
         // 초기 1회 렌더(현재 유형 기준).
         renderSavedInfo();
 
+        // 캔버스 크기 한계를 넘지 않는 안전한 scale 을 계산한다.
+        // 브라우저 캔버스는 한 변 최대 ~16384px(그리고 면적 제한)을 넘으면 빈(흰) 이미지가 된다.
+        // 원하는 품질 scale(desired)을 쓰되, (폭/높이 × scale) 이 안전 한계를 넘으면 자동으로 낮춘다.
+        function computeSafeScale(cssWidth, cssHeight, desired){
+            var MAX_SIDE = 12000;             // 한 변 최대 안전 픽셀 (여유 있게)
+            var MAX_AREA = 40 * 1000 * 1000;  // 최대 면적(px^2) — 모바일 메모리 안전치
+            var w = Math.max(1, cssWidth);
+            var h = Math.max(1, cssHeight);
+            var s = desired || 3;
+            s = Math.min(s, MAX_SIDE / w, MAX_SIDE / h);     // 한 변 한계
+            s = Math.min(s, Math.sqrt(MAX_AREA / (w * h)));  // 면적 한계
+            return Math.max(1, s);                            // 최소 1배는 보장
+        }
+
         /* =====================================================================
          * 공통 이미지 저장 유틸 — "화질 최우선 + 10MB 상한 엄수"
          * - 무손실 PNG 를 우선한다. (글자/단색 배경이 가장 선명)
@@ -562,15 +576,15 @@
             // 실제 참여자 칸
             function personCell(p, i, borderColor){
                 return ''
-                  + '<div style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:1px solid ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center;">'
-                  +   '<div style="font-weight:900; font-size:' + cellNoSize + ';">' + (i + 1) + '호</div>'
-                  +   '<div style="color:#000000; font-weight:700; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(p.height) + 'cm · ' + esc(p.job) + ' · ' + esc(p.age) + '</div>'
+                  + '<div style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:2px solid ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center;">'
+                  +   '<div style="font-weight:900; font-size:' + cellNoSize + '; color:#000000;">' + (i + 1) + '호</div>'
+                  +   '<div style="color:#000000; font-weight:800; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(p.height) + 'cm · ' + esc(p.job) + ' · ' + esc(p.age) + '</div>'
                   + '</div>';
             }
             // "모집중" 자리 칸 (번호는 이어서, data-recruit 로 표시해 재파싱 때 제외)
             function recruitCell(i, borderColor){
                 return ''
-                  + '<div data-recruit="1" style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:1px dashed ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center; background:repeating-linear-gradient(45deg,#ffffff,#ffffff 8px,#fafafa 8px,#fafafa 16px);">'
+                  + '<div data-recruit="1" style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:2px dashed ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center; background:repeating-linear-gradient(45deg,#ffffff,#ffffff 8px,#fafafa 8px,#fafafa 16px);">'
                   +   '<div style="font-weight:900; font-size:' + cellNoSize + '; color:#9ca3af;">' + (i + 1) + '호</div>'
                   +   '<div style="color:#f472b6; font-weight:900; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(recruitLabel) + ' 💗</div>'
                   + '</div>';
@@ -892,18 +906,16 @@
                     } catch (fe) { /* 폰트 로드 실패해도 캡처는 진행 */ }
                 }
 
-                // 선명도 우선 : 4배 해상도로 캡처 (모바일 축소 표시에도 글자/선이 또렷).
-                var detailScale = Math.max(4, Math.min(5, (window.devicePixelRatio || 1) * 2));
+                // 선명도는 높이되, 캔버스 크기 한계(브라우저 최대 ~16384px)를 넘으면
+                // 빈(흰) 이미지가 되므로 안전 범위 내에서 최대 scale 을 계산한다.
+                var detailScale = computeSafeScale(holder.offsetWidth || 1080, holder.offsetHeight || 1080, 3.5);
 
                 var canvas = await html2canvas(holder, {
                     backgroundColor: '#ffffff',
                     scale: detailScale,
                     useCORS: true,
                     allowTaint: false,
-                    logging: false,
-                    letterRendering: true,
-                    width: 1080,
-                    windowWidth: 1080
+                    logging: false
                 });
 
                 // ===== 10MB 상한 + 화질 최우선 저장 =====
@@ -953,13 +965,13 @@
                     p.job || '',
                     p.age || ''
                 ].filter(Boolean);
-                // 가독성 ↑ : 검정색 + 두께/크기 키움
-                profile = '<div style="color:#000000; font-weight:700; font-size:20px; margin-top:5px; word-break:keep-all;">'
+                // 가독성 ↑ : 검정 + 크고 두껍게 (모바일 축소에도 안 뭉개지도록)
+                profile = '<div style="color:#000000; font-weight:800; font-size:24px; margin-top:6px; word-break:keep-all;">'
                         + feedEsc(bits.join(' · ')) + '</div>';
             }
             return ''
-              + '<div style="padding:14px 10px; border-bottom:1px solid #e5e7eb; text-align:center;">'
-              +   '<div style="font-weight:900; font-size:24px; color:#000000;">' + (idx + 1) + '호</div>'
+              + '<div style="padding:16px 10px; border-bottom:2px solid #cbd5e1; text-align:center;">'
+              +   '<div style="font-weight:900; font-size:28px; color:#000000;">' + (idx + 1) + '호</div>'
               +   profile
               + '</div>';
         }
@@ -970,7 +982,7 @@
                 || '<div style="padding:24px; text-align:center; color:#9ca3af;">없음</div>';
             return ''
               + '<div style="width:50%; box-sizing:border-box;">'
-              +   '<div style="padding:10px; text-align:center; font-weight:900; font-size:24px; color:#fff; background:' + bg + ';">'
+              +   '<div style="padding:12px; text-align:center; font-weight:900; font-size:28px; color:#fff; background:' + bg + ';">'
               +     feedEsc(label) + ' ' + ((people || []).length) + '</div>'
               +   rows
               + '</div>';
@@ -1002,12 +1014,12 @@
             return ''
               + '<div style="margin-bottom:22px;">'
               +   '<div style="text-align:center; margin-bottom:12px;">'
-              +     '<div style="font-size:28px; font-weight:900; color:#111827; word-break:keep-all;">' + feedEsc(card.title) + '</div>'
-              +     (card.date ? '<div style="font-size:19px; font-weight:600; color:#4b5563; margin-top:3px;">' + feedEsc(card.date) + '</div>' : '')
+              +     '<div style="font-size:34px; font-weight:900; color:#000000; word-break:keep-all;">' + feedEsc(card.title) + '</div>'
+              +     (card.date ? '<div style="font-size:22px; font-weight:700; color:#374151; margin-top:4px;">' + feedEsc(card.date) + '</div>' : '')
               +   '</div>'
-              +   '<div style="display:flex; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">'
+              +   '<div style="display:flex; border:2px solid #cbd5e1; border-radius:10px; overflow:hidden;">'
               +     feedColumn('남', '#3b82f6', card.males, showProfile)
-              +     '<div style="width:1px; background:#e5e7eb;"></div>'
+              +     '<div style="width:2px; background:#cbd5e1;"></div>'
               +     feedColumn('여', '#ec4899', card.females, showProfile)
               +   '</div>'
               + '</div>';
@@ -1108,15 +1120,15 @@
                 target.style.width = '1080px';
                 target.style.maxWidth = 'none';
 
+                // 폭 고정 후 실제 높이 기준으로, 캔버스 한계를 넘지 않는 안전 scale 계산.
+                var feedScale = computeSafeScale(target.offsetWidth || 1080, target.offsetHeight || 1080, 3.5);
+
                 var canvas = await html2canvas(target, {
                     backgroundColor: '#ffffff',
                     scale: feedScale,
                     useCORS: true,
                     allowTaint: false,
-                    logging: false,
-                    letterRendering: true,
-                    width: 1080,
-                    windowWidth: 1080
+                    logging: false
                 });
 
                 target.style.width = prevWidth;

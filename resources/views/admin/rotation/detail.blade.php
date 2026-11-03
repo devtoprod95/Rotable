@@ -650,10 +650,13 @@
 
             data.cards.forEach(function(card, idx){
                 var males = card.males || [], females = card.females || [];
-                // balance 켜지면 남/여 중 많은 쪽 수에 맞춰 모집중으로 채운다.
+                // balance 켜지면 남/여 중 많은 쪽 수에 맞춰 모집중으로 '셀'을 채운다.
                 var total = balance ? Math.max(males.length, females.length) : null;
                 var maleTotal   = balance ? total : males.length;
                 var femaleTotal = balance ? total : females.length;
+                // 헤더에 표시하는 인원수는 '실제 참여자 수'만 센다. (모집중 더미 자리는 제외)
+                var maleHeadCount   = males.length;
+                var femaleHeadCount = females.length;
 
                 html += '<div style="width:' + cardWidth + '; box-sizing:border-box; padding:3px;"'
                       + ' data-roster-card="' + idx + '"'
@@ -665,10 +668,10 @@
                 html +=       '<div style="font-size:' + cellTitleSize + '; font-weight:900; word-break:keep-all;">' + esc(card.title) + '</div>';
                 html +=       '<div style="font-size:' + cellDateSize + '; color:#374151; font-weight:600; margin-top:1px;">' + esc(card.date) + '</div>';
                 html +=     '</div>';
-                // 남/여 헤더 (모집중 포함한 표시 인원수)
+                // 남/여 헤더 (실제 참여자 수만 표시 — 모집중 더미는 제외)
                 html +=     '<div style="display:flex; font-size:' + cellHeadSize + '; font-weight:900; text-align:center; border-bottom:1px solid #eee;">';
-                html +=       '<div style="width:50%; padding:4px; background:#3b82f6; color:#ffffff;">남 ' + maleTotal + '</div>';
-                html +=       '<div style="width:50%; padding:4px; background:#ec4899; color:#ffffff;">여 ' + femaleTotal + '</div>';
+                html +=       '<div style="width:50%; padding:4px; background:#3b82f6; color:#ffffff;">남 ' + maleHeadCount + '</div>';
+                html +=       '<div style="width:50%; padding:4px; background:#ec4899; color:#ffffff;">여 ' + femaleHeadCount + '</div>';
                 html +=     '</div>';
                 // 남/여 명단
                 html +=     '<div style="display:flex;">';
@@ -853,12 +856,43 @@
             renderSavedInfo();               // 선택 유형의 저장 정보로 갱신
         });
 
+        // 샘플 HTML 의 명단을 "현재 에디터에 작성된 명단"으로 바꿔서 돌려준다.
+        // - 현재 에디터에 명단(data-roster-grid)이 있으면 그 남/여 인원을 추출해,
+        //   새 샘플의 모든 행사 카드에 동일하게 채운다. (행사명/날짜는 샘플 값 유지)
+        // - 현재 명단이 없거나 비어 있으면 샘플 기본(더미) 명단을 그대로 둔다.
+        function applyCurrentRosterToSample(sampleHtml){
+            // 1) 현재 에디터 명단 추출
+            var $cur = $('<div></div>').html(getHtml());
+            var curData = parseRoster($cur.find('[data-roster-grid]').first());
+            var curCard = (curData && curData.cards && curData.cards[0]) ? curData.cards[0] : null;
+            var hasCurrent = curCard && ((curCard.males && curCard.males.length) || (curCard.females && curCard.females.length));
+            if (!hasCurrent) { return sampleHtml; } // 현재 명단 없으면 샘플 그대로
+
+            // 2) 샘플 HTML 파싱
+            var $sample = $('<div></div>').html(sampleHtml);
+            var $grid = $sample.find('[data-roster-grid]').first();
+            if ($grid.length === 0) { return sampleHtml; } // 샘플에 명단 영역 없으면 그대로
+
+            var sampleData = parseRoster($grid);
+            if (!sampleData || !sampleData.cards.length) { return sampleHtml; }
+
+            // 3) 샘플의 각 카드 명단을 현재 명단으로 교체 (행사명/날짜는 샘플 유지)
+            sampleData.cards.forEach(function(card){
+                card.males   = curCard.males.slice();
+                card.females = curCard.females.slice();
+            });
+
+            // 4) 새 그리드로 다시 그려 샘플 HTML 의 명단 영역만 치환
+            $grid.replaceWith(buildRosterGrid(sampleData));
+            return $sample.html();
+        }
+
         // 1열 샘플 (선택한 유형 기준)
         $('.btn-sample-one').on('click', async function(){
             var type = currentType();
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
-            if(await salert({text: '현재 작성 내용을 [' + label + '] 1열 샘플로 교체하시겠습니까?'})){
-                setHtml(SAMPLES[type][1]);
+            if(await salert({text: '현재 작성 내용을 [' + label + '] 1열 샘플로 교체하시겠습니까?\n(현재 참여자 명단은 그대로 옮겨집니다)'})){
+                setHtml(applyCurrentRosterToSample(SAMPLES[type][1]));
             }
         });
 
@@ -866,8 +900,8 @@
         $('.btn-sample-two').on('click', async function(){
             var type = currentType();
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
-            if(await salert({text: '현재 작성 내용을 [' + label + '] 2열 샘플로 교체하시겠습니까?'})){
-                setHtml(SAMPLES[type][2]);
+            if(await salert({text: '현재 작성 내용을 [' + label + '] 2열 샘플로 교체하시겠습니까?\n(현재 참여자 명단은 그대로 옮겨집니다)'})){
+                setHtml(applyCurrentRosterToSample(SAMPLES[type][2]));
             }
         });
 

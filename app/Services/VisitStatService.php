@@ -22,7 +22,7 @@ class VisitStatService
      * 전화번호의 성별은 그 전화번호의 "가장 최근 방문 레코드" 기준으로 1개로 확정한다.
      *
      * @param CarbonInterface|null $until 이 시각 "이전(미만)"에 생성된 회원만 집계. null 이면 전체.
-     * @return array<string, int>
+     * @return array<string, int|array<string, int>> 집계 결과. platform_counts 만 [플랫폼=>수] 중첩 배열이고 나머지는 int.
      */
     public function aggregate(?CarbonInterface $until = null): array
     {
@@ -35,6 +35,22 @@ class VisitStatService
         $total       = (clone $base)->count();
         $totalMale   = (clone $base)->where('gender', Member::GENDER_MALE)->count();
         $totalFemale = (clone $base)->where('gender', Member::GENDER_FEMALE)->count();
+
+        // 신청 플랫폼별 방문 수 (방문 = 회원 레코드 1건).
+        // 플랫폼은 늘어날 수 있으므로 하드코딩하지 않고, 실제 데이터의 platform 값을 그대로 집계한다.
+        // (Member::platformOptions() 의 모든 플랫폼은 0 으로라도 키가 존재하도록 미리 채운다.)
+        $platformCounts = [];
+        foreach (Member::platformOptions() as $opt) {
+            $platformCounts[$opt['id']] = 0;
+        }
+        $platformRows = (clone $base)
+            ->selectRaw('members.platform as platform, COUNT(*) as cnt')
+            ->groupBy('members.platform')
+            ->get();
+        foreach ($platformRows as $row) {
+            $key = $row->platform ?? Member::PLATFORM_MUNTO; // null 은 기본(문토)로 귀속
+            $platformCounts[$key] = ($platformCounts[$key] ?? 0) + (int) $row->cnt;
+        }
 
         // 전화번호별 방문 횟수 + 그 전화번호의 대표 성별(가장 최근 방문 레코드)을 구한다.
         $rows = (clone $base)
@@ -79,9 +95,10 @@ class VisitStatService
         }
 
         return array_merge([
-            'total_visits' => $total,
-            'total_male'   => $totalMale,
-            'total_female' => $totalFemale,
+            'total_visits'    => $total,
+            'total_male'      => $totalMale,
+            'total_female'    => $totalFemale,
+            'platform_counts' => $platformCounts,
         ], $buckets);
     }
 

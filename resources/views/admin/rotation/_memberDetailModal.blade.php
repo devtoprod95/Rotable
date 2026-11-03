@@ -75,6 +75,12 @@
                 : '<span class="badge bg-green-lt">비흡연</span>';
         }
 
+        function platformBadge(v){
+            if(v === 'frip'){ return '<span class="badge bg-cyan-lt">프립</span>'; }
+            if(v === 'munto'){ return '<span class="badge bg-orange-lt">문토</span>'; }
+            return v ? esc(v) : '-';
+        }
+
         function subText(d){
             var parts = [];
             if(d.birth_year){
@@ -126,6 +132,7 @@
             basic += gridItem('직업', esc(d.job));
             basic += gridItem('지역/거주지', esc(d.region));
             basic += gridItem('흡연 여부', smokerBadge(d.is_smoker));
+            basic += gridItem('신청 플랫폼', platformBadge(d.platform));
             $('#memberDetail-basic').html(basic);
 
             // 자기소개

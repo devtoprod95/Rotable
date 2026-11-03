@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $total_visits
  * @property int $total_male
  * @property int $total_female
+ * @property array<string, int> $platform_counts
  * @property int $visit_1
  * @property int $visit_1_male
  * @property int $visit_1_female
@@ -40,6 +41,7 @@ class EventVisitSnapshot extends Model
         'total_visits',
         'total_male',
         'total_female',
+        'platform_counts',
         'visit_1', 'visit_1_male', 'visit_1_female',
         'visit_2', 'visit_2_male', 'visit_2_female',
         'visit_3', 'visit_3_male', 'visit_3_female',
@@ -58,6 +60,8 @@ class EventVisitSnapshot extends Model
             'total_visits'  => 'integer',
             'total_male'    => 'integer',
             'total_female'  => 'integer',
+            // 신청 플랫폼별 방문 수. 예: ['munto' => 12, 'frip' => 8] (플랫폼 확장 대비 JSON)
+            'platform_counts' => 'array',
             'visit_1'            => 'integer',
             'visit_1_male'       => 'integer',
             'visit_1_female'     => 'integer',

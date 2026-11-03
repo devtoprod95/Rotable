@@ -91,6 +91,9 @@
         @php
             $maleCount   = $event->members->where('gender', 'M')->count();
             $femaleCount = $event->members->where('gender', 'F')->count();
+            // 플랫폼별 인원수 (문토/프립)
+            $muntoCount = $event->members->where('platform', \App\Models\Member::PLATFORM_MUNTO)->count();
+            $fripCount  = $event->members->where('platform', \App\Models\Member::PLATFORM_FRIP)->count();
             // 최고관리자만 참여자 비밀번호를 볼 수 있다.
             $isSuperAdmin = auth('admin')->user()?->hasRole(\App\Enums\Role::SuperAdmin->value) ?? false;
         @endphp
@@ -98,10 +101,12 @@
             <div class="card">
                 <div class="card-header d-flex align-items-center justify-content-between">
                     <h3 class="card-title mb-0">참여자</h3>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <span class="badge bg-secondary-lt">총 {{ $event->members->count() }}명</span>
                         <span class="badge bg-blue-lt">남 {{ $maleCount }}명</span>
                         <span class="badge bg-pink-lt">여 {{ $femaleCount }}명</span>
-                        <span class="badge bg-secondary-lt">총 {{ $event->members->count() }}명</span>
+                        <span class="badge bg-orange-lt">문토 {{ $muntoCount }}명</span>
+                        <span class="badge bg-cyan-lt">프립 {{ $fripCount }}명</span>
                     </div>
                 </div>
                 <div class="card-body py-2">
@@ -156,6 +161,21 @@
                                                 @endif
                                                 <div class="fw-bold" style="font-size: 0.85em;">
                                                     {{ $member->phone ?? '-' }}
+                                                </div>
+                                                @php
+                                                    $platformLabels = [
+                                                        \App\Models\Member::PLATFORM_MUNTO => '문토',
+                                                        \App\Models\Member::PLATFORM_FRIP  => '프립',
+                                                    ];
+                                                    $platformBadgeCls = [
+                                                        \App\Models\Member::PLATFORM_MUNTO => 'bg-orange-lt',
+                                                        \App\Models\Member::PLATFORM_FRIP  => 'bg-cyan-lt',
+                                                    ];
+                                                @endphp
+                                                <div style="font-size: 0.85em;">
+                                                    <span class="badge {{ $platformBadgeCls[$member->platform] ?? 'bg-secondary-lt' }}">
+                                                        {{ $platformLabels[$member->platform] ?? $member->platform }}
+                                                    </span>
                                                 </div>
                                                 <div class="text-muted" style="font-size: 0.85em;">
                                                     @if ($member->birth_year)

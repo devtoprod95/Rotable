@@ -49,6 +49,8 @@ class RotationService
                 'adminRequests',
                 'members as male_count'   => fn ($q) => $q->where('gender', Member::GENDER_MALE),
                 'members as female_count' => fn ($q) => $q->where('gender', Member::GENDER_FEMALE),
+                'members as munto_count'  => fn ($q) => $q->where('platform', Member::PLATFORM_MUNTO),
+                'members as frip_count'   => fn ($q) => $q->where('platform', Member::PLATFORM_FRIP),
             ]);
 
         if (!empty($filters['searchText'])) {
@@ -1397,6 +1399,8 @@ class RotationService
                 // 그 행사에서의 내(검색자) 회원 레코드 id (대화 메시지 모달 필터용).
                 'my_member_id'      => $meInEvt->id,
                 'partner'           => $this->meetingPersonPayload($profileSource),
+                // 그 행사 "당시" 상대가 신청한 플랫폼. (프로필과 달리 행사마다 다를 수 있어 최신값이 아닌 그 레코드 값)
+                'event_platform'    => $other->platform,
                 // 상대가 이성인지(검색자 기준). 프런트에서 이성/동성 토글에 사용.
                 'is_opposite'       => $oppositeGender !== null && $other->gender === $oppositeGender,
                 // 나와 그 상대가 이 행사에서 주고받은 메시지 수 (양방향 합계, 0이면 버튼 숨김).
@@ -1552,6 +1556,9 @@ class RotationService
                 // 그 행사에서의 각자 member 레코드 id (매칭 조회 모달 필터용).
                 'a_member_id'  => $a->id,
                 'b_member_id'  => $b->id,
+                // 그 행사 "당시" 각자 신청한 플랫폼. (프로필과 달리 행사마다 다를 수 있음)
+                'a_platform'   => $a->platform,
+                'b_platform'   => $b->platform,
                 'a_voted_b'    => $aVotedB,
                 'b_voted_a'    => $bVotedA,
                 'is_mutual'    => $aVotedB && $bVotedA,

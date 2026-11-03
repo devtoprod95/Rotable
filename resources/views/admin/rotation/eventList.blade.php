@@ -107,6 +107,24 @@
                             </tbody>
                         </table>
                     </div>
+
+                    {{-- 신청 플랫폼별 방문 수 (플랫폼 확장 대비: platform_counts JSON + platformOptions 루프) --}}
+                    @php
+                        $platformCounts = $visitSnapshot->platform_counts ?? [];
+                        // 색상 매핑(없으면 기본색으로 폴백 — 새 플랫폼 추가 시 라벨은 자동, 색만 선택적으로 추가)
+                        $platformBadgeCls = [
+                            \App\Models\Member::PLATFORM_MUNTO => 'bg-orange-lt',
+                            \App\Models\Member::PLATFORM_FRIP  => 'bg-cyan-lt',
+                        ];
+                    @endphp
+                    <div class="mt-3 d-flex align-items-center gap-2 flex-wrap">
+                        <span class="text-muted" style="font-size:0.9em;">신청 플랫폼별 방문</span>
+                        @foreach (\App\Models\Member::platformOptions() as $opt)
+                            <span class="badge {{ $platformBadgeCls[$opt['id']] ?? 'bg-secondary-lt' }}">
+                                {{ $opt['label'] }} {{ number_format($platformCounts[$opt['id']] ?? 0) }}명
+                            </span>
+                        @endforeach
+                    </div>
                 @else
                     <div class="text-center text-muted py-3">표시할 통계 데이터가 없습니다.</div>
                 @endif
@@ -252,6 +270,13 @@
                         var d = cell.getRow().getData();
                         var m = d.male_count ?? 0, f = d.female_count ?? 0;
                         return `<span class="badge bg-blue-lt">남 ${m}</span><br><span class="badge bg-pink-lt mt-1">여 ${f}</span>`;
+                    }
+                },
+                { title: "플랫폼", field: "munto_count", hozAlign: "center", width: 100, headerSort: false,
+                    formatter: function(cell){
+                        var d = cell.getRow().getData();
+                        var mu = d.munto_count ?? 0, fr = d.frip_count ?? 0;
+                        return `<span class="badge bg-orange-lt">문토 ${mu}</span><br><span class="badge bg-cyan-lt mt-1">프립 ${fr}</span>`;
                     }
                 },
                 { title: "매칭수", field: "match_count", hozAlign: "center", width: 110, headerSort: false,

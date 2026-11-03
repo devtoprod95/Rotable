@@ -95,6 +95,12 @@
             return '';
         }
 
+        function platformBadge(v){
+            if(v === 'frip'){ return '<span class="badge bg-cyan-lt">프립</span>'; }
+            if(v === 'munto'){ return '<span class="badge bg-orange-lt">문토</span>'; }
+            return '<span class="text-muted">-</span>';
+        }
+
         function val(p, key){
             if(key === 'age'){ return p.age ? (p.age + '세') : (p.birth_year ? p.birth_year + '년생' : '-'); }
             if(key === 'height'){ return p.height ? p.height + 'cm' : '-'; }
@@ -210,6 +216,15 @@
         }
 
         // 함께한 행사들을 "행사 유형(와인파티/1:1)"별로 묶어서 섹션으로 렌더링.
+        function platformRow(m, a, b){
+            return `<div class="d-flex align-items-center justify-content-center gap-3 flex-wrap mt-2" style="font-size:0.9rem;">`
+                 + `<span class="text-muted">당시 신청 플랫폼</span>`
+                 + `<span>${esc(a.name)||'A'} ${platformBadge(m.a_platform)}</span>`
+                 + `<span class="text-muted">·</span>`
+                 + `<span>${esc(b.name)||'B'} ${platformBadge(m.b_platform)}</span>`
+                 + `</div>`;
+        }
+
         function meetingCard(m){
             var a = m.a || {}, b = m.b || {};
             return `<div class="card mb-3">`
@@ -218,6 +233,7 @@
                      + compareTable(a, b)
                      + `<hr class="my-3">`
                      + relationRow(m, a, b)
+                     + platformRow(m, a, b)
                      + matchButtons(m, a, b)
                      + `<hr class="my-3">`
                      + chatBox(m, a, b)

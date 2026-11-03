@@ -20,6 +20,23 @@ class Member extends Authenticatable
     public const GENDER_MALE   = 'M'; // 남
     public const GENDER_FEMALE = 'F'; // 여
 
+    /** 신청 플랫폼 */
+    public const PLATFORM_MUNTO = 'munto'; // 문토
+    public const PLATFORM_FRIP  = 'frip';  // 프립
+
+    /**
+     * 신청 플랫폼 셀렉트 옵션. (입장등록 화면에서 사용)
+     *
+     * @return array<int, array{id: string, label: string}>
+     */
+    public static function platformOptions(): array
+    {
+        return [
+            ['id' => self::PLATFORM_MUNTO, 'label' => '문토'],
+            ['id' => self::PLATFORM_FRIP, 'label' => '프립'],
+        ];
+    }
+
     /**
      * 이미 로그인된 상태에서도 입장/입장등록 화면 접근이 허용되는 예외 회원 이름.
      * (운영/디버깅 편의용)
@@ -44,6 +61,8 @@ class Member extends Authenticatable
         'ideal_type',
         'hobby',
         'tmi',
+        // 신청 플랫폼 (문토/프립)
+        'platform',
     ];
 
     /** @var list<string> */

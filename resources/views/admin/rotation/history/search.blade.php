@@ -106,6 +106,12 @@
             return '';
         }
 
+        function platformBadge(v){
+            if(v === 'frip'){ return '<span class="badge bg-cyan-lt">프립</span>'; }
+            if(v === 'munto'){ return '<span class="badge bg-orange-lt">문토</span>'; }
+            return '';
+        }
+
         function specLine(p){
             var s = [];
             if(p.age){ s.push(p.age + '세'); }
@@ -128,10 +134,11 @@
                  + `<div class="text-muted" style="font-size:0.85em;">${t}</div>`;
         }
 
-        function personCell(p){
+        function personCell(p, platform){
             if(!p){ return '-'; }
             var line = specLine(p);
-            return `<div><span class="fw-bold">${esc(p.name) || '-'}</span> ${genderBadge(p.gender)}</div>`
+            var pf = (platform !== undefined && platform !== null) ? platformBadge(platform) : '';
+            return `<div><span class="fw-bold">${esc(p.name) || '-'}</span> ${genderBadge(p.gender)} ${pf}</div>`
                  + (line ? `<div class="text-muted" style="font-size:0.85em;">${line}</div>` : '')
                  + (p.phone ? `<div class="text-muted" style="font-size:0.85em;">${esc(p.phone)}</div>` : '');
         }
@@ -235,7 +242,7 @@
                       + `<i class="ti ti-heart me-1"></i>매칭 조회</button>`;
 
                 return `<tr>`
-                     + `<td>${personCell(p)}</td>`
+                     + `<td>${personCell(p, r.event_platform)}</td>`
                      + `<td class="text-center align-middle">${visitCell(r.visit_counts)}</td>`
                      + `<td class="text-center align-middle">${relationCell(r)}</td>`
                      + `<td class="text-center align-middle">${votedCell}</td>`

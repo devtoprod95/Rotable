@@ -95,9 +95,10 @@ class MemberAuthController extends Controller
     public function showRegister(): InertiaResponse
     {
         return Inertia::render('Auth/Register', [
-            'rounds'         => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING]),
-            'birthYears'     => $this->birthYearOptions(),
-            'tablesByEvent'  => $this->tablesByEvent(),
+            'rounds'          => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING]),
+            'birthYears'      => $this->birthYearOptions(),
+            'tablesByEvent'   => $this->tablesByEvent(),
+            'platformOptions' => Member::platformOptions(),
         ]);
     }
 
@@ -209,6 +210,8 @@ class MemberAuthController extends Controller
             'merit'      => ['required', 'string', 'max:100'],
             'hobby'      => ['required', 'string', 'max:100'],
             'tmi'        => ['required', 'string', 'max:100'],
+            // 신청 플랫폼 (문토/프립) — 기본 문토
+            'platform'   => ['required', Rule::in([Member::PLATFORM_MUNTO, Member::PLATFORM_FRIP])],
         ];
 
         $validated = $request->validate($rules, [
@@ -237,6 +240,8 @@ class MemberAuthController extends Controller
             'merit.required'             => '나의 장점을 입력해주세요.',
             'hobby.required'             => '취미/요즘 빠진 것을 입력해주세요.',
             'tmi.required'               => 'TMI를 입력해주세요.',
+            'platform.required'          => '신청하신 플랫폼을 선택해주세요.',
+            'platform.in'                => '신청 플랫폼 선택이 올바르지 않습니다.',
         ]);
 
         $member = Member::create([
@@ -256,6 +261,8 @@ class MemberAuthController extends Controller
             'merit'      => $validated['merit'],
             'hobby'      => $validated['hobby'],
             'tmi'        => $validated['tmi'],
+            // 신청 플랫폼
+            'platform'   => $validated['platform'],
         ]);
 
         // 참가자가 고른 기준(홈) 좌석을 생성한다.

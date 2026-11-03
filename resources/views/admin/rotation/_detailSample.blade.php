@@ -303,7 +303,7 @@
         // 상세페이지 제작 화면에서 넣은 스샷. 파일이 있는 것만 카드로 노출한다.
         $appShots = [
             ['file' => 'home.png',    'step' => 'STEP 1', 'title' => '내 테이블 · 이번 턴 상대', 'desc' => '지금 내 앞에 누가 앉았는지 폰에 바로! “누구였지?” 걱정 없이 상대 프로필을 확인해요.'],
-            ['file' => 'message.png', 'step' => 'STEP 2', 'title' => '익명 메시지',            'desc' => '대화 중 마음이 가는 상대에게 살짝 익명 메시지. 부담 없이 먼저 다가갈 수 있어요.'],
+            ['file' => 'message.png', 'step' => 'STEP 2', 'title' => '익명 메시지',            'desc' => '대화 중 마음이 가는 상대에게 익명 메시지. 부담 없이 먼저 다가갈 수 있어요.'],
             ['file' => 'match.png',   'step' => 'STEP 3', 'title' => '비밀 투표(매칭 선택)',    'desc' => '마음에 든 상대를 티 안 나게 조용히 선택. 100% 비공개라 솔직하게 고를 수 있어요.'],
             ['file' => 'result.png',  'step' => 'STEP 4', 'title' => '매칭 결과 발표',          'desc' => '서로 선택했다면 매칭 성사! 결과 화면으로 설렘을 확인해요. (예시 화면)'],
         ];
@@ -326,13 +326,17 @@
             @foreach ($appShots as $idx => $shot)
                 @php $tone = $appTones[$idx % count($appTones)]; @endphp
                 <div style="width:50%; box-sizing:border-box; padding:18px 14px;">
-                    <div style="position:relative; border:2px solid {{ $tone['bd'] }}; background:{{ $tone['bg'] }}; border-radius:18px; padding:16px; box-sizing:border-box; box-shadow:0 6px 18px -8px rgba(0,0,0,0.18); height:100%;">
+                    <div style="position:relative; display:flex; flex-direction:column; border:2px solid {{ $tone['bd'] }}; background:{{ $tone['bg'] }}; border-radius:18px; padding:16px; box-sizing:border-box; height:100%;">
                         {{-- 단계 뱃지 --}}
-                        <div style="position:absolute; top:-14px; left:16px; background:{{ $tone['badge'] }}; color:#ffffff; font-family:'Jua',sans-serif; font-size:24px; font-weight:400; line-height:1; padding:9px 18px; border-radius:999px; box-shadow:0 4px 10px -3px rgba(0,0,0,0.3); letter-spacing:0.5px;">
+                        <div style="position:absolute; top:-14px; left:16px; background:{{ $tone['badge'] }}; color:#ffffff; font-family:'Jua',sans-serif; font-size:24px; font-weight:400; line-height:1; padding:9px 18px; border-radius:999px; letter-spacing:0.5px;">
                             {{ $shot['step'] }}
                         </div>
-                        <img src="{{ asset('images/' . $shot['file']) }}" alt="{{ $shot['title'] }}"
-                             style="display:block; width:100%; height:auto; border-radius:12px; margin-top:12px; border:1px solid #e5e7eb;">
+                        {{-- 이미지: 고정 비율 박스(9:16)로 감싸 모든 카드의 이미지 영역 높이를 동일하게 맞춘다. --}}
+                        {{-- html2canvas 호환을 위해 aspect-ratio 대신 padding-top(177.78%) 비율 트릭 사용. --}}
+                        <div style="position:relative; width:100%; padding-top:177.78%; margin-top:12px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; background:#ffffff;">
+                            <img src="{{ asset('images/' . $shot['file']) }}" alt="{{ $shot['title'] }}"
+                                 style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;">
+                        </div>
                         <div style="font-size:30px; font-weight:900; color:#0f172a; margin-top:16px; text-align:center; word-break:keep-all;">{{ $shot['title'] }}</div>
                         <div style="font-size:26px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; text-align:center; word-break:keep-all;">{{ $shot['desc'] }}</div>
                     </div>

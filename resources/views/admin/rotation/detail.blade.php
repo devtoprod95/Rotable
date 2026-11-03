@@ -341,6 +341,53 @@
             return out;
         }
 
+        /**
+         * html2canvas 캡처 전 보정 — width:100% + height:auto 이미지의 세로 눌림 방지.
+         *
+         * html2canvas(1.4.1) 는 height:auto 인 이미지를 캡처할 때 높이를 0/오계산해
+         * 세로로 찌그러진 이미지를 그리는 경우가 있다. 캡처 대상의 레이아웃이 확정된 뒤,
+         * 각 이미지의 '현재 렌더된 폭 × natural 비율' 로 픽셀 높이를 명시적으로 박아 비율을 보존한다.
+         *
+         * @param {HTMLElement} root 캡처 대상 컨테이너
+         */
+        function fixImageHeights(root){
+            if (!root) { return; }
+            var imgs = root.querySelectorAll('img');
+            Array.prototype.forEach.call(imgs, function(img){
+                var nw = img.naturalWidth, nh = img.naturalHeight;
+                if (!nw || !nh) { return; } // 자연 크기를 못 읽으면 건드리지 않음
+
+                // object-fit(contain/cover) 로 비율박스 안에 맞춰 그리는 이미지는 건드리지 않는다.
+                // (고정 비율 컨테이너에서 높이를 natural 비율로 덮어쓰면 레이아웃이 깨진다.)
+                var cs = window.getComputedStyle(img);
+                var objFit = cs.objectFit || cs.getPropertyValue('object-fit');
+                if (objFit && objFit !== 'fill' && objFit !== 'none') { return; }
+
+                // 현재 렌더된 폭(=width:100% 결과). clientWidth 가 0 이면 natural 폭으로 폴백.
+                var renderW = img.clientWidth || img.getBoundingClientRect().width || nw;
+                var h = Math.round(renderW * (nh / nw));
+                if (h > 0) {
+                    // auto 대신 실제 픽셀 높이를 고정 → html2canvas 가 비율을 깨지 못한다.
+                    img.style.height = h + 'px';
+                }
+            });
+            // 스타일 반영(reflow) 강제.
+            void root.offsetHeight;
+        }
+
+        /**
+         * fixImageHeights 로 박았던 인라인 height 를 제거해 원래(height:auto) 상태로 되돌린다.
+         * 캡처 대상 DOM 이 재사용(모달 등)될 때 호출한다.
+         *
+         * @param {HTMLElement} root
+         */
+        function clearImageHeights(root){
+            if (!root) { return; }
+            Array.prototype.forEach.call(root.querySelectorAll('img'), function(img){
+                img.style.height = '';
+            });
+        }
+
         function triggerDownload(blob, filename){
             var url = URL.createObjectURL(blob);
             var link = document.createElement('a');
@@ -893,6 +940,11 @@
                     });
                 }));
 
+                // html2canvas(1.4.1) 는 width:100% + height:auto 이미지의 높이를 0/오계산해
+                // 세로로 눌린(찌그러진) 이미지를 그리는 버그가 있다.
+                // → 렌더된 실제 폭과 natural 비율로 '픽셀 높이'를 명시적으로 고정해 비율을 보존한다.
+                fixImageHeights(holder);
+
                 // 폰트가 캡처 전에 완전히 로드되도록 명시적으로 기다린다. (미로드 시 폴백 폰트로 찍히는 문제 방지)
                 if (document.fonts && document.fonts.load) {
                     try {
@@ -1120,6 +1172,9 @@
                 target.style.width = '1080px';
                 target.style.maxWidth = 'none';
 
+                // 폭을 1080 으로 고정한 '뒤'(렌더 폭 확정 후) 이미지 높이를 픽셀로 고정해 세로 눌림 방지.
+                fixImageHeights(target);
+
                 // 폭 고정 후 실제 높이 기준으로, 캔버스 한계를 넘지 않는 안전 scale 계산.
                 var feedScale = computeSafeScale(target.offsetWidth || 1080, target.offsetHeight || 1080, 3.5);
 
@@ -1133,6 +1188,8 @@
 
                 target.style.width = prevWidth;
                 target.style.maxWidth = prevMaxWidth;
+                // 박아둔 인라인 높이 제거(모달 DOM 재사용 대비).
+                clearImageHeights(target);
 
                 // 화질 최우선 + 10MB 상한 (상세페이지 다운로드와 동일 로직)
                 await exportCanvasUnder10MB(canvas, 'rotable_피드');

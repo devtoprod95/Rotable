@@ -12,8 +12,8 @@
     // 유형별 설정 (이미지/타이틀/행사명/포인트)
     $typeConfig = [
         'wine' => [
-            'image'    => file_exists(public_path('images/detail_wine.png'))
-                ? asset('images/detail_wine.png')
+            'image'    => file_exists(public_path('images/detail_img_wine.png'))
+                ? asset('images/detail_img_wine.png')
                 : asset('images/detail_img.png'),
             'title'    => 'ROTABLE 와인파티 안내',
             'subtitle' => '이번 회차 참여자를 확인하세요',
@@ -35,8 +35,8 @@
             ],
         ],
         'solo' => [
-            'image'    => file_exists(public_path('images/detail_solo.png'))
-                ? asset('images/detail_solo.png')
+            'image'    => file_exists(public_path('images/detail_img_one.png'))
+                ? asset('images/detail_img_one.png')
                 : asset('images/detail_img.png'),
             'title'    => 'ROTABLE 1:1 소개팅 안내',
             'subtitle' => '이번 회차 참여자를 확인하세요',
@@ -44,13 +44,12 @@
             // 핵심 매력 — 아이콘 카드 그리드로 노출 (icon / title / desc)
             'points'   => [
                 ['icon' => '📍', 'title' => '선릉역 도보 3분', 'desc' => '접근성 좋은 역세권에서 진행돼요'],
-                ['icon' => '⏱️', 'title' => '현장 바로 발표', 'desc' => '끝나면 그 자리에서 매칭 결과 확인'],
+                ['icon' => '⏱️', 'title' => '종료 후 10분 내 발표', 'desc' => '로테이션이 끝나고 전원 퇴실하면 10분 이내에 매칭 결과를 바로 확인'],
                 ['icon' => '✍️', 'title' => '글작성 X', 'desc' => '종이·설문 없이 스마트폰 터치 몇 번이면 끝'],
                 ['icon' => '📱', 'title' => '상대 정보 다시보기', 'desc' => '"누구였지?" 걱정 끝, 폰에서 바로 확인'],
-                ['icon' => '💌', 'title' => '연락처 공유', 'desc' => '선택해 준 상대 정보로 편하게 연락 이어가기'],
+                ['icon' => '💌', 'title' => '연락처 공유', 'desc' => '서로 선택해 매칭이 성사되면, 두 사람의 연락처가 쌍방으로 공유돼요'],
+                ['icon' => '💘', 'title' => '매칭 안 돼도 연락처', 'desc' => '매칭이 안 되더라도, 상대가 나를 선택했다면 그 상대의 연락처를 받을 수 있어요'],
                 ['icon' => '📊', 'title' => '받은 표 수 확인', 'desc' => '결과 발표 때 내가 몇 표 받았는지 공개'],
-                ['icon' => '🎉', 'title' => '2차 비용 무료', 'desc' => '자유 대화 시간은 자율 참석! 남는 분들은 추가 부담없이 즐겨요'],
-                ['icon' => '💬', 'title' => '대화 주제 제공', 'desc' => '가벼운 대화 주제를 드려 처음에도 어색하지 않아요'],
                 ['icon' => '🤍', 'title' => '100% 비밀 투표', 'desc' => '서로 선택한 경우에만 매칭 사실 공유'],
             ],
         ],
@@ -95,8 +94,8 @@
         ? [
             ['icon' => '🎫', 'title' => '입장 & 닉네임', 'desc' => '도착하면 나만의 닉네임을 받고 지정 자리에 착석'],
             ['icon' => '☕', 'title' => '1:1 로테이션 대화', 'desc' => '한 분씩 마주 앉아 대화하고, 시간이 되면 자리 이동'],
-            ['icon' => '🤫', 'title' => '스마트폰 비밀 투표', 'desc' => '마음에 든 상대를 조용히·비공개로 선택하면 끝'],
-            ['icon' => '💘', 'title' => '바로 매칭 발표', 'desc' => '끝나면 그 자리에서 결과 확인, 기다릴 필요 없어요'],
+            ['icon' => '🤫', 'title' => '스마트폰으로 투표', 'desc' => '마음에 든 상대를 스마트폰으로 선택하면 끝'],
+            ['icon' => '💘', 'title' => '매칭 발표', 'desc' => '로테이션이 끝나고 전원 퇴실하면 10분 이내에 결과 확인'],
             ['icon' => '💌', 'title' => '상대 정보 & 연락', 'desc' => '선택해 준 상대 정보를 폰으로 확인해 연락 이어가기'],
         ]
         : [
@@ -241,10 +240,17 @@
     <!--ROSTER_GRID:end-->
 
     {{-- 좌석/성비 안내 --}}
+    @if ($type === 'solo')
+    <div style="margin-top:20px; background:#eff6ff; border:1px dashed #93c5fd; border-radius:12px; padding:20px 16px; text-align:center; font-size:27px; color:#1d4ed8; line-height:1.7;">
+        🪑 자리는 <b>1:1(남 1 · 여 1)</b> 로 테이블마다 한 쌍씩 배정돼요.<br>
+        <span style="font-size:24px; color:#2563eb;">정해진 시간마다 자리를 옮겨 여러 상대와 1:1로 대화해요.</span>
+    </div>
+    @else
     <div style="margin-top:20px; background:#eff6ff; border:1px dashed #93c5fd; border-radius:12px; padding:20px 16px; text-align:center; font-size:27px; color:#1d4ed8; line-height:1.7;">
         🪑 자리는 <b>3:3 · 4:4</b> 등 최대한 <b>성비를 맞춰</b> 배정해요.<br>
         <span style="font-size:24px; color:#2563eb;">다만 당일 참석 현황에 따라 일부 테이블은 3:2 등으로 조정될 수 있어요.</span>
     </div>
+    @endif
 
     {{-- 이전 로테이블 기록 --}}
     <div style="margin-top: 20px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
@@ -347,6 +353,50 @@
     @endif
     @endif
 
+    @if ($type === 'solo')
+    {{-- 실제 앱 화면 소개 (1:1 소개팅 전용) — 참여자가 겪는 흐름 순서로 스샷 노출 --}}
+    @php
+        $soloShots = [
+            ['file' => 'solo_home.png',  'step' => 'STEP 1', 'title' => '내 상대 · 현재 자리', 'desc' => '지금 내 앞에 앉은 상대가 누구인지 폰에 바로! 상대 프로필을 확인하며 1:1 대화에 집중해요.'],
+            ['file' => 'solo_match.png', 'step' => 'STEP 2', 'title' => '비밀 투표(매칭 선택)', 'desc' => '마음에 든 상대를 티 안 나게 조용히 선택. 100% 비공개라 솔직하게 고를 수 있어요.'],
+        ];
+        $soloShots = array_values(array_filter($soloShots, fn ($s) => file_exists(public_path('images/' . $s['file']))));
+        $soloTones = [
+            ['bd' => '#bae6fd', 'bg' => '#f0f9ff', 'badge' => '#0284c7'], // 스카이
+            ['bd' => '#fbcfe8', 'bg' => '#fdf2f8', 'badge' => '#db2777'], // 핑크
+        ];
+    @endphp
+    @if (count($soloShots) > 0)
+    <div style="margin-top:4px; margin-bottom:44px;">
+        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#0ea5e9; text-align:center; letter-spacing:0.5px; margin-bottom:8px;">📱 이렇게 진행돼요</div>
+        <div style="font-size:30px; color:#6b7280; text-align:center; margin-bottom:24px; line-height:1.6;">
+            모든 진행은 <b style="color:#0ea5e9;">스마트폰 하나</b>로! 아래는 <b>실제 앱 화면</b>이에요.<br>
+            글작성 없이 터치 몇 번이면 끝, 처음이어도 어렵지 않아요.
+        </div>
+        <div style="display:flex; flex-wrap:wrap; padding:0 6px;">
+            @foreach ($soloShots as $idx => $shot)
+                @php $tone = $soloTones[$idx % count($soloTones)]; @endphp
+                <div style="width:50%; box-sizing:border-box; padding:18px 14px;">
+                    <div style="position:relative; display:flex; flex-direction:column; border:2px solid {{ $tone['bd'] }}; background:{{ $tone['bg'] }}; border-radius:18px; padding:16px; box-sizing:border-box; height:100%;">
+                        {{-- 단계 뱃지 --}}
+                        <div style="position:absolute; top:-14px; left:16px; background:{{ $tone['badge'] }}; color:#ffffff; font-family:'Jua',sans-serif; font-size:24px; font-weight:400; line-height:1; padding:9px 18px; border-radius:999px; letter-spacing:0.5px;">
+                            {{ $shot['step'] }}
+                        </div>
+                        {{-- 이미지: 고정 비율 박스(9:16). html2canvas 호환 위해 padding-top 비율 트릭 사용. --}}
+                        <div style="position:relative; width:100%; padding-top:177.78%; margin-top:12px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden; background:#ffffff;">
+                            <img src="{{ asset('images/' . $shot['file']) }}" alt="{{ $shot['title'] }}"
+                                 style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;">
+                        </div>
+                        <div style="font-size:30px; font-weight:900; color:#0f172a; margin-top:16px; text-align:center; word-break:keep-all;">{{ $shot['title'] }}</div>
+                        <div style="font-size:26px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; text-align:center; word-break:keep-all;">{{ $shot['desc'] }}</div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+    @endif
+
     @if ($type === 'wine')
     {{-- 미니게임 콘텐츠 소개 (와인파티 전용) --}}
     <div style="margin-top:4px; margin-bottom:44px;">
@@ -419,7 +469,8 @@
     </div>
     @endif
 
-    {{-- 파티 진행시간 안내 --}}
+    {{-- 파티 진행시간 안내 (와인파티 전용 — 1:1 은 1/2차 구분이 없어 제외) --}}
+    @if ($type !== 'solo')
     <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
         <div style="background:#7c3aed; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             🕖 파티 진행시간
@@ -446,6 +497,7 @@
             <div style="text-align:center; font-size:25px; color:#7c3aed; margin-top:18px;">※ 진행시간은 당일 상황에 따라 소폭 변동될 수 있어요</div>
         </div>
     </div>
+    @endif
 
     {{-- 참여 조건 --}}
     <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
@@ -463,7 +515,7 @@
         {{-- 남성 자격요건 / 우선 승인 안내 --}}
         <div style="background:#dbeafe; border-top:2px solid #bfdbfe; padding:22px 14px; text-align:center; font-size:30px; color:#1e3a8a; line-height:2.0;">
             <div style="font-weight:900; font-size:33px; margin-bottom:12px;">👔 남성 참가 자격요건</div>
-            <div>- 신장 <b>175cm 이상</b></div>
+            <div>- 신장 <b>{{ $type === 'solo' ? '173cm' : '175cm' }} 이상</b></div>
             <div>- <b>대기업 · 공기업 · 전문직</b> <b>우선 승인</b></div>
             <div>- 공무원 · 교사 · 금융권 · 사업체 운영 · 사무직 등 안정적인 전문 직군 우대</div>
             <div style="background:#bfdbfe; border-radius:10px; padding:16px 10px; margin-top:16px; font-size:28px; color:#1e3a8a; line-height:1.6;">
@@ -519,6 +571,35 @@
     @endif
 
     {{-- 자주 묻는 질문 --}}
+    @if ($type === 'solo')
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#f59e0b; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+            자주 묻는 질문
+        </div>
+        <div style="background:#fffbeb; padding:24px 16px; font-size:31px; color:#374151; line-height:1.8; text-align:center;">
+            <div style="margin-bottom:24px;">
+                <div style="font-weight:900;">Q. 혼자 가도 괜찮나요?</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">그럼요, 대부분 혼자 오세요 😊 한 분씩 1:1로 마주 앉아 대화하고, 시간이 되면 자리를 옮기는 방식이라 자연스럽게 모든 상대와 대화하게 돼요. 진행은 스마트폰 안내를 따라가면 되니 편하게 오세요.</div>
+            </div>
+            <div style="margin-bottom:24px;">
+                <div style="font-weight:900;">Q. 매칭 결과는 언제 알 수 있나요?</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">로테이션이 모두 끝나고 <b>전원 퇴실하면 10분 이내</b>에 결과가 발표돼요. 기다릴 필요 없이 그날 바로 확인하실 수 있어요!</div>
+            </div>
+            <div style="margin-bottom:24px;">
+                <div style="font-weight:900;">Q. 내 연락처가 공개되나요?</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">내가 <b>선택한 상대</b>에게는 서로 매칭되지 않더라도 내 연락처가 공개될 수 있어요. 마음에 드는 분을 <b>신중하게</b> 선택해 주세요 🙏</div>
+            </div>
+            <div style="margin-bottom:24px;">
+                <div style="font-weight:900;">Q. 주차가 되나요?</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">아쉽지만 전용 주차 공간은 없어요 🙏<br>선릉역에서 도보 3분 거리라 접근성이 좋으니<br>가급적 대중교통 이용을 부탁드려요!</div>
+            </div>
+            <div>
+                <div style="font-weight:900;">Q. 개인정보는 안전한가요?</div>
+                <div style="color:#4b5563; font-weight:700; margin-top:6px;">네, 안심하셔도 돼요! 🤍<br>투표 결과와 연락처는 선택·매칭된 상대에게만 공유되고,<br>그 외에는 어디에도 공개되지 않아요.<br>소중한 개인정보는 저희가 책임지고 안전하게 지켜드릴게요.</div>
+            </div>
+        </div>
+    </div>
+    @else
     <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
         <div style="background:#f59e0b; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
             자주 묻는 질문
@@ -546,6 +627,7 @@
             </div>
         </div>
     </div>
+    @endif
 
     {{-- 마감 임박 CTA 배너 --}}
     <div style="margin-top:48px; border-radius:16px; overflow:hidden; background:linear-gradient(135deg,#f43f5e,#ec4899,#8b5cf6); padding:36px 20px; text-align:center; color:#ffffff;">

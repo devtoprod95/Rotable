@@ -339,45 +339,55 @@
         }
 
         async function exportCanvasUnder10MB(canvas, baseName){
-            // 1) 원본 해상도 PNG 가 10MB 이하면 그대로 저장 (최고 화질)
+            // 1) 원본 해상도 PNG 가 한도 이하면 그대로 저장 (최고 화질, 무손실)
             var png = await canvasToBlob(canvas, 'image/png');
             if (png && png.size <= EXPORT_MAX_BYTES) {
                 triggerDownload(png, baseName + '.png');
                 return;
             }
 
-            // 2) 10MB 초과 → 현재 용량 대비 "필요한 축소 비율"을 한 번에 계산해 재인코딩.
-            //    PNG 용량은 대략 픽셀수(면적)에 비례하므로 ratio = sqrt(목표/현재) 로 추정.
-            //    0.9 안전계수를 곱해 1~2회 안에 10MB 이하로 맞춘다. (느린 반복 인코딩 방지)
-            if (png && png.size > 0) {
-                var ratio = Math.sqrt(EXPORT_MAX_BYTES / png.size) * 0.9;
-                ratio = Math.min(0.98, Math.max(0.1, ratio));
+            // 2) 한도 초과 → 필요한 축소 비율을 추정(sqrt 면적비)해 PNG 를 다시 만든다.
+            //    추정이 빗나가도 "한도 이하가 될 때까지" 반복해서 반드시 맞춘다. (실패로 끝내지 않음)
+            var cur = canvas;
+            var p = png;
+            var guard = 0;
+            while (p && p.size > EXPORT_MAX_BYTES && guard < 10) {
+                guard++;
+                var ratio = Math.sqrt(EXPORT_MAX_BYTES / p.size) * 0.92;
+                ratio = Math.min(0.95, Math.max(0.3, ratio)); // 한 번에 과하게 줄지 않게
+                cur = downscaleCanvas(cur, ratio);
+                p = await canvasToBlob(cur, 'image/png');
+                if (cur.width <= 500) { break; } // 너무 작아지면 JPEG 폴백으로
+            }
+            if (p && p.size <= EXPORT_MAX_BYTES) {
+                triggerDownload(p, baseName + '.png');
+                return;
+            }
 
-                var cur = downscaleCanvas(canvas, ratio);
-                var p = await canvasToBlob(cur, 'image/png');
-
-                // 추정이 빗나가 아직 크면 한 번 더만 줄인다. (최대 2회로 제한)
-                if (p && p.size > EXPORT_MAX_BYTES) {
-                    var r2 = Math.sqrt(EXPORT_MAX_BYTES / p.size) * 0.9;
-                    r2 = Math.min(0.95, Math.max(0.1, r2));
-                    cur = downscaleCanvas(cur, r2);
-                    p = await canvasToBlob(cur, 'image/png');
-                }
-
-                if (p && p.size <= EXPORT_MAX_BYTES) {
-                    triggerDownload(p, baseName + '.png');
-                    return;
-                }
-
-                // 3) 그래도 안 되면 최후수단 — 축소된 캔버스에서 고품질 JPEG
-                var jpg = await canvasToBlob(cur, 'image/jpeg', 0.92);
+            // 3) PNG 로 못 맞추면 고품질 JPEG 로 전환 (품질을 낮춰가며 한도 이하 확보)
+            var qualities = [0.95, 0.92, 0.9, 0.87, 0.85, 0.8];
+            for (var q = 0; q < qualities.length; q++) {
+                var jpg = await canvasToBlob(cur, 'image/jpeg', qualities[q]);
                 if (jpg && jpg.size <= EXPORT_MAX_BYTES) {
                     triggerDownload(jpg, baseName + '.jpg');
                     return;
                 }
             }
 
-            await salert({text: '이미지를 10MB 이하로 저장하지 못했습니다. 내용을 줄인 뒤 다시 시도해주세요.', cancel: false});
+            // 4) 그래도 안 되면 캔버스를 더 줄이며 JPEG 재시도 (마지막 안전장치)
+            var safety = 0;
+            while (safety < 6) {
+                safety++;
+                cur = downscaleCanvas(cur, 0.8);
+                var jpg2 = await canvasToBlob(cur, 'image/jpeg', 0.85);
+                if (jpg2 && jpg2.size <= EXPORT_MAX_BYTES) {
+                    triggerDownload(jpg2, baseName + '.jpg');
+                    return;
+                }
+                if (cur.width <= 300) { break; }
+            }
+
+            await salert({text: '이미지를 20MB 이하로 저장하지 못했습니다. 내용을 줄인 뒤 다시 시도해주세요.', cancel: false});
         }
 
         // 다운로드 버튼에 로딩 상태(스피너/문구)를 입히고, 작업 중 중복 클릭을 막는다.

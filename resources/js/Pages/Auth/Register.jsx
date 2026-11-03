@@ -143,23 +143,38 @@ export default function Register() {
         });
     }
 
-    // 제출 버튼 → 모달 열기 전에 필수 선택(회차·테이블)을 먼저 확인한다.
+    // 제출 버튼 → 입장 전 확인 모달을 열기 전에, 필수 항목을 모두 먼저 검증한다.
+    // 빈 값이 있으면 (여러 개여도) 맨 처음 누락 항목 "하나만" 모달로 안내하고 확인 모달은 열지 않는다.
     function submit(e) {
         e.preventDefault();
 
-        if (!data.gender) {
-            setError('gender', '성별을 선택해주세요.');
-            topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
-        }
-        if (!data.event_id) {
-            setError('event_id', '회차를 선택해주세요.');
-            topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            return;
-        }
-        if (!data.rotation_table_id) {
-            setError('rotation_table_id', '앉아 계신 테이블을 선택해주세요.');
-            topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        // 검증 순서 = 화면에 보이는 순서. 첫 번째로 비어 있는 항목만 안내한다.
+        // scrollTop 이 true 인 항목(회차/테이블/성별)은 해당 입력 위치로 스크롤한다.
+        const requiredChecks = [
+            { key: 'gender',            empty: !data.gender,            message: '성별을 선택해주세요.',              field: 'gender',            scrollTop: true },
+            { key: 'event_id',          empty: !data.event_id,          message: '회차를 선택해주세요.',              field: 'event_id',          scrollTop: true },
+            { key: 'rotation_table_id', empty: !data.rotation_table_id, message: '앉아 계신 테이블을 선택해주세요.',   field: 'rotation_table_id', scrollTop: true },
+            { key: 'name',              empty: !data.name,              message: '닉네임을 입력해주세요.' },
+            { key: 'phone',             empty: !data.phone,             message: '핸드폰 번호를 입력해주세요.' },
+            { key: 'password',          empty: !data.password,          message: '비밀번호(4자리)를 입력해주세요.' },
+            { key: 'birth_year',        empty: !data.birth_year,        message: '출생연도를 선택해주세요.' },
+            { key: 'job',               empty: !data.job,               message: '직업을 입력해주세요.' },
+            { key: 'height',            empty: !data.height,            message: '키를 입력해주세요.' },
+            { key: 'mbti',              empty: !data.mbti,              message: 'MBTI를 입력해주세요.' },
+            { key: 'region',            empty: !data.region,            message: '지역을 입력해주세요.' },
+            { key: 'is_smoker',         empty: data.is_smoker === '' || data.is_smoker === null || data.is_smoker === undefined, message: '흡연 여부를 선택해주세요.' },
+        ];
+
+        const firstMissing = requiredChecks.find((c) => c.empty);
+        if (firstMissing) {
+            if (firstMissing.field) {
+                setError(firstMissing.field, firstMissing.message);
+            }
+            if (firstMissing.scrollTop) {
+                topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            // 여러 개가 비어 있어도 하나만 보여준다. (모달에 확인 버튼이 가려지지 않도록)
+            setErrorModal({ open: true, messages: [firstMissing.message] });
             return;
         }
 
@@ -172,9 +187,10 @@ export default function Register() {
         setConfirmOpen(false);
         post('/register', {
             onError: (errs) => {
+                // 서버 검증 실패도 맨 처음 사유 "하나만" 띄운다.
                 const messages = Object.values(errs || {}).filter(Boolean);
                 if (messages.length) {
-                    setErrorModal({ open: true, messages });
+                    setErrorModal({ open: true, messages: [messages[0]] });
                 }
             },
         });

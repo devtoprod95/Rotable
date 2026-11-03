@@ -92,6 +92,14 @@ Route::middleware('role')->group(function () {
                 Route::get('/detail', [RotationController::class, 'historyDetailIndex'])->name('detail');
                 Route::get('/detail/data', [RotationController::class, 'historyDetailData'])->name('detail.data');
             });
+
+            // 손익분기점 계산기 — 객단가/비용 항목(기타 추가금 포함)으로 1인당 흑자전환 참가비를 계산한다. 입력값은 저장/불러오기 가능.
+            Route::prefix('bep')->name('bep.')->group(function () {
+                Route::get('/', [RotationController::class, 'bepIndex'])->name('index');
+                Route::get('/list', [RotationController::class, 'bepList'])->name('list');
+                Route::post('/store', [RotationController::class, 'bepStore'])->name('store');
+                Route::delete('/delete', [RotationController::class, 'bepDelete'])->name('delete');
+            });
         });
 
         Route::prefix('role')->name('role.')->group(function () {

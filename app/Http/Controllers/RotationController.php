@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Dtos\RotationTableListRequestDto;
 use App\Http\Requests\Admin\RotationSeatingStoreRequest;
 use App\Models\EventRound;
+use App\Models\EventBepEstimate;
 use App\Models\Member;
 use App\Models\QrLink;
 use App\Services\Rotation\RotationService;
@@ -550,6 +551,85 @@ class RotationController extends Controller
     public function guideException(): View
     {
         return view('admin.rotation.guideException');
+    }
+
+    /**
+     * 손익분기점(BEP) 계산기 — 객단가/비용 항목(기타 추가금 포함)으로 "1인당 흑자전환 참가비"를 계산하는 화면.
+     * 계산 자체는 클라이언트(JS)에서 실시간으로 수행하고, 입력값은 저장/불러오기(event_bep_estimates)할 수 있다.
+     * 와인파티/1:1 타입별로 기본 비용 프리셋이 다르다.
+     */
+    public function bepIndex(): View
+    {
+        return view('admin.rotation.bep');
+    }
+
+    /**
+     * 저장된 BEP 견적 목록. (최신순)
+     */
+    public function bepList(): JsonResponse
+    {
+        $estimates = EventBepEstimate::orderByDesc('id')
+            ->get(['id', 'name', 'type', 'payload', 'updated_at'])
+            ->map(fn (EventBepEstimate $estimate): array => [
+                'id'         => $estimate->id,
+                'name'       => $estimate->name,
+                'type'       => $estimate->type,
+                'payload'    => $estimate->payload,
+                'updated_at' => $estimate->updated_at?->format('Y-m-d H:i'),
+            ]);
+
+        return apiRes(Response::HTTP_OK, ['data' => $estimates]);
+    }
+
+    /**
+     * BEP 견적 저장. id 가 있으면 수정, 없으면 신규 생성.
+     */
+    public function bepStore(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'id'      => 'nullable|integer|exists:event_bep_estimates,id',
+            'name'    => 'required|string|max:255',
+            'type'    => ['required', Rule::in(['wine', 'one'])],
+            'payload' => 'required|array',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $id = (int) $this->request->input('id', 0);
+
+        $data = [
+            'name'    => $this->request->input('name'),
+            'type'    => $this->request->input('type'),
+            'payload' => $this->request->input('payload'),
+        ];
+
+        if ($id > 0) {
+            $estimate = EventBepEstimate::findOrFail($id);
+            $estimate->update($data);
+        } else {
+            $data['created_by'] = auth('admin')->id();
+            $estimate = EventBepEstimate::create($data);
+        }
+
+        return apiRes(Response::HTTP_OK, [
+            'data' => ['id' => $estimate->id],
+            'msg'  => '저장되었습니다.',
+        ]);
+    }
+
+    /**
+     * BEP 견적 삭제. (복수 선택)
+     */
+    public function bepDelete(): JsonResponse
+    {
+        if ($this->invalidIds()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
+        }
+
+        EventBepEstimate::whereIn('id', $this->request->input('ids'))->delete();
+
+        return apiRes(Response::HTTP_OK, ['msg' => '삭제되었습니다.']);
     }
 
     /**

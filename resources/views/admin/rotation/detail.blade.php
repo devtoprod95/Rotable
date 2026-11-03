@@ -198,7 +198,7 @@
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="ti ti-photo-down me-1"></i> 피드 이미지 다운로드
-                    <span class="badge bg-pink-lt ms-1">배너 + 참여자 명단</span>
+                    <span class="badge bg-pink-lt ms-1">로고 + 참여자 명단 · 3:4 세로</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
@@ -206,12 +206,8 @@
                 <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
                     <div class="text-secondary small">
                         <i class="ti ti-info-circle me-1"></i>
-                        현재 에디터의 <b>참여자 명단</b>을 그대로 이미지로 만듭니다.
+                        현재 에디터의 <b>참여자 명단</b>을 그대로 1장의 피드 이미지로 만듭니다.
                         (명단은 <b>참여자 명단 편집</b>에서 수정하세요.)
-                    </div>
-                    <div class="form-check form-switch mb-0 ms-auto">
-                        <input class="form-check-input" type="checkbox" id="feedShowProfile" checked>
-                        <label class="form-check-label" for="feedShowProfile">프로필(키·직업·나이) 표시</label>
                     </div>
                 </div>
 
@@ -220,13 +216,13 @@
                     먼저 <b>1열 / 2열 샘플</b>을 불러오거나 <b>참여자 명단 편집</b>으로 명단을 채워 주세요.
                 </div>
 
-                <div class="d-flex justify-content-center">
-                    {{-- 이 영역이 그대로 이미지로 캡처됩니다. (고정 폭 1080) --}}
-                    <div id="feedCapture" style="width:1080px; max-width:100%; background:#ffffff; border-radius:8px; overflow:hidden;">
-                        <img src="{{ asset('images/rotable_banner.png') }}" alt="rotable banner"
-                             crossorigin="anonymous"
-                             style="width:100%; display:block;">
-                        <div id="feedRosterArea" style="padding:28px 32px; font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif;"></div>
+                {{-- 미리보기 축소용 래퍼: 폭 1080 을 화면에선 작게(45%) 보여준다. 높이는 내용만큼. --}}
+                <div style="display:flex; justify-content:center; overflow:auto;">
+                    <div id="feedPreviewBox" style="width:486px; min-height:300px;">
+                        {{-- 이 영역이 그대로 이미지로 캡처됩니다. (폭 1080, 높이는 명단 길이만큼) --}}
+                        <div id="feedCapture" style="width:1080px; background:#ffffff; overflow:hidden; transform:scale(0.45); transform-origin:top left;">
+                            <div id="feedRosterArea" style="width:100%; box-sizing:border-box; font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1042,7 +1038,16 @@
             return $('<i>').text(s == null ? '' : String(s)).html();
         }
 
-        // 한 사람 셀: 번호 + (옵션)프로필(키·직업·나이)
+        // ── 1:1 정사각(1080x1080) 피드 이미지 렌더 ──────────────────────────
+        // 로테이블 로고 + 현재 참여자 명단을 SNS 피드용 정사각 썸네일로 구성한다.
+        var FEED_LOGO = "{{ asset('images/logo.png') }}";
+
+        // 피드 헤더에 쓸 행사 타입 라벨 (현재 선택된 유형 기준).
+        function feedTypeLabel(){
+            return currentType() === 'solo' ? '1:1 로테이션 소개팅' : '로테이션 와인파티';
+        }
+
+        // 한 사람 셀 (compact): N호 + (옵션)프로필
         function feedPersonCell(p, idx, showProfile){
             var profile = '';
             if (showProfile) {
@@ -1051,13 +1056,12 @@
                     p.job || '',
                     p.age || ''
                 ].filter(Boolean);
-                // 가독성 ↑ : 검정 + 크고 두껍게 (모바일 축소에도 안 뭉개지도록)
-                profile = '<div style="color:#000000; font-weight:800; font-size:24px; margin-top:6px; word-break:keep-all;">'
+                profile = '<div style="color:#1f2937; font-weight:700; font-size:21px; margin-top:3px; word-break:keep-all;">'
                         + feedEsc(bits.join(' · ')) + '</div>';
             }
             return ''
-              + '<div style="padding:16px 10px; border-bottom:2px solid #cbd5e1; text-align:center;">'
-              +   '<div style="font-weight:900; font-size:28px; color:#000000;">' + (idx + 1) + '호</div>'
+              + '<div style="padding:9px 8px; border-bottom:1px solid #e5e7eb; text-align:center;">'
+              +   '<div style="font-weight:900; font-size:24px; color:#111827;">' + (idx + 1) + '호</div>'
               +   profile
               + '</div>';
         }
@@ -1065,72 +1069,68 @@
         // 한 성별 컬럼
         function feedColumn(label, bg, people, showProfile){
             var rows = (people || []).map(function(p, i){ return feedPersonCell(p, i, showProfile); }).join('')
-                || '<div style="padding:24px; text-align:center; color:#9ca3af;">없음</div>';
+                || '<div style="padding:20px; text-align:center; color:#9ca3af; font-weight:700;">모집중</div>';
             return ''
-              + '<div style="width:50%; box-sizing:border-box;">'
-              +   '<div style="padding:12px; text-align:center; font-weight:900; font-size:28px; color:#fff; background:' + bg + ';">'
-              +     feedEsc(label) + ' ' + ((people || []).length) + '</div>'
-              +   rows
+              + '<div style="flex:1 1 0; min-width:0;">'
+              +   '<div style="padding:10px; text-align:center; font-weight:900; font-size:26px; color:#fff; background:' + bg + ';">'
+              +     feedEsc(label) + ' <span style="font-weight:900;">' + ((people || []).length) + '</span></div>'
+              +   '<div>' + rows + '</div>'
               + '</div>';
         }
 
-        // 최상단 로테이블 간단 설명 (배너 아래 / 명단 위)
-        function feedIntro(){
+        // 피드 본문 조립 = 로고 헤더 + '현재 에디터 명단 그대로'(buildRosterGrid 재사용).
+        // buildRosterGrid 를 쓰므로 모집중(성비 자동 맞춤) 등 에디터 명단과 100% 동일하게 나온다.
+        function feedSquareHtml(data){
+            var card0 = (data && data.cards && data.cards[0]) ? data.cards[0] : null;
             return ''
-              + '<div style="text-align:center; margin-bottom:20px; padding-bottom:18px; border-bottom:2px dashed #f3c6dc;'
-              +            " font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif;\">"
-              +   '<div style="font-size:30px; font-weight:900; color:#ec4899;">ROTABLE · 로테이션 소개팅</div>'
-              +   '<div style="font-size:20px; font-weight:600; color:#374151; margin-top:8px; line-height:1.5; word-break:keep-all;">'
-              +     '한 자리에서 돌아가며 모두와 대화하고,<br>마음에 든 상대에게 비밀 투표하는 로테이션 소개팅 파티 🍷'
-              +   '</div>'
-              + '</div>';
+            + '<div style="width:100%; box-sizing:border-box;'
+            +            ' background:linear-gradient(160deg,#fff1f6 0%,#f7f0ff 55%,#eef4ff 100%); padding:44px 44px;'
+            +            " font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif;\">"
+
+            // ── 상단: 로고 + 브랜드를 "액자"처럼 감싼 헤더 카드 ──
+            +   '<div style="position:relative; margin-bottom:30px; padding:6px;'
+            +            ' border-radius:28px; background:linear-gradient(135deg,#f9a8d4 0%,#c4b5fd 50%,#93c5fd 100%);">'
+            +     '<div style="position:relative; border-radius:24px; background:#fffdfe; padding:34px 28px 30px; text-align:center;'
+            +              ' border:2px solid #fde4ef;">'
+
+            // 상단 작은 리본 뱃지
+            +       '<div style="position:absolute; top:-20px; left:50%; transform:translateX(-50%);'
+            +                ' background:linear-gradient(135deg,#ec4899,#a855f7); color:#ffffff;'
+            +                ' font-size:24px; font-weight:900; padding:8px 26px; border-radius:999px; white-space:nowrap;">'
+            +         '✨ 오늘, 운명 같은 만남 ✨'
+            +       '</div>'
+
+            // 로고 + ROTABLE (가로 나란히)
+            +       '<div style="display:flex; align-items:center; justify-content:center; gap:16px; margin-top:12px;">'
+            +         '<img src="' + FEED_LOGO + '" crossorigin="anonymous" alt="ROTABLE" style="width:88px; height:88px; object-fit:contain;">'
+            +         '<div style="font-family:\'Jua\',sans-serif; font-size:66px; font-weight:400; color:#e8488f; letter-spacing:0.5px; line-height:1;">ROTABLE</div>'
+            +       '</div>'
+
+            // 설렘 카피
+            +       '<div style="font-family:\'Jua\',sans-serif; font-size:36px; font-weight:400; color:#be185d; margin-top:16px; line-height:1.3;">'
+            +         '한 자리에서, 모두와 설레는 만남 💘'
+            +       '</div>'
+            +       '<div style="font-size:24px; font-weight:700; color:#8b5cf6; margin-top:8px; line-height:1.5;">'
+            +         '두근거리는 오늘, 당신의 인연이 이 안에 있을지도 몰라요'
+            +       '</div>'
+
+            // 타입 + 참여자 라벨 (구분선 위)
+            +       '<div style="display:inline-block; margin-top:20px; padding-top:16px; border-top:2px dashed #f3c6dc;">'
+            +         '<span style="display:inline-block; background:#fdf2f8; color:#be185d; border:2px solid #fbcfe8;'
+            +                  ' border-radius:999px; padding:8px 26px; font-size:27px; font-weight:900;">'
+            +           '💗 ' + feedEsc(feedTypeLabel()) + ' · 이번 회차 참여자'
+            +         '</span>'
+            +       '</div>'
+
+            +     '</div>'
+            +   '</div>'
+
+            // ── 명단: 현재 에디터 명단 그대로 (내용 길이만큼) ──
+            +   buildRosterGrid(data)
+            + '</div>';
         }
 
-        // "이번 참여자 목록" 섹션 제목
-        function feedRosterTitle(){
-            return ''
-              + '<div style="text-align:center; margin-bottom:16px;">'
-              +   '<span style="display:inline-block; padding:8px 24px; border-radius:999px; background:#111827;'
-              +            ' color:#ffffff; font-size:26px; font-weight:900;">👥 이번 참여자 목록</span>'
-              + '</div>';
-        }
-
-        // 행사 카드 1개 렌더
-        function feedCard(card, showProfile){
-            return ''
-              + '<div style="margin-bottom:22px;">'
-              +   '<div style="text-align:center; margin-bottom:12px;">'
-              +     '<div style="font-size:34px; font-weight:900; color:#000000; word-break:keep-all;">' + feedEsc(card.title) + '</div>'
-              +     (card.date ? '<div style="font-size:22px; font-weight:700; color:#374151; margin-top:4px;">' + feedEsc(card.date) + '</div>' : '')
-              +   '</div>'
-              +   '<div style="display:flex; border:2px solid #cbd5e1; border-radius:10px; overflow:hidden;">'
-              +     feedColumn('남', '#3b82f6', card.males, showProfile)
-              +     '<div style="width:2px; background:#cbd5e1;"></div>'
-              +     feedColumn('여', '#ec4899', card.females, showProfile)
-              +   '</div>'
-              + '</div>';
-        }
-
-        // 하단 로테이블 홍보 문구 / CTA 배너. (피드 이미지 맨 아래에 붙음)
-        function feedPromoFooter(){
-            return ''
-              + '<div style="margin-top:26px; padding:30px 28px; border-radius:16px; text-align:center;'
-              +            ' background:linear-gradient(135deg,#ec4899 0%,#f472b6 55%,#a855f7 100%); color:#ffffff;'
-              +            " font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif;\">"
-              +   '<div style="font-size:40px; font-weight:900; letter-spacing:-0.5px;">한 자리에서, 모두와 마주치다 💘</div>'
-              +   '<div style="font-size:24px; font-weight:700; margin-top:12px; line-height:1.5; word-break:keep-all;">'
-              +     '돌아가며 모두와 대화하고, 마음에 든 상대에게 비밀 투표!<br>'
-              +     '서로 선택하면 다음 날 아침 <b>매칭 발표</b> ✨'
-              +   '</div>'
-              +   '<div style="display:inline-block; margin-top:20px; padding:13px 34px; border-radius:999px;'
-              +            ' background:#ffffff; color:#ec4899; font-size:26px; font-weight:900;">'
-              +     '🍷 ROTABLE 로테이션 소개팅'
-              +   '</div>'
-              +   '<div style="font-size:20px; font-weight:600; margin-top:14px; opacity:0.95;">지금 바로 참여 신청하세요!</div>'
-              + '</div>';
-        }
-
-        // 에디터에서 추출한 roster 데이터 → 캡처 영역 렌더. (명단 없으면 false)
+        // 에디터에서 추출한 roster 데이터 → 피드 영역 렌더. (명단 없으면 false)
         function renderFeedRoster(){
             var loc  = locateRosterGrid(getHtml());
             var data = loc ? parseRoster(loc.grid) : null;
@@ -1139,31 +1139,47 @@
                 $('#feedRosterArea').empty();
                 $('#feedEmpty').show();
                 $('.btn-feed-download').prop('disabled', true);
+                updateFeedPreviewHeight();
                 return false;
             }
 
             $('#feedEmpty').hide();
-            var showProfile = $('#feedShowProfile').is(':checked');
-            var html = feedIntro()
-                     + feedRosterTitle()
-                     + data.cards.map(function(card){ return feedCard(card, showProfile); }).join('')
-                     + feedPromoFooter();
-            $('#feedRosterArea').html(html);
+            $('#feedRosterArea').html(feedSquareHtml(data));
             $('.btn-feed-download').prop('disabled', false);
+            updateFeedPreviewHeight();
             return true;
         }
 
-        // '피드 이미지 다운' 버튼 → 모달 열고 현재 에디터 명단으로 미리보기
+        // 미리보기 래퍼 높이를 캡처 내용(scale 0.45) 에 맞춰 조정한다.
+        // 아직 숨김(scrollHeight=0)이면 건드리지 않는다. (0px 로 접혀 안 보이는 문제 방지)
+        function updateFeedPreviewHeight(){
+            var cap = document.getElementById('feedCapture');
+            if (!cap || !cap.parentElement) { return; }
+            var h = cap.scrollHeight || cap.offsetHeight || 0;
+            if (h > 0) {
+                cap.parentElement.style.height = Math.ceil(h * 0.45) + 'px';
+            } else {
+                cap.parentElement.style.height = 'auto';
+            }
+        }
+
+        // '피드 이미지 다운' 버튼 → 모달 먼저 열고, 완전히 보인 뒤 현재 명단으로 미리보기 렌더.
+        // (모달이 숨겨진 상태에서 렌더하면 scrollHeight 가 0 이라 미리보기 높이가 0 이 된다.)
         $('.btn-open-feed').on('click', function(){
-            renderFeedRoster();
             var m = getFeedModal();
+            var el = document.getElementById('detailFeedModal');
+            if (el) {
+                el.addEventListener('shown.bs.modal', function onShown(){
+                    el.removeEventListener('shown.bs.modal', onShown);
+                    renderFeedRoster();
+                });
+            }
             if (m) { m.show(); }
+            // show 이벤트가 안 잡히는 환경 대비 폴백.
+            setTimeout(renderFeedRoster, 250);
         });
 
-        // 프로필 표시 토글 → 다시 렌더
-        $('#feedShowProfile').on('change', function(){ renderFeedRoster(); });
-
-        // 피드 이미지(배너 + 명단) 다운로드
+        // 피드 이미지(로고 + 명단) 다운로드
         $('.btn-feed-download').on('click', async function(){
             if (typeof html2canvas === 'undefined') {
                 await salert({text: '이미지 변환 모듈을 불러오지 못했습니다. 페이지를 새로고침해주세요.', cancel: false});
@@ -1196,25 +1212,29 @@
                     try { await document.fonts.ready; } catch (fe) { /* 무시 */ }
                 }
 
-                // 선명도 우선 : 4배 해상도로 캡처 (모바일 축소 표시에도 글자/선이 또렷).
-                var feedScale = Math.max(4, Math.min(5, (window.devicePixelRatio || 1) * 2));
-
                 // 모달이 좁은 화면이면 #feedCapture 가 1080 미만으로 줄어 캡처 해상도가 떨어진다.
-                // 캡처 직전에 폭을 1080 으로 고정했다가 끝나면 원복한다.
+                // 캡처 직전에 폭을 1080 으로 고정하고 미리보기 축소(transform)를 풀었다가 끝나면 원복한다.
                 var prevWidth = target.style.width;
                 var prevMaxWidth = target.style.maxWidth;
+                var prevTransform = target.style.transform;
                 target.style.width = '1080px';
                 target.style.maxWidth = 'none';
+                target.style.transform = 'none';
 
-                // 폭을 1080 으로 고정한 '뒤'(렌더 폭 확정 후) 이미지 높이를 픽셀로 고정해 세로 눌림 방지.
+                // 폭 고정 '뒤'(렌더 폭 확정 후) 이미지 높이를 픽셀로 고정해 세로 눌림 방지.
                 fixImageHeights(target);
 
-                // 폭 고정 후 실제 높이 기준으로, 캔버스 한계를 넘지 않는 안전 scale 계산.
-                var feedScale = computeSafeScale(target.offsetWidth || 1080, target.offsetHeight || 1080, 3.5);
+                // 높이는 '명단 길이만큼'(실제 콘텐츠 높이). 폭 1080 기준으로 안전 scale 계산.
+                var feedW = 1080;
+                var feedH = target.scrollHeight || target.offsetHeight || 1080;
+                var feedScale = computeSafeScale(feedW, feedH, 3.5);
 
                 var canvas = await html2canvas(target, {
                     backgroundColor: '#ffffff',
                     scale: feedScale,
+                    width: feedW,
+                    height: feedH,
+                    windowWidth: feedW,
                     useCORS: true,
                     allowTaint: false,
                     logging: false
@@ -1222,6 +1242,7 @@
 
                 target.style.width = prevWidth;
                 target.style.maxWidth = prevMaxWidth;
+                target.style.transform = prevTransform;
                 // 박아둔 인라인 높이 제거(모달 DOM 재사용 대비).
                 clearImageHeights(target);
 

@@ -204,7 +204,7 @@
                     {{-- 행사명 + 날짜 --}}
                     <div style="background:#eef2f7; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">
                         <div style="font-size:{{ $cellTitleSize }}; font-weight:900; word-break:keep-all;">{{ $event['title'] }}</div>
-                        <div style="font-size:{{ $cellDateSize }}; color:#6b7280; margin-top:1px;">{{ $event['date'] }}</div>
+                        <div style="font-size:{{ $cellDateSize }}; color:#374151; font-weight:600; margin-top:1px;">{{ $event['date'] }}</div>
                     </div>
 
                     {{-- 남(좌) / 여(우) 헤더 --}}
@@ -220,7 +220,7 @@
                             @foreach ($maleSample as $m)
                                 <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:1px solid #d7e3ef; text-align:center; display:flex; flex-direction:column; justify-content:center;">
                                     <div style="font-weight:900; font-size:{{ $cellNoSize }};">{{ $m['no'] }}호</div>
-                                    <div style="color:#6b7280; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $m['height'] }}cm · {{ $m['job'] }} · {{ $m['age'] }}</div>
+                                    <div style="color:#000000; font-weight:700; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $m['height'] }}cm · {{ $m['job'] }} · {{ $m['age'] }}</div>
                                 </div>
                             @endforeach
                         </div>
@@ -229,7 +229,7 @@
                             @foreach ($femaleSample as $f)
                                 <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:1px solid #f6d9e6; text-align:center; display:flex; flex-direction:column; justify-content:center;">
                                     <div style="font-weight:900; font-size:{{ $cellNoSize }};">{{ $f['no'] }}호</div>
-                                    <div style="color:#6b7280; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $f['height'] }}cm · {{ $f['job'] }} · {{ $f['age'] }}</div>
+                                    <div style="color:#000000; font-weight:700; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $f['height'] }}cm · {{ $f['job'] }} · {{ $f['age'] }}</div>
                                 </div>
                             @endforeach
                         </div>

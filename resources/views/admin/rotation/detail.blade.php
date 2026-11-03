@@ -16,6 +16,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+
+{{-- 이미지 생성 중 로딩 오버레이 (드롭다운이 닫혀도 보이도록 화면 전체 덮개로 표시) --}}
+<div id="imageExportOverlay"
+     style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(17,24,39,0.55);
+            align-items:center; justify-content:center;">
+    <div style="background:#ffffff; border-radius:14px; padding:26px 34px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.25);">
+        <div class="spinner-border text-pink" style="width:2.5rem; height:2.5rem;" role="status" aria-hidden="true"></div>
+        <div id="imageExportOverlayText" style="margin-top:14px; font-size:16px; font-weight:700; color:#374151;">
+            이미지 생성 중…
+        </div>
+        <div style="margin-top:4px; font-size:13px; color:#9ca3af;">잠시만 기다려 주세요 (고화질 처리 중)</div>
+    </div>
+</div>
+
 <div class="row row-cards mt-2">
     <div class="col-12">
         <div class="card">
@@ -275,6 +289,111 @@
         // 초기 1회 렌더(현재 유형 기준).
         renderSavedInfo();
 
+        /* =====================================================================
+         * 공통 이미지 저장 유틸 — "화질 최우선 + 10MB 상한 엄수"
+         * - 무손실 PNG 를 우선한다. (글자/단색 배경이 가장 선명)
+         * - PNG 가 10MB 를 넘으면 JPEG 로 품질을 떨어뜨리는 대신, 해상도만 완만히(0.92배씩)
+         *   줄여 10MB 이하가 되는 가장 큰 PNG 를 저장한다. (텍스트 뭉개짐 없이 선명 유지)
+         * - 아주 극단적으로 못 맞추는 경우에만 최후수단으로 고품질 JPEG 로 저장한다.
+         * =================================================================== */
+        var EXPORT_MAX_BYTES = 20 * 1024 * 1024; // 20MB (선명도 우선, 상한)
+
+        // 이미지 생성 로딩 오버레이 제어 (드롭다운 닫힘과 무관하게 항상 보인다)
+        function showExportOverlay(text){
+            $('#imageExportOverlayText').text(text || '이미지 생성 중…');
+            $('#imageExportOverlay').css('display', 'flex');
+        }
+        function hideExportOverlay(){
+            $('#imageExportOverlay').hide();
+        }
+
+        function canvasToBlob(cv, type, quality){
+            return new Promise(function(resolve){
+                cv.toBlob(function(b){ resolve(b); }, type, quality);
+            });
+        }
+
+        // 캔버스를 비율 유지한 채 축소한 새 캔버스를 만든다.
+        function downscaleCanvas(src, ratio){
+            var out = document.createElement('canvas');
+            out.width  = Math.max(1, Math.round(src.width  * ratio));
+            out.height = Math.max(1, Math.round(src.height * ratio));
+            var ctx = out.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, out.width, out.height);
+            ctx.drawImage(src, 0, 0, out.width, out.height);
+            return out;
+        }
+
+        function triggerDownload(blob, filename){
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.download = filename;
+            link.href = url;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        async function exportCanvasUnder10MB(canvas, baseName){
+            // 1) 원본 해상도 PNG 가 10MB 이하면 그대로 저장 (최고 화질)
+            var png = await canvasToBlob(canvas, 'image/png');
+            if (png && png.size <= EXPORT_MAX_BYTES) {
+                triggerDownload(png, baseName + '.png');
+                return;
+            }
+
+            // 2) 10MB 초과 → 현재 용량 대비 "필요한 축소 비율"을 한 번에 계산해 재인코딩.
+            //    PNG 용량은 대략 픽셀수(면적)에 비례하므로 ratio = sqrt(목표/현재) 로 추정.
+            //    0.9 안전계수를 곱해 1~2회 안에 10MB 이하로 맞춘다. (느린 반복 인코딩 방지)
+            if (png && png.size > 0) {
+                var ratio = Math.sqrt(EXPORT_MAX_BYTES / png.size) * 0.9;
+                ratio = Math.min(0.98, Math.max(0.1, ratio));
+
+                var cur = downscaleCanvas(canvas, ratio);
+                var p = await canvasToBlob(cur, 'image/png');
+
+                // 추정이 빗나가 아직 크면 한 번 더만 줄인다. (최대 2회로 제한)
+                if (p && p.size > EXPORT_MAX_BYTES) {
+                    var r2 = Math.sqrt(EXPORT_MAX_BYTES / p.size) * 0.9;
+                    r2 = Math.min(0.95, Math.max(0.1, r2));
+                    cur = downscaleCanvas(cur, r2);
+                    p = await canvasToBlob(cur, 'image/png');
+                }
+
+                if (p && p.size <= EXPORT_MAX_BYTES) {
+                    triggerDownload(p, baseName + '.png');
+                    return;
+                }
+
+                // 3) 그래도 안 되면 최후수단 — 축소된 캔버스에서 고품질 JPEG
+                var jpg = await canvasToBlob(cur, 'image/jpeg', 0.92);
+                if (jpg && jpg.size <= EXPORT_MAX_BYTES) {
+                    triggerDownload(jpg, baseName + '.jpg');
+                    return;
+                }
+            }
+
+            await salert({text: '이미지를 10MB 이하로 저장하지 못했습니다. 내용을 줄인 뒤 다시 시도해주세요.', cancel: false});
+        }
+
+        // 다운로드 버튼에 로딩 상태(스피너/문구)를 입히고, 작업 중 중복 클릭을 막는다.
+        async function withButtonLoading($btn, loadingText, task){
+            var original = $btn.html();
+            $btn.prop('disabled', true)
+                .html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>' + (loadingText || '생성 중…'));
+            // 스피너가 화면에 그려질 틈을 준 뒤 무거운 작업 시작.
+            await new Promise(function(r){ setTimeout(r, 30); });
+            try {
+                await task();
+            } finally {
+                $btn.prop('disabled', false).html(original);
+            }
+        }
+
         var previewModal = null;
 
         function getHtml(){
@@ -435,7 +554,7 @@
                 return ''
                   + '<div style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:1px solid ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center;">'
                   +   '<div style="font-weight:900; font-size:' + cellNoSize + ';">' + (i + 1) + '호</div>'
-                  +   '<div style="color:#6b7280; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(p.height) + 'cm · ' + esc(p.job) + ' · ' + esc(p.age) + '</div>'
+                  +   '<div style="color:#000000; font-weight:700; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(p.height) + 'cm · ' + esc(p.job) + ' · ' + esc(p.age) + '</div>'
                   + '</div>';
             }
             // "모집중" 자리 칸 (번호는 이어서, data-recruit 로 표시해 재파싱 때 제외)
@@ -473,7 +592,7 @@
                 // 행사명 + 날짜
                 html +=     '<div style="background:#eef2f7; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">';
                 html +=       '<div style="font-size:' + cellTitleSize + '; font-weight:900; word-break:keep-all;">' + esc(card.title) + '</div>';
-                html +=       '<div style="font-size:' + cellDateSize + '; color:#6b7280; margin-top:1px;">' + esc(card.date) + '</div>';
+                html +=       '<div style="font-size:' + cellDateSize + '; color:#374151; font-weight:600; margin-top:1px;">' + esc(card.date) + '</div>';
                 html +=     '</div>';
                 // 남/여 헤더 (모집중 포함한 표시 인원수)
                 html +=     '<div style="display:flex; font-size:' + cellHeadSize + '; font-weight:900; text-align:center; border-bottom:1px solid #eee;">';
@@ -718,6 +837,10 @@
                 return;
             }
 
+            // 드롭다운이 닫혀도 보이도록 화면 전체 로딩 오버레이로 진행 표시.
+            showExportOverlay('이미지 생성 중…');
+            await new Promise(function(r){ setTimeout(r, 30); });
+
             // 화면 밖(보이지만 뷰포트 밖)에 캡처 전용 컨테이너를 만든다.
             // display:none 이면 html2canvas 가 크기를 못 재므로, 화면 밖으로 밀어낸다.
             var holder = document.getElementById('detailCaptureHolder');
@@ -759,80 +882,28 @@
                     } catch (fe) { /* 폰트 로드 실패해도 캡처는 진행 */ }
                 }
 
+                // 선명도 우선 : 4배 해상도로 캡처 (모바일 축소 표시에도 글자/선이 또렷).
+                var detailScale = Math.max(4, Math.min(5, (window.devicePixelRatio || 1) * 2));
+
                 var canvas = await html2canvas(holder, {
                     backgroundColor: '#ffffff',
-                    scale: 2,
+                    scale: detailScale,
                     useCORS: true,
                     allowTaint: false,
-                    logging: false
+                    logging: false,
+                    letterRendering: true,
+                    width: 1080,
+                    windowWidth: 1080
                 });
 
-                // ===== 10MB 용량 제한 처리 =====
-                // PNG 는 무손실이라 용량 조절이 어렵다.
-                // 1) 먼저 PNG 로 만들어 10MB 이하이면 그대로 저장.
-                // 2) 10MB 를 넘으면 JPEG 로 전환해 품질을 단계적으로 낮춰 10MB 아래로 맞춘다.
-                // 3) 최저 품질로도 못 맞추면 캔버스 해상도를 줄여 재시도한다.
-                var MAX_BYTES = 10 * 1024 * 1024; // 10MB
-
-                // canvas.toBlob 을 Promise 로 감싼다.
-                function toBlob(cv, type, quality){
-                    return new Promise(function(resolve){
-                        cv.toBlob(function(b){ resolve(b); }, type, quality);
-                    });
-                }
-
-                // 주어진 캔버스에서 10MB 이하 blob 과 확장자를 구한다. (못 맞추면 null)
-                async function makeUnderLimit(cv){
-                    // 1) PNG 우선
-                    var pngBlob = await toBlob(cv, 'image/png');
-                    if (pngBlob && pngBlob.size <= MAX_BYTES) {
-                        return { blob: pngBlob, ext: 'png' };
-                    }
-
-                    // 2) JPEG 품질을 단계적으로 낮춰가며 시도
-                    var qualities = [0.92, 0.85, 0.75, 0.65, 0.55, 0.45, 0.35, 0.25];
-                    for (var i = 0; i < qualities.length; i++) {
-                        var jpgBlob = await toBlob(cv, 'image/jpeg', qualities[i]);
-                        if (jpgBlob && jpgBlob.size <= MAX_BYTES) {
-                            return { blob: jpgBlob, ext: 'jpg' };
-                        }
-                    }
-                    return null;
-                }
-
-                var result = await makeUnderLimit(canvas);
-
-                // 3) 그래도 10MB 를 못 맞추면 캔버스 크기를 줄여 재시도 (최대 3회)
-                var scaleCanvas = canvas;
-                var shrinkTries = 0;
-                while (result === null && shrinkTries < 3) {
-                    shrinkTries++;
-                    var scaled = document.createElement('canvas');
-                    scaled.width  = Math.max(1, Math.round(scaleCanvas.width  * 0.8));
-                    scaled.height = Math.max(1, Math.round(scaleCanvas.height * 0.8));
-                    var ctx = scaled.getContext('2d');
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, scaled.width, scaled.height);
-                    ctx.drawImage(scaleCanvas, 0, 0, scaled.width, scaled.height);
-                    scaleCanvas = scaled;
-                    result = await makeUnderLimit(scaleCanvas);
-                }
-
-                if (!result || !result.blob) {
-                    await salert({text: '이미지를 10MB 이하로 저장하지 못했습니다. 내용을 줄인 뒤 다시 시도해주세요.', cancel: false});
-                    return;
-                }
-
-                var url = URL.createObjectURL(result.blob);
-                var link = document.createElement('a');
-                link.download = 'rotable_상세페이지.' + result.ext;
-                link.href = url;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
+                // ===== 10MB 상한 + 화질 최우선 저장 =====
+                // PNG(무손실) 를 유지하면서 10MB 를 넘으면 해상도만 완만히 줄여 맞춘다.
+                // (JPEG 저품질로 글자를 뭉개는 대신, 선명한 PNG 를 우선한다.)
+                await exportCanvasUnder10MB(canvas, 'rotable_상세페이지');
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
+            } finally {
+                hideExportOverlay();
             }
         });
 
@@ -872,13 +943,13 @@
                     p.job || '',
                     p.age || ''
                 ].filter(Boolean);
-                // 가독성 ↑ : 진한 색(#1f2937) + 두께/크기 키움
-                profile = '<div style="color:#1f2937; font-weight:700; font-size:20px; margin-top:5px; word-break:keep-all;">'
+                // 가독성 ↑ : 검정색 + 두께/크기 키움
+                profile = '<div style="color:#000000; font-weight:700; font-size:20px; margin-top:5px; word-break:keep-all;">'
                         + feedEsc(bits.join(' · ')) + '</div>';
             }
             return ''
               + '<div style="padding:14px 10px; border-bottom:1px solid #e5e7eb; text-align:center;">'
-              +   '<div style="font-weight:900; font-size:24px; color:#111827;">' + (idx + 1) + '호</div>'
+              +   '<div style="font-weight:900; font-size:24px; color:#000000;">' + (idx + 1) + '호</div>'
               +   profile
               + '</div>';
         }
@@ -997,6 +1068,10 @@
 
             var target = document.getElementById('feedCapture');
 
+            // 화면 전체 로딩 오버레이로 진행 표시 (드롭다운/모달과 무관하게 보임)
+            showExportOverlay('피드 이미지 생성 중…');
+            await new Promise(function(r){ setTimeout(r, 30); });
+
             try {
                 // 배너 등 이미지가 완전히 로드된 뒤 캡처 (CORS-safe)
                 var imgs = target.querySelectorAll('img');
@@ -1013,30 +1088,36 @@
                     try { await document.fonts.ready; } catch (fe) { /* 무시 */ }
                 }
 
+                // 선명도 우선 : 4배 해상도로 캡처 (모바일 축소 표시에도 글자/선이 또렷).
+                var feedScale = Math.max(4, Math.min(5, (window.devicePixelRatio || 1) * 2));
+
+                // 모달이 좁은 화면이면 #feedCapture 가 1080 미만으로 줄어 캡처 해상도가 떨어진다.
+                // 캡처 직전에 폭을 1080 으로 고정했다가 끝나면 원복한다.
+                var prevWidth = target.style.width;
+                var prevMaxWidth = target.style.maxWidth;
+                target.style.width = '1080px';
+                target.style.maxWidth = 'none';
+
                 var canvas = await html2canvas(target, {
                     backgroundColor: '#ffffff',
-                    scale: 2,
+                    scale: feedScale,
                     useCORS: true,
                     allowTaint: false,
-                    logging: false
+                    logging: false,
+                    letterRendering: true,
+                    width: 1080,
+                    windowWidth: 1080
                 });
 
-                canvas.toBlob(function(blob){
-                    if (!blob) {
-                        salert({text: '이미지 생성에 실패했습니다.', cancel: false});
-                        return;
-                    }
-                    var url = URL.createObjectURL(blob);
-                    var link = document.createElement('a');
-                    link.download = 'rotable_피드.png';
-                    link.href = url;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    URL.revokeObjectURL(url);
-                }, 'image/png');
+                target.style.width = prevWidth;
+                target.style.maxWidth = prevMaxWidth;
+
+                // 화질 최우선 + 10MB 상한 (상세페이지 다운로드와 동일 로직)
+                await exportCanvasUnder10MB(canvas, 'rotable_피드');
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
+            } finally {
+                hideExportOverlay();
             }
         });
     });

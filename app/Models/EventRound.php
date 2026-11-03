@@ -78,6 +78,16 @@ class EventRound extends Model
     }
 
     /**
+     * 이 회차의 사전 참여자 명단(화이트리스트).
+     *
+     * @return HasMany<EventRoster>
+     */
+    public function rosters(): HasMany
+    {
+        return $this->hasMany(EventRoster::class, 'event_id');
+    }
+
+    /**
      * 이 행사를 생성한 관리자.
      *
      * @return BelongsTo<Admin, EventRound>

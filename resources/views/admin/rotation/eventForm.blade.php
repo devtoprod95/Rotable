@@ -17,6 +17,9 @@
                 <h3 class="card-title mb-0">{{ $isEdit ? '행사 정보 수정' : '행사 생성' }}</h3>
                 <div class="d-flex gap-2">
                     @if ($isEdit)
+                        <a href="{{ route('admin.rotation.event.checkin', ['id' => $event->id]) }}" class="btn btn-teal px-4">
+                            <i class="ti ti-user-check me-1"></i> 체크인
+                        </a>
                         <a href="{{ route('admin.rotation.seating.index', ['eventId' => $event->id]) }}" class="btn btn-azure px-4">
                             <i class="ti ti-layout-grid me-1"></i> 좌석 배정
                         </a>

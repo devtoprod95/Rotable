@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\EventRound;
+use App\Models\EventRoster;
 use App\Models\Member;
 use App\Models\RotationSeat;
 use App\Models\RotationTable;
@@ -170,6 +171,15 @@ class MemberAuthController extends Controller
                 Rule::unique('members', 'phone')->where(
                     fn ($query) => $query->where('event_id', $request->input('event_id'))
                 ),
+                // 사전 참여자 명단(화이트리스트)에 등록된 번호만 입장등록 허용. (항상 강제)
+                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
+                    $eventId = (int) $request->input('event_id');
+                    $phone = $this->normalizePhone($value);
+                    $allowed = EventRoster::where('event_id', $eventId)->where('phone', $phone)->exists();
+                    if (! $allowed) {
+                        $fail('사전에 등록된 참여자 명단에 없는 번호입니다. 신청하신 번호가 맞는지 확인하시거나 운영진에게 문의해 주세요.');
+                    }
+                },
             ],
             'name'       => ['required', 'string', 'max:50'],
             'password'   => ['required', 'string', 'size:4'],
@@ -274,6 +284,13 @@ class MemberAuthController extends Controller
             'rotation_table_id' => $validated['rotation_table_id'],
         ]);
 
+        // 입장등록한 번호를 사전 명단에서 "참석(체크인)"으로 자동 처리한다.
+        // (아직 미참석인 경우에만 지금 시각으로 체크인 — 현장 도착 수작업 체크를 줄인다.)
+        EventRoster::where('event_id', $validated['event_id'])
+            ->where('phone', $validated['phone'])
+            ->whereNull('checked_in_at')
+            ->update(['checked_in_at' => now()]);
+
         Auth::guard('web')->login($member);
         $request->session()->regenerate();
 
@@ -310,6 +327,16 @@ class MemberAuthController extends Controller
             'phone.regex'       => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'password.required' => '비밀번호를 입력해주세요.',
         ]);
+
+        // 사전 참여자 명단(화이트리스트)에 등록된 번호만 입장(로그인) 허용. (항상 강제)
+        $allowed = EventRoster::where('event_id', (int) $validated['event_id'])
+            ->where('phone', $validated['phone'])
+            ->exists();
+        if (! $allowed) {
+            throw ValidationException::withMessages([
+                'phone' => '사전에 등록된 참여자 명단에 없는 번호입니다. 신청하신 번호가 맞는지 확인하시거나 운영진에게 문의해 주세요.',
+            ]);
+        }
 
         // 비밀번호를 평문 저장하므로 Hash 기반 attempt() 대신 직접 비교한다.
         $member = Member::query()

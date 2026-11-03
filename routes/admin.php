@@ -38,6 +38,13 @@ Route::middleware('role')->group(function () {
                 Route::post('/{id}/tables', [RotationController::class, 'eventTableAdd'])->whereNumber('id')->name('tables.add');
                 Route::delete('/{id}/tables', [RotationController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');
                 Route::get('/{id}/messages/list', [RotationController::class, 'eventMessageList'])->whereNumber('id')->name('messages.list');
+                // 사전 참여자 명단(화이트리스트) — 행사별
+                Route::get('/{id}/checkin', [RotationController::class, 'checkinIndex'])->whereNumber('id')->name('checkin');
+                Route::get('/{id}/rosters', [RotationController::class, 'rosterList'])->whereNumber('id')->name('rosters.list');
+                Route::post('/{id}/rosters', [RotationController::class, 'rosterAdd'])->whereNumber('id')->name('rosters.add');
+                Route::put('/{id}/rosters/{rosterId}', [RotationController::class, 'rosterUpdate'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.update');
+                Route::delete('/{id}/rosters', [RotationController::class, 'rosterDelete'])->whereNumber('id')->name('rosters.delete');
+                Route::patch('/{id}/rosters/{rosterId}/check-in', [RotationController::class, 'rosterToggleCheckIn'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.checkIn');
                 Route::get('/{id}/matches/list', [RotationController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
                 Route::get('/{id}/members/{memberId}/voters/list', [RotationController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
                 Route::get('/{id}/members/{memberId}/voted/list', [RotationController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');

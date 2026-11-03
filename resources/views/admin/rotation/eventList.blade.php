@@ -319,6 +319,11 @@
                             .html('좌석 배정')
                             .on("click", function(){ location.href = seatingBase + "?eventId=" + data.id; });
                         $wrap.append($seating);
+                        var $checkin = $("<button>")
+                            .addClass("btn btn-sm btn-outline-teal w-100")
+                            .html('<i class="ti ti-user-check me-1"></i>체크인')
+                            .on("click", function(){ location.href = detailBase + "/" + data.id + "/checkin"; });
+                        $wrap.append($checkin);
                         if((data.messages_count ?? 0) >= 1){
                             var $msg = $("<button>")
                                 .addClass("btn btn-sm btn-outline-primary w-100")

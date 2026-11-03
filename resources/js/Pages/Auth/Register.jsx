@@ -5,6 +5,7 @@ import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
 import RadioField from '@/Components/RadioField';
 import ContactForm from '@/Components/ContactForm';
+import AuthErrorModal from '@/Components/AuthErrorModal';
 
 const GENDER_OPTIONS = [
     { id: 'M', label: '남' },
@@ -65,6 +66,9 @@ export default function Register() {
 
     // 제출 전 최종 확인 모달 노출 여부.
     const [confirmOpen, setConfirmOpen] = useState(false);
+
+    // 입장등록 실패 사유를 모달로 크게 보여준다. (input 아래 작은 텍스트만으로는 놓치기 쉬움)
+    const [errorModal, setErrorModal] = useState({ open: false, messages: [] });
 
     // 필수 선택 누락 시 상단(회차/테이블)으로 스크롤하기 위한 ref.
     const topRef = useRef(null);
@@ -167,7 +171,14 @@ export default function Register() {
     // 모달에서 최종 확인 → 실제 등록 요청.
     function confirmSubmit() {
         setConfirmOpen(false);
-        post('/register');
+        post('/register', {
+            onError: (errs) => {
+                const messages = Object.values(errs || {}).filter(Boolean);
+                if (messages.length) {
+                    setErrorModal({ open: true, messages });
+                }
+            },
+        });
     }
 
     return (
@@ -418,6 +429,13 @@ export default function Register() {
                     </div>
                 </div>
             )}
+
+            <AuthErrorModal
+                open={errorModal.open}
+                title="입장등록을 할 수 없어요"
+                messages={errorModal.messages}
+                onClose={() => setErrorModal({ open: false, messages: [] })}
+            />
         </AppLayout>
     );
 }

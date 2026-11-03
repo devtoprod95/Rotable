@@ -67,6 +67,7 @@ class PurgeData extends Command
                 'admin_requests',
                 'rotation_seats',
                 'rotation_tables',
+                'event_rosters',
                 'members',
                 'event_rounds',
             ],

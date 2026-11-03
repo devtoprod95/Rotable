@@ -1,8 +1,10 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
 import ContactForm from '@/Components/ContactForm';
+import AuthErrorModal from '@/Components/AuthErrorModal';
 
 /**
  * 개발 편의용 자동 입력 값. (production 이 아닐 때만 사용)
@@ -21,6 +23,9 @@ export default function Login() {
         password: '',
     });
 
+    // 실패 사유를 모달로 크게 보여준다. (input 아래 작은 텍스트만으로는 놓치기 쉬움)
+    const [errorModal, setErrorModal] = useState({ open: false, messages: [] });
+
     // 회차(event_id)는 유지하고 나머지 필드를 AUTOFILL 값으로 채운다.
     function autofill() {
         Object.entries(AUTOFILL).forEach(([key, value]) => {
@@ -30,7 +35,14 @@ export default function Login() {
 
     function submit(e) {
         e.preventDefault();
-        post('/login');
+        post('/login', {
+            onError: (errs) => {
+                const messages = Object.values(errs || {}).filter(Boolean);
+                if (messages.length) {
+                    setErrorModal({ open: true, messages });
+                }
+            },
+        });
     }
 
     return (
@@ -127,6 +139,13 @@ export default function Login() {
                     </p>
                 </div>
             </div>
+
+            <AuthErrorModal
+                open={errorModal.open}
+                title="입장할 수 없어요"
+                messages={errorModal.messages}
+                onClose={() => setErrorModal({ open: false, messages: [] })}
+            />
         </AppLayout>
     );
 }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Dtos\RotationTableListRequestDto;
 use App\Http\Requests\Admin\RotationSeatingStoreRequest;
 use App\Models\EventRound;
+use App\Models\Member;
 use App\Models\QrLink;
 use App\Services\RotationService;
 use Illuminate\Http\JsonResponse;
@@ -171,6 +172,115 @@ class RotationController extends Controller
         }
 
         $result = $this->rotationService->tableDelete($this->request->input('ids'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /* ======================================================================
+     | 사전 참여자 명단(화이트리스트) — event_rosters
+     * ==================================================================== */
+
+    /**
+     * 체크인 전용 화면 (현장용).
+     * 특정 행사의 사전 명단을 큰 카드로 보여주고, 번호 뒤 4자리 검색 + 탭 한 번에 참석 토글.
+     */
+    public function checkinIndex(int $id): View
+    {
+        $event = EventRound::find($id);
+        abort_if($event === null, 404);
+
+        return view('admin.rotation.checkin', [
+            'event' => $event,
+        ]);
+    }
+
+    /**
+     * 사전 명단 목록 (행사 상세 섹션에서 ajax 로 조회).
+     */
+    public function rosterList(int $id): JsonResponse
+    {
+        $rosters = $this->rotationService->rosterList($id)->map(fn ($r) => [
+            'id'            => $r->id,
+            'name'          => $r->name,
+            'gender'        => $r->gender,
+            'phone'         => $r->phone,
+            'memo'          => $r->memo,
+            'checked_in'    => $r->checked_in_at !== null,
+            'checked_in_at' => $r->checked_in_at?->format('Y-m-d H:i'),
+        ])->all();
+
+        return response()->json(['data' => $rosters, 'total' => count($rosters)]);
+    }
+
+    /**
+     * 사전 명단 1명 추가 (이름/번호/성별 개별 입력).
+     */
+    public function rosterAdd(int $id): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'name'   => 'nullable|string|max:50',
+            'phone'  => 'required|string|regex:/^[0-9\-\s]+$/',
+            'gender' => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
+        ], [
+            'phone.required'  => '전화번호를 입력해주세요.',
+            'phone.regex'     => '전화번호 형식이 올바르지 않습니다.',
+            'gender.required' => '성별을 선택해주세요.',
+            'gender.in'       => '성별 선택이 올바르지 않습니다.',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $result = $this->rotationService->rosterAdd(
+            $id,
+            $this->request->input('name'),
+            (string) $this->request->input('phone', ''),
+            $this->request->input('gender'),
+        );
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /**
+     * 사전 명단 1건 수정.
+     */
+    public function rosterUpdate(int $id, int $rosterId): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'name'   => 'nullable|string|max:50',
+            'phone'  => 'required|string|regex:/^[0-9\-\s]+$/',
+            'gender' => ['nullable', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
+            'memo'   => 'nullable|string|max:255',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $result = $this->rotationService->rosterUpdate($rosterId, $validator->validated());
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /**
+     * 사전 명단 삭제 (ids 배열).
+     */
+    public function rosterDelete(int $id): JsonResponse
+    {
+        if ($this->invalidIds()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
+        }
+
+        $result = $this->rotationService->rosterDelete($this->request->input('ids'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /**
+     * 체크인(참석/노쇼) 토글.
+     */
+    public function rosterToggleCheckIn(int $id, int $rosterId): JsonResponse
+    {
+        $result = $this->rotationService->rosterToggleCheckIn($rosterId);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }

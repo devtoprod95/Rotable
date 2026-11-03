@@ -499,6 +499,25 @@
     </div>
     @endif
 
+    {{-- 1:1 소개팅 전용 — 상대별 대화 시간 안내 --}}
+    @if ($type === 'solo')
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#0ea5e9; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+            ⏱️ 상대별 대화 시간
+        </div>
+        <div style="background:#f0f9ff; padding:26px 16px; text-align:center; font-size:31px; color:#0c4a6e; line-height:1.9;">
+            한 상대와의 1:1 대화는 <b style="color:#0284c7;">약 10~15분</b>씩 주어져요.<br>
+            <span style="font-size:28px; color:#0369a1;">대화 시간은 <b>그날 참여 인원</b>에 따라 조정되며, 상황에 따라 <b>소폭 변경</b>될 수 있어요.</span>
+        </div>
+    </div>
+    @endif
+
+    {{-- 시간 준수 안내 (와인·1:1 공통) --}}
+    <div style="margin-top:24px; background:#fff7ed; border:2px dashed #fb923c; border-radius:12px; padding:22px 16px; text-align:center; font-size:30px; color:#9a3412; line-height:1.8;">
+        🙏 <b>원활한 진행을 위해 시간 준수</b>를 꼭 부탁드려요!<br>
+        <span style="font-size:27px; color:#c2410c;">정해진 자리 이동·투표 시간을 함께 지켜 주셔야 모두가<br>더 많은 분과 즐겁게 대화할 수 있어요.</span>
+    </div>
+
     {{-- 참여 조건 --}}
     <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
         <div style="background:#3b82f6; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">

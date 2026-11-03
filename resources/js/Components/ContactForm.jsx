@@ -26,7 +26,13 @@ export default function ContactForm() {
         setError('');
 
         if (!contact.trim()) {
-            setError('연락 받으실 연락처를 입력해주세요.');
+            setError('연락 받으실 휴대폰 번호를 입력해주세요.');
+            return;
+        }
+        // 숫자만 남긴다. (하이픈/공백 제거)
+        const phone = contact.replace(/\D+/g, '');
+        if (!/^010\d{8}$/.test(phone)) {
+            setError('휴대폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.');
             return;
         }
         if (!message.trim()) {
@@ -43,7 +49,7 @@ export default function ContactForm() {
                     'X-CSRF-TOKEN': csrfToken(),
                     Accept: 'application/json',
                 },
-                body: JSON.stringify({ name, contact, message }),
+                body: JSON.stringify({ name, contact: phone, message }),
             });
             if (res.ok) {
                 setDone(true);
@@ -106,11 +112,12 @@ export default function ContactForm() {
                 maxLength={50}
             />
             <TextField
-                label="연락처"
+                label="휴대폰 번호"
+                type="tel"
                 value={contact}
-                onChange={setContact}
-                placeholder="전화번호 · 카톡/인스타 ID 등"
-                maxLength={100}
+                onChange={(v) => setContact(v.replace(/\D+/g, '').slice(0, 11))}
+                placeholder="01012345678"
+                maxLength={11}
             />
             <label className="flex flex-col gap-1.5">
                 <span className="text-sm font-semibold text-gray-700">문의 내용</span>

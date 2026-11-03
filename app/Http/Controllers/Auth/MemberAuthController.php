@@ -298,6 +298,15 @@ class MemberAuthController extends Controller
     }
 
     /**
+     * 문의하기 전용 화면 (입장/입장등록에서만 이동).
+     * 기존 문의 폼(ContactForm)을 담은 독립 페이지.
+     */
+    public function showContact(): InertiaResponse
+    {
+        return Inertia::render('Auth/Contact');
+    }
+
+    /**
      * 입장(로그인) 화면.
      */
     public function showLogin(): InertiaResponse
@@ -378,24 +387,28 @@ class MemberAuthController extends Controller
      */
     public function contact(Request $request): JsonResponse
     {
+        // 연락처는 휴대폰 번호만 받는다. 하이픈/공백 제거 후 검증한다. (예: 010-1234-5678 → 01012345678)
+        $request->merge(['contact' => $this->normalizePhone($request->input('contact'))]);
+
         $validated = $request->validate([
-            'contact' => ['required', 'string', 'max:100'],
+            'contact' => ['required', 'string', 'regex:/^010\d{8}$/'],
             'message' => ['required', 'string', 'max:1000'],
             'name'    => ['nullable', 'string', 'max:50'],
         ], [
-            'contact.required' => '연락 받으실 연락처를 입력해주세요.',
+            'contact.required' => '연락 받으실 휴대폰 번호를 입력해주세요.',
+            'contact.regex'    => '휴대폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'message.required' => '문의 내용을 입력해주세요.',
         ]);
 
         $name    = trim((string) ($validated['name'] ?? ''));
-        $contact = trim($validated['contact']);
+        $contact = $validated['contact']; // 이미 숫자만 남은 번호
         $message = trim($validated['message']);
 
         $text = implode("\n", array_filter([
             '📩 <b>[로테이블 문의]</b>',
             '',
             $name !== '' ? '🙋 <b>이름</b> : ' . e($name) : null,
-            '📞 <b>연락처</b> : ' . e($contact),
+            '📞 <b>휴대폰</b> : ' . e($contact),
             '💬 <b>내용</b> : ' . e($message),
             '🕒 <b>시간</b> : ' . now()->format('Y-m-d H:i'),
         ]));

@@ -137,6 +137,12 @@ export default function Login() {
                             입장등록
                         </Link>
                     </p>
+                    <p className="mt-2 text-center text-sm text-secondary-400">
+                        궁금한 점이 있으신가요?{' '}
+                        <Link href="/contact-us" className="font-semibold text-primary">
+                            문의하기
+                        </Link>
+                    </p>
                 </div>
             </div>
 

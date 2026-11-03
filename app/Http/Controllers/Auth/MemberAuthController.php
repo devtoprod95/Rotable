@@ -171,8 +171,12 @@ class MemberAuthController extends Controller
                 Rule::unique('members', 'phone')->where(
                     fn ($query) => $query->where('event_id', $request->input('event_id'))
                 ),
-                // 사전 참여자 명단(화이트리스트)에 등록된 번호만 입장등록 허용. (항상 강제)
+                // 사전 참여자 명단(화이트리스트)에 등록된 번호만 입장등록 허용.
+                // (config('rotation.roster_required') 가 true 일 때만 강제 — 임시 off 가능)
                 function (string $attribute, mixed $value, \Closure $fail) use ($request) {
+                    if (! config('rotation.roster_required')) {
+                        return; // 체크인(화이트리스트) 임시 off → 누구나 입장등록 허용.
+                    }
                     $eventId = (int) $request->input('event_id');
                     $phone = $this->normalizePhone($value);
                     $allowed = EventRoster::where('event_id', $eventId)->where('phone', $phone)->exists();
@@ -284,12 +288,22 @@ class MemberAuthController extends Controller
             'rotation_table_id' => $validated['rotation_table_id'],
         ]);
 
-        // 입장등록한 번호를 사전 명단에서 "참석(체크인)"으로 자동 처리한다.
-        // (아직 미참석인 경우에만 지금 시각으로 체크인 — 현장 도착 수작업 체크를 줄인다.)
-        EventRoster::where('event_id', $validated['event_id'])
-            ->where('phone', $validated['phone'])
-            ->whereNull('checked_in_at')
-            ->update(['checked_in_at' => now()]);
+        // 입장등록한 번호를 체크인 리스트(event_rosters)에 반영한다.
+        // - 명단에 없으면 이번 입장등록 정보(이름/번호/성별)로 자동 추가한다.
+        // - 아직 미참석이면 지금 시각으로 참석(체크인) 처리한다.
+        //   (화이트리스트 off 라서 명단에 없던 사람도 입장등록하면 체크인 목록에 자동 반영된다.)
+        $roster = EventRoster::firstOrNew([
+            'event_id' => $validated['event_id'],
+            'phone'    => $validated['phone'],
+        ]);
+        if (! $roster->exists) {
+            $roster->name   = $validated['name'];
+            $roster->gender = $validated['gender'];
+        }
+        if ($roster->checked_in_at === null) {
+            $roster->checked_in_at = now();
+        }
+        $roster->save();
 
         Auth::guard('web')->login($member);
         $request->session()->regenerate();
@@ -337,14 +351,17 @@ class MemberAuthController extends Controller
             'password.required' => '비밀번호를 입력해주세요.',
         ]);
 
-        // 사전 참여자 명단(화이트리스트)에 등록된 번호만 입장(로그인) 허용. (항상 강제)
-        $allowed = EventRoster::where('event_id', (int) $validated['event_id'])
-            ->where('phone', $validated['phone'])
-            ->exists();
-        if (! $allowed) {
-            throw ValidationException::withMessages([
-                'phone' => '사전에 등록된 참여자 명단에 없는 번호입니다. 신청하신 번호가 맞는지 확인하시거나 운영진에게 문의해 주세요.',
-            ]);
+        // 사전 참여자 명단(화이트리스트)에 등록된 번호만 입장(로그인) 허용.
+        // (config('rotation.roster_required') 가 true 일 때만 강제 — 임시 off 가능)
+        if (config('rotation.roster_required')) {
+            $allowed = EventRoster::where('event_id', (int) $validated['event_id'])
+                ->where('phone', $validated['phone'])
+                ->exists();
+            if (! $allowed) {
+                throw ValidationException::withMessages([
+                    'phone' => '사전에 등록된 참여자 명단에 없는 번호입니다. 신청하신 번호가 맞는지 확인하시거나 운영진에게 문의해 주세요.',
+                ]);
+            }
         }
 
         // 비밀번호를 평문 저장하므로 Hash 기반 attempt() 대신 직접 비교한다.

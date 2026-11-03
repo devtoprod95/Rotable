@@ -78,7 +78,9 @@ Route::middleware('role')->group(function () {
 
             // 참가자 안내 슬라이드 — 행사장에서 PPT 처럼 띄워 서비스 이용안내/룰/대화 주제를 안내한다.
             Route::prefix('guide')->name('guide.')->group(function () {
-                Route::get('/', [RotationController::class, 'guideIndex'])->name('index');
+                Route::get('/{type?}', [RotationController::class, 'guideIndex'])
+                    ->where('type', 'wine|solo')
+                    ->name('index');
                 // 예외 상황 대처 설명서 (별도 페이지)
                 Route::get('/exception', [RotationController::class, 'guideException'])->name('exception');
             });

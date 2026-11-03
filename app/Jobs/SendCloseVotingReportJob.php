@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Services\RotationService;
+use App\Services\Rotation\SeatingService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -32,8 +32,8 @@ class SendCloseVotingReportJob implements ShouldQueue
     ) {
     }
 
-    public function handle(RotationService $rotationService): void
+    public function handle(SeatingService $seatingService): void
     {
-        $rotationService->sendCloseVotingReport($this->eventId, $this->trigger);
+        $seatingService->sendCloseVotingReport($this->eventId, $this->trigger);
     }
 }

@@ -7,7 +7,12 @@ use App\Http\Requests\Admin\RotationSeatingStoreRequest;
 use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\QrLink;
-use App\Services\RotationService;
+use App\Services\Rotation\RotationService;
+use App\Services\Rotation\RosterService;
+use App\Services\Rotation\DetailPageService;
+use App\Services\Rotation\MeetingHistoryService;
+use App\Services\Rotation\MatchService;
+use App\Services\Rotation\SeatingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -19,7 +24,12 @@ class RotationController extends Controller
 {
     public function __construct(
         protected Request $request,
-        protected RotationService $rotationService
+        protected RotationService $rotationService,
+        protected RosterService $rosterService,
+        protected DetailPageService $detailPageService,
+        protected MeetingHistoryService $meetingHistoryService,
+        protected MatchService $matchService,
+        protected SeatingService $seatingService
     ) {
     }
 
@@ -199,7 +209,7 @@ class RotationController extends Controller
      */
     public function rosterList(int $id): JsonResponse
     {
-        $rosters = $this->rotationService->rosterList($id)->map(fn ($r) => [
+        $rosters = $this->rosterService->rosterList($id)->map(fn ($r) => [
             'id'            => $r->id,
             'name'          => $r->name,
             'gender'        => $r->gender,
@@ -231,7 +241,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
         }
 
-        $result = $this->rotationService->rosterAdd(
+        $result = $this->rosterService->rosterAdd(
             $id,
             $this->request->input('name'),
             (string) $this->request->input('phone', ''),
@@ -256,7 +266,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
         }
 
-        $result = $this->rotationService->rosterUpdate($rosterId, $validator->validated());
+        $result = $this->rosterService->rosterUpdate($rosterId, $validator->validated());
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -270,7 +280,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
         }
 
-        $result = $this->rotationService->rosterDelete($this->request->input('ids'));
+        $result = $this->rosterService->rosterDelete($this->request->input('ids'));
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -280,7 +290,7 @@ class RotationController extends Controller
      */
     public function rosterToggleCheckIn(int $id, int $rosterId): JsonResponse
     {
-        $result = $this->rotationService->rosterToggleCheckIn($rosterId);
+        $result = $this->rosterService->rosterToggleCheckIn($rosterId);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -324,8 +334,8 @@ class RotationController extends Controller
         $matchedOnly = $this->request->boolean('matched');
 
         $matches = $matchedOnly
-            ? $this->rotationService->matchedPairList($id)
-            : $this->rotationService->matchList($id);
+            ? $this->matchService->matchedPairList($id)
+            : $this->matchService->matchList($id);
 
         // 매칭 전용 조회는 "쌍 수"를 total 로 반환한다.
         // (한 사람이 여러 명과 매칭될 수 있어 행 수 != 쌍 수 이므로 targets 합으로 센다.)
@@ -347,7 +357,7 @@ class RotationController extends Controller
      */
     public function eventMemberVoterList(int $id, int $memberId): JsonResponse
     {
-        $voters = $this->rotationService->memberVoterList($id, $memberId);
+        $voters = $this->matchService->memberVoterList($id, $memberId);
 
         return response()->json([
             'data'  => $voters,
@@ -361,7 +371,7 @@ class RotationController extends Controller
      */
     public function eventMemberVotedList(int $id, int $memberId): JsonResponse
     {
-        $targets = $this->rotationService->memberVotedTargetList($id, $memberId);
+        $targets = $this->matchService->memberVotedTargetList($id, $memberId);
 
         return response()->json([
             'data'  => $targets,
@@ -381,8 +391,8 @@ class RotationController extends Controller
     public function detailIndex(): View
     {
         // 유형별 저장본/메타를 "유형당 1회 조회"로 함께 가져온다. (중복 조회 제거)
-        $wine = $this->rotationService->detailPayload('wine');
-        $solo = $this->rotationService->detailPayload('solo');
+        $wine = $this->detailPageService->detailPayload('wine');
+        $solo = $this->detailPageService->detailPayload('solo');
 
         return view('admin.rotation.detail', [
             // 유형별 저장본 (없으면 해당 유형 2열 샘플로 폴백)
@@ -392,10 +402,10 @@ class RotationController extends Controller
             'metaWine'     => $wine['meta'],
             'metaSolo'     => $solo['meta'],
             // 유형(와인파티/1:1) × 열 수(1열/2열) 조합 샘플
-            'wineOne'      => $this->rotationService->detailSampleHtml(1, 'wine'),
-            'wineTwo'      => $this->rotationService->detailSampleHtml(2, 'wine'),
-            'soloOne'      => $this->rotationService->detailSampleHtml(1, 'solo'),
-            'soloTwo'      => $this->rotationService->detailSampleHtml(2, 'solo'),
+            'wineOne'      => $this->detailPageService->detailSampleHtml(1, 'wine'),
+            'wineTwo'      => $this->detailPageService->detailSampleHtml(2, 'wine'),
+            'soloOne'      => $this->detailPageService->detailSampleHtml(1, 'solo'),
+            'soloTwo'      => $this->detailPageService->detailSampleHtml(2, 'solo'),
         ]);
     }
 
@@ -412,7 +422,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
         }
 
-        $result = $this->rotationService->detailHtmlSave(
+        $result = $this->detailPageService->detailHtmlSave(
             (string) $this->request->input('html', ''),
             (string) $this->request->input('type', 'wine'),
         );
@@ -712,7 +722,7 @@ class RotationController extends Controller
         }
 
         return response()->json(
-            $this->rotationService->meetingPartnersByPhone((string) $this->request->input('phone'))
+            $this->meetingHistoryService->meetingPartnersByPhone((string) $this->request->input('phone'))
         );
     }
 
@@ -742,7 +752,7 @@ class RotationController extends Controller
         }
 
         return response()->json(
-            $this->rotationService->meetingHistoryBetween(
+            $this->meetingHistoryService->meetingHistoryBetween(
                 (string) $this->request->input('phoneA'),
                 (string) $this->request->input('phoneB')
             )
@@ -776,8 +786,8 @@ class RotationController extends Controller
         $roundNo = (int) $this->request->input('roundNo');
 
         return response()->json([
-            'members' => $this->rotationService->seatingMembers($eventId),
-            'board'   => $this->rotationService->seatingBoard($eventId, $roundNo),
+            'members' => $this->seatingService->seatingMembers($eventId),
+            'board'   => $this->seatingService->seatingBoard($eventId, $roundNo),
         ]);
     }
 
@@ -789,7 +799,7 @@ class RotationController extends Controller
         $eventId = (int) $this->request->input('eventId');
         $roundNo = (int) $this->request->input('roundNo');
 
-        return response()->json($this->rotationService->seatingBoard($eventId, $roundNo));
+        return response()->json($this->seatingService->seatingBoard($eventId, $roundNo));
     }
 
     /**
@@ -799,7 +809,7 @@ class RotationController extends Controller
     {
         $eventId = (int) $this->request->input('eventId');
 
-        return response()->json($this->rotationService->seatingMembers($eventId));
+        return response()->json($this->seatingService->seatingMembers($eventId));
     }
 
     /**
@@ -807,7 +817,7 @@ class RotationController extends Controller
      */
     public function seatingStore(RotationSeatingStoreRequest $request): JsonResponse
     {
-        $result = $this->rotationService->seatingUpsert((object) $request->validated());
+        $result = $this->seatingService->seatingUpsert((object) $request->validated());
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -824,7 +834,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
         }
 
-        $result = $this->rotationService->seatingDelete((int) $this->request->input('id'));
+        $result = $this->seatingService->seatingDelete((int) $this->request->input('id'));
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -842,7 +852,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
         }
 
-        $result = $this->rotationService->rotateProgress((int) $this->request->input('event_id'));
+        $result = $this->seatingService->rotateProgress((int) $this->request->input('event_id'));
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -860,7 +870,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
         }
 
-        $result = $this->rotationService->rotateBack((int) $this->request->input('event_id'));
+        $result = $this->seatingService->rotateBack((int) $this->request->input('event_id'));
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -873,7 +883,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
         }
 
-        $result = $this->rotationService->openVoting((int) $this->request->input('event_id'));
+        $result = $this->seatingService->openVoting((int) $this->request->input('event_id'));
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }
@@ -891,7 +901,7 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
         }
 
-        $result = $this->rotationService->closeVoting((int) $this->request->input('event_id'));
+        $result = $this->seatingService->closeVoting((int) $this->request->input('event_id'));
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }

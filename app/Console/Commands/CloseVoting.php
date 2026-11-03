@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\EventRound;
-use App\Services\RotationService;
+use App\Services\Rotation\SeatingService;
 use Illuminate\Console\Command;
 
 class CloseVoting extends Command
@@ -11,7 +11,7 @@ class CloseVoting extends Command
     protected $signature   = 'rotation:close-voting';
     protected $description = '투표중(V) 행사 중 자동 마감 시각(행사 다음 날 오전 9시)이 지난 행사를 종료(X)로 전환한다.';
 
-    public function __construct(protected RotationService $rotationService)
+    public function __construct(protected SeatingService $seatingService)
     {
         parent::__construct();
     }
@@ -33,7 +33,7 @@ class CloseVoting extends Command
                 continue;
             }
 
-            $result = $this->rotationService->closeVoting($event->id, 'auto');
+            $result = $this->seatingService->closeVoting($event->id, 'auto');
 
             if (($result['isSuccess'] ?? false) === true) {
                 $closed++;

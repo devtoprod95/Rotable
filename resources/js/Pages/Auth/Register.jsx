@@ -4,7 +4,6 @@ import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
 import RadioField from '@/Components/RadioField';
-import ContactForm from '@/Components/ContactForm';
 import AuthErrorModal from '@/Components/AuthErrorModal';
 
 const GENDER_OPTIONS = [
@@ -211,7 +210,18 @@ export default function Register() {
                                     </p>
                                 </div>
                             </div>
-                            <ContactForm />
+                            <Link
+                                href="/login"
+                                className="mt-6 block w-full rounded-full bg-primary py-3 text-center text-base font-bold text-white transition hover:bg-primary-600"
+                            >
+                                입장하기
+                            </Link>
+                            <Link
+                                href="/contact-us"
+                                className="mt-3 block w-full rounded-full border border-secondary-200 bg-white py-3 text-center text-base font-bold text-secondary-600 transition hover:bg-secondary-50"
+                            >
+                                문의하기
+                            </Link>
                         </div>
                     ) : (
                     <>

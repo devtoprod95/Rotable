@@ -3,7 +3,6 @@ import { useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
-import ContactForm from '@/Components/ContactForm';
 import AuthErrorModal from '@/Components/AuthErrorModal';
 
 /**
@@ -75,7 +74,18 @@ export default function Login() {
                                     </p>
                                 </div>
                             </div>
-                            <ContactForm />
+                            <Link
+                                href="/register"
+                                className="mt-6 block w-full rounded-full bg-primary py-3 text-center text-base font-bold text-white transition hover:bg-primary-600"
+                            >
+                                입장등록하기
+                            </Link>
+                            <Link
+                                href="/contact-us"
+                                className="mt-3 block w-full rounded-full border border-secondary-200 bg-white py-3 text-center text-base font-bold text-secondary-600 transition hover:bg-secondary-50"
+                            >
+                                문의하기
+                            </Link>
                         </div>
                     ) : (
                     <>
@@ -128,8 +138,6 @@ export default function Login() {
                             {processing ? '입장 중…' : '입장'}
                         </button>
                     </form>
-                    </>
-                    )}
 
                     <p className="mt-6 text-center text-sm text-secondary-400">
                         아직 등록하지 않으셨나요?{' '}
@@ -143,6 +151,8 @@ export default function Login() {
                             문의하기
                         </Link>
                     </p>
+                    </>
+                    )}
                 </div>
             </div>
 

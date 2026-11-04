@@ -24,9 +24,18 @@ enum Menu: string
                 'name'     => '행사',
                 'icon'     => 'calendar-event',
                 'pattern'  => 'admin.rotation*',
+                // 시간 순서: 행사 만들기 → 당일 운영(체크인 → 로테이션 진행) → 홍보 → 안내 → 분석·도구
                 'children' => [
-                    ['name' => '행사 관리', 'route' => 'admin.rotation.event.index', 'pattern' => 'admin.rotation.event*'],
-                    ['name' => '좌석 배정', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
+                    ['name' => '행사 목록', 'route' => 'admin.rotation.event.index', 'pattern' => 'admin.rotation.event*'],
+                    [
+                        'name'     => '당일 운영',
+                        'pattern'  => ['admin.rotation.event.checkin*', 'admin.rotation.checkin*', 'admin.rotation.seating*'],
+                        'children' => [
+                            // 가장 가까운 진행 예정 행사의 체크인으로 바로 이동한다. (행사는 화면 상단 탭바에서 바꾼다.)
+                            ['name' => '체크인', 'route' => 'admin.rotation.checkin.current', 'pattern' => ['admin.rotation.event.checkin*', 'admin.rotation.checkin*']],
+                            ['name' => '로테이션 진행', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
+                        ],
+                    ],
                     [
                         'name'     => '홍보',
                         'pattern'  => ['admin.rotation.detail*', 'admin.rotation.qr*'],
@@ -44,14 +53,14 @@ enum Menu: string
                         ],
                     ],
                     [
-                        'name'     => '만남 이력',
-                        'pattern'  => 'admin.rotation.history*',
+                        'name'     => '분석·도구',
+                        'pattern'  => ['admin.rotation.history*', 'admin.rotation.bep*'],
                         'children' => [
                             ['name' => '만남 이력 기본 조회', 'route' => 'admin.rotation.history.index', 'pattern' => 'admin.rotation.history.index*'],
                             ['name' => '만남 이력 상세 조회', 'route' => 'admin.rotation.history.detail', 'pattern' => 'admin.rotation.history.detail*'],
+                            ['name' => '손익분기 계산기', 'route' => 'admin.rotation.bep.index', 'pattern' => 'admin.rotation.bep*'],
                         ],
                     ],
-                    ['name' => '손익분기 계산기', 'route' => 'admin.rotation.bep.index', 'pattern' => 'admin.rotation.bep*'],
                 ],
             ],
             self::Admin->value => [

@@ -237,7 +237,7 @@ class MeetingHistoryService
         $aAll = Member::where('phone', $phoneA)->with('eventRound')->orderByDesc('id')->get();
         $bAll = Member::where('phone', $phoneB)->with('eventRound')->orderByDesc('id')->get();
 
-        // 최신 프로필(별도 쿼리 없이 이미 로드한 컬렉션에서 추출).
+        // 최신 회원 레코드(상단 요약용). 이름/직업/키 등은 행사마다 달라서 상단에는 행사와 무관한 정보만 쓴다.
         $aLatest = $aAll->first();
         $bLatest = $bAll->first();
 
@@ -247,8 +247,8 @@ class MeetingHistoryService
         if ($aMembers->isEmpty() || $bMembers->isEmpty()) {
             return [
                 'found' => false,
-                'a'     => $aLatest ? $this->meetingPersonPayload($aLatest) : null,
-                'b'     => $bLatest ? $this->meetingPersonPayload($bLatest) : null,
+                'a'     => $aLatest ? $this->meetingIdentityPayload($aLatest) : null,
+                'b'     => $bLatest ? $this->meetingIdentityPayload($bLatest) : null,
                 'meetings' => [],
             ];
         }
@@ -259,8 +259,8 @@ class MeetingHistoryService
         if (empty($sharedEventIds)) {
             return [
                 'found'    => true,
-                'a'        => $this->meetingPersonPayload($aLatest),
-                'b'        => $this->meetingPersonPayload($bLatest),
+                'a'        => $this->meetingIdentityPayload($aLatest),
+                'b'        => $this->meetingIdentityPayload($bLatest),
                 'meetings' => [],
             ];
         }
@@ -269,14 +269,14 @@ class MeetingHistoryService
         $votedMap = $this->buildVotedMap($sharedEventIds);
         $messages = \App\Models\Message::whereIn('event_id', $sharedEventIds)->get();
 
-        // 프로필 payload(최신 정보) — 모든 행사 카드에서 공통으로 쓴다.
-        $aProfile = $this->meetingPersonPayload($aLatest);
-        $bProfile = $this->meetingPersonPayload($bLatest);
-
         $meetings = [];
         foreach ($sharedEventIds as $eventId) {
             $a = $aMembers->get($eventId);
             $b = $bMembers->get($eventId);
+
+            // 그 행사에 입장등록한 "당시" 정보로 프로필을 만든다. (번호표·직업·키·지역 등은 행사마다 다를 수 있다.)
+            // 나이는 그 행사가 열린 해를 기준으로 계산한다.
+            $asOfYear = $a->eventRound?->event_time?->year;
 
             $aVotedB = isset($votedMap[$eventId][$a->id][$b->id]);
             $bVotedA = isset($votedMap[$eventId][$b->id][$a->id]);
@@ -303,14 +303,12 @@ class MeetingHistoryService
             $meetings[] = [
                 'event'        => $this->eventPayload($a->eventRound),
                 'event_id'     => $eventId,
-                'a'            => $aProfile,
-                'b'            => $bProfile,
+                // 그 행사 "당시" 각자의 정보 (플랫폼 포함 — 행사마다 다를 수 있다).
+                'a'            => $this->meetingPersonPayload($a, $asOfYear),
+                'b'            => $this->meetingPersonPayload($b, $asOfYear),
                 // 그 행사에서의 각자 member 레코드 id (매칭 조회 모달 필터용).
                 'a_member_id'  => $a->id,
                 'b_member_id'  => $b->id,
-                // 그 행사 "당시" 각자 신청한 플랫폼. (프로필과 달리 행사마다 다를 수 있음)
-                'a_platform'   => $a->platform,
-                'b_platform'   => $b->platform,
                 'a_voted_b'    => $aVotedB,
                 'b_voted_a'    => $bVotedA,
                 'is_mutual'    => $aVotedB && $bVotedA,
@@ -327,8 +325,8 @@ class MeetingHistoryService
 
         return [
             'found'    => true,
-            'a'        => $aProfile,
-            'b'        => $bProfile,
+            'a'        => $this->meetingIdentityPayload($aLatest),
+            'b'        => $this->meetingIdentityPayload($bLatest),
             'meetings' => $meetings,
         ];
     }
@@ -354,25 +352,56 @@ class MeetingHistoryService
         return $map;
     }
 
+    /** @var array<int, array<string, array{nickname:?string, platform:?string}>> 행사별 번호표 라벨 맵 캐시 */
+    private array $labelMaps = [];
+
     /**
      * 만남 이력 응답용 회원 프로필 payload.
+     * label 은 관리자 표기 `닉네임(플랫폼)_N호` (회원이 속한 행사의 체크인 명단 기준).
      *
+     * @param int|null $asOfYear 나이 계산 기준 연도. 없으면 올해. (행사 카드는 그 행사가 열린 해를 넘긴다.)
      * @return array<string, mixed>
      */
-    private function meetingPersonPayload(?Member $member): array
+    private function meetingPersonPayload(?Member $member, ?int $asOfYear = null): array
     {
+        $label = null;
+        if ($member !== null) {
+            $labeler = app(MemberLabelService::class);
+            $eventId = (int) $member->event_id;
+            $this->labelMaps[$eventId] ??= $labeler->labelMap($eventId);
+            $label = $labeler->label($this->labelMaps[$eventId], $member->gender, $member->name, $member->platform);
+        }
+
+        $baseYear = $asOfYear ?? (int) now()->year;
+
         return [
             'id'         => $member?->id,
             'name'       => $member?->name,
+            'label'      => $label,
             'phone'      => $member?->phone,
             'gender'     => $member?->gender,
+            'platform'   => $member?->platform,
             'birth_year' => $member?->birth_year,
-            'age'        => $member?->birth_year ? ((int) now()->year - (int) $member->birth_year + 1) : null,
+            'age'        => $member?->birth_year ? ($baseYear - (int) $member->birth_year + 1) : null,
             'job'        => $member?->job,
             'height'     => $member?->height,
             'mbti'       => $member?->mbti,
             'region'     => $member?->region,
             'is_smoker'  => $member?->is_smoker,
+        ];
+    }
+
+    /**
+     * 상단 요약용 "행사와 무관한" 식별 정보. (전화번호·성별)
+     * 번호표·직업·키 같은 값은 행사마다 달라서 여기에는 넣지 않는다.
+     *
+     * @return array{phone:?string, gender:?string}
+     */
+    private function meetingIdentityPayload(?Member $member): array
+    {
+        return [
+            'phone'  => $member?->phone,
+            'gender' => $member?->gender,
         ];
     }
 

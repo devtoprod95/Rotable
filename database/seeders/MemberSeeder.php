@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\EventRoster;
 use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\RotationSeat;
@@ -16,10 +17,20 @@ class MemberSeeder extends Seeder
      */
     private const TARGET_EVENT_ID = 1;
 
+    /** 성별당 생성할 인원 수 */
+    private const COUNT_PER_GENDER = 10;
+
     /**
      * 샘플 회원 데이터 시딩.
-     * 지정한 특정 회차(TARGET_EVENT_ID)에만 남/여 회원을 고르게 생성한다.
-     * (핸드폰 번호는 회차 + 번호 조합으로 유일하다.)
+     *
+     * 지금 구조에서는 "체크인 명단(event_rosters)에서 번호표를 배정받은" 사람만 입장등록할 수 있다.
+     * 그래서 순서는 실제 운영 흐름과 같다:
+     *   1) 체크인 명단에 닉네임·플랫폼·성별을 적고 번호표(ticket_no)를 부여(=체크인)한다.
+     *   2) 그 번호표로 회원(members)을 생성한다. (members.name = 번호표 숫자, members.platform = 체크인 명단의 플랫폼)
+     *   3) 좌석(기준 자리)을 배치한다.
+     *
+     * 지정한 특정 회차(TARGET_EVENT_ID)에만 남/여 회원을 고르게 생성하며,
+     * 핸드폰 번호는 회차 + 번호 조합으로 유일하다.
      *
      * 이 시더만 단독 실행하려면:
      *   php artisan db:seed --class=MemberSeeder
@@ -41,32 +52,53 @@ class MemberSeeder extends Seeder
         // 남1=01011111111, 남2=01011111112 … 여10=01011111130
         $phoneSeq = 11111111;
 
-        // 남성 10명: 이름 김남자1~김남자10
-        $males = [];
-        for ($i = 1; $i <= 10; $i++) {
-            $males[] = Member::factory()
-                ->male()
-                ->for($round, 'eventRound')
-                ->create([
-                    'name'  => $i,
-                    'phone' => '010' . $phoneSeq++,
-                ]);
-        }
-
-        // 여성 10명: 이름 김여자1~김여자10
-        $females = [];
-        for ($i = 1; $i <= 10; $i++) {
-            $females[] = Member::factory()
-                ->female()
-                ->for($round, 'eventRound')
-                ->create([
-                    'name'  => $i,
-                    'phone' => '010' . $phoneSeq++,
-                ]);
-        }
+        $males   = $this->createGender($round, Member::GENDER_MALE, $phoneSeq);
+        $phoneSeq += self::COUNT_PER_GENDER;
+        $females = $this->createGender($round, Member::GENDER_FEMALE, $phoneSeq);
 
         // 테이블(1~TABLE_COUNT) 생성 및 좌석(기준 자리) 배치.
         $this->seatMembers($round, $males, $females);
+    }
+
+    /**
+     * 한 성별에 대해 "체크인(번호표 부여) → 입장등록(회원 생성)"을 번호표 1번부터 순서대로 만든다.
+     *
+     * @return list<Member>
+     */
+    private function createGender(EventRound $round, string $gender, int $phoneSeq): array
+    {
+        $members = [];
+
+        for ($ticket = 1; $ticket <= self::COUNT_PER_GENDER; $ticket++) {
+            // 1) 체크인 명단 — 닉네임·플랫폼·성별을 적고, 이 번호표로 체크인(참석) 처리.
+            $platform = $ticket % 2 === 0 ? Member::PLATFORM_FRIP : Member::PLATFORM_MUNTO;
+            $nickname = ($gender === Member::GENDER_MALE ? '남' : '여') . '_닉네임' . $ticket;
+
+            EventRoster::updateOrCreate(
+                [
+                    'event_id'  => $round->id,
+                    'gender'    => $gender,
+                    'ticket_no' => $ticket,
+                ],
+                [
+                    'name'          => $nickname,
+                    'platform'      => $platform,
+                    'checked_in_at' => now(),
+                ],
+            );
+
+            // 2) 그 번호표로 입장등록(회원 생성). members.name 은 번호표 숫자 문자열.
+            $factory = Member::factory()->for($round, 'eventRound');
+            $factory = $gender === Member::GENDER_MALE ? $factory->male() : $factory->female();
+
+            $members[] = $factory->create([
+                'name'     => (string) $ticket,
+                'phone'    => '010' . ($phoneSeq + $ticket - 1),
+                'platform' => $platform,
+            ]);
+        }
+
+        return $members;
     }
 
     /**

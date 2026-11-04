@@ -64,7 +64,7 @@
 
         function nameCell(cell){
             var d = cell.getRow().getData();
-            var n = d.name ? $('<div>').text(d.name + '호').html() : '-';
+            var n = $('<div>').text(d.label || (d.name ? d.name + '호' : '-')).html();
             var mutual = d.is_mutual
                 ? ' <span class="badge bg-pink-lt"><i class="ti ti-heart-filled text-pink"></i> 매칭</span>'
                 : '';

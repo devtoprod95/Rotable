@@ -90,8 +90,8 @@
             if(gender === 'M'){ return '<span class="badge bg-blue-lt">남</span>'; }
             return '';
         }
-        function nameWithGender(name, gender){
-            var n = name ? $('<div>').text(name + '호').html() : '-';
+        function nameWithGender(name, gender, label){
+            var n = (label || name) ? $('<div>').text(label || (name + '호')).html() : '-';
             return `<span class="fw-bold">${n}</span> ${genderBadge(gender)}`;
         }
 
@@ -150,8 +150,8 @@
                     { title: "보낸사람 → 받는사람", field: "sender_id", width: 200, headerSort: false,
                         formatter: function(cell){
                             var d = cell.getRow().getData();
-                            var from = nameWithGender(d.sender ? d.sender.name : null, d.sender ? d.sender.gender : null);
-                            var to   = nameWithGender(d.receiver ? d.receiver.name : null, d.receiver ? d.receiver.gender : null);
+                            var from = nameWithGender(d.sender ? d.sender.name : null, d.sender ? d.sender.gender : null, d.sender ? d.sender.label : null);
+                            var to   = nameWithGender(d.receiver ? d.receiver.name : null, d.receiver ? d.receiver.gender : null, d.receiver ? d.receiver.label : null);
                             return `<div class="d-flex align-items-center gap-2 flex-wrap">
                                         <span>${from}</span>
                                         <i class="ti ti-arrow-right text-muted"></i>

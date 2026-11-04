@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AdminRequest;
+use App\Services\Rotation\MemberLabelService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -30,7 +31,7 @@ class AdminRequestController extends Controller
         $searchText = $this->request->input('searchText', '');
 
         $query = AdminRequest::query()
-            ->with(['member:id,name,gender', 'eventRound:id,title']);
+            ->with(['member:id,name,gender,platform', 'eventRound:id,title']);
 
         if ($eventId > 0) {
             $query->where('event_id', $eventId);
@@ -70,7 +71,7 @@ class AdminRequestController extends Controller
         $limit = (int) $this->request->input('limit', 30);
 
         $requests = AdminRequest::query()
-            ->with(['member:id,name,gender', 'eventRound:id,title'])
+            ->with(['member:id,name,gender,platform', 'eventRound:id,title'])
             ->orderByDesc('id')
             ->limit($limit)
             ->get()
@@ -138,8 +139,20 @@ class AdminRequestController extends Controller
      *
      * @return array<string, mixed>
      */
+    /** @var array<int, array<string, array{nickname:?string, platform:?string}>> 행사별 번호표 라벨 맵 캐시 */
+    private array $labelMaps = [];
+
     private function transform(AdminRequest $req): array
     {
+        $member = $req->member;
+        $label  = null;
+        if ($member) {
+            $labeler  = app(MemberLabelService::class);
+            $eventId  = (int) $req->event_id;
+            $this->labelMaps[$eventId] ??= $labeler->labelMap($eventId);
+            $label = $labeler->label($this->labelMaps[$eventId], $member->gender, $member->name, $member->platform);
+        }
+
         return [
             'id'          => $req->id,
             'body'        => $req->body,
@@ -148,10 +161,11 @@ class AdminRequestController extends Controller
             'event_id'    => $req->event_id,
             'event_title' => $req->eventRound?->title,
             'table_no'    => $req->table_no,
-            'member'      => $req->member ? [
-                'id'     => $req->member->id,
-                'name'   => $req->member->name,
-                'gender' => $req->member->gender,
+            'member'      => $member ? [
+                'id'     => $member->id,
+                'name'   => $member->name,
+                'label'  => $label,
+                'gender' => $member->gender,
             ] : null,
         ];
     }

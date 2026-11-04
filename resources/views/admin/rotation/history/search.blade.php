@@ -138,7 +138,7 @@
             if(!p){ return '-'; }
             var line = specLine(p);
             var pf = (platform !== undefined && platform !== null) ? platformBadge(platform) : '';
-            return `<div><span class="fw-bold">${p.name ? esc(p.name) + '호' : '-'}</span> ${genderBadge(p.gender)} ${pf}</div>`
+            return `<div><span class="fw-bold">${esc(p.label || (p.name ? p.name + '호' : '-'))}</span> ${genderBadge(p.gender)} ${pf}</div>`
                  + (line ? `<div class="text-muted" style="font-size:0.85em;">${line}</div>` : '')
                  + (p.phone ? `<div class="text-muted" style="font-size:0.85em;">${esc(p.phone)}</div>` : '');
         }
@@ -227,7 +227,7 @@
             var html = partners.map(function(r){
                 var p = r.partner || {};
                 var detailUrl = detailBase + '?phoneA=' + encodeURIComponent(myPhone) + '&phoneB=' + encodeURIComponent(p.phone || '');
-                var label = esc(p.name || '');
+                var label = esc(p.label || (p.name ? p.name + '호' : ''));
 
                 // 나와 그 상대가 주고받은 메시지가 있을 때만 버튼 노출. (양방향 대화)
                 var msgCell = (r.message_count > 0)
@@ -333,7 +333,7 @@
             var myId     = $(this).data('my-id');
             var memberId = $(this).data('member-id');
             var label    = $(this).data('label') || '';
-            var meName   = (lastRes && lastRes.me && lastRes.me.name) ? lastRes.me.name : '';
+            var meName   = (lastRes && lastRes.me) ? (lastRes.me.label || (lastRes.me.name ? lastRes.me.name + '호' : '')) : '';
             MessagesModal.open(eventId, meName + ' ↔ ' + label, { convA: myId, convB: memberId });
         });
 
@@ -342,7 +342,7 @@
             var eventId  = $(this).data('event-id');
             var memberId = $(this).data('member-id');
             var label    = $(this).data('label') || '';
-            var who = (label ? label + '호' : '회원');
+            var who = label || '회원';
             VotedModal.open(eventId, memberId, who + ' 님이 선택/매칭한 상대');
         });
 
@@ -350,8 +350,8 @@
         $('#meVotedBtn').on('click', function(){
             var eventId  = $(this).data('event-id');
             var memberId = $(this).data('member-id');
-            var meName   = (lastRes && lastRes.me && lastRes.me.name) ? lastRes.me.name : '';
-            var meWho = (meName ? meName + '호' : '회원');
+            var meName   = (lastRes && lastRes.me) ? (lastRes.me.label || (lastRes.me.name ? lastRes.me.name + '호' : '')) : '';
+            var meWho = meName || '회원';
             VotedModal.open(eventId, memberId, meWho + ' 님이 선택/매칭한 상대');
         });
 
@@ -359,8 +359,8 @@
         $('#myRequestBtn').on('click', function(){
             var eventId  = $(this).data('event-id');
             var memberId = $(this).data('member-id');
-            var meName   = (lastRes && lastRes.me && lastRes.me.name) ? lastRes.me.name : '';
-            var meWho = (meName ? meName + '호' : '회원');
+            var meName   = (lastRes && lastRes.me) ? (lastRes.me.label || (lastRes.me.name ? lastRes.me.name + '호' : '')) : '';
+            var meWho = meName || '회원';
             RequestsModal.open(eventId, meWho + ' 님이 보낸 요청', { memberId: memberId });
         });
 

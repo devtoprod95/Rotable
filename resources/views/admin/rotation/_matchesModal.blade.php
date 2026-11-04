@@ -101,7 +101,7 @@
             else if(m.is_smoker === false){ line2.push('비흡연'); }
 
             var html = `<div class="text-center">`
-                     + `<div><span class="fw-bold">${m.name ? esc(m.name) + '호' : '-'}</span> ${genderBadge(m.gender)}</div>`;
+                     + `<div><span class="fw-bold">${esc(m.label || (m.name ? m.name + '호' : '-'))}</span> ${genderBadge(m.gender)}</div>`;
             if(line1.length){ html += `<div style="font-size:0.8em;color:#666;">${line1.join(' · ')}</div>`; }
             if(line2.length){ html += `<div style="font-size:0.8em;color:#666;">${line2.join(' · ')}</div>`; }
             if(m.phone){ html += `<div style="font-size:0.8em;color:#888;">${esc(m.phone)}</div>`; }
@@ -121,7 +121,7 @@
                 var specLine = specs ? `<div class="text-start" style="font-size:0.8em;color:#666;">${specs}</div>` : '';
                 var sepCls = (multiple && i < targets.length - 1) ? 'border-bottom pb-1 mb-1' : '';
                 return `<div class="py-1 text-start ${sepCls}">`
-                         + `<div class="d-flex align-items-center gap-1"><span class="fw-bold">${t.name ? esc(t.name) + '호' : '-'}</span> ${genderBadge(t.gender)}${mutual}</div>`
+                         + `<div class="d-flex align-items-center gap-1"><span class="fw-bold">${esc(t.label || (t.name ? t.name + '호' : '-'))}</span> ${genderBadge(t.gender)}${mutual}</div>`
                          + specLine
                      + `</div>`;
             }).join('');

@@ -56,12 +56,11 @@ function buildAutofill(birthYears) {
         ideal_type: pick(IDEAL_SAMPLES),
         hobby: pick(HOBBY_SAMPLES),
         tmi: pick(TMI_SAMPLES),
-        platform: pick(['munto', 'frip']),
     };
 }
 
 export default function Register() {
-    const { rounds = [], birthYears = [], tablesByEvent = {}, platformOptions = [], isProduction = true } = usePage().props;
+    const { rounds = [], birthYears = [], tablesByEvent = {}, isProduction = true } = usePage().props;
 
     // 제출 전 최종 확인 모달 노출 여부.
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -96,8 +95,6 @@ export default function Register() {
         ideal_type: '',
         hobby: '',
         tmi: '',
-        // 신청 플랫폼 (기본: 문토)
-        platform: 'munto',
     });
 
     // 선택한 회차(event_id)에 해당하는 테이블 옵션.
@@ -288,13 +285,6 @@ export default function Register() {
                             }
                             error={errors.rotation_table_id}
                             disabled={!data.gender || !data.event_id || tableOptions.length === 0}
-                        />
-                        <RadioField
-                            label="신청한 플랫폼"
-                            value={data.platform}
-                            onChange={(v) => setData('platform', v)}
-                            options={platformOptions}
-                            error={errors.platform}
                         />
                         <TextField
                             label="번호표"

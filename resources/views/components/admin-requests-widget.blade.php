@@ -127,7 +127,7 @@
                 return;
             }
             var html = items.map(function(it){
-                var name = it.member ? esc(it.member.name) + '호' : '알 수 없음';
+                var name = it.member ? esc(it.member.label || (it.member.name + '호')) : '알 수 없음';
                 var g = it.member ? genderBadge(it.member.gender) : '';
                 var ev = it.event_title
                     ? '<span class="ar-event"><i class="ti ti-calendar-event me-1"></i>' + esc(it.event_title) + '</span>'

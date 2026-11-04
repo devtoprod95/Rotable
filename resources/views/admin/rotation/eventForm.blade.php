@@ -8,35 +8,38 @@
 @section('title', $isEdit ? '행사 상세' : '행사 생성')
 
 @section('content')
-<div class="row row-cards mt-2">
+
+{{-- 수정(상세) 화면에서만: 행사 운영 공용 탭바 [행사 상세][체크인][로테이션 진행] --}}
+@if ($isEdit)
+<div class="mt-2">
+    <x-event-tabs :event-id="$event->id" active="info" />
+</div>
+@endif
+
+<div class="row row-cards">
 
     {{-- 행사 정보 (생성/상세 공용) --}}
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <h3 class="card-title mb-0">{{ $isEdit ? '행사 정보 수정' : '행사 생성' }}</h3>
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 flex-wrap">
                     @if ($isEdit)
-                        <a href="{{ route('admin.rotation.event.checkin', ['id' => $event->id]) }}" class="btn btn-teal px-4">
-                            <i class="ti ti-user-check me-1"></i> 체크인
-                        </a>
-                        <a href="{{ route('admin.rotation.seating.index', ['eventId' => $event->id]) }}" class="btn btn-azure px-4">
-                            <i class="ti ti-layout-grid me-1"></i> 좌석 배정
-                        </a>
-                        <button type="button" id="goMatchesBtn" class="btn btn-outline-pink px-4">
+                        {{-- 체크인/로테이션 진행은 위 탭바로 이동. 여기는 결과 조회만 모아 둔다. --}}
+                        <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
                             <i class="ti ti-heart me-1"></i> 전체 매칭
                         </button>
-                        <button type="button" id="goMatchedBtn" class="btn btn-outline-pink px-4">
+                        <button type="button" id="goMatchedBtn" class="btn btn-sm btn-outline-pink">
                             <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
                         </button>
-                        <button type="button" id="goMessagesBtn" class="btn btn-outline-primary px-4">
-                            <i class="ti ti-messages me-1"></i> 전체 메시지<span id="messagesCount"></span>
+                        <button type="button" id="goMessagesBtn" class="btn btn-sm btn-outline-primary">
+                            <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
                         </button>
-                        <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow px-4">
-                            <i class="ti ti-hand-stop me-1"></i> 전체 요청<span id="requestsCount"></span>
+                        <button type="button" id="goRequestsBtn" class="btn btn-sm btn-outline-yellow">
+                            <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
                         </button>
                     @endif
-                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary px-4">목록</a>
+                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary">목록</a>
                 </div>
             </div>
             <div class="card-body">
@@ -66,7 +69,7 @@
                             <div class="col-md-2">
                                 <label class="form-label">상태</label>
                                 <input type="text" class="form-control" value="{{ $statuses[$event->status] ?? $event->status }}" disabled readonly>
-                                <small class="form-hint text-muted mt-2 d-block">상태는 좌석 배정에서 관리됩니다.</small>
+                                <small class="form-hint text-muted mt-2 d-block">상태는 로테이션 진행에서 관리됩니다.</small>
                             </div>
                         @else
                             <div class="col-md-2">
@@ -141,9 +144,12 @@
                                                         $memberData['password'] = $member->password;
                                                     }
                                                     $memberData['age'] = $member->birth_year ? (now()->year - $member->birth_year + 1) : null;
+                                                    // 관리자 표기 라벨(`닉네임(플랫폼)_N호`) — 모달 제목/상세에서 그대로 쓴다.
+                                                    $memberLabel = $memberLabels[$member->id] ?? ($member->name . '호');
+                                                    $memberData['label'] = $memberLabel;
                                                 @endphp
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <span class="fw-bold">{{ $member->name }}호</span>
+                                                    <span class="fw-bold">{{ $memberLabel }}</span>
                                                     @if ($member->gender === 'F')
                                                         <span class="badge bg-pink-lt">여</span>
                                                     @else
@@ -243,7 +249,7 @@
                                                         <button type="button"
                                                                 class="btn btn-sm btn-outline-blue btn-voted"
                                                                 data-member-id="{{ $member->id }}"
-                                                                data-member-label="{{ $member->name }}">
+                                                                data-member-label="{{ $memberLabel }}">
                                                             보낸 {{ $member->cast_votes_count }}표
                                                         </button>
                                                     @else
@@ -254,7 +260,7 @@
                                                         <button type="button"
                                                                 class="btn btn-sm btn-outline-pink btn-voters"
                                                                 data-member-id="{{ $member->id }}"
-                                                                data-member-label="{{ $member->name }}">
+                                                                data-member-label="{{ $memberLabel }}">
                                                             받은 {{ $member->received_votes_count }}표
                                                         </button>
                                                     @else
@@ -267,7 +273,7 @@
                                                     <button type="button"
                                                             class="btn btn-outline-primary btn-sent-messages"
                                                             data-member-id="{{ $member->id }}"
-                                                            data-member-label="{{ $member->name }}">
+                                                            data-member-label="{{ $memberLabel }}">
                                                         {{ $member->sent_messages_count }}건
                                                     </button>
                                                 @else
@@ -279,7 +285,7 @@
                                                     <button type="button"
                                                             class="btn btn-outline-yellow btn-sent-requests"
                                                             data-member-id="{{ $member->id }}"
-                                                            data-member-label="{{ $member->name }}">
+                                                            data-member-label="{{ $memberLabel }}">
                                                         {{ $member->admin_requests_count }}건
                                                     </button>
                                                 @else
@@ -427,7 +433,7 @@
         $(document).on('click', '.btn-voters', function(){
             var memberId = $(this).data('member-id');
             var label = $(this).data('member-label') || '';
-            var who = (label ? label + '호' : '회원');
+            var who = label || '회원';
             VotersModal.open({{ $event->id }}, memberId, who + ' 님을 선택한 사람');
         });
 
@@ -435,7 +441,7 @@
         $(document).on('click', '.btn-voted', function(){
             var memberId = $(this).data('member-id');
             var label = $(this).data('member-label') || '';
-            var who = (label ? label + '호' : '회원');
+            var who = label || '회원';
             VotedModal.open({{ $event->id }}, memberId, who + ' 님이 선택/매칭한 상대');
         });
 
@@ -443,7 +449,7 @@
         $(document).on('click', '.btn-sent-messages', function(){
             var memberId = $(this).data('member-id');
             var label = $(this).data('member-label') || '';
-            var who = (label ? label + '호' : '회원');
+            var who = label || '회원';
             MessagesModal.open({{ $event->id }}, who + ' 님이 보낸 메시지', { senderId: memberId });
         });
 
@@ -451,7 +457,7 @@
         $(document).on('click', '.btn-sent-requests', function(){
             var memberId = $(this).data('member-id');
             var label = $(this).data('member-label') || '';
-            var who = (label ? label + '호' : '회원');
+            var who = label || '회원';
             RequestsModal.open({{ $event->id }}, who + ' 님이 보낸 요청', { memberId: memberId });
         });
 

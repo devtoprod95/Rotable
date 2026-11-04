@@ -316,7 +316,7 @@
                         $wrap.append($edit);
                         var $seating = $("<button>")
                             .addClass("btn btn-sm btn-outline-azure w-100")
-                            .html('좌석 배정')
+                            .html('로테이션 진행')
                             .on("click", function(){ location.href = seatingBase + "?eventId=" + data.id; });
                         $wrap.append($seating);
                         var $checkin = $("<button>")

@@ -24,8 +24,11 @@ Route::middleware('role')->group(function () {
 
         Route::prefix("erd")->name('erd.')->group(base_path("routes/erd.php"));
 
-        // 로테이션 소개팅 관리 (행사 관리 / 테이블 관리 / 좌석 배정)
+        // 로테이션 소개팅 관리 (행사 목록 / 당일 운영[체크인·로테이션 진행] / 홍보 / 안내 / 분석·도구)
         Route::prefix('rotation')->name('rotation.')->group(function () {
+            // 사이드바 "체크인" 진입점 — 지금 운영할 행사의 체크인 화면으로 이동한다.
+            Route::get('/checkin', [RotationController::class, 'checkinCurrent'])->name('checkin.current');
+
             Route::prefix('event')->name('event.')->group(function () {
                 Route::get('/', [RotationController::class, 'eventIndex'])->name('index');
                 Route::get('/list', [RotationController::class, 'eventList'])->name('list');
@@ -38,13 +41,14 @@ Route::middleware('role')->group(function () {
                 Route::post('/{id}/tables', [RotationController::class, 'eventTableAdd'])->whereNumber('id')->name('tables.add');
                 Route::delete('/{id}/tables', [RotationController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');
                 Route::get('/{id}/messages/list', [RotationController::class, 'eventMessageList'])->whereNumber('id')->name('messages.list');
-                // 사전 참여자 명단(화이트리스트) — 행사별
+                // 체크인 명단 — 행사별 (닉네임·플랫폼·성별, 전화번호 없음)
                 Route::get('/{id}/checkin', [RotationController::class, 'checkinIndex'])->whereNumber('id')->name('checkin');
                 Route::get('/{id}/rosters', [RotationController::class, 'rosterList'])->whereNumber('id')->name('rosters.list');
                 Route::post('/{id}/rosters', [RotationController::class, 'rosterAdd'])->whereNumber('id')->name('rosters.add');
                 Route::put('/{id}/rosters/{rosterId}', [RotationController::class, 'rosterUpdate'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.update');
                 Route::delete('/{id}/rosters', [RotationController::class, 'rosterDelete'])->whereNumber('id')->name('rosters.delete');
                 Route::patch('/{id}/rosters/{rosterId}/check-in', [RotationController::class, 'rosterToggleCheckIn'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.checkIn');
+                Route::patch('/{id}/rosters/{rosterId}/ticket', [RotationController::class, 'rosterSetTicket'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.ticket');
                 Route::get('/{id}/matches/list', [RotationController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
                 Route::get('/{id}/members/{memberId}/voters/list', [RotationController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
                 Route::get('/{id}/members/{memberId}/voted/list', [RotationController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');

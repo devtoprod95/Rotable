@@ -9,12 +9,15 @@ use App\Models\EventBepEstimate;
 use App\Models\Member;
 use App\Models\QrLink;
 use App\Services\Rotation\RotationService;
+use App\Services\Rotation\MemberLabelService;
 use App\Services\Rotation\RosterService;
 use App\Services\Rotation\DetailPageService;
 use App\Services\Rotation\MeetingHistoryService;
 use App\Services\Rotation\MatchService;
 use App\Services\Rotation\SeatingService;
+use App\Services\Rotation\EventContextService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Validator;
@@ -30,7 +33,8 @@ class RotationController extends Controller
         protected DetailPageService $detailPageService,
         protected MeetingHistoryService $meetingHistoryService,
         protected MatchService $matchService,
-        protected SeatingService $seatingService
+        protected SeatingService $seatingService,
+        protected EventContextService $eventContextService
     ) {
     }
 
@@ -125,7 +129,28 @@ class RotationController extends Controller
             'event'    => $event,
             'types'    => EventRound::typeOptions(),
             'statuses' => EventRound::statusOptions(),
+            // 참여자 표기 `닉네임(플랫폼)_N호` — 회원 id => 라벨
+            'memberLabels' => $this->memberLabelsFor($id, $event->members),
         ]);
+    }
+
+    /**
+     * 행사 회원들의 관리자 표기 라벨 맵(회원 id => `닉네임(플랫폼)_N호`).
+     *
+     * @param  iterable<int, Member>  $members
+     * @return array<int, string>
+     */
+    private function memberLabelsFor(int $eventId, iterable $members): array
+    {
+        $labels = app(MemberLabelService::class);
+        $map    = $labels->labelMap($eventId);
+
+        $out = [];
+        foreach ($members as $m) {
+            $out[$m->id] = $labels->label($map, $m->gender, $m->name, $m->platform);
+        }
+
+        return $out;
     }
 
     /**
@@ -188,12 +213,27 @@ class RotationController extends Controller
     }
 
     /* ======================================================================
-     | 사전 참여자 명단(화이트리스트) — event_rosters
+     | 체크인 명단 — event_rosters (닉네임·플랫폼·성별)
      * ==================================================================== */
 
     /**
+     * 사이드바 "체크인" 진입점. 지금 운영할 행사(진행 중 > 가까운 예정 > 최근)의 체크인 화면으로 보낸다.
+     * 행사가 하나도 없으면 행사 목록으로 보낸다. (행사는 체크인 화면 상단 탭바에서 바꿀 수 있다.)
+     */
+    public function checkinCurrent(): RedirectResponse
+    {
+        $eventId = $this->eventContextService->currentEventId();
+
+        if ($eventId === null) {
+            return redirect()->route('admin.rotation.event.create');
+        }
+
+        return redirect()->route('admin.rotation.event.checkin', ['id' => $eventId]);
+    }
+
+    /**
      * 체크인 전용 화면 (현장용).
-     * 특정 행사의 사전 명단을 큰 카드로 보여주고, 번호 뒤 4자리 검색 + 탭 한 번에 참석 토글.
+     * 특정 행사의 신청자 명단을 큰 카드로 보여주고, 닉네임 검색 + 탭 한 번에 참석 토글.
      */
     public function checkinIndex(int $id): View
     {
@@ -201,42 +241,54 @@ class RotationController extends Controller
         abort_if($event === null, 404);
 
         return view('admin.rotation.checkin', [
-            'event' => $event,
+            'event'           => $event,
+            'platformOptions' => Member::platformOptions(),
         ]);
     }
 
     /**
-     * 사전 명단 목록 (행사 상세 섹션에서 ajax 로 조회).
+     * 체크인 명단 목록 (ajax).
      */
     public function rosterList(int $id): JsonResponse
     {
-        $rosters = $this->rosterService->rosterList($id)->map(fn ($r) => [
-            'id'            => $r->id,
-            'name'          => $r->name,
-            'gender'        => $r->gender,
-            'phone'         => $r->phone,
-            'memo'          => $r->memo,
-            'checked_in'    => $r->checked_in_at !== null,
-            'checked_in_at' => $r->checked_in_at?->format('Y-m-d H:i'),
-        ])->all();
+        // 번호표로 입장등록한 회원 현황 ("성별|번호" => 등록 시각)
+        $registered = $this->rosterService->registeredTickets($id);
+
+        $rosters = $this->rosterService->rosterList($id)->map(function ($r) use ($registered) {
+            $regKey = $r->ticket_no !== null ? ($r->gender . '|' . (int) $r->ticket_no) : null;
+
+            return [
+                'id'            => $r->id,
+                'name'          => $r->name,
+                'gender'        => $r->gender,
+                'platform'      => $r->platform,
+                'ticket_no'     => $r->ticket_no,
+                'checked_in'    => $r->checked_in_at !== null,
+                'checked_in_at' => $r->checked_in_at?->format('Y-m-d H:i'),
+                // 입장등록 여부: 이 번호표(같은 성별)로 가입한 회원이 있는지
+                'registered'    => $regKey !== null && isset($registered[$regKey]),
+                'registered_at' => $regKey !== null ? ($registered[$regKey] ?? null) : null,
+            ];
+        })->all();
 
         return response()->json(['data' => $rosters, 'total' => count($rosters)]);
     }
 
     /**
-     * 사전 명단 1명 추가 (이름/번호/성별 개별 입력).
+     * 체크인 명단 1명 추가 (닉네임/플랫폼/성별).
      */
     public function rosterAdd(int $id): JsonResponse
     {
         $validator = Validator::make($this->request->all(), [
-            'name'   => 'nullable|string|max:50',
-            'phone'  => 'required|string|regex:/^[0-9\-\s]+$/',
-            'gender' => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
+            'name'     => 'required|string|max:50',
+            'platform' => ['required', Rule::in([Member::PLATFORM_MUNTO, Member::PLATFORM_FRIP])],
+            'gender'   => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
         ], [
-            'phone.required'  => '전화번호를 입력해주세요.',
-            'phone.regex'     => '전화번호 형식이 올바르지 않습니다.',
-            'gender.required' => '성별을 선택해주세요.',
-            'gender.in'       => '성별 선택이 올바르지 않습니다.',
+            'name.required'     => '닉네임을 입력해주세요.',
+            'platform.required' => '플랫폼을 선택해주세요.',
+            'platform.in'       => '플랫폼 선택이 올바르지 않습니다.',
+            'gender.required'   => '성별을 선택해주세요.',
+            'gender.in'         => '성별 선택이 올바르지 않습니다.',
         ]);
         if ($validator->fails()) {
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
@@ -244,8 +296,8 @@ class RotationController extends Controller
 
         $result = $this->rosterService->rosterAdd(
             $id,
-            $this->request->input('name'),
-            (string) $this->request->input('phone', ''),
+            (string) $this->request->input('name'),
+            $this->request->input('platform'),
             $this->request->input('gender'),
         );
 
@@ -253,15 +305,14 @@ class RotationController extends Controller
     }
 
     /**
-     * 사전 명단 1건 수정.
+     * 체크인 명단 1건 수정.
      */
     public function rosterUpdate(int $id, int $rosterId): JsonResponse
     {
         $validator = Validator::make($this->request->all(), [
-            'name'   => 'nullable|string|max:50',
-            'phone'  => 'required|string|regex:/^[0-9\-\s]+$/',
-            'gender' => ['nullable', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
-            'memo'   => 'nullable|string|max:255',
+            'name'     => 'nullable|string|max:50',
+            'platform' => ['nullable', Rule::in([Member::PLATFORM_MUNTO, Member::PLATFORM_FRIP])],
+            'gender'   => ['nullable', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
         ]);
         if ($validator->fails()) {
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
@@ -273,7 +324,7 @@ class RotationController extends Controller
     }
 
     /**
-     * 사전 명단 삭제 (ids 배열).
+     * 체크인 명단 삭제 (ids 배열).
      */
     public function rosterDelete(int $id): JsonResponse
     {
@@ -287,13 +338,51 @@ class RotationController extends Controller
     }
 
     /**
-     * 체크인(참석/노쇼) 토글.
+     * 체크인(참석/노쇼) 토글 + 번호표 부여.
+     *
+     * 참석 처리할 때 ticket_no 를 보내면 그 번호를 쓰고(1순위·수동),
+     * 비우면 그 성별의 가장 작은 빈 번호가 자동 배정된다(2순위·자동).
      */
     public function rosterToggleCheckIn(int $id, int $rosterId): JsonResponse
     {
-        $result = $this->rosterService->rosterToggleCheckIn($rosterId);
+        $validator = Validator::make($this->request->all(), [
+            'ticket_no' => 'nullable|integer|min:1|max:' . RosterService::TICKET_MAX,
+        ], [
+            'ticket_no.integer' => '번호표는 숫자로 입력해 주세요.',
+            'ticket_no.min'     => '번호표는 1 이상이어야 합니다.',
+            'ticket_no.max'     => '번호표는 ' . RosterService::TICKET_MAX . ' 이하여야 합니다.',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
 
-        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+        $manual = $this->request->filled('ticket_no') ? (int) $this->request->input('ticket_no') : null;
+
+        $result = $this->rosterService->rosterToggleCheckIn($rosterId, $manual);
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
+    }
+
+    /**
+     * 번호표 변경 (관리자). 이미 입장등록한 회원의 번호표도 함께 바뀐다.
+     */
+    public function rosterSetTicket(int $id, int $rosterId): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'ticket_no' => 'required|integer|min:1|max:' . RosterService::TICKET_MAX,
+        ], [
+            'ticket_no.required' => '번호표를 입력해 주세요.',
+            'ticket_no.integer'  => '번호표는 숫자로 입력해 주세요.',
+            'ticket_no.min'      => '번호표는 1 이상이어야 합니다.',
+            'ticket_no.max'      => '번호표는 ' . RosterService::TICKET_MAX . ' 이하여야 합니다.',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $result = $this->rosterService->rosterSetTicket($rosterId, (int) $this->request->input('ticket_no'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
     }
 
     /* ======================================================================
@@ -904,7 +993,9 @@ class RotationController extends Controller
     public function seatingIndex(): View
     {
         $events  = EventRound::orderByDesc('id')->get();
-        $eventId = (int) ($this->request->input('eventId') ?: ($events->first()->id ?? 0));
+        // 행사 미지정 시: 진행 중 > 가까운 예정 > 최근 행사 (사이드바 "체크인"과 같은 기준)
+        $eventId = (int) ($this->request->input('eventId')
+            ?: ($this->eventContextService->currentEventId() ?? ($events->first()->id ?? 0)));
         $roundNo = (int) ($this->request->input('roundNo') ?? 0);
 
         return view('admin.rotation.seating', [

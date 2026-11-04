@@ -53,7 +53,12 @@ class EventMessageSent implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
-        $this->message->loadMissing(['sender:id,name,gender', 'receiver:id,name,gender']);
+        $this->message->loadMissing(['sender:id,name,gender,platform', 'receiver:id,name,gender,platform']);
+
+        // 관리자 표기 라벨(`닉네임(플랫폼)_N호`)
+        $labeler  = app(\App\Services\Rotation\MemberLabelService::class);
+        $labelMap = $labeler->labelMap((int) $this->message->event_id);
+        $label    = fn ($m) => $m ? $labeler->label($labelMap, $m->gender, $m->name, $m->platform) : null;
 
         return [
             'id'         => $this->message->id,
@@ -62,10 +67,12 @@ class EventMessageSent implements ShouldBroadcastNow
             'created_at' => $this->message->created_at?->toIso8601String(),
             'sender'     => $this->message->sender ? [
                 'name'   => $this->message->sender->name,
+                'label'  => $label($this->message->sender),
                 'gender' => $this->message->sender->gender,
             ] : null,
             'receiver' => $this->message->receiver ? [
                 'name'   => $this->message->receiver->name,
+                'label'  => $label($this->message->receiver),
                 'gender' => $this->message->receiver->gender,
             ] : null,
         ];

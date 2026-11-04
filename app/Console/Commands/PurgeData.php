@@ -13,9 +13,9 @@ use Illuminate\Support\Facades\DB;
  * - 실제 .env DB 의 데이터를 지우므로 기본적으로 확인 프롬프트를 띄운다. (--force 로 생략)
  *
  * 실행 예:
- *   php artisan data:purge members        # 회원 + 회원 참조 데이터만 삭제 (행사/테이블은 유지)
+ *   php artisan data:purge members        # 회원 + 회원 참조 데이터 + 체크인 명단 삭제 (행사/테이블은 유지)
  *   php artisan data:purge stats          # 방문 통계 스냅샷(event_visit_snapshots)만 삭제 (id 초기화)
- *   php artisan data:purge all            # 행사 + 방문 통계 스냅샷까지 포함한 전체 데이터 삭제
+ *   php artisan data:purge all            # 행사 + 체크인 명단 + 방문 통계 스냅샷까지 포함한 전체 데이터 삭제
  *   php artisan data:purge all --force    # 확인 없이 즉시 실행
  */
 class PurgeData extends Command
@@ -24,7 +24,7 @@ class PurgeData extends Command
         {scope=all : 삭제 범위 (members | stats | all)}
         {--force : 확인 프롬프트 없이 즉시 실행}';
 
-    protected $description = '회원/행사/방문 통계 데이터를 물리 삭제한다. (members: 회원·참조 데이터, stats: 방문 통계, all: 전체)';
+    protected $description = '회원/체크인 명단/행사/방문 통계 데이터를 물리 삭제한다. (members: 회원·체크인 명단·참조 데이터, stats: 방문 통계, all: 전체)';
 
     /**
      * 방문 통계(스냅샷) 테이블. 다른 테이블을 FK 로 참조하지 않는 독립 통계 테이블이라
@@ -50,11 +50,14 @@ class PurgeData extends Command
         $tables = match ($scope) {
             'members' => [
                 // members 를 FK 로 참조하는 자식 테이블부터 삭제 후 members 삭제. (행사/테이블은 유지)
+                // event_rosters 는 members 를 FK 로 참조하진 않지만, 번호표(ticket_no)로 members.name 과
+                // 연결되는 테이블이라 함께 비운다. (남겨 두면 지워진 회원 번호표가 "입장등록 완료"로 잘못 보임)
                 'event_votes',
                 'messages',
                 'rotation_seats',
                 'admin_requests',
                 'members',
+                'event_rosters',
             ],
             'stats' => [
                 // 방문 통계만 삭제: 일반 테이블은 손대지 않는다.

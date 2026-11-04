@@ -33,6 +33,7 @@ class MatchService
     public function matchList(int $eventId): array
     {
         [$votes, $votedMap] = $this->loadVotesWithMutualMap($eventId);
+        $labelMap = $this->labelMap($eventId);
 
         // 같은 선택한 사람(voter)끼리 묶는다.
         $grouped = [];
@@ -41,7 +42,7 @@ class MatchService
 
             if (!isset($grouped[$voterId])) {
                 $grouped[$voterId] = [
-                    'voter'      => $this->personPayload($vote->voter, $voterId),
+                    'voter'      => $this->personPayload($vote->voter, $voterId, null, $labelMap),
                     'targets'    => [],
                     'has_mutual' => false,
                     'voted_at'   => null,
@@ -50,7 +51,7 @@ class MatchService
 
             $isMutual = isset($votedMap[$vote->target_id][$vote->voter_id]);
 
-            $grouped[$voterId]['targets'][] = $this->personPayload($vote->target, (int) $vote->target_id, $isMutual);
+            $grouped[$voterId]['targets'][] = $this->personPayload($vote->target, (int) $vote->target_id, $isMutual, $labelMap);
 
             if ($isMutual) {
                 $grouped[$voterId]['has_mutual'] = true;
@@ -97,6 +98,7 @@ class MatchService
     public function matchedPairList(int $eventId): array
     {
         [$votes, $votedMap] = $this->loadVotesWithMutualMap($eventId);
+        $labelMap = $this->labelMap($eventId);
 
         $grouped = [];
         foreach ($votes as $vote) {
@@ -127,14 +129,14 @@ class MatchService
 
             if (!isset($grouped[$voterId])) {
                 $grouped[$voterId] = [
-                    'voter'      => $this->personPayload($vote->voter, $voterId),
+                    'voter'      => $this->personPayload($vote->voter, $voterId, null, $labelMap),
                     'targets'    => [],
                     'has_mutual' => true,
                     'voted_at'   => null,
                 ];
             }
 
-            $grouped[$voterId]['targets'][] = $this->personPayload($vote->target, (int) $vote->target_id, true);
+            $grouped[$voterId]['targets'][] = $this->personPayload($vote->target, (int) $vote->target_id, true, $labelMap);
 
             $this->keepLatestVotedAt($grouped[$voterId], $vote);
         }
@@ -158,7 +160,7 @@ class MatchService
     private function loadVotesWithMutualMap(int $eventId): array
     {
         $votes = Vote::query()
-            ->with(['voter:id,name,gender,phone,birth_year,job,height,region,is_smoker,mbti', 'target:id,name,gender,phone,birth_year,job,height,region,is_smoker,mbti'])
+            ->with(['voter:id,name,gender,platform,phone,birth_year,job,height,region,is_smoker,mbti', 'target:id,name,gender,platform,phone,birth_year,job,height,region,is_smoker,mbti'])
             ->where('event_id', $eventId)
             ->orderByDesc('id')
             ->get();
@@ -172,16 +174,29 @@ class MatchService
     }
 
     /**
+     * 행사의 번호표 → 닉네임/플랫폼 맵. (관리자 표기 라벨용)
+     *
+     * @return array<string, array{nickname:?string, platform:?string}>
+     */
+    private function labelMap(int $eventId): array
+    {
+        return app(MemberLabelService::class)->labelMap($eventId);
+    }
+
+    /**
      * 매칭/투표 응답용 회원 상세 payload 를 만든다.
      * $isMutual 이 전달되면 target 용(상호 매칭 플래그 포함) payload 로 간주한다.
+     * label 은 관리자 표기 `닉네임(플랫폼)_N호`.
      *
+     * @param array<string, array{nickname:?string, platform:?string}> $labelMap
      * @return array<string, mixed>
      */
-    private function personPayload(?Member $member, int $id, ?bool $isMutual = null): array
+    private function personPayload(?Member $member, int $id, ?bool $isMutual = null, array $labelMap = []): array
     {
         $payload = [
             'id'         => $id,
             'name'       => $member?->name,
+            'label'      => app(MemberLabelService::class)->label($labelMap, $member?->gender, $member?->name, $member?->platform),
             'gender'     => $member?->gender,
             'phone'      => $member?->phone,
             'birth_year' => $member?->birth_year,
@@ -227,7 +242,7 @@ class MatchService
     {
         // 이 회원(memberId)을 지목한 투표들.
         $votes = Vote::query()
-            ->with(['voter:id,name,gender,phone,birth_year,job,height'])
+            ->with(['voter:id,name,gender,platform,phone,birth_year,job,height'])
             ->where('event_id', $eventId)
             ->where('target_id', $memberId)
             ->orderByDesc('id')
@@ -242,14 +257,17 @@ class MatchService
             ->all();
 
         $currentYear = (int) now()->year;
+        $labelMap    = $this->labelMap($eventId);
+        $labeler     = app(MemberLabelService::class);
 
-        $rows = $votes->map(function (Vote $vote) use ($myTargets, $currentYear) {
+        $rows = $votes->map(function (Vote $vote) use ($myTargets, $currentYear, $labelMap, $labeler) {
             $voter = $vote->voter;
             $birthYear = $voter?->birth_year;
 
             return [
                 'id'         => (int) $vote->voter_id,
                 'name'       => $voter?->name,
+                'label'      => $labeler->label($labelMap, $voter?->gender, $voter?->name, $voter?->platform),
                 'gender'     => $voter?->gender,
                 'job'        => $voter?->job,
                 'phone'      => $voter?->phone,
@@ -279,7 +297,7 @@ class MatchService
     {
         // 이 회원(memberId)이 지목한 투표들.
         $votes = Vote::query()
-            ->with(['target:id,name,gender,phone,birth_year,job,height'])
+            ->with(['target:id,name,gender,platform,phone,birth_year,job,height'])
             ->where('event_id', $eventId)
             ->where('voter_id', $memberId)
             ->orderByDesc('id')
@@ -294,14 +312,17 @@ class MatchService
             ->all();
 
         $currentYear = (int) now()->year;
+        $labelMap    = $this->labelMap($eventId);
+        $labeler     = app(MemberLabelService::class);
 
-        $rows = $votes->map(function (Vote $vote) use ($votersOfMe, $currentYear) {
+        $rows = $votes->map(function (Vote $vote) use ($votersOfMe, $currentYear, $labelMap, $labeler) {
             $target = $vote->target;
             $birthYear = $target?->birth_year;
 
             return [
                 'id'         => (int) $vote->target_id,
                 'name'       => $target?->name,
+                'label'      => $labeler->label($labelMap, $target?->gender, $target?->name, $target?->platform),
                 'gender'     => $target?->gender,
                 'job'        => $target?->job,
                 'phone'      => $target?->phone,

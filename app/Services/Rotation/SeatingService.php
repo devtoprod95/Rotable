@@ -9,6 +9,7 @@ use App\Models\Member;
 use App\Models\RotationSeat;
 use App\Models\RotationTable;
 use App\Models\Vote;
+use App\Services\TelegramNotifier;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -84,7 +85,10 @@ class SeatingService
             );
         });
 
-        $tableData = $tables->map(function (RotationTable $table) use ($seatingsByTableNo) {
+        $labeler  = app(MemberLabelService::class);
+        $labelMap = $labeler->labelMap($eventId);
+
+        $tableData = $tables->map(function (RotationTable $table) use ($seatingsByTableNo, $labeler, $labelMap) {
                 $seatsHere = $seatingsByTableNo->get($table->table_no, collect());
 
                 return [
@@ -94,6 +98,7 @@ class SeatingService
                         'seating_id' => $s->id,
                         'member_id'  => $s->member_id,
                         'name'       => $s->member?->name,
+                        'label'      => $labeler->label($labelMap, $s->member?->gender, $s->member?->name, $s->member?->platform),
                         'gender'     => $s->member?->gender,
                         'job'        => $s->member?->job,
                         'birth_year' => $s->member?->birth_year,
@@ -126,12 +131,16 @@ class SeatingService
      */
     public function seatingMembers(int $eventId): array
     {
+        $labeler  = app(MemberLabelService::class);
+        $labelMap = $labeler->labelMap($eventId);
+
         return Member::where('event_id', $eventId)
             ->orderBy('name')
             ->get()
             ->map(fn (Member $m) => [
                 'id'         => $m->id,
                 'name'       => $m->name,
+                'label'      => $labeler->label($labelMap, $m->gender, $m->name, $m->platform),
                 'gender'     => $m->gender,
                 'job'        => $m->job,
                 'birth_year' => $m->birth_year,

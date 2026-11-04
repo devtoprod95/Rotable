@@ -78,7 +78,7 @@ class EventRound extends Model
     }
 
     /**
-     * 이 회차의 사전 참여자 명단(화이트리스트).
+     * 이 회차의 체크인 명단(닉네임·플랫폼·성별).
      *
      * @return HasMany<EventRoster>
      */

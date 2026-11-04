@@ -6,19 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * 사전 참여자 명단(화이트리스트) 1건.
+ * 체크인 명단 1건.
  *
- * - 행사(회차)별로 "입장 가능한 참가자"를 미리 등록해 둔다.
- * - 입장등록/로그인 시 (event_id, phone) 이 존재해야 통과시킨다. (사전 명단은 항상 강제)
+ * - 행사(회차)별로 "신청자"를 닉네임·플랫폼·성별로 미리 적어 두고, 당일 참석(체크인)을 표시한다.
+ * - 문토/프립 신청자는 전화번호를 알 수 없으므로 번호 기반 연동(입장 제한·자동 체크인)은 하지 않는다.
+ *   회원(members)과 자동으로 연결되지 않는 독립 목록이다.
  * - checked_in_at: 당일 참석(체크인) 시각. null 이면 미참석(노쇼).
  *
  * @property int         $id
  * @property int         $event_id
- * @property string|null $name
- * @property string|null $gender
- * @property string      $phone
+ * @property string|null $name       닉네임(플랫폼 신청 닉네임)
+ * @property string|null $gender     M|F
+ * @property string      $platform   munto|frip
+ * @property int|null    $ticket_no  번호표 숫자(같은 행사·같은 성별 안에서 유일). null=미배정
  * @property \Illuminate\Support\Carbon|null $checked_in_at
- * @property string|null $memo
  */
 class EventRoster extends Model
 {
@@ -29,9 +30,9 @@ class EventRoster extends Model
         'event_id',
         'name',
         'gender',
-        'phone',
+        'platform',
+        'ticket_no',
         'checked_in_at',
-        'memo',
     ];
 
     /**
@@ -41,6 +42,7 @@ class EventRoster extends Model
     {
         return [
             'checked_in_at' => 'datetime',
+            'ticket_no'     => 'integer',
         ];
     }
 

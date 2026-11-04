@@ -52,7 +52,14 @@ class AdminRequestSent implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
-        $this->adminRequest->loadMissing(['member:id,name,gender,event_id', 'eventRound:id,title']);
+        $this->adminRequest->loadMissing(['member:id,name,gender,platform,event_id', 'eventRound:id,title']);
+
+        // 관리자 표기 라벨(`닉네임(플랫폼)_N호`)
+        $member = $this->adminRequest->member;
+        $labeler = app(\App\Services\Rotation\MemberLabelService::class);
+        $label = $member
+            ? $labeler->label($labeler->labelMap((int) $this->adminRequest->event_id), $member->gender, $member->name, $member->platform)
+            : null;
 
         return [
             'id'         => $this->adminRequest->id,
@@ -62,10 +69,11 @@ class AdminRequestSent implements ShouldBroadcastNow
             'event_id'   => $this->adminRequest->event_id,
             'event_title' => $this->adminRequest->eventRound?->title,
             'table_no'   => $this->adminRequest->table_no,
-            'member'     => $this->adminRequest->member ? [
-                'id'     => $this->adminRequest->member->id,
-                'name'   => $this->adminRequest->member->name,
-                'gender' => $this->adminRequest->member->gender,
+            'member'     => $member ? [
+                'id'     => $member->id,
+                'name'   => $member->name,
+                'label'  => $label,
+                'gender' => $member->gender,
             ] : null,
         ];
     }

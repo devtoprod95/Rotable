@@ -272,7 +272,7 @@ class RotationService
     public function eventMessageList(int $eventId, int $page, int $size, array $sort, array $filters = []): LengthAwarePaginator
     {
         $query = \App\Models\Message::query()
-            ->with(['sender:id,name,gender', 'receiver:id,name,gender'])
+            ->with(['sender:id,name,gender,platform', 'receiver:id,name,gender,platform'])
             ->where('event_id', $eventId);
 
         // 두 회원 "사이"의 대화(양방향)만 조회할 때. (convA ↔ convB)
@@ -313,7 +313,21 @@ class RotationService
             $query->orderByDesc('id');
         }
 
-        return $query->paginate($size, ['*'], 'page', $page);
+        $pageData = $query->paginate($size, ['*'], 'page', $page);
+
+        // 보낸/받는 사람에 관리자 표기 라벨(`닉네임(플랫폼)_N호`)을 붙인다.
+        $labeler  = app(MemberLabelService::class);
+        $labelMap = $labeler->labelMap($eventId);
+        $pageData->getCollection()->each(function ($msg) use ($labeler, $labelMap): void {
+            foreach (['sender', 'receiver'] as $rel) {
+                $m = $msg->{$rel};
+                if ($m !== null) {
+                    $m->setAttribute('label', $labeler->label($labelMap, $m->gender, $m->name, $m->platform));
+                }
+            }
+        });
+
+        return $pageData;
     }
 
 

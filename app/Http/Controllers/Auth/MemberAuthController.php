@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\EventRound;
-use App\Models\EventRoster;
 use App\Models\Member;
 use App\Models\RotationSeat;
 use App\Models\RotationTable;
+use App\Services\Rotation\RosterService;
 use App\Services\TelegramNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -99,7 +99,6 @@ class MemberAuthController extends Controller
             'rounds'          => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING]),
             'birthYears'      => $this->birthYearOptions(),
             'tablesByEvent'   => $this->tablesByEvent(),
-            'platformOptions' => Member::platformOptions(),
         ]);
     }
 
@@ -171,21 +170,24 @@ class MemberAuthController extends Controller
                 Rule::unique('members', 'phone')->where(
                     fn ($query) => $query->where('event_id', $request->input('event_id'))
                 ),
-                // 사전 참여자 명단(화이트리스트)에 등록된 번호만 입장등록 허용.
-                // (config('rotation.roster_required') 가 true 일 때만 강제 — 임시 off 가능)
+            ],
+            // 번호표: 호스트가 체크인 때 부여한 번호(같은 행사·같은 성별)로만 입장등록할 수 있다.
+            // 체크인 명단에 없거나, 이미 그 번호로 입장등록한 사람이 있으면 거부한다.
+            'name'       => [
+                'bail', 'required', 'string', 'max:50', 'regex:/^\d+$/',
                 function (string $attribute, mixed $value, \Closure $fail) use ($request) {
-                    if (! config('rotation.roster_required')) {
-                        return; // 체크인(화이트리스트) 임시 off → 누구나 입장등록 허용.
-                    }
                     $eventId = (int) $request->input('event_id');
-                    $phone = $this->normalizePhone($value);
-                    $allowed = EventRoster::where('event_id', $eventId)->where('phone', $phone)->exists();
-                    if (! $allowed) {
-                        $fail('사전에 등록된 참여자 명단에 없는 번호입니다. 신청하신 번호가 맞는지 확인하시거나 운영진에게 문의해 주세요.');
+                    $gender  = (string) $request->input('gender');
+                    if ($eventId <= 0 || ! in_array($gender, [Member::GENDER_MALE, Member::GENDER_FEMALE], true)) {
+                        return; // 회차/성별 오류는 각자의 규칙 메시지로 안내한다.
+                    }
+
+                    $check = app(RosterService::class)->checkRegistrableTicket($eventId, $gender, $value);
+                    if (! $check['ok']) {
+                        $fail($check['message']);
                     }
                 },
             ],
-            'name'       => ['required', 'string', 'max:50', 'regex:/^\d+$/'],
             'password'   => ['required', 'string', 'size:4'],
             'gender'     => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
             'birth_year' => ['required', 'integer', 'between:' . self::BIRTH_YEAR_MIN . ',' . $this->birthYearMax()],
@@ -224,8 +226,6 @@ class MemberAuthController extends Controller
             'merit'      => ['required', 'string', 'max:100'],
             'hobby'      => ['required', 'string', 'max:100'],
             'tmi'        => ['required', 'string', 'max:100'],
-            // 신청 플랫폼 (문토/프립) — 기본 문토
-            'platform'   => ['required', Rule::in([Member::PLATFORM_MUNTO, Member::PLATFORM_FRIP])],
         ];
 
         $validated = $request->validate($rules, [
@@ -256,14 +256,13 @@ class MemberAuthController extends Controller
             'merit.required'             => '나의 장점을 입력해주세요.',
             'hobby.required'             => '취미/요즘 빠진 것을 입력해주세요.',
             'tmi.required'               => 'TMI를 입력해주세요.',
-            'platform.required'          => '신청하신 플랫폼을 선택해주세요.',
-            'platform.in'                => '신청 플랫폼 선택이 올바르지 않습니다.',
         ]);
 
         $member = Member::create([
             'event_id'   => $validated['event_id'],
             'phone'      => $validated['phone'],
-            'name'       => $validated['name'],
+            // 번호표는 숫자로 정규화해 저장한다. ("03" → "3") — 체크인 명단의 번호와 같은 형태로 맞춘다.
+            'name'       => (string) (int) $validated['name'],
             'password'   => $validated['password'],
             'gender'     => $validated['gender'],
             'birth_year' => $validated['birth_year'],
@@ -277,8 +276,12 @@ class MemberAuthController extends Controller
             'merit'      => $validated['merit'],
             'hobby'      => $validated['hobby'],
             'tmi'        => $validated['tmi'],
-            // 신청 플랫폼
-            'platform'   => $validated['platform'],
+            // 신청 플랫폼: 사용자가 고르지 않고, 연결 키(행사·성별·번호표)로 찾은 체크인 명단의 값을 쓴다.
+            'platform'   => app(RosterService::class)->platformForTicket(
+                (int) $validated['event_id'],
+                (string) $validated['gender'],
+                (int) $validated['name'],
+            ),
         ]);
 
         // 참가자가 고른 기준(홈) 좌석을 생성한다.
@@ -289,23 +292,6 @@ class MemberAuthController extends Controller
             'member_id'         => $member->id,
             'rotation_table_id' => $validated['rotation_table_id'],
         ]);
-
-        // 입장등록한 번호를 체크인 리스트(event_rosters)에 반영한다.
-        // - 명단에 없으면 이번 입장등록 정보(이름/번호/성별)로 자동 추가한다.
-        // - 아직 미참석이면 지금 시각으로 참석(체크인) 처리한다.
-        //   (화이트리스트 off 라서 명단에 없던 사람도 입장등록하면 체크인 목록에 자동 반영된다.)
-        $roster = EventRoster::firstOrNew([
-            'event_id' => $validated['event_id'],
-            'phone'    => $validated['phone'],
-        ]);
-        if (! $roster->exists) {
-            $roster->name   = $validated['name'];
-            $roster->gender = $validated['gender'];
-        }
-        if ($roster->checked_in_at === null) {
-            $roster->checked_in_at = now();
-        }
-        $roster->save();
 
         Auth::guard('web')->login($member);
         $request->session()->regenerate();
@@ -352,19 +338,6 @@ class MemberAuthController extends Controller
             'phone.regex'       => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'password.required' => '비밀번호를 입력해주세요.',
         ]);
-
-        // 사전 참여자 명단(화이트리스트)에 등록된 번호만 입장(로그인) 허용.
-        // (config('rotation.roster_required') 가 true 일 때만 강제 — 임시 off 가능)
-        if (config('rotation.roster_required')) {
-            $allowed = EventRoster::where('event_id', (int) $validated['event_id'])
-                ->where('phone', $validated['phone'])
-                ->exists();
-            if (! $allowed) {
-                throw ValidationException::withMessages([
-                    'phone' => '사전에 등록된 참여자 명단에 없는 번호입니다. 신청하신 번호가 맞는지 확인하시거나 운영진에게 문의해 주세요.',
-                ]);
-            }
-        }
 
         // 비밀번호를 평문 저장하므로 Hash 기반 attempt() 대신 직접 비교한다.
         $member = Member::query()

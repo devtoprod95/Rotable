@@ -121,7 +121,7 @@
                             <div class="d-flex flex-wrap align-items-center gap-2">
                                 <span class="badge bg-blue text-white">① 행사 생성</span>
                                 <i class="ti ti-chevron-right text-muted"></i>
-                                <span class="badge bg-blue text-white">② 테이블/좌석 배정</span>
+                                <span class="badge bg-blue text-white">② 체크인</span>
                                 <i class="ti ti-chevron-right text-muted"></i>
                                 <span class="badge bg-blue text-white">③ 로테이션 진행</span>
                                 <i class="ti ti-chevron-right text-muted"></i>
@@ -141,17 +141,20 @@
                                 <button type="button" class="list-group-item list-group-item-action active" data-guide="event">
                                     <i class="ti ti-calendar-event me-2"></i> 1. 행사 관리
                                 </button>
+                                <button type="button" class="list-group-item list-group-item-action" data-guide="checkin">
+                                    <i class="ti ti-user-check me-2"></i> 2. 체크인
+                                </button>
                                 <button type="button" class="list-group-item list-group-item-action" data-guide="seating">
-                                    <i class="ti ti-armchair me-2"></i> 2. 좌석 배정
+                                    <i class="ti ti-armchair me-2"></i> 3. 로테이션 진행 (좌석)
                                 </button>
                                 <button type="button" class="list-group-item list-group-item-action" data-guide="progress">
-                                    <i class="ti ti-rotate me-2"></i> 3. 로테이션 진행 / 투표
+                                    <i class="ti ti-rotate me-2"></i> 4. 로테이션 진행 / 투표
                                 </button>
                                 <button type="button" class="list-group-item list-group-item-action" data-guide="match">
-                                    <i class="ti ti-heart me-2"></i> 4. 매칭 / 메시지 / 요청
+                                    <i class="ti ti-heart me-2"></i> 5. 매칭 / 메시지 / 요청
                                 </button>
                                 <button type="button" class="list-group-item list-group-item-action" data-guide="detail">
-                                    <i class="ti ti-sparkles me-2"></i> 5. 상세페이지 제작
+                                    <i class="ti ti-sparkles me-2"></i> 6. 상세페이지 제작
                                 </button>
                             </div>
                         </div>
@@ -165,19 +168,37 @@
                                 <ul class="lh-lg">
                                     <li><b>행사 생성</b>: 행사명 · <b>타입</b> · <b>일시</b>를 입력해 회차를 만듭니다. 생성 시 상태는 자동으로 <span class="badge bg-secondary text-white">대기</span> 입니다.</li>
                                     <li><b>타입 선택</b>: <span class="badge bg-azure-lt">와인파티</span> <span class="badge bg-azure-lt">1:1 로테이션</span> 등. <mark>타입에 따라 단체 대화(3:3·4:4·3:2)일 수도, 1:1일 수도</mark> 있습니다.</li>
-                                    <li><b>테이블 수</b>를 입력하면 테이블과 0턴이 함께 생성되어 바로 좌석 배정을 시작할 수 있습니다.</li>
+                                    <li><b>테이블 수</b>를 입력하면 테이블과 0턴이 함께 생성되어 바로 좌석 배치를 시작할 수 있습니다.</li>
                                     <li><b>상세 화면</b>에서 참여자 현황(남/여/총원), 각 회원의 <b>받은 투표수 · 보낸 메시지 · 요청수</b>를 확인합니다.</li>
                                 </ul>
                                 <div class="fw-bold text-pink mb-1"><i class="ti ti-users me-1"></i> 그러면 참가자는</div>
                                 <ul class="lh-lg">
-                                    <li>입장 화면의 <b>회차 선택 목록</b>에 이 행사가 노출되어, <mark>번호표·핸드폰·비밀번호(4자리)로 입장등록</mark> 할 수 있습니다.</li>
+                                    <li>입장 화면의 <b>회차 선택 목록</b>에 이 행사가 노출됩니다. <mark>호스트에게 받은 번호표 · 핸드폰 · 비밀번호(4자리)로 입장등록</mark> 할 수 있어요. (번호표는 <b>체크인</b>에서 부여)</li>
                                 </ul>
-                                <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-primary btn-sm"><i class="ti ti-external-link me-1"></i> 행사 관리로 이동</a>
+                                <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-primary btn-sm"><i class="ti ti-external-link me-1"></i> 행사 목록으로 이동</a>
+                            </div>
+
+                            <div class="guide-panel d-none" data-panel="checkin">
+                                <h4 class="mb-1"><i class="ti ti-user-check me-1"></i> 2. 체크인</h4>
+                                <p class="text-muted">현장에서 참가자를 확인하고 <b>번호표를 부여</b>합니다. 입장등록은 이 번호표가 있어야 가능합니다.</p>
+                                <div class="fw-bold text-blue mb-1"><i class="ti ti-user-cog me-1"></i> 관리자가 하는 일</div>
+                                <ul class="lh-lg">
+                                    <li><b>명단 준비</b>: 신청자의 <b>닉네임 · 플랫폼 · 성별</b>을 미리 적어 둡니다. 현장 신청자는 그 자리에서 추가해도 됩니다.</li>
+                                    <li><b>체크인</b>: 도착한 분을 탭하면 번호 입력창이 뜹니다. <mark>번호를 직접 입력하면 그 번호로(1순위), 비워두면 그 성별의 가장 작은 빈 번호가 자동 배정(2순위)</mark>됩니다.</li>
+                                    <li>배정된 번호가 크게 표시되면 <b>번호표 카드</b>를 건네 주세요. 번호는 <b>같은 성별끼리만</b> 겹치지 않습니다. (남 3번 · 여 3번 공존)</li>
+                                    <li><b>입장등록 현황</b>: 각 행에 <span class="badge bg-teal text-white">입장등록 완료</span> / <span class="badge bg-yellow-lt">입장등록 대기</span>가 표시됩니다. (새로고침으로 갱신)</li>
+                                    <li>입장등록을 마친 분은 번호 변경·삭제가 막혀 있습니다.</li>
+                                </ul>
+                                <div class="fw-bold text-pink mb-1"><i class="ti ti-users me-1"></i> 그러면 참가자는</div>
+                                <ul class="lh-lg">
+                                    <li>받은 <b>번호표</b>로 입장등록합니다. 체크인 명단에 없는 번호는 <mark>입장등록이 거부</mark>됩니다.</li>
+                                </ul>
+                                <a href="{{ route('admin.rotation.checkin.current') }}" class="btn btn-primary btn-sm"><i class="ti ti-external-link me-1"></i> 체크인으로 이동</a>
                             </div>
 
                             <div class="guide-panel d-none" data-panel="seating">
-                                <h4 class="mb-1"><i class="ti ti-armchair me-1"></i> 2. 좌석 배정</h4>
-                                <p class="text-muted">누가 어느 테이블에 앉을지 <b>턴(0턴)</b> 단위로 배치합니다.</p>
+                                <h4 class="mb-1"><i class="ti ti-armchair me-1"></i> 3. 로테이션 진행 (좌석 배치)</h4>
+                                <p class="text-muted">누가 어느 테이블에 앉을지 <b>턴(0턴)</b> 단위로 배치합니다. 로테이션 진행 화면의 첫 단계입니다.</p>
                                 <div class="fw-bold text-blue mb-1"><i class="ti ti-user-cog me-1"></i> 관리자가 하는 일</div>
                                 <ul class="lh-lg">
                                     <li><b>행사 · 턴</b>을 선택하고, 테이블 그리드에서 참가자를 좌석에 끌어다 배치합니다.</li>
@@ -191,12 +212,12 @@
                                 <ul class="lh-lg">
                                     <li>자신에게 배정된 <b>테이블/자리</b>를 안내받아 해당 자리에 착석합니다.</li>
                                 </ul>
-                                <a href="{{ route('admin.rotation.seating.index') }}" class="btn btn-primary btn-sm"><i class="ti ti-external-link me-1"></i> 좌석 배정으로 이동</a>
+                                <a href="{{ route('admin.rotation.seating.index') }}" class="btn btn-primary btn-sm"><i class="ti ti-external-link me-1"></i> 로테이션 진행으로 이동</a>
                             </div>
 
                             <div class="guide-panel d-none" data-panel="progress">
-                                <h4 class="mb-1"><i class="ti ti-rotate me-1"></i> 3. 로테이션 진행 / 투표</h4>
-                                <p class="text-muted">좌석 화면의 버튼으로 <b>행사 상태를 전환</b>하며 진행을 통제합니다.</p>
+                                <h4 class="mb-1"><i class="ti ti-rotate me-1"></i> 4. 로테이션 진행 / 투표</h4>
+                                <p class="text-muted">로테이션 진행 화면의 버튼으로 <b>행사 상태를 전환</b>하며 진행을 통제합니다.</p>
                                 <div class="fw-bold text-blue mb-1"><i class="ti ti-user-cog me-1"></i> 관리자가 하는 일</div>
                                 <ul class="lh-lg">
                                     <li><b>로테이션 진행</b>: 현재 턴 기준 다음 턴을 자동 생성합니다. <mark>여자는 고정, 남자가 한 칸씩 이동</mark>해 새로운 상대와 만나게 됩니다. 상태는 <span class="badge bg-blue text-white">진행</span>.</li>
@@ -213,8 +234,8 @@
                             </div>
 
                             <div class="guide-panel d-none" data-panel="match">
-                                <h4 class="mb-1"><i class="ti ti-heart me-1"></i> 4. 매칭 / 메시지 / 요청</h4>
-                                <p class="text-muted">행사 상세 상단 버튼으로 <b>결과를 조회</b>합니다.</p>
+                                <h4 class="mb-1"><i class="ti ti-heart me-1"></i> 5. 매칭 / 메시지 / 요청</h4>
+                                <p class="text-muted">행사 상세·로테이션 진행 화면의 <b>결과 보기</b> 버튼으로 결과를 조회합니다.</p>
                                 <div class="fw-bold text-blue mb-1"><i class="ti ti-user-cog me-1"></i> 관리자가 확인하는 것</div>
                                 <ul class="lh-lg">
                                     <li><b>전체 매칭</b>: 누가 누구를 선택했는지 전체 투표 현황</li>
@@ -231,7 +252,7 @@
                             </div>
 
                             <div class="guide-panel d-none" data-panel="detail">
-                                <h4 class="mb-1"><i class="ti ti-sparkles me-1"></i> 5. 상세페이지 제작</h4>
+                                <h4 class="mb-1"><i class="ti ti-sparkles me-1"></i> 6. 상세페이지 제작</h4>
                                 <p class="text-muted">홍보용 상세페이지를 HTML로 꾸미고 <b>이미지로 저장</b>해 외부 홍보에 사용합니다.</p>
                                 <div class="fw-bold text-blue mb-1"><i class="ti ti-user-cog me-1"></i> 관리자가 하는 일</div>
                                 <ul class="lh-lg">

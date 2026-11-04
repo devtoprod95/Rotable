@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '좌석 배정')
+@section('title', '로테이션 진행')
 
 @section('content')
 <style>
@@ -19,44 +19,47 @@
     .seat-chips .chip-remove { transition: background-color .12s ease; cursor: pointer; }
     .seat-chips .chip-remove:hover { background-color: rgba(214, 57, 57, 0.15); }
 </style>
-<div class="row row-cards mt-2">
+
+{{-- 행사 운영 공용 탭바: 행사 선택 + [행사 정보][체크인][로테이션 진행] --}}
+<div class="mt-2">
+    <x-event-tabs :event-id="$eventId" active="progress" />
+</div>
+
+<div class="row row-cards">
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
-                    <h3 class="card-title mb-0">좌석 배정</h3>
+                    <h3 class="card-title mb-0">로테이션 진행</h3>
                     <span class="badge d-none" id="eventStatusBadge"></span>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" id="goDetailBtn" class="btn btn-outline-secondary">
-                        <i class="ti ti-external-link me-1"></i> 행사 상세
-                    </button>
-                    <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
+                {{-- 결과 조회(보조): 진행 중 참고용이라 오른쪽에 작게 모아 둔다. --}}
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <span class="text-secondary small d-none d-lg-inline">결과 보기</span>
+                    <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
                         <i class="ti ti-heart me-1"></i> 전체 매칭
                     </button>
-                    <button type="button" id="goMatchedBtn" class="btn btn-outline-pink">
+                    <button type="button" id="goMatchedBtn" class="btn btn-sm btn-outline-pink">
                         <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
                     </button>
-                    <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
-                        <i class="ti ti-messages me-1"></i> 전체 메시지<span id="messagesCount"></span>
+                    <button type="button" id="goMessagesBtn" class="btn btn-sm btn-outline-primary">
+                        <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
                     </button>
-                    <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow">
-                        <i class="ti ti-hand-stop me-1"></i> 전체 요청<span id="requestsCount"></span>
+                    <button type="button" id="goRequestsBtn" class="btn btn-sm btn-outline-yellow">
+                        <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
                     </button>
                 </div>
             </div>
             <div class="card-body">
-                <div class="row g-2 align-items-start">
-                    <div class="col-md-5">
-                        <label class="form-label">행사</label>
-                        <select class="form-select" id="eventSelect">
-                            @foreach ($events as $event)
-                                <option value="{{ $event->id }}" {{ $eventId == $event->id ? 'selected' : '' }}>{{ $event->label }}</option>
-                            @endforeach
-                        </select>
-                        <small class="form-hint text-muted">배정할 행사를 선택하세요.</small>
-                    </div>
-                    <div class="col-md-3">
+                {{-- 행사 선택은 상단 탭바가 맡는다. 이 화면의 스크립트가 값을 읽으므로 숨겨서 유지한다. --}}
+                <select class="d-none" id="eventSelect" aria-hidden="true" tabindex="-1">
+                    @foreach ($events as $event)
+                        <option value="{{ $event->id }}" {{ $eventId == $event->id ? 'selected' : '' }}>{{ $event->label }}</option>
+                    @endforeach
+                </select>
+
+                <div class="row g-3 align-items-start">
+                    <div class="col-md-4">
                         <label class="form-label">턴</label>
                         <div class="input-group">
                             <button class="btn btn-outline-secondary" type="button" id="roundPrev" title="이전 턴">
@@ -69,7 +72,7 @@
                         </div>
                         <small class="form-hint text-muted" id="roundHint">턴을 이동하며 배치를 볼 수 있습니다.</small>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-8">
                         <label class="form-label d-block" id="actionLabel">&nbsp;</label>
                         <div class="d-flex align-items-center" style="min-height: 38px;">
                             <button type="button" class="btn btn-primary w-100 d-none" id="rotateBtn">
@@ -116,7 +119,6 @@
         const matchesUrlTemplate = "{{ route('admin.rotation.event.matches.list', ['id' => '__ID__']) }}";
         const messagesUrlTemplate = "{{ route('admin.rotation.event.messages.list', ['id' => '__ID__']) }}";
         const requestsListUrl = "{{ route('admin.requests.list') }}";
-        const eventDetailBase = "{{ url('admin/rotation/event') }}";
 
         // 서버 enum 기반 상태 라벨 (P/S/V/X). 뱃지 표기에 사용.
         const STATUS_LABEL = @json($statuses);
@@ -157,7 +159,7 @@
                 if(m.birth_year){ info.push(String(m.birth_year).slice(-2) + '년생'); }
                 if(m.job){ info.push(m.job); }
                 let suffix = info.length ? ` · ${info.join(' · ')}` : '';
-                html += `<option value="${m.id}">[${genderLabel(m.gender)}] ${m.name}호${suffix}</option>`;
+                html += `<option value="${m.id}">[${genderLabel(m.gender)}] ${m.label || (m.name + "호")}${suffix}</option>`;
             });
             return html;
         }
@@ -348,7 +350,7 @@
                                    style="width:1.4rem;height:1.4rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.95rem;line-height:1;"></i></a>`
                         : '';
                     return `<span class="badge ${genderBadgeClass(m.gender)} me-1 mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1">
-                                <span>${m.name}호${infoText}</span>
+                                <span>${m.label || (m.name + "호")}${infoText}</span>
                                 ${removeBtn}
                             </span>`;
                 }).join('');
@@ -535,13 +537,6 @@
             MessagesModal.open(eventId, label);
         });
 
-        // 선택된 행사의 상세 페이지를 새 창으로 연다.
-        $('#goDetailBtn').on('click', function(){
-            var eventId = $('#eventSelect').val();
-            if(!eventId){ return; }
-            window.open(eventDetailBase + '/' + eventId, '_blank');
-        });
-
         // 선택된 행사의 매칭 결과를 모달로 조회
         $('#goMatchesBtn').on('click', function(){
             var eventId = $('#eventSelect').val();
@@ -577,6 +572,8 @@
             if(viewRound < currentRound){ viewRound += 1; loadData(); }
         });
 
+        // #eventSelect 는 화면에서는 숨겨져 있다. (행사 전환은 상단 탭바가 페이지 이동으로 처리)
+        // 다만 값을 스크립트에서 바꿀 수 있는 경로를 남겨 두기 위해 change 핸들러는 유지한다.
         $('#eventSelect').change(function(){ viewRound = null; syncUrl(); loadData(); });
 
         // 최초 로딩: URL에 eventId가 있으면 그 행사를 선택

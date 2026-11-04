@@ -169,7 +169,7 @@
                     { title: "회원", field: "member", width: 150, headerSort: false,
                         formatter: function(cell){
                             var m = cell.getRow().getData().member;
-                            var name = m ? $('<div>').text(m.name).html() : '알 수 없음';
+                            var name = m ? $('<div>').text(m.name + '호').html() : '알 수 없음';
                             return `<span class="fw-bold">${name}</span> ${m ? genderBadge(m.gender) : ''}`;
                         }
                     },

@@ -3,6 +3,7 @@
 namespace App\Services\Rotation;
 
 use App\Models\EventPageDetail;
+use App\Models\EventPageDetailSave;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 
@@ -131,6 +132,194 @@ class DetailPageService
                 'saved_by_username' => $admin?->username,
                 'saved_at'          => $savedAt->format('Y-m-d H:i:s'),
             ];
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /* ======================================================================
+     | 이름 붙여 저장한 목록 (event_page_detail_saves) — 유형별 다중 스냅샷
+     * ==================================================================== */
+
+    /**
+     * 특정 유형의 "저장 목록"을 최신순으로 반환한다. (html 본문은 제외한 경량 목록)
+     *
+     * @param  string  $type  상세페이지 유형 ('wine' | 'solo')
+     * @return array<int, array{id:int, title:string, saved_by:?string, saved_at:?string}>
+     */
+    public function snapshotList(string $type = 'wine'): array
+    {
+        $type = $this->detailType($type);
+
+        return EventPageDetailSave::where('type', $type)
+            ->orderByDesc('id')
+            ->get(['id', 'title', 'saved_by', 'updated_at'])
+            ->map(fn (EventPageDetailSave $s): array => [
+                'id'       => (int) $s->id,
+                'title'    => (string) $s->title,
+                'saved_by' => $s->saved_by,
+                'saved_at' => $s->updated_at?->format('Y-m-d H:i'),
+            ])
+            ->all();
+    }
+
+    /**
+     * 저장 목록 1건의 HTML 을 반환한다. (불러오기)
+     *
+     * @return array{isSuccess:bool, message?:string, html?:string, title?:string, type?:string}
+     */
+    public function snapshotLoad(int $id): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $save = EventPageDetailSave::findOrFail($id);
+
+            $returnMsg          = helpersSuccessMessage('불러왔습니다.');
+            $returnMsg['html']  = (string) ($save->html ?? '');
+            $returnMsg['title'] = (string) $save->title;
+            $returnMsg['type']  = (string) $save->type;
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage('저장본을 찾을 수 없습니다.');
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 상세페이지 HTML 을 "이름(title)을 붙여" 유형별 목록에 새로 저장한다.
+     *
+     * @param  string  $title  저장 이름(라벨)
+     * @param  string  $html   저장할 HTML 전체
+     * @param  string  $type   상세페이지 유형 ('wine' | 'solo')
+     * @return array{isSuccess:bool, message?:string, item?:array{id:int, title:string, saved_by:?string, saved_at:?string}}
+     */
+    public function snapshotStore(string $title, string $html, string $type = 'wine'): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $type  = $this->detailType($type);
+            $title = trim($title);
+            if ($title === '') {
+                return helpersFailMessage('저장 이름을 입력해 주세요.');
+            }
+
+            /** @var \App\Models\Admin|null $admin */
+            $admin = Auth::guard('admin')->user();
+
+            $save = EventPageDetailSave::create([
+                'type'              => $type,
+                'title'             => mb_substr($title, 0, 100),
+                'html'              => $html,
+                'saved_by'          => $admin?->name ?? '알 수 없음',
+                'saved_by_username' => $admin?->username,
+            ]);
+
+            $returnMsg         = helpersSuccessMessage('저장 목록에 추가했습니다.');
+            $returnMsg['item'] = [
+                'id'       => (int) $save->id,
+                'title'    => (string) $save->title,
+                'saved_by' => $save->saved_by,
+                'saved_at' => $save->updated_at?->format('Y-m-d H:i'),
+            ];
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 저장 목록 1건의 HTML 을 덮어써서 업데이트한다. (현재 편집 중인 항목 저장)
+     * 저장자/시각(updated_at)도 갱신한다.
+     *
+     * @param  int     $id    업데이트할 저장본 id
+     * @param  string  $html  저장할 HTML 전체
+     * @return array{isSuccess:bool, message?:string, item?:array{id:int, title:string, saved_by:?string, saved_at:?string}}
+     */
+    public function snapshotUpdate(int $id, string $html): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $save = EventPageDetailSave::findOrFail($id);
+
+            /** @var \App\Models\Admin|null $admin */
+            $admin = Auth::guard('admin')->user();
+
+            $save->html              = $html;
+            $save->saved_by          = $admin?->name ?? '알 수 없음';
+            $save->saved_by_username = $admin?->username;
+            $save->save(); // updated_at 자동 갱신
+
+            $returnMsg         = helpersSuccessMessage('저장했습니다.');
+            $returnMsg['item'] = [
+                'id'       => (int) $save->id,
+                'title'    => (string) $save->title,
+                'saved_by' => $save->saved_by,
+                'saved_at' => $save->updated_at?->format('Y-m-d H:i'),
+            ];
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage('저장본을 찾을 수 없습니다.');
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 초기/유형전환 로드용 — 특정 유형의 "가장 최근 저장본"을 반환한다.
+     * 저장본이 있으면 그 id/title/html/meta 를, 없으면 기본 샘플(2열)과 id=null 을 돌려준다.
+     *
+     * @param  string  $type  상세페이지 유형 ('wine' | 'solo')
+     * @return array{
+     *     id: ?int,
+     *     title: ?string,
+     *     html: string,
+     *     meta: array{saved_by:string, saved_at:string}|null
+     * }
+     */
+    public function latestSnapshotPayload(string $type = 'wine'): array
+    {
+        $type = $this->detailType($type);
+
+        $save = EventPageDetailSave::where('type', $type)->orderByDesc('id')->first();
+
+        if ($save === null) {
+            // 저장본이 없으면 기본 샘플(2열)로 시작한다. (현재 편집 id 없음)
+            return [
+                'id'    => null,
+                'title' => null,
+                'html'  => $this->detailSampleHtml(2, $type),
+                'meta'  => null,
+            ];
+        }
+
+        return [
+            'id'    => (int) $save->id,
+            'title' => (string) $save->title,
+            'html'  => (string) ($save->html ?? ''),
+            'meta'  => [
+                'saved_by' => (string) ($save->saved_by ?? '알 수 없음'),
+                'saved_at' => $save->updated_at?->format('Y-m-d H:i:s') ?? '',
+            ],
+        ];
+    }
+
+    /**
+     * 저장 목록 1건을 삭제한다.
+     *
+     * @return array{isSuccess:bool, message?:string}
+     */
+    public function snapshotDelete(int $id): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            EventPageDetailSave::where('id', $id)->delete();
+            $returnMsg = helpersSuccessMessage('삭제했습니다.');
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
         }

@@ -391,14 +391,20 @@ class RotationController extends Controller
      */
     public function detailIndex(): View
     {
-        // 유형별 저장본/메타를 "유형당 1회 조회"로 함께 가져온다. (중복 조회 제거)
-        $wine = $this->detailPageService->detailPayload('wine');
-        $solo = $this->detailPageService->detailPayload('solo');
+        // 방안 A: 저장은 '저장 목록'으로 일원화. 초기 화면엔 유형별 "가장 최근 저장본"을 띄운다.
+        // (저장본이 없으면 해당 유형 2열 샘플, 현재 편집 id 는 null)
+        $wine = $this->detailPageService->latestSnapshotPayload('wine');
+        $solo = $this->detailPageService->latestSnapshotPayload('solo');
 
         return view('admin.rotation.detail', [
-            // 유형별 저장본 (없으면 해당 유형 2열 샘플로 폴백)
+            // 유형별 초기 HTML (최근 저장본 없으면 2열 샘플)
             'savedWine'    => $wine['html'],
             'savedSolo'    => $solo['html'],
+            // 유형별 "현재 편집 중" 저장본 id/제목 — 없으면 null
+            'currentIdWine'    => $wine['id'],
+            'currentIdSolo'    => $solo['id'],
+            'currentTitleWine' => $wine['title'],
+            'currentTitleSolo' => $solo['title'],
             // 유형별 마지막 저장 메타(누가·언제) — 없으면 null
             'metaWine'     => $wine['meta'],
             'metaSolo'     => $solo['meta'],
@@ -411,22 +417,76 @@ class RotationController extends Controller
     }
 
     /**
-     * 상세페이지 HTML 저장 (storage 파일에 기록).
+     * 저장 목록 1건 업데이트 — 현재 편집 중인 저장본의 HTML 을 덮어쓴다.
      */
-    public function detailSave(): JsonResponse
+    public function detailSaveUpdate(int $id): JsonResponse
     {
         $validator = Validator::make($this->request->all(), [
             'html' => 'nullable|string',
-            'type' => 'nullable|in:wine,solo',
         ]);
         if ($validator->fails()) {
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
         }
 
-        $result = $this->detailPageService->detailHtmlSave(
+        $result = $this->detailPageService->snapshotUpdate(
+            $id,
+            (string) $this->request->input('html', ''),
+        );
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_NOT_FOUND), $result);
+    }
+
+    /**
+     * 저장 목록 조회 — 특정 유형의 "이름 붙여 저장한" 목록(최신순, html 제외).
+     */
+    public function detailSaveList(): JsonResponse
+    {
+        $type = (string) $this->request->input('type', 'wine');
+
+        return response()->json([
+            'items' => $this->detailPageService->snapshotList($type),
+        ]);
+    }
+
+    /**
+     * 저장 목록 추가 — 현재 상세페이지 HTML 을 이름(라벨)을 붙여 새로 저장한다.
+     */
+    public function detailSaveStore(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'title' => 'required|string|max:100',
+            'html'  => 'nullable|string',
+            'type'  => 'nullable|in:wine,solo',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $result = $this->detailPageService->snapshotStore(
+            (string) $this->request->input('title', ''),
             (string) $this->request->input('html', ''),
             (string) $this->request->input('type', 'wine'),
         );
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
+    /**
+     * 저장 목록 1건 불러오기 — 저장된 HTML 을 반환한다.
+     */
+    public function detailSaveShow(int $id): JsonResponse
+    {
+        $result = $this->detailPageService->snapshotLoad($id);
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_NOT_FOUND), $result);
+    }
+
+    /**
+     * 저장 목록 1건 삭제.
+     */
+    public function detailSaveDelete(int $id): JsonResponse
+    {
+        $result = $this->detailPageService->snapshotDelete($id);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
     }

@@ -66,7 +66,15 @@ Route::middleware('role')->group(function () {
             // 상세페이지 디자이너 — HTML 에디터로 꾸미고 이미지(PNG)로 다운로드
             Route::prefix('detail')->name('detail.')->group(function () {
                 Route::get('/', [RotationController::class, 'detailIndex'])->name('index');
-                Route::post('/save', [RotationController::class, 'detailSave'])->name('save');
+                // 저장 목록(유형별 다중 스냅샷) — 목록/추가/불러오기/업데이트/삭제
+                Route::get('/saves', [RotationController::class, 'detailSaveList'])->name('saves.list');
+                Route::post('/saves', [RotationController::class, 'detailSaveStore'])->name('saves.store');
+                Route::get('/saves/{id}', [RotationController::class, 'detailSaveShow'])
+                    ->whereNumber('id')->name('saves.show');
+                Route::post('/saves/{id}', [RotationController::class, 'detailSaveUpdate'])
+                    ->whereNumber('id')->name('saves.update');
+                Route::delete('/saves/{id}', [RotationController::class, 'detailSaveDelete'])
+                    ->whereNumber('id')->name('saves.delete');
             });
 
             // QR 코드 설정 — 연결 대상 URL 을 등록하면 공개 주소(/qr/{code})가 발급된다.

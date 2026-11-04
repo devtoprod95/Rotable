@@ -70,6 +70,14 @@
                             <i class="ti ti-dots me-1"></i> 더보기
                         </button>
                         <div class="dropdown-menu dropdown-menu-end">
+                            <h6 class="dropdown-header">저장 목록</h6>
+                            <button type="button" class="dropdown-item btn-detail-save-as">
+                                <i class="ti ti-bookmark-plus me-2 fs-2"></i> 다른 이름으로 저장
+                            </button>
+                            <button type="button" class="dropdown-item btn-open-saves">
+                                <i class="ti ti-list-details me-2 fs-2"></i> 저장 목록 불러오기
+                            </button>
+                            <div class="dropdown-divider"></div>
                             <h6 class="dropdown-header">샘플 불러오기</h6>
                             <button type="button" class="dropdown-item btn-sample-one">
                                 <i class="ti ti-layout-rows me-2 fs-2"></i> 1열 샘플
@@ -92,8 +100,9 @@
             <div class="card-body">
                 <small class="form-hint text-muted d-block mb-3">
                     <b>유형(와인파티 / 1:1 소개팅)</b>을 먼저 고른 뒤 <b>1열 / 2열 샘플</b>을 누르면 해당 유형의 샘플이 적용됩니다.
-                    유형별로 상단 이미지와 로테이블 포인트가 다릅니다. 이후 HTML 에디터로 자유롭게 꾸미고 [저장]하면 유지됩니다.
-                    우측 하단 <b>미리보기</b> 버튼으로 결과를 확인하세요.
+                    이후 HTML 에디터로 자유롭게 꾸미고 <b>[저장]</b> 하세요.
+                    편집 중인 저장본이 있으면 그 저장본이 갱신되고, 없으면 이름을 입력해 <b>저장 목록</b>에 새로 저장됩니다.
+                    (더보기 → <b>저장 목록 불러오기</b> 에서 이전 저장본을 불러올 수 있어요.)
                 </small>
                 <label class="form-label">상세페이지 작성 (HTML)</label>
                 <textarea id="detailHtmlEditor">{!! $savedWine !!}</textarea>
@@ -190,6 +199,44 @@
     </div>
 </div>
 
+{{-- 저장 목록(이름 붙여 저장) 모달 --}}
+{{-- 현재 선택한 유형(wine/solo)의 "이름 붙여 저장한" 상세페이지 목록을 보여주고, 불러오기/삭제한다. --}}
+<div class="modal modal-blur fade" id="detailSavesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ti ti-list-details me-1"></i> 저장 목록
+                    <span class="badge bg-pink-lt ms-1" id="savesTypeBadge">와인파티</span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-secondary small mb-3">
+                    <i class="ti ti-info-circle me-1"></i>
+                    현재 선택한 유형의 저장본만 보여집니다. <b>불러오기</b> 하면 그 저장본이 <b>현재 편집 대상</b>이 되고,
+                    이후 상단 <b>[저장]</b> 을 누르면 그 저장본이 그대로 갱신됩니다.
+                    (다른 이름으로 남기려면 <b>다른 이름으로 저장</b>)
+                </div>
+                <div id="savesListBody">
+                    {{-- JS 가 목록을 렌더링 --}}
+                </div>
+                <div id="savesEmpty" class="text-center text-secondary py-5" style="display:none;">
+                    <i class="ti ti-folder-off fs-1 d-block mb-2"></i>
+                    저장된 목록이 없어요.<br>
+                    상단 <b>더보기 → 다른 이름으로 저장</b> 으로 현재 상세페이지를 저장해 보세요.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary btn-detail-save-as">
+                    <i class="ti ti-bookmark-plus me-1"></i> 다른 이름으로 저장
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- 피드 이미지 다운로드 모달 --}}
 {{-- rotable_banner.png + 선택한 행사의 "현재 DB 참여자 명단"을 합쳐 하나의 이미지로 다운로드한다. --}}
 <div class="modal modal-blur fade" id="detailFeedModal" tabindex="-1" aria-hidden="true">
@@ -261,6 +308,13 @@
             solo: {!! json_encode($metaSolo) !!}
         };
 
+        // 유형별 "현재 편집 중인 저장본" {id, title}. 저장 목록에 없는 새 내용이면 id=null.
+        // [저장] 시 id 가 있으면 그 항목을 덮어쓰고(업데이트), 없으면 이름을 받아 새로 저장한다.
+        var CURRENT = {
+            wine: { id: {!! json_encode($currentIdWine) !!}, title: {!! json_encode($currentTitleWine) !!} },
+            solo: { id: {!! json_encode($currentIdSolo) !!}, title: {!! json_encode($currentTitleSolo) !!} }
+        };
+
         // 현재 에디터에 올라와 있는 유형 (초기값: 와인)
         var activeType = 'wine';
 
@@ -268,18 +322,22 @@
             return $('input[name="sampleType"]:checked').val() === 'solo' ? 'solo' : 'wine';
         }
 
-        // 제목 옆 "마지막 저장" 배지를 현재 선택한 유형의 메타로 갱신한다.
+        // 제목 옆 배지를 현재 유형의 "편집 중 저장본 제목 + 마지막 저장(누가·언제)"으로 갱신한다.
         function renderSavedInfo(){
-            var meta = META[currentType()];
+            var t = currentType();
+            var meta = META[t];
+            var cur  = CURRENT[t] || {};
             var $info = $('#detailSavedInfo');
-            if (meta && meta.saved_at) {
-                var who = meta.saved_by || '알 수 없음';
-                $info.html('마지막 저장: '
-                    + who + ' · ' + meta.saved_at);
-                $info.show();
+            var parts = [];
+            if (cur.id && cur.title) {
+                parts.push('📄 ' + cur.title);
             } else {
-                $info.hide().empty();
+                parts.push('🆕 새 상세페이지 (미저장)');
             }
+            if (meta && meta.saved_at) {
+                parts.push('마지막 저장: ' + (meta.saved_by || '알 수 없음') + ' · ' + meta.saved_at);
+            }
+            $info.text(parts.join('  ·  ')).show();
         }
 
         // 초기 1회 렌더(현재 유형 기준).
@@ -447,6 +505,21 @@
             await salert({text: '이미지를 20MB 이하로 저장하지 못했습니다. 내용을 줄인 뒤 다시 시도해주세요.', cancel: false});
         }
 
+        // 다운로드 파일명 베이스를 만든다. (현재 저장본 제목 + 유형을 포함)
+        //  - 예) prefix='rotable_상세페이지', 제목='11월 와인파티' → 'rotable_상세페이지_와인파티_11월 와인파티'
+        //  - 저장본이 없으면(미저장) 제목 없이 유형만 붙인다.
+        //  - 파일명에 못 쓰는 문자(\ / : * ? " < > |)는 _ 로 치환한다.
+        function buildDownloadBaseName(prefix){
+            var type  = currentType();
+            var label = type === 'solo' ? '1:1소개팅' : '와인파티';
+            var cur   = CURRENT[type] || {};
+            var parts = [prefix, label];
+            if (cur.id && cur.title) {
+                parts.push(cur.title);
+            }
+            return parts.join('_').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim();
+        }
+
         // 다운로드 버튼에 로딩 상태(스피너/문구)를 입히고, 작업 중 중복 클릭을 막는다.
         async function withButtonLoading($btn, loadingText, task){
             var original = $btn.html();
@@ -573,8 +646,11 @@
                 function readCol($col){
                     var people = [];
                     $col.children('div').each(function(){
-                        // "모집중" 자리(data-recruit)는 실제 인원이 아니므로 건너뛴다.
-                        if ($(this).attr('data-recruit')) { return; }
+                        var recruit = $(this).attr('data-recruit');
+                        // 수동 모집중 자리(data-recruit="manual")는 명단 순서를 유지해 복원한다.
+                        if (recruit === 'manual') { people.push({ recruit: true }); return; }
+                        // 성비 자동 맞춤으로 채워진 자리(data-recruit="1")는 실제 인원이 아니므로 건너뛴다.
+                        if (recruit) { return; }
                         var info = $(this).children('div').last().text(); // "177cm · 쇼핑몰 · 30대 초반"
                         var parts = info.split('·').map(function(x){ return x.trim(); });
                         var height = (parts[0] || '').replace(/cm$/i,'').trim();
@@ -624,19 +700,25 @@
                   +   '<div style="color:#000000; font-weight:800; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(p.height) + 'cm · ' + esc(p.job) + ' · ' + esc(p.age) + '</div>'
                   + '</div>';
             }
-            // "모집중" 자리 칸 (번호는 이어서, data-recruit 로 표시해 재파싱 때 제외)
-            function recruitCell(i, borderColor){
+            // "모집중" 자리 칸.
+            // - manual=true: 관리자가 수동으로 끼워 넣은 모집중 자리 (data-recruit="manual" → 재파싱 때 복원)
+            // - manual=false: 성비 자동 맞춤으로 채운 자리 (data-recruit="1" → 재파싱 때 제외)
+            function recruitCell(i, borderColor, manual){
+                var flag = manual ? 'manual' : '1';
                 return ''
-                  + '<div data-recruit="1" style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:2px dashed ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center; background:repeating-linear-gradient(45deg,#ffffff,#ffffff 8px,#fafafa 8px,#fafafa 16px);">'
+                  + '<div data-recruit="' + flag + '" style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:2px dashed ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center; background:repeating-linear-gradient(45deg,#ffffff,#ffffff 8px,#fafafa 8px,#fafafa 16px);">'
                   +   '<div style="font-weight:900; font-size:' + cellNoSize + '; color:#9ca3af;">' + (i + 1) + '호</div>'
                   +   '<div style="color:#f472b6; font-weight:900; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(recruitLabel) + ' 💗</div>'
                   + '</div>';
             }
-            // 한 컬럼 렌더: 실제 인원 + (balance 시) 모집중으로 total 까지 채움
+            // 한 컬럼 렌더: 명단 순서대로 실제 인원/수동 모집중 자리를 그리고,
+            // (balance 시) 부족한 만큼 뒤에 자동 모집중 자리로 채운다.
             function columnCells(people, total, borderColor){
                 var out = '';
-                people.forEach(function(p, i){ out += personCell(p, i, borderColor); });
-                for (var i = people.length; i < total; i++) { out += recruitCell(i, borderColor); }
+                people.forEach(function(p, i){
+                    out += p && p.recruit ? recruitCell(i, borderColor, true) : personCell(p, i, borderColor);
+                });
+                for (var i = people.length; i < total; i++) { out += recruitCell(i, borderColor, false); }
                 return out;
             }
 
@@ -646,13 +728,13 @@
 
             data.cards.forEach(function(card, idx){
                 var males = card.males || [], females = card.females || [];
-                // balance 켜지면 남/여 중 많은 쪽 수에 맞춰 모집중으로 '셀'을 채운다.
+                // balance 켜지면 남/여 중 많은 쪽 '자리 수'(모집중 자리 포함)에 맞춰 모집중으로 채운다.
                 var total = balance ? Math.max(males.length, females.length) : null;
                 var maleTotal   = balance ? total : males.length;
                 var femaleTotal = balance ? total : females.length;
-                // 헤더에 표시하는 인원수는 '실제 참여자 수'만 센다. (모집중 더미 자리는 제외)
-                var maleHeadCount   = males.length;
-                var femaleHeadCount = females.length;
+                // 헤더에 표시하는 인원수는 '실제 참여자 수'만 센다. (수동/자동 모집중 자리는 제외)
+                var maleHeadCount   = males.filter(function(p){ return !(p && p.recruit); }).length;
+                var femaleHeadCount = females.filter(function(p){ return !(p && p.recruit); }).length;
 
                 html += '<div style="width:' + cardWidth + '; box-sizing:border-box; padding:3px;"'
                       + ' data-roster-card="' + idx + '"'
@@ -720,8 +802,11 @@
             $col.attr('data-gender', gender);
             $col.append(
                 '<div class="d-flex align-items-center justify-content-between mb-2">'
-                + '<span class="badge ' + toneClass + ' fs-3">' + label + ' <b class="roster-count">' + people.length + '</b>명</span>'
-                + '<button type="button" class="btn btn-sm btn-outline-secondary roster-add"><i class="ti ti-plus"></i> 추가</button>'
+                + '<span class="badge ' + toneClass + ' fs-3">' + label + ' <b class="roster-count">0</b>명</span>'
+                + '<div class="btn-group">'
+                +   '<button type="button" class="btn btn-sm btn-outline-secondary roster-add"><i class="ti ti-plus"></i> 추가</button>'
+                +   '<button type="button" class="btn btn-sm btn-outline-pink roster-add-recruit"><i class="ti ti-heart"></i> 모집중 추가</button>'
+                + '</div>'
                 + '</div>'
             );
             var $table = $(
@@ -738,6 +823,16 @@
 
         function rosterRow(p){
             p = p || {};
+            // "모집중" 자리 행: 입력칸 대신 '모집중' 표시만 둔다. (data-recruit 로 구분)
+            if (p.recruit) {
+                return $(
+                    '<tr data-recruit="1" class="bg-pink-lt">'
+                    + '<td class="roster-no text-secondary"></td>'
+                    + '<td colspan="3" class="fw-bold text-pink"><i class="ti ti-heart-filled me-1"></i>모집중 자리 💗</td>'
+                    + '<td><button type="button" class="btn btn-sm btn-ghost-danger roster-del"><i class="ti ti-trash"></i></button></td>'
+                    + '</tr>'
+                );
+            }
             return $(
                 '<tr>'
                 + '<td class="roster-no text-secondary"></td>'
@@ -750,12 +845,14 @@
         }
 
         // 각 컬럼의 번호(N호)와 인원수 뱃지를 다시 매긴다.
+        // 번호(N호)는 모집중 자리 포함 전체 순번, 인원수 뱃지는 실제 참여자(모집중 제외)만 센다.
         function renumberRoster($scope){
             ($scope || $('#rosterEditorBody')).find('[data-gender]').each(function(){
                 var $col = $(this);
                 var $rows = $col.find('.roster-rows > tr');
                 $rows.each(function(i){ $(this).find('.roster-no').text((i + 1) + '호'); });
-                $col.find('.roster-count').text($rows.length);
+                var realCount = $rows.filter(function(){ return !$(this).attr('data-recruit'); }).length;
+                $col.find('.roster-count').text(realCount);
             });
         }
 
@@ -767,6 +864,11 @@
                 function readCol(gender){
                     var arr = [];
                     $card.find('[data-gender="' + gender + '"] .roster-rows > tr').each(function(){
+                        // "모집중" 자리 행은 입력칸이 없으므로 recruit 플래그만 담는다.
+                        if ($(this).attr('data-recruit')) {
+                            arr.push({ recruit: true });
+                            return;
+                        }
                         arr.push({
                             height: $(this).find('.roster-height').val().trim(),
                             job:    $(this).find('.roster-job').val().trim(),
@@ -811,6 +913,11 @@
         // 행 추가/삭제 (이벤트 위임)
         $('#rosterEditorBody').on('click', '.roster-add', function(){
             $(this).closest('[data-gender]').find('.roster-rows').append(rosterRow({}));
+            renumberRoster($(this).closest('.card'));
+        });
+        // "모집중" 자리 행 추가 (실제 참여자 대신 모집중 더미 자리를 수동으로 끼워 넣는다)
+        $('#rosterEditorBody').on('click', '.roster-add-recruit', function(){
+            $(this).closest('[data-gender]').find('.roster-rows').append(rosterRow({recruit: true}));
             renumberRoster($(this).closest('.card'));
         });
         $('#rosterEditorBody').on('click', '.roster-del', function(){
@@ -901,28 +1008,196 @@
             }
         });
 
-        // 저장 (유형별 storage 파일에 기록)
-        $('.btn-detail-save').on('click', async function(){
-            var type  = currentType();
+        // 서버 응답(item)으로 현재 유형의 CURRENT/META 상태와 배지를 갱신한다.
+        function applySavedItem(type, item){
+            if (!item) { return; }
+            CURRENT[type] = { id: item.id, title: item.title };
+            META[type] = { saved_by: item.saved_by, saved_at: item.saved_at };
+            SAVED[type] = getHtml();
+            if (type === currentType()) { renderSavedInfo(); }
+        }
+
+        // 현재 HTML 을 "새 저장본"으로 만든다. (이름 입력받음) → 성공 시 CURRENT 를 그 항목으로.
+        async function createSnapshot(type, html, defaultTitle){
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
-            if(await salert({text: '[' + label + '] 상세페이지를 저장하시겠습니까?'})){
-                var html = getHtml();
+            var res = await Swal.fire({
+                title: '[' + label + '] 새 상세페이지 저장',
+                input: 'text',
+                inputLabel: '저장 이름',
+                inputValue: defaultTitle || '',
+                inputPlaceholder: '예: 11월 와인파티 2차 버전',
+                inputAttributes: { maxlength: 100 },
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonText: '저장',
+                cancelButtonText: '취소',
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                inputValidator: function(v){ if (!v || !v.trim()) { return '저장 이름을 입력해 주세요.'; } }
+            });
+            if (!res.isConfirmed) { return false; }
+            return new Promise(function(resolve){
                 $.ajax({
-                    url: "{{ route('admin.rotation.detail.save') }}",
+                    url: "{{ route('admin.rotation.detail.saves.store') }}",
                     type: 'POST',
-                    data: { html: html, type: type },
-                    success: function(res){
-                        SAVED[type] = html;   // 저장 성공 시 보관본 갱신
-                        // 서버가 돌려준 저장 메타(누가·언제)로 제목 옆 배지 갱신
-                        if (res && res.saved) {
-                            META[type] = res.saved;
-                            if (type === currentType()) { renderSavedInfo(); }
-                        }
-                        alert(res?.msg);
-                    },
+                    data: { title: res.value.trim(), html: html, type: type },
+                    success: function(r){ applySavedItem(type, r && r.item); alert(r?.msg); resolve(true); },
+                    error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); resolve(false); }
+                });
+            });
+        }
+
+        // [저장] — 현재 편집 중 저장본이 있으면 그걸 업데이트, 없으면 새로 저장(이름 입력).
+        $('.btn-detail-save').on('click', async function(){
+            var type = currentType();
+            var html = getHtml();
+            var cur  = CURRENT[type] || {};
+
+            if (cur.id) {
+                // 기존 저장본 업데이트
+                if (!(await salert({text: "'" + (cur.title || '') + "' 저장본을 수정 저장하시겠습니까?"}))) { return; }
+                $.ajax({
+                    url: "{{ url('admin/rotation/detail/saves') }}/" + cur.id,
+                    type: 'POST',
+                    data: { html: html },
+                    success: function(r){ applySavedItem(type, r && r.item); alert(r?.msg); },
                     error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
                 });
+            } else {
+                // 저장 목록에 없는 새 내용 → 새로 저장
+                if (!html || !html.trim()) {
+                    await salert({text: '저장할 내용이 없습니다. 먼저 내용을 작성해 주세요.', cancel: false});
+                    return;
+                }
+                await createSnapshot(type, html, '');
             }
+        });
+
+        /* =====================================================================
+         * 저장 목록 (이름 붙여 저장) — 유형별 다중 스냅샷
+         *  - 다른 이름으로 저장: 제목 입력받아 현재 HTML 을 목록에 새로 저장
+         *  - 저장 목록: 현재 유형의 목록 조회 → 불러오기/삭제
+         * =================================================================== */
+        var savesModal = null;
+        function getSavesModal(){
+            if (savesModal) { return savesModal; }
+            var el = document.getElementById('detailSavesModal');
+            var ModalClass =
+                (window.tabler && window.tabler.Modal) ||
+                (window.tabler && window.tabler.bootstrap && window.tabler.bootstrap.Modal) ||
+                (window.bootstrap && window.bootstrap.Modal) ||
+                (window.coreui && window.coreui.Modal) ||
+                window.Modal;
+            if(!ModalClass){ console.error('Modal 클래스를 찾을 수 없습니다.'); return null; }
+            savesModal = new ModalClass(el);
+            return savesModal;
+        }
+
+        function savesEsc(s){
+            return $('<i>').text(s == null ? '' : s).html();
+        }
+
+        // 목록 데이터 → 테이블 렌더
+        function renderSavesList(items){
+            var $body = $('#savesListBody');
+            if (!items || !items.length) {
+                $body.empty();
+                $('#savesEmpty').show();
+                return;
+            }
+            $('#savesEmpty').hide();
+            var rows = items.map(function(it){
+                return ''
+                  + '<tr data-id="' + it.id + '">'
+                  +   '<td class="w-100"><div class="fw-bold">' + savesEsc(it.title) + '</div>'
+                  +       '<div class="text-secondary small">' + savesEsc(it.saved_by || '') + ' · ' + savesEsc(it.saved_at || '') + '</div></td>'
+                  +   '<td class="text-nowrap text-end">'
+                  +     '<button type="button" class="btn btn-sm btn-primary saves-load"><i class="ti ti-folder-open me-1"></i>불러오기</button> '
+                  +     '<button type="button" class="btn btn-sm btn-ghost-danger saves-del"><i class="ti ti-trash"></i></button>'
+                  +   '</td>'
+                  + '</tr>';
+            }).join('');
+            $body.html('<table class="table table-vcenter card-table"><tbody>' + rows + '</tbody></table>');
+        }
+
+        // 현재 유형의 목록을 서버에서 불러와 렌더
+        function reloadSavesList(){
+            var type = currentType();
+            $('#savesTypeBadge').text(type === 'solo' ? '1:1 소개팅' : '와인파티');
+            $('#savesListBody').html('<div class="text-center text-secondary py-4"><span class="spinner-border spinner-border-sm me-2"></span>불러오는 중…</div>');
+            $('#savesEmpty').hide();
+            $.ajax({
+                url: "{{ route('admin.rotation.detail.saves.list') }}",
+                type: 'GET',
+                data: { type: type },
+                success: function(res){ renderSavesList(res && res.items ? res.items : []); },
+                error: function(){ $('#savesListBody').html('<div class="text-danger text-center py-4">목록을 불러오지 못했습니다.</div>'); }
+            });
+        }
+
+        // 다른 이름으로 저장 (제목 입력받아 새 저장본 생성 → 현재 편집 대상이 그 새 저장본이 됨)
+        $('.btn-detail-save-as').on('click', async function(){
+            var type = currentType();
+            var html = getHtml();
+            if (!html || !html.trim()) {
+                await salert({text: '저장할 내용이 없습니다. 먼저 내용을 작성해 주세요.', cancel: false});
+                return;
+            }
+            var ok = await createSnapshot(type, html, (CURRENT[type] && CURRENT[type].title) ? (CURRENT[type].title + ' (복사)') : '');
+            if (ok && document.getElementById('detailSavesModal').classList.contains('show')) {
+                reloadSavesList();
+            }
+        });
+
+        // 저장 목록 열기
+        $('.btn-open-saves').on('click', function(){
+            reloadSavesList();
+            var m = getSavesModal();
+            if (m) { m.show(); }
+        });
+
+        // 불러오기 (선택한 저장본을 에디터에 로드 → 그 저장본이 현재 편집 대상이 됨)
+        $('#savesListBody').on('click', '.saves-load', async function(){
+            var id = $(this).closest('tr').data('id');
+            if (!(await salert({text: '이 저장본으로 현재 작성 내용을 교체하시겠습니까?'}))) { return; }
+            var type = currentType();
+            $.ajax({
+                url: "{{ url('admin/rotation/detail/saves') }}/" + id,
+                type: 'GET',
+                success: async function(res){
+                    // apiRes 는 200 응답에서 isSuccess 를 제거하므로, success 콜백이면 로드 성공으로 본다.
+                    setHtml((res && res.html) ? res.html : '');
+                    // 불러온 저장본을 "현재 편집 중"으로 설정 → 이후 [저장] 은 이 항목을 덮어쓴다.
+                    CURRENT[type] = { id: (res && res.id) ? res.id : id, title: (res && res.title) || '' };
+                    SAVED[type] = getHtml();
+                    renderSavedInfo();
+                    var m = getSavesModal();
+                    if (m) { m.hide(); }
+                    await salert({text: "'" + ((res && res.title) || '') + "' 를 불러왔어요. 수정 후 [저장]을 누르면 이 저장본이 갱신됩니다.", cancel: false});
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '불러오지 못했습니다.'); }
+            });
+        });
+
+        // 삭제 (현재 편집 중이던 저장본을 지우면 '미저장 새 문서' 상태로 전환)
+        $('#savesListBody').on('click', '.saves-del', async function(){
+            var $tr = $(this).closest('tr');
+            var id  = parseInt($tr.data('id'), 10);
+            if (!(await salert({text: '이 저장본을 삭제하시겠습니까?'}))) { return; }
+            var type = currentType();
+            $.ajax({
+                url: "{{ url('admin/rotation/detail/saves') }}/" + id,
+                type: 'DELETE',
+                success: function(res){
+                    alert(res?.msg);
+                    if (CURRENT[type] && parseInt(CURRENT[type].id, 10) === id) {
+                        CURRENT[type] = { id: null, title: null };
+                        renderSavedInfo();
+                    }
+                    reloadSavesList();
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '삭제하지 못했습니다.'); }
+            });
         });
 
         // 이미지(PNG) 다운로드 — 모달 상태와 무관하게 오프스크린 영역에 렌더해서 캡처
@@ -1003,7 +1278,7 @@
                 // ===== 10MB 상한 + 화질 최우선 저장 =====
                 // PNG(무손실) 를 유지하면서 10MB 를 넘으면 해상도만 완만히 줄여 맞춘다.
                 // (JPEG 저품질로 글자를 뭉개는 대신, 선명한 PNG 를 우선한다.)
-                await exportCanvasUnder10MB(canvas, 'rotable_상세페이지');
+                await exportCanvasUnder10MB(canvas, buildDownloadBaseName('rotable_상세페이지'));
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
             } finally {
@@ -1247,7 +1522,7 @@
                 clearImageHeights(target);
 
                 // 화질 최우선 + 10MB 상한 (상세페이지 다운로드와 동일 로직)
-                await exportCanvasUnder10MB(canvas, 'rotable_피드');
+                await exportCanvasUnder10MB(canvas, buildDownloadBaseName('rotable_피드'));
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
             } finally {

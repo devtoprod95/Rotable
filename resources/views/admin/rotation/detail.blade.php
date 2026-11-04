@@ -1281,12 +1281,25 @@
                 }
 
                 // 선명도는 높이되, 캔버스 크기 한계(브라우저 최대 ~16384px)를 넘으면
-                // 빈(흰) 이미지가 되므로 안전 범위 내에서 최대 scale 을 계산한다.
-                var detailScale = computeSafeScale(holder.offsetWidth || 1080, holder.offsetHeight || 1080, 3.5);
+                // 캡처 대상 폭을 1080 으로 확정한다. (fixed 요소라도 레이아웃 폭을 고정)
+                holder.style.width = '1080px';
 
+                // 폭 확정 '뒤'에 실제 콘텐츠 높이를 픽셀로 측정한다.
+                var capW = holder.offsetWidth || 1080;
+                var capH = holder.scrollHeight || holder.offsetHeight || 1080;
+
+                // 선명도는 높이되, 캔버스 크기 한계(브라우저 최대 ~16384px)를 넘으면
+                // 빈(흰) 이미지가 되므로 안전 범위 내에서 최대 scale 을 계산한다.
+                var detailScale = computeSafeScale(capW, capH, 3.5);
+
+                // width/height/windowWidth 를 명시해 html2canvas 가 뷰포트가 아닌
+                // 1080px 기준으로 레이아웃을 계산하게 한다. (미지정 시 세로로 눌리는 버그 방지)
                 var canvas = await html2canvas(holder, {
                     backgroundColor: '#ffffff',
                     scale: detailScale,
+                    width: capW,
+                    height: capH,
+                    windowWidth: capW,
                     useCORS: true,
                     allowTaint: false,
                     logging: false

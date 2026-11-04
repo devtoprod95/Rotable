@@ -38,7 +38,7 @@
                     <i class="ti ti-sparkles text-pink me-1"></i> 상세페이지 제작
                 </h3>
                 <div class="d-flex gap-2 flex-wrap align-items-center">
-                    {{-- 샘플 유형 선택 --}}
+                    {{-- 유형 선택 (와인파티 / 1:1 소개팅) --}}
                     <div class="btn-group" role="group" aria-label="샘플 유형">
                         <input type="radio" class="btn-check" name="sampleType" id="sampleTypeWine" value="wine" autocomplete="off" checked>
                         <label class="btn btn-outline-pink" for="sampleTypeWine">
@@ -52,41 +52,58 @@
 
                     <span class="vr d-none d-md-inline"></span>
 
-                    {{-- 자주 쓰는 핵심 동작만 밖에 노출 --}}
-                    <button type="button" class="btn btn-pink btn-open-roster">
-                        <i class="ti ti-users-group me-1"></i> 참여자 명단 편집
-                    </button>
-                    <button type="button" class="btn btn-azure btn-open-preview">
-                        <i class="ti ti-eye me-1"></i> 미리보기
-                    </button>
-                    <button type="button" class="btn btn-primary btn-detail-save">
-                        <i class="ti ti-device-floppy me-1"></i> 저장
-                    </button>
-
-                    {{-- 나머지(샘플 불러오기·다운로드 계열)는 더보기 드롭다운으로 접음 --}}
-                    <div class="dropdown">
-                        <button type="button" class="btn btn-outline-secondary dropdown-toggle"
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="ti ti-dots me-1"></i> 더보기
+                    {{-- 저장 그룹: 저장본 선택/저장/다른 이름으로 저장 (자주 쓰므로 밖으로 노출) --}}
+                    <div class="btn-group" role="group" aria-label="저장">
+                        <button type="button" class="btn btn-primary btn-detail-save">
+                            <i class="ti ti-device-floppy me-1"></i> 저장
                         </button>
-                        <div class="dropdown-menu dropdown-menu-end">
-                            <h6 class="dropdown-header">저장 목록</h6>
-                            <button type="button" class="dropdown-item btn-detail-save-as">
-                                <i class="ti ti-bookmark-plus me-2 fs-2"></i> 다른 이름으로 저장
-                            </button>
+                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="visually-hidden">저장 옵션</span>
+                        </button>
+                        <div class="dropdown-menu">
                             <button type="button" class="dropdown-item btn-open-saves">
                                 <i class="ti ti-list-details me-2 fs-2"></i> 저장 목록 불러오기
                             </button>
-                            <div class="dropdown-divider"></div>
-                            <h6 class="dropdown-header">샘플 불러오기</h6>
+                            <button type="button" class="dropdown-item btn-detail-save-as">
+                                <i class="ti ti-bookmark-plus me-2 fs-2"></i> 다른 이름으로 저장
+                            </button>
+                        </div>
+                    </div>
+
+                    <span class="vr d-none d-md-inline"></span>
+
+                    {{-- 편집 그룹: 참여자 명단 편집 / 샘플 불러오기 --}}
+                    <button type="button" class="btn btn-pink btn-open-roster">
+                        <i class="ti ti-users-group me-1"></i> 참여자 명단 편집
+                    </button>
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="ti ti-layout-board me-1"></i> 샘플 불러오기
+                        </button>
+                        <div class="dropdown-menu">
                             <button type="button" class="dropdown-item btn-sample-one">
                                 <i class="ti ti-layout-rows me-2 fs-2"></i> 1열 샘플
                             </button>
                             <button type="button" class="dropdown-item btn-sample-two">
                                 <i class="ti ti-layout-columns me-2 fs-2"></i> 2열 샘플
                             </button>
-                            <div class="dropdown-divider"></div>
-                            <h6 class="dropdown-header">이미지 다운로드</h6>
+                        </div>
+                    </div>
+
+                    <span class="vr d-none d-md-inline"></span>
+
+                    {{-- 결과 그룹: 미리보기 / 다운로드 --}}
+                    <button type="button" class="btn btn-azure btn-open-preview">
+                        <i class="ti ti-eye me-1"></i> 미리보기
+                    </button>
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="ti ti-download me-1"></i> 다운로드
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end">
                             <button type="button" class="dropdown-item btn-detail-download">
                                 <i class="ti ti-download me-2 fs-2"></i> 이미지 다운로드
                             </button>
@@ -99,10 +116,10 @@
             </div>
             <div class="card-body">
                 <small class="form-hint text-muted d-block mb-3">
-                    <b>유형(와인파티 / 1:1 소개팅)</b>을 먼저 고른 뒤 <b>1열 / 2열 샘플</b>을 누르면 해당 유형의 샘플이 적용됩니다.
-                    이후 HTML 에디터로 자유롭게 꾸미고 <b>[저장]</b> 하세요.
+                    <b>유형(와인파티 / 1:1 소개팅)</b>을 고른 뒤 <b>샘플 불러오기 → 1열 / 2열</b>로 기본 틀을 불러오세요.
+                    이후 HTML 에디터로 꾸미고 <b>[저장]</b> 하세요.
                     편집 중인 저장본이 있으면 그 저장본이 갱신되고, 없으면 이름을 입력해 <b>저장 목록</b>에 새로 저장됩니다.
-                    (더보기 → <b>저장 목록 불러오기</b> 에서 이전 저장본을 불러올 수 있어요.)
+                    (<b>저장 ▾ → 저장 목록 불러오기</b> 로 이전 저장본을 불러오거나, <b>다른 이름으로 저장</b>으로 새 버전을 남길 수 있어요.)
                 </small>
                 <label class="form-label">상세페이지 작성 (HTML)</label>
                 <textarea id="detailHtmlEditor">{!! $savedWine !!}</textarea>

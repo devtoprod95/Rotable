@@ -51,7 +51,7 @@ export default function ProfileDetailModal({ member, tone, onClose }) {
                 <div className={`px-5 py-4 ${headCls}`}>
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">{tone === 'female' ? '👩' : '👨'}</span>
-                        <span className="text-lg font-extrabold text-secondary-800">{member.name}</span>
+                        <span className="text-lg font-extrabold text-secondary-800">{member.name}호</span>
                         <button
                             type="button"
                             onClick={onClose}

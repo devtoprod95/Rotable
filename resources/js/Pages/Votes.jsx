@@ -75,7 +75,7 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle, 
         >
             <div className="flex items-center gap-2">
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
-                <span className="font-bold">{candidate.name}</span>
+                <span className="font-bold">{candidate.name}호</span>
 
                 {onDetail && (
                     <span

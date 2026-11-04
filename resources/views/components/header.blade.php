@@ -170,7 +170,7 @@
                                 </ul>
                                 <div class="fw-bold text-pink mb-1"><i class="ti ti-users me-1"></i> 그러면 참가자는</div>
                                 <ul class="lh-lg">
-                                    <li>입장 화면의 <b>회차 선택 목록</b>에 이 행사가 노출되어, <mark>닉네임·핸드폰·비밀번호(4자리)로 입장등록</mark> 할 수 있습니다.</li>
+                                    <li>입장 화면의 <b>회차 선택 목록</b>에 이 행사가 노출되어, <mark>번호표·핸드폰·비밀번호(4자리)로 입장등록</mark> 할 수 있습니다.</li>
                                 </ul>
                                 <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-primary btn-sm"><i class="ti ti-external-link me-1"></i> 행사 관리로 이동</a>
                             </div>

@@ -76,7 +76,7 @@ function MemberChip({
         >
             <div className="flex items-center gap-2">
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
-                <span className="font-bold">{member.name}</span>
+                <span className="font-bold">{member.name}호</span>
                 {onDetail && (
                     <span
                         role="button"
@@ -344,7 +344,7 @@ export default function Home() {
                     </div>
                 )}
                 <h1 className="mt-2 text-xl font-extrabold">
-                    {auth?.user?.name}님, 로테이션 기록표예요 👋
+                    {auth?.user?.name}호님, 로테이션 기록표예요 👋
                 </h1>
 
                 {/* 안내 문구: 1:1(매칭 선택) vs 와인파티(메시지 전달) */}

@@ -29,7 +29,7 @@ function PartnerRow({ member, tone, onSelect, onDetail, disabled }) {
         <div className={`rounded-xl border p-3 ${toneCls}`}>
             <div className="flex items-center gap-2">
                 <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
-                <span className="truncate font-bold">{member.name}</span>
+                <span className="truncate font-bold">{member.name}호</span>
                 {onDetail && (
                     <span
                         role="button"
@@ -123,7 +123,7 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
 
                 <div className="mt-3 flex items-center gap-2 rounded-xl bg-gray-50 p-3">
                     <span className="text-base">{tone === 'female' ? '👩' : '👨'}</span>
-                    <span className="font-bold">{target.name}</span>
+                    <span className="font-bold">{target.name}호</span>
                     <span className="text-xs text-gray-400">님에게</span>
                 </div>
 
@@ -190,7 +190,7 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
                             </p>
                         </div>
                         <p className="text-center text-sm font-semibold text-secondary-700">
-                            <b className="text-primary">{target.name}</b>님에게 이대로 전달할까요?
+                            <b className="text-primary">{target.name}호</b>님에게 이대로 전달할까요?
                         </p>
                         <p className="text-center text-xs text-gray-400">
                             전달 후에는 취소할 수 없어요.

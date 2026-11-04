@@ -124,7 +124,7 @@ export default function AppLayout({
                                                     </span>
                                                     <span className="flex items-baseline gap-0.5">
                                                         <span className="text-sm font-bold tracking-tight">
-                                                            {auth.user.name}
+                                                            {auth.user.name}호
                                                         </span>
                                                         <span className="text-xs font-medium opacity-70">
                                                             님

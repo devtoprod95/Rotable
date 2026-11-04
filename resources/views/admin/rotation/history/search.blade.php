@@ -138,7 +138,7 @@
             if(!p){ return '-'; }
             var line = specLine(p);
             var pf = (platform !== undefined && platform !== null) ? platformBadge(platform) : '';
-            return `<div><span class="fw-bold">${esc(p.name) || '-'}</span> ${genderBadge(p.gender)} ${pf}</div>`
+            return `<div><span class="fw-bold">${p.name ? esc(p.name) + '호' : '-'}</span> ${genderBadge(p.gender)} ${pf}</div>`
                  + (line ? `<div class="text-muted" style="font-size:0.85em;">${line}</div>` : '')
                  + (p.phone ? `<div class="text-muted" style="font-size:0.85em;">${esc(p.phone)}</div>` : '');
         }
@@ -342,7 +342,8 @@
             var eventId  = $(this).data('event-id');
             var memberId = $(this).data('member-id');
             var label    = $(this).data('label') || '';
-            VotedModal.open(eventId, memberId, label + ' 님이 선택/매칭한 상대');
+            var who = (label ? label + '호' : '회원');
+            VotedModal.open(eventId, memberId, who + ' 님이 선택/매칭한 상대');
         });
 
         // 본인의 "매칭 조회" 모달 — 내가 선택된 행사에서 투표/매칭한 상대.
@@ -350,7 +351,8 @@
             var eventId  = $(this).data('event-id');
             var memberId = $(this).data('member-id');
             var meName   = (lastRes && lastRes.me && lastRes.me.name) ? lastRes.me.name : '';
-            VotedModal.open(eventId, memberId, meName + ' 님이 선택/매칭한 상대');
+            var meWho = (meName ? meName + '호' : '회원');
+            VotedModal.open(eventId, memberId, meWho + ' 님이 선택/매칭한 상대');
         });
 
         // 선택된 행사에서 "본인"이 관리자에게 보낸 요청 모달.
@@ -358,7 +360,8 @@
             var eventId  = $(this).data('event-id');
             var memberId = $(this).data('member-id');
             var meName   = (lastRes && lastRes.me && lastRes.me.name) ? lastRes.me.name : '';
-            RequestsModal.open(eventId, meName + ' 님이 보낸 요청', { memberId: memberId });
+            var meWho = (meName ? meName + '호' : '회원');
+            RequestsModal.open(eventId, meWho + ' 님이 보낸 요청', { memberId: memberId });
         });
 
         // 뒤로/앞으로 가기: 주소의 phone 으로 다시 조회(주소는 이미 바뀌어 있으므로 pushUrl=false)

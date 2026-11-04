@@ -306,7 +306,8 @@
             var eventId  = $(this).data('event-id');
             var memberId = $(this).data('member-id');
             var label    = $(this).data('label') || '';
-            VotedModal.open(eventId, memberId, label + ' 님이 선택/매칭한 상대');
+            var who = (label ? label + '호' : '회원');
+            VotedModal.open(eventId, memberId, who + ' 님이 선택/매칭한 상대');
         });
 
         // 쿼리스트링으로 넘어온 초기값이 있으면 자동 조회.

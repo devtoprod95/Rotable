@@ -157,7 +157,7 @@
                 if(m.birth_year){ info.push(String(m.birth_year).slice(-2) + '년생'); }
                 if(m.job){ info.push(m.job); }
                 let suffix = info.length ? ` · ${info.join(' · ')}` : '';
-                html += `<option value="${m.id}">[${genderLabel(m.gender)}] ${m.name}${suffix}</option>`;
+                html += `<option value="${m.id}">[${genderLabel(m.gender)}] ${m.name}호${suffix}</option>`;
             });
             return html;
         }
@@ -348,7 +348,7 @@
                                    style="width:1.4rem;height:1.4rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.95rem;line-height:1;"></i></a>`
                         : '';
                     return `<span class="badge ${genderBadgeClass(m.gender)} me-1 mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1">
-                                <span>${m.name}${infoText}</span>
+                                <span>${m.name}호${infoText}</span>
                                 ${removeBtn}
                             </span>`;
                 }).join('');

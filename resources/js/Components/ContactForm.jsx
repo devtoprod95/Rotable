@@ -108,7 +108,7 @@ export default function ContactForm() {
                 label="이름 (선택)"
                 value={name}
                 onChange={setName}
-                placeholder="닉네임 또는 이름"
+                placeholder="이름"
                 maxLength={50}
             />
             <TextField

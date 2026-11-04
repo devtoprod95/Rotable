@@ -37,7 +37,7 @@ function SentMessage({ message }) {
                 <div className="flex items-center gap-2">
                     <span className="text-base">💌</span>
                     <span className="font-bold text-secondary-700">
-                        {message.receiver_name ?? '상대'}님에게
+                        {message.receiver_name ? `${message.receiver_name}호` : '상대'}님에게
                     </span>
                     <span
                         className={

@@ -14,7 +14,7 @@ class MemberSeeder extends Seeder
      * 회원을 생성할 대상 행사(event_rounds.id).
      * 이 id의 행사에만 샘플 회원을 생성한다.
      */
-    private const TARGET_EVENT_ID = 2;
+    private const TARGET_EVENT_ID = 1;
 
     /**
      * 샘플 회원 데이터 시딩.
@@ -48,7 +48,7 @@ class MemberSeeder extends Seeder
                 ->male()
                 ->for($round, 'eventRound')
                 ->create([
-                    'name'  => '김남자' . $i,
+                    'name'  => $i,
                     'phone' => '010' . $phoneSeq++,
                 ]);
         }
@@ -60,7 +60,7 @@ class MemberSeeder extends Seeder
                 ->female()
                 ->for($round, 'eventRound')
                 ->create([
-                    'name'  => '김여자' . $i,
+                    'name'  => $i,
                     'phone' => '010' . $phoneSeq++,
                 ]);
         }

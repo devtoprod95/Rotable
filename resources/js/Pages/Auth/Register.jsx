@@ -40,9 +40,9 @@ function buildAutofill(birthYears) {
     const birthYearIds = birthYears.map((y) => (typeof y === 'object' ? y.id : y));
 
     return {
-        // 닉네임~비밀번호는 기존 고정값 유지
+        // 번호표~비밀번호는 기존 고정값 유지
         phone: '01025466499',
-        name: '김도한',
+        name: '1',
         password: 'qqqq',
         gender: 'M',
         // 출생연도~흡연 여부는 매번 랜덤
@@ -154,7 +154,7 @@ export default function Register() {
             { key: 'gender',            empty: !data.gender,            message: '성별을 선택해주세요.',              field: 'gender',            scrollTop: true },
             { key: 'event_id',          empty: !data.event_id,          message: '회차를 선택해주세요.',              field: 'event_id',          scrollTop: true },
             { key: 'rotation_table_id', empty: !data.rotation_table_id, message: '앉아 계신 테이블을 선택해주세요.',   field: 'rotation_table_id', scrollTop: true },
-            { key: 'name',              empty: !data.name,              message: '닉네임을 입력해주세요.' },
+            { key: 'name',              empty: !data.name,              message: '번호표를 입력해주세요.' },
             { key: 'phone',             empty: !data.phone,             message: '핸드폰 번호를 입력해주세요.' },
             { key: 'password',          empty: !data.password,          message: '비밀번호(4자리)를 입력해주세요.' },
             { key: 'birth_year',        empty: !data.birth_year,        message: '출생연도를 선택해주세요.' },
@@ -297,10 +297,12 @@ export default function Register() {
                             error={errors.platform}
                         />
                         <TextField
-                            label="닉네임"
+                            label="번호표"
                             value={data.name}
                             onChange={(v) => setData('name', v)}
-                            placeholder="닉네임을 입력해주세요."
+                            placeholder="받으신 번호표를 입력해주세요."
+                            digitsOnly
+                            maxLength={10}
                             error={errors.name}
                         />
                         <TextField
@@ -419,7 +421,7 @@ export default function Register() {
                 </div>
             </div>
 
-            {/* 제출 전 최종 확인 모달 — 닉네임/테이블을 다시 확인시킨다. */}
+            {/* 제출 전 최종 확인 모달 — 번호표/테이블을 다시 확인시킨다. */}
             {confirmOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-6"
@@ -431,7 +433,19 @@ export default function Register() {
                     >
                         <h2 className="text-center text-xl font-extrabold text-secondary-800">입장 전 확인</h2>
                         <p className="mt-4 text-center text-base leading-relaxed text-secondary-600">
-                            <span className="font-bold text-primary">{data.name || '회원'}</span>님,
+                            {data.gender && (
+                                <span
+                                    className={
+                                        'mr-1 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-bold ' +
+                                        (data.gender === 'F'
+                                            ? 'bg-rose-50 text-rose-600'
+                                            : 'bg-sky-50 text-sky-600')
+                                    }
+                                >
+                                    {data.gender === 'F' ? '👩 여성' : '👨 남성'}
+                                </span>
+                            )}
+                            <span className="font-bold text-primary">{data.name || '회원'}호</span>님,
                             <br />
                             <span className="font-bold text-primary">
                                 {selectedTableLabel || '선택한 테이블'}

@@ -91,7 +91,7 @@
             return '';
         }
         function nameWithGender(name, gender){
-            var n = name ? $('<div>').text(name).html() : '-';
+            var n = name ? $('<div>').text(name + '호').html() : '-';
             return `<span class="fw-bold">${n}</span> ${genderBadge(gender)}`;
         }
 

@@ -143,7 +143,7 @@
                                                     $memberData['age'] = $member->birth_year ? (now()->year - $member->birth_year + 1) : null;
                                                 @endphp
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <span class="fw-bold">{{ $member->name }}</span>
+                                                    <span class="fw-bold">{{ $member->name }}호</span>
                                                     @if ($member->gender === 'F')
                                                         <span class="badge bg-pink-lt">여</span>
                                                     @else
@@ -427,28 +427,32 @@
         $(document).on('click', '.btn-voters', function(){
             var memberId = $(this).data('member-id');
             var label = $(this).data('member-label') || '';
-            VotersModal.open({{ $event->id }}, memberId, label + ' 님을 선택한 사람');
+            var who = (label ? label + '호' : '회원');
+            VotersModal.open({{ $event->id }}, memberId, who + ' 님을 선택한 사람');
         });
 
         // ===== 상세: 보낸 투표(이 회원이 선택한 상대) 모달 =====
         $(document).on('click', '.btn-voted', function(){
             var memberId = $(this).data('member-id');
             var label = $(this).data('member-label') || '';
-            VotedModal.open({{ $event->id }}, memberId, label + ' 님이 선택/매칭한 상대');
+            var who = (label ? label + '호' : '회원');
+            VotedModal.open({{ $event->id }}, memberId, who + ' 님이 선택/매칭한 상대');
         });
 
         // ===== 상세: 보낸 메시지 모달 (특정 회원이 보낸 것만) =====
         $(document).on('click', '.btn-sent-messages', function(){
             var memberId = $(this).data('member-id');
             var label = $(this).data('member-label') || '';
-            MessagesModal.open({{ $event->id }}, label + ' 님이 보낸 메시지', { senderId: memberId });
+            var who = (label ? label + '호' : '회원');
+            MessagesModal.open({{ $event->id }}, who + ' 님이 보낸 메시지', { senderId: memberId });
         });
 
         // ===== 상세: 보낸 요청 모달 (특정 회원이 보낸 것만) =====
         $(document).on('click', '.btn-sent-requests', function(){
             var memberId = $(this).data('member-id');
             var label = $(this).data('member-label') || '';
-            RequestsModal.open({{ $event->id }}, label + ' 님이 보낸 요청', { memberId: memberId });
+            var who = (label ? label + '호' : '회원');
+            RequestsModal.open({{ $event->id }}, who + ' 님이 보낸 요청', { memberId: memberId });
         });
 
         // ===== 상세: 회원 상세정보 모달 =====

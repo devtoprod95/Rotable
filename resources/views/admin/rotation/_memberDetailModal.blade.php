@@ -117,7 +117,7 @@
             var avatarCls = (d.gender === 'F') ? 'bg-pink-lt' : 'bg-blue-lt';
             $('#memberDetail-avatar').attr('class', 'avatar avatar-lg ' + avatarCls).text(d.name ? d.name.charAt(0) : '?');
 
-            $('#memberDetail-name').text(d.name || '-');
+            $('#memberDetail-name').text(d.name ? d.name + '호' : '-');
             $('#memberDetail-gender').html(genderBadge(d.gender));
             $('#memberDetail-sub').html(subText(d));
 

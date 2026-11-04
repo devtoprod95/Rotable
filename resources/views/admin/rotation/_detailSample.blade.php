@@ -56,19 +56,40 @@
     ][$type];
 
     // 더미 참여자 (남 5 / 여 5) — 이름은 N호로 표기
+    // 1:1 소개팅(solo)은 나이 제한(남 25~37세 · 여 23~37세)에 맞춰 "년생"으로 표기한다.
+    // (한국식 나이 기준: 출생연도 = 올해 - 나이 + 1)
+    $thisYear = (int) now()->year;
+    $yearsFromAges = function (array $ages) use ($thisYear): array {
+        return array_map(fn (int $age): string => ($thisYear - $age + 1) . '년생', $ages);
+    };
+    // 남 25~37 / 여 23~37 범위 내 샘플 나이 (5명씩)
+    $maleSoloYears   = $yearsFromAges([27, 30, 34, 25, 37]);
+    $femaleSoloYears = $yearsFromAges([26, 29, 31, 23, 35]);
+
+    // "참여 조건"의 나이(년생) 범위 라인.
+    //  - 나이 범위를 한국식 나이 기준으로 출생연도(2자리)로 환산해 "OO~OO년생"으로 표기한다.
+    //  - 1:1 소개팅(solo): 남 25~37세 / 여 23~37세.  와인파티(wine): 기존 범위 유지.
+    $yy = fn (int $age): string => sprintf('%02d', ($thisYear - $age + 1) % 100); // 출생연도 뒤 2자리
+    if ($type === 'solo') {
+        // 나이 많을수록 출생연도가 작음 → (최고령 → 최연소) 순서로 "OO~OO년생"
+        $ageConditionLine = '남성 ' . $yy(37) . '~' . $yy(25) . '년생 / 여성 ' . $yy(37) . '~' . $yy(23) . '년생';
+    } else {
+        $ageConditionLine = '남성 00~88년생 / 여성 02~88년생';
+    }
+
     $maleSample = [
-        ['no' => 1, 'height' => 177, 'job' => '쇼핑몰',   'age' => '30대 초반'],
-        ['no' => 2, 'height' => 181, 'job' => 'IT개발자', 'age' => '30대 초반'],
-        ['no' => 3, 'height' => 184, 'job' => 'IT개발자', 'age' => '30대 중반'],
-        ['no' => 4, 'height' => 175, 'job' => '회사원',   'age' => '20대 중반'],
-        ['no' => 5, 'height' => 182, 'job' => '공무원',    'age' => '30대 초반'],
+        ['no' => 1, 'height' => 177, 'job' => '쇼핑몰',   'age' => $type === 'solo' ? $maleSoloYears[0] : '30대 초반'],
+        ['no' => 2, 'height' => 181, 'job' => 'IT개발자', 'age' => $type === 'solo' ? $maleSoloYears[1] : '30대 초반'],
+        ['no' => 3, 'height' => 184, 'job' => 'IT개발자', 'age' => $type === 'solo' ? $maleSoloYears[2] : '30대 중반'],
+        ['no' => 4, 'height' => 175, 'job' => '회사원',   'age' => $type === 'solo' ? $maleSoloYears[3] : '20대 중반'],
+        ['no' => 5, 'height' => 182, 'job' => '공무원',    'age' => $type === 'solo' ? $maleSoloYears[4] : '30대 초반'],
     ];
     $femaleSample = [
-        ['no' => 1, 'height' => 168, 'job' => '간호사',   'age' => '20대 후반'],
-        ['no' => 2, 'height' => 160, 'job' => '사업가',   'age' => '30대 초반'],
-        ['no' => 3, 'height' => 167, 'job' => '공무원',   'age' => '30대 초반'],
-        ['no' => 4, 'height' => 158, 'job' => '디자이너', 'age' => '30대 중반'],
-        ['no' => 5, 'height' => 169, 'job' => '승무원',   'age' => '30대 초반'],
+        ['no' => 1, 'height' => 168, 'job' => '간호사',   'age' => $type === 'solo' ? $femaleSoloYears[0] : '20대 후반'],
+        ['no' => 2, 'height' => 160, 'job' => '사업가',   'age' => $type === 'solo' ? $femaleSoloYears[1] : '30대 초반'],
+        ['no' => 3, 'height' => 167, 'job' => '공무원',   'age' => $type === 'solo' ? $femaleSoloYears[2] : '30대 초반'],
+        ['no' => 4, 'height' => 158, 'job' => '디자이너', 'age' => $type === 'solo' ? $femaleSoloYears[3] : '30대 중반'],
+        ['no' => 5, 'height' => 169, 'job' => '승무원',   'age' => $type === 'solo' ? $femaleSoloYears[4] : '30대 초반'],
     ];
 
     // 더미 행사
@@ -524,7 +545,7 @@
             참여 조건
         </div>
         <div style="background:#eff6ff; padding:22px 14px; text-align:center; font-size:31px; color:#374151; line-height:2.2;">
-            <div>- 남성 00~88년생 / 여성 02~88년생</div>
+            <div>- {{ $ageConditionLine }}</div>
             <div>- 미혼이신 분 (돌싱·기혼은 참여가 어려워요)</div>
             <div>- 안정적인 직업과 경제력을 갖추신 분 (신분·재직 확인에 협조해 주세요)</div>
             <div>- 진지하게 좋은 인연을 찾고 싶으신 분</div>

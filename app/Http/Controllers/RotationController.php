@@ -16,6 +16,7 @@ use App\Services\Rotation\MeetingHistoryService;
 use App\Services\Rotation\MatchService;
 use App\Services\Rotation\SeatingService;
 use App\Services\Rotation\EventContextService;
+use App\Services\Rotation\EventNoticeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -695,6 +696,27 @@ class RotationController extends Controller
     {
         return view('admin.rotation.guide', [
             'initialType' => $type === 'solo' ? 'solo' : 'wine',
+        ]);
+    }
+
+    /**
+     * 채팅방 공지 문구 — 선택한 행사의 시작 시간/타입에 맞춰 안내 문구를 자동 생성한다.
+     * 행사 미지정 시 지금 운영할 행사(사이드바 "체크인"과 같은 기준)를 사용한다.
+     */
+    public function guideNotice(EventNoticeService $noticeService): View
+    {
+        $events  = $this->eventContextService->selectableEvents();
+        $eventId = (int) ($this->request->input('eventId')
+            ?: ($this->eventContextService->currentEventId() ?? 0));
+        $event   = $eventId > 0 ? EventRound::find($eventId) : null;
+        $place   = (string) $this->request->input('place', '');
+
+        return view('admin.rotation.guideNotice', [
+            'events'       => $events,
+            'event'        => $event,
+            'place'        => $place !== '' ? $place : EventNoticeService::DEFAULT_PLACE,
+            'notice'       => $event ? $noticeService->build($event, $place) : '',
+            'typeOptions'  => EventRound::typeOptions(),
         ]);
     }
 

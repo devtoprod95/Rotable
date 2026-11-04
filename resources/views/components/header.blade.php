@@ -44,6 +44,9 @@
                                     <a href="{{ route('public.guide') }}" target="_blank" rel="noopener" class="dropdown-item">
                                         <i class="ti ti-slideshow me-2 fs-2"></i> 안내 슬라이드
                                     </a>
+                                    <a href="{{ route('admin.rotation.guide.notice') }}" class="dropdown-item">
+                                        <i class="ti ti-message-2 me-2 fs-2"></i> 채팅방 공지
+                                    </a>
                                     <div class="dropdown-divider"></div>
                                     <button type="button" class="dropdown-item" id="adminGuideOpenBtn">
                                         <i class="ti ti-help-circle me-2 fs-2 text-danger"></i> 사용 설명서

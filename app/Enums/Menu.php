@@ -49,6 +49,7 @@ enum Menu: string
                         'pattern'  => 'admin.rotation.guide*',
                         'children' => [
                             ['name' => '안내 슬라이드', 'route' => 'admin.rotation.guide.index', 'pattern' => 'admin.rotation.guide.index*'],
+                            ['name' => '채팅방 공지', 'route' => 'admin.rotation.guide.notice', 'pattern' => 'admin.rotation.guide.notice*'],
                             ['name' => '예외 상황 대처', 'route' => 'admin.rotation.guide.exception', 'pattern' => 'admin.rotation.guide.exception*'],
                         ],
                     ],

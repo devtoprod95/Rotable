@@ -7,11 +7,12 @@
     /* 프로필 비교 테이블: 가운데 라벨 기준으로 A/B 값을 좁게 모아 눈 이동 최소화 */
     .cmp-table { width: 100%; max-width: 720px; margin: 0 auto; border-collapse: separate; border-spacing: 0; }
     .cmp-table td, .cmp-table th { padding: 7px 12px; vertical-align: middle; }
-    .cmp-table .cmp-label { width: 90px; text-align: center; color: #6b7280; font-size: 0.8rem; background: #f8fafc; font-weight: 600; }
-    .cmp-table .cmp-a { text-align: right; background: #f2f7ff; }
-    .cmp-table .cmp-b { text-align: left;  background: #fff2f7; }
+    /* 항목을 '왼쪽'에 두고 A | B 값을 나란히 (좌→우로 자연스럽게 읽히게) */
+    .cmp-table .cmp-label { width: 110px; white-space: nowrap; text-align: left; color: #6b7280; font-size: 0.82rem; background: #f8fafc; font-weight: 700; }
+    .cmp-table .cmp-a { text-align: left; background: #f2f7ff; }
+    .cmp-table .cmp-b { text-align: left; background: #fff2f7; }
     .cmp-table tr + tr td { border-top: 1px solid #eef1f5; }
-    .cmp-head td { font-weight: 700; font-size: 1.05rem; border-bottom: 2px solid #e9edf2; }
+    .cmp-head td { font-weight: 700; font-size: 1.0rem; border-bottom: 2px solid #e9edf2; }
 
     /* 메시지 채팅 박스: 폭을 제한해 가운데 모아 읽기 편하게 */
     .chat-wrap { max-width: 640px; margin: 0 auto; max-height: 360px; overflow-y: auto; padding: 4px; }
@@ -30,7 +31,9 @@
 
     /* 매칭/메시지 영역: 뱃지 나열 대신 카드형 칩으로 한눈에 보이게 */
     .meet-section { margin-top: 18px; }
-    .meet-section__title { display:flex; align-items:center; gap:8px; font-weight:700; font-size:0.85rem; color:#4b5563; margin-bottom:10px; }
+    /* 섹션 제목: 왼쪽 강조 바 + 또렷한 글씨로 섹션 구분을 명확히 한다. */
+    .meet-section__title { display:flex; align-items:center; gap:8px; font-weight:800; font-size:0.98rem; color:#1f2937; margin-bottom:12px; padding-left:10px; border-left:4px solid #6c8cff; }
+    .meet-section__title .ti { font-size:1.15rem; color:#6c8cff; }
     .meet-vote-row { display:flex; align-items:center; justify-content:center; gap:14px; flex-wrap:wrap; }
     .meet-vote-chip { display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:12px; background:#f8fafc; border:1px solid #eef1f5; font-size:0.85rem; }
     .meet-vote-chip .ti { font-size:1.1rem; }
@@ -41,6 +44,44 @@
     .meet-mutual-banner.is-partial { background:#fff9e8; color:#92740a; }
     .meet-mutual-banner.is-none { background:#f3f4f6; color:#6b7280; }
     .meet-msg-count { text-align:center; font-size:0.82rem; color:#8a92a0; margin-bottom:8px; }
+
+    /* 행사별 '당시 신원' 헤더: 번호 기준 조회라 행사마다 닉네임/번호표/플랫폼이 다를 수 있어
+       각 행사 카드 상단에 "그 행사에서의 신원"을 또렷한 카드로 보여준다. */
+    .meet-identity { display:flex; align-items:stretch; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:4px; }
+    .meet-id-card { flex:1 1 0; min-width:220px; max-width:320px; border:1px solid #eef1f5; border-radius:14px; padding:12px 14px; background:#fff; }
+    .meet-id-card.is-a { border-color:#dbe7ff; background:linear-gradient(180deg,#f5f9ff,#ffffff); }
+    .meet-id-card.is-b { border-color:#ffdcec; background:linear-gradient(180deg,#fff5fa,#ffffff); }
+    .meet-id-top { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+    .meet-id-tag { font-weight:800; font-size:0.72rem; padding:2px 8px; border-radius:999px; }
+    .meet-id-tag.is-a { background:#dbe7ff; color:#1d4ed8; }
+    .meet-id-tag.is-b { background:#ffdcec; color:#be185d; }
+    .meet-id-nick { font-weight:800; font-size:1.05rem; color:#1f2937; line-height:1.2; word-break:break-all; }
+    .meet-id-ticket { font-weight:800; font-size:0.9rem; color:#374151; }
+    /* "항목: 값" 한 줄 */
+    .meet-id-line { display:flex; gap:6px; align-items:baseline; margin-top:5px; font-size:0.9rem; }
+    .meet-id-k { flex:0 0 58px; color:#8a92a0; font-weight:700; }
+    .meet-id-v { color:#1f2937; font-weight:800; word-break:break-all; }
+    .meet-id-sub { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:6px; }
+    .meet-id-connector { display:flex; align-items:center; color:#c4ccd6; font-size:1.3rem; padding:0 2px; }
+    @media (max-width: 560px){ .meet-id-connector{ display:none; } }
+
+    /* 관계 종합 통계 카드 (함께한 행사 / 상호매칭 / 한쪽선택 / 메시지) */
+    .meet-stats { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
+    .meet-stat { flex:1 1 140px; max-width:200px; text-align:center; border:1px solid #eef1f5; border-radius:14px; padding:14px 10px; background:#fff; }
+    .meet-stat__ico { font-size:1.4rem; line-height:1; margin-bottom:4px; }
+    .meet-stat__num { font-size:1.8rem; font-weight:800; line-height:1.1; color:#1f2937; }
+    .meet-stat__lbl { font-size:0.8rem; color:#8a92a0; font-weight:700; margin-top:2px; }
+    .meet-stat.is-event  { background:#eef4ff; border-color:#dbe7ff; } .meet-stat.is-event  .meet-stat__ico, .meet-stat.is-event  .meet-stat__num { color:#2563eb; }
+    .meet-stat.is-mutual { background:#ffeef4; border-color:#ffdcec; } .meet-stat.is-mutual .meet-stat__ico, .meet-stat.is-mutual .meet-stat__num { color:#c0266e; }
+    .meet-stat.is-oneway { background:#fff9e8; border-color:#fdeec0; } .meet-stat.is-oneway .meet-stat__ico, .meet-stat.is-oneway .meet-stat__num { color:#92740a; }
+    .meet-stat.is-msg    { background:#eef9f1; border-color:#d7f0de; } .meet-stat.is-msg    .meet-stat__ico, .meet-stat.is-msg    .meet-stat__num { color:#1f7a3d; }
+
+    /* 여태 사용한 닉네임 — 닉네임별로 '어느 행사에서 썼는지' 함께 표기 */
+    .meet-nick-item { margin:4px 0; line-height:1.6; }
+    .meet-nick-badge { display:inline-block; background:#f1f3f8; border:1px solid #e3e7ef; border-radius:999px; padding:2px 10px; margin-right:4px; font-size:0.82rem; font-weight:700; color:#374151; }
+    .meet-nick-pf { color:#8a92a0; font-weight:600; font-size:0.75rem; }
+    .meet-nick-at { color:#8a92a0; font-size:0.75rem; margin-right:4px; }
+    .meet-nick-ev { display:inline-block; background:#eef4ff; border:1px solid #dbe7ff; border-radius:8px; padding:1px 8px; margin:2px 2px; font-size:0.78rem; font-weight:700; color:#2563eb; }
 </style>
 
 <div class="row row-cards mt-2">
@@ -77,22 +118,31 @@
     {{-- 두 사람 요약 (가운데로 모음) --}}
     <div class="col-12 d-none" id="summaryCard">
         <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0"><i class="ti ti-users me-1"></i> 두 사람 요약</h3>
+            </div>
             <div class="card-body">
-                <div class="d-flex align-items-center justify-content-center gap-4 flex-wrap">
-                    <div class="text-end" id="summaryA" style="min-width:160px;"></div>
-                    <div class="text-center px-3">
-                        <div class="h1 mb-0 text-primary" id="meetingCount">0</div>
-                        <div class="text-muted" style="font-size:0.8rem;">함께한 행사</div>
-                        <div class="mt-1 d-flex justify-content-center gap-1 flex-wrap" id="meetingCountByType"></div>
-                    </div>
-                    <div class="text-start" id="summaryB" style="min-width:160px;"></div>
+                {{-- 유형별 함께한 행사 뱃지 (와인파티/1:1 ...) --}}
+                <div class="text-center mb-3">
+                    <div class="d-flex justify-content-center gap-1 flex-wrap" id="meetingCountByType"></div>
                 </div>
+                {{-- 관계 종합(통계 카드) + 고정 프로필 비교 표 --}}
+                <div id="summaryCompare"></div>
                 <div id="genderNote" class="d-none mt-3 text-center text-warning" style="font-size:0.85rem;"></div>
+                <div class="mt-3 text-center text-muted" style="font-size:0.8rem;">
+                    <i class="ti ti-info-circle me-1"></i>
+                    전화번호로 묶은 결과예요. <b>닉네임·번호표·플랫폼·직업</b> 등은 <b>행사마다 다를 수 있어</b>,
+                    각 행사 카드의 <b>프로필 비교</b>에서 그 행사 기준으로 보여드려요.
+                </div>
             </div>
         </div>
     </div>
 
     {{-- 만남 이력 카드들 --}}
+    <div class="col-12 d-none" id="meetingListHeading">
+        <h3 class="mb-0 mt-2"><i class="ti ti-calendar-heart me-1 text-primary"></i> 함께 참여한 행사</h3>
+        <div class="text-muted" style="font-size:0.82rem;">각 행사별로 그때의 신원·프로필·매칭·메시지를 보여줍니다.</div>
+    </div>
     <div class="col-12" id="meetingList"></div>
 
     {{-- 빈 상태 --}}
@@ -136,7 +186,15 @@
                 if(p.birth_year){ return p.birth_year + '년생'; }
                 return p.age ? (p.age + '세') : '-';
             }
-            if(key === 'platform'){ return platformBadge(p.platform); }
+            if(key === 'platform'){ return p.platform_label ? esc(p.platform_label) : '-'; }
+            if(key === 'nickname'){ return p.nickname ? esc(p.nickname) : '-'; }
+            if(key === 'ticket'){
+                if(p.ticket != null && p.ticket !== ''){ return esc(p.ticket) + '호'; }
+                var mTicket = /_([0-9]+호)\s*$/.exec(p.label || '');
+                return mTicket ? mTicket[1] : '-';
+            }
+            if(key === 'gender'){ return p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '-'); }
+            if(key === 'phone'){ return p.phone ? esc(p.phone) : '-'; }
             if(key === 'height'){ return p.height ? p.height + 'cm' : '-'; }
             if(key === 'smoke'){
                 if(p.is_smoker === true){ return '흡연'; }
@@ -146,37 +204,118 @@
             return esc(p[key] || '-');
         }
 
-        // A | 라벨 | B 비교 테이블 (가운데 정렬 → 눈 이동 최소화)
-        // a, b 는 "그 행사에 입장등록한 당시"의 정보다. (번호표·직업·키·지역 등은 행사마다 다를 수 있다.)
+        // 항목 | A | B 비교 테이블 (항목을 왼쪽에 두고 A·B 를 나란히 → 좌→우로 읽기 편하게)
+        // a, b 는 "그 행사에 입장등록한 당시"의 정보다. (플랫폼·닉네임·번호표·직업·키 등은 행사마다 다를 수 있다.)
         function compareTable(a, b){
             var rows = [
-                ['플랫폼', 'platform'], ['나이', 'age'], ['직업', 'job'], ['키', 'height'],
+                ['플랫폼', 'platform'], ['닉네임', 'nickname'], ['번호표', 'ticket'], ['성별', 'gender'],
+                ['나이', 'age'], ['직업', 'job'], ['키', 'height'],
                 ['MBTI', 'mbti'], ['지역', 'region'], ['흡연', 'smoke'],
             ];
             var body = rows.map(function(r){
                 return `<tr>`
-                     + `<td class="cmp-a">${val(a, r[1])}</td>`
                      + `<td class="cmp-label">${r[0]}</td>`
+                     + `<td class="cmp-a">${val(a, r[1])}</td>`
                      + `<td class="cmp-b">${val(b, r[1])}</td>`
                      + `</tr>`;
             }).join('');
 
             return `<table class="cmp-table">`
                  + `<tr class="cmp-head">`
-                     + `<td class="cmp-a">${esc(nm(a,'A'))} ${genderBadge(a.gender)}</td>`
-                     + `<td class="cmp-label">상대</td>`
-                     + `<td class="cmp-b">${genderBadge(b.gender)} ${esc(nm(b,'B'))}</td>`
+                     + `<td class="cmp-label">항목</td>`
+                     + `<td class="cmp-a"><span class="badge bg-blue-lt">A</span> 프로필</td>`
+                     + `<td class="cmp-b"><span class="badge bg-pink-lt">B</span> 프로필</td>`
                  + `</tr>`
                  + body
                  + `</table>`;
         }
 
-        // 상단 요약: 행사와 무관한 식별 정보(전화번호)만 보여준다.
-        // 성별·번호표·이름 등은 행사마다 다를 수 있어 요약에 단정적으로 쓰지 않고, 각 행사 카드에서 보여준다.
-        function summaryPerson(p, tag, tagCls){
-            if(!p || !p.phone){ return '<span class="text-muted">정보 없음</span>'; }
-            return `<div><span class="badge ${tagCls} me-1">${tag}</span>`
-                 + `<span class="fw-bold fs-2">${esc(p.phone)}</span></div>`;
+        // 상단 요약: 두 사람의 "고정 프로필 비교" + "관계 종합"을 한눈에.
+        //  - 고정 정보(전화번호·성별·출생연도)만 비교표로. (닉네임·플랫폼·번호표 등 행사마다 바뀌는 건 각 행사 카드에서)
+        //  - 성별/출생연도는 가장 최근 함께한 행사 기준 대표값. (행사마다 다르면 아래 경고로 보완)
+        //  - meetings 를 종합해 상호매칭/한쪽선택/메시지 수를 집계해 관계를 요약한다.
+        function summarySection(a, b, meetings){
+            a = a || {}; b = b || {};
+            meetings = meetings || [];
+
+            // 대표 성별/출생연도: 가장 최근(목록 첫 번째) 함께한 행사의 값. 없으면 identity 폴백.
+            var latest = meetings[0] || {};
+            var la = latest.a || {}, lb = latest.b || {};
+            function gender(p){ return p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '-'); }
+            function birth(p){
+                if(p.birth_year && p.age){ return p.birth_year + '년생 (' + p.age + '세)'; }
+                if(p.birth_year){ return p.birth_year + '년생'; }
+                return p.age ? (p.age + '세') : '-';
+            }
+            function phone(p){ return p.phone ? esc(p.phone) : '<span class="text-muted">-</span>'; }
+
+            // 여태 사용한 '플랫폼 닉네임' 목록 — 각 닉네임을 "어느 행사에서 썼는지" 함께 보여준다.
+            //  - (닉네임+플랫폼) 조합별로 묶고, 그 조합을 쓴 행사명들을 함께 나열한다.
+            function usedNicks(side){
+                var map = {}, order = [];
+                meetings.forEach(function(m){
+                    var p = m[side] || {};
+                    if(!p.nickname){ return; }
+                    var pf  = p.platform_label ? p.platform_label : '';
+                    var key = p.nickname + '|' + pf;
+                    if(!map[key]){
+                        map[key] = { nick: p.nickname, pf: pf, events: [] };
+                        order.push(key);
+                    }
+                    var evName = (m.event && m.event.title) ? m.event.title : '행사';
+                    if(map[key].events.indexOf(evName) === -1){ map[key].events.push(evName); }
+                });
+                if(!order.length){ return '<span class="text-muted">-</span>'; }
+
+                return order.map(function(key){
+                    var it = map[key];
+                    var evs = it.events.map(function(e){
+                        return '<span class="meet-nick-ev">' + esc(e) + '</span>';
+                    }).join('');
+                    return '<div class="meet-nick-item">'
+                         + '<span class="meet-nick-badge">' + esc(it.nick)
+                         + (it.pf ? ' <span class="meet-nick-pf">' + esc(it.pf) + '</span>' : '') + '</span>'
+                         + '<span class="meet-nick-at">사용 행사:</span> ' + evs
+                         + '</div>';
+                }).join('');
+            }
+
+            var rows = [
+                ['전화번호',      phone(a),         phone(b)],
+                ['성별',          gender(la),       gender(lb)],
+                ['출생연도',      birth(la),        birth(lb)],
+                ['사용한 닉네임', usedNicks('a'),   usedNicks('b')],
+            ];
+            var body = rows.map(function(r){
+                return `<tr><td class="cmp-label">${r[0]}</td><td class="cmp-a">${r[1]}</td><td class="cmp-b">${r[2]}</td></tr>`;
+            }).join('');
+
+            var compare = `<table class="cmp-table">`
+                 + `<tr class="cmp-head">`
+                     + `<td class="cmp-label">항목</td>`
+                     + `<td class="cmp-a"><span class="badge bg-blue-lt">A</span></td>`
+                     + `<td class="cmp-b"><span class="badge bg-pink-lt">B</span></td>`
+                 + `</tr>` + body + `</table>`;
+
+            // 관계 종합: 여러 행사 통틀어 상호매칭/한쪽선택/메시지 집계.
+            var mutual = 0, oneWay = 0, msgTotal = 0;
+            meetings.forEach(function(m){
+                if(m.is_mutual){ mutual++; }
+                else if(m.a_voted_b || m.b_voted_a){ oneWay++; }
+                msgTotal += (m.messages_a_to_b || 0) + (m.messages_b_to_a || 0);
+            });
+            function statCard(cls, icon, value, label){
+                return `<div class="meet-stat ${cls}"><div class="meet-stat__ico"><i class="ti ${icon}"></i></div>`
+                     + `<div class="meet-stat__num">${value}</div><div class="meet-stat__lbl">${label}</div></div>`;
+            }
+            var stats = `<div class="meet-stats">`
+                 + statCard('is-event', 'ti-calendar-heart', meetings.length, '함께한 행사')
+                 + statCard('is-mutual', 'ti-heart-filled', mutual, '상호 매칭')
+                 + statCard('is-oneway', 'ti-heart', oneWay, '한쪽만 선택')
+                 + statCard('is-msg', 'ti-messages', msgTotal, '주고받은 메시지')
+                 + `</div>`;
+
+            return stats + `<div class="mt-3">` + compare + `</div>`;
         }
 
         // 매칭 결과: 상호 매칭이면 눈에 띄는 배너로, 투표 방향은 카드형 칩 2개로 한눈에 보이게.
@@ -269,16 +408,21 @@
             return `<div class="card mb-3">`
                  + `<div class="card-header">${eventHeader(m.event)}</div>`
                  + `<div class="card-body">`
+                     // ① 프로필 비교 (신원 정보 — 플랫폼·닉네임·번호표·성별 포함)
+                     + `<div class="meet-section"><div class="meet-section__title"><i class="ti ti-user-circle"></i> 프로필 비교</div>`
                      + compareTable(a, b)
+                     + `</div>`
+                     // ② 매칭 결과 (relationRow 가 자체 제목 '매칭 결과' 포함)
                      + relationRow(m, a, b)
                      + matchButtons(m, a, b)
                      + `<hr class="my-3">`
+                     // ③ 메시지 (chatBox 가 자체 제목 '메시지' 포함)
                      + chatBox(m, a, b)
                  + `</div></div>`;
         }
 
         function render(res){
-            $('#summaryCard, #emptyCard').addClass('d-none');
+            $('#summaryCard, #emptyCard, #meetingListHeading').addClass('d-none');
             $('#meetingList').empty();
 
             if(!res){ return; }
@@ -292,9 +436,7 @@
                 return;
             }
 
-            $('#summaryA').html(summaryPerson(res.a, 'A', 'bg-blue-lt'));
-            $('#summaryB').html(summaryPerson(res.b, 'B', 'bg-pink-lt'));
-            $('#meetingCount').text((res.meetings || []).length);
+            $('#summaryCompare').html(summarySection(res.a, res.b, res.meetings));
 
             // 성별이 행사마다 다른지 확인해 안내한다. (예: 번호를 다른 사람에게 넘겨받아 다른 성별로 참여한 경우)
             var gendersA = new Set((res.meetings || []).map(function(m){ return m.a && m.a.gender; }).filter(Boolean));
@@ -331,6 +473,7 @@
                 return;
             }
 
+            $('#meetingListHeading').removeClass('d-none');
             $('#meetingList').html(res.meetings.map(meetingCard).join(''));
         }
 

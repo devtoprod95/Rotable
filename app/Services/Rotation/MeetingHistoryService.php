@@ -206,6 +206,13 @@ class MeetingHistoryService
             'found'        => true,
             'me'           => $this->meetingPersonPayload($myMembers->first()),
             'my_gender'    => $myGender,
+            // 본인이 참여한 "행사별 신원" (행사마다 플랫폼·닉네임·번호표 등이 다를 수 있음). 최근순.
+            'me_by_event'  => $myMembers->map(function (Member $m): array {
+                return [
+                    'event'  => $this->eventPayload($m->eventRound),
+                    'person' => $this->meetingPersonPayload($m, $m->eventRound?->event_time?->year),
+                ];
+            })->values()->all(),
             'events_count' => count($eventIds),
             // 본인(검색한 전화번호)의 행사 유형별 참여 횟수. (예: ['wine'=>3,'one'=>2])
             'events_count_by_type' => app(VisitStatService::class)
@@ -364,6 +371,61 @@ class MeetingHistoryService
      */
     private function meetingPersonPayload(?Member $member, ?int $asOfYear = null): array
     {
+        $label        = null;
+        $nickname     = null;
+        $platformCode = $member?->platform;   // 기본: 회원 신청 플랫폼
+        if ($member !== null) {
+            $labeler = app(MemberLabelService::class);
+            $eventId = (int) $member->event_id;
+            $this->labelMaps[$eventId] ??= $labeler->labelMap($eventId);
+            $label = $labeler->label($this->labelMaps[$eventId], $member->gender, $member->name, $member->platform);
+
+            // 체크인 명단(event_rosters) 기준의 닉네임/플랫폼. 번호표 → (성별|번호) 로 연결.
+            $hit = $this->labelMaps[$eventId][(string) $member->gender . '|' . (int) $member->name] ?? null;
+            if ($hit !== null) {
+                $nickname     = $hit['nickname'] ?: null;
+                $platformCode = $hit['platform'] ?: $platformCode; // 명단 플랫폼 우선, 없으면 회원 플랫폼
+            }
+        }
+
+        $platformLabel = match ($platformCode) {
+            Member::PLATFORM_MUNTO => '문토',
+            Member::PLATFORM_FRIP  => '프립',
+            default                => null,
+        };
+
+        $baseYear = $asOfYear ?? (int) now()->year;
+
+        return [
+            'id'             => $member?->id,
+            'name'           => $member?->name,          // 번호표 번호 (예: "3")
+            'ticket'         => $member?->name,           // 번호표 (명시)
+            'nickname'       => $nickname,                // 체크인 명단 닉네임 (없을 수 있음)
+            'label'          => $label,                   // "닉네임(플랫폼)_N호"
+            'phone'          => $member?->phone,
+            'gender'         => $member?->gender,
+            'platform'       => $platformCode,            // 코드 (munto/frip) — 명단 기준 우선
+            'platform_label' => $platformLabel,           // 한글 플랫폼명 (문토/프립)
+            'birth_year'     => $member?->birth_year,
+            'age'            => $member?->birth_year ? ($baseYear - (int) $member->birth_year + 1) : null,
+            'job'            => $member?->job,
+            'height'         => $member?->height,
+            'mbti'           => $member?->mbti,
+            'region'         => $member?->region,
+            'is_smoker'      => $member?->is_smoker,
+        ];
+    }
+
+    /**
+     * 상단 요약용 식별 정보.
+     *  - 전화번호·성별(행사 무관) + "가장 최근 입장등록" 기준의 대표 닉네임/플랫폼/번호표(label).
+     *  - 닉네임·번호표·플랫폼은 행사마다 다를 수 있으나, 요약에선 "가장 최근 값"을 대표로 보여준다.
+     *    (각 행사별 정확한 신원은 meetings[].a/b 로 따로 제공)
+     *
+     * @return array{phone:?string, gender:?string, name:?string, label:?string, platform:?string}
+     */
+    private function meetingIdentityPayload(?Member $member): array
+    {
         $label = null;
         if ($member !== null) {
             $labeler = app(MemberLabelService::class);
@@ -372,36 +434,12 @@ class MeetingHistoryService
             $label = $labeler->label($this->labelMaps[$eventId], $member->gender, $member->name, $member->platform);
         }
 
-        $baseYear = $asOfYear ?? (int) now()->year;
-
         return [
-            'id'         => $member?->id,
-            'name'       => $member?->name,
-            'label'      => $label,
-            'phone'      => $member?->phone,
-            'gender'     => $member?->gender,
-            'platform'   => $member?->platform,
-            'birth_year' => $member?->birth_year,
-            'age'        => $member?->birth_year ? ($baseYear - (int) $member->birth_year + 1) : null,
-            'job'        => $member?->job,
-            'height'     => $member?->height,
-            'mbti'       => $member?->mbti,
-            'region'     => $member?->region,
-            'is_smoker'  => $member?->is_smoker,
-        ];
-    }
-
-    /**
-     * 상단 요약용 "행사와 무관한" 식별 정보. (전화번호·성별)
-     * 번호표·직업·키 같은 값은 행사마다 달라서 여기에는 넣지 않는다.
-     *
-     * @return array{phone:?string, gender:?string}
-     */
-    private function meetingIdentityPayload(?Member $member): array
-    {
-        return [
-            'phone'  => $member?->phone,
-            'gender' => $member?->gender,
+            'phone'    => $member?->phone,
+            'gender'   => $member?->gender,
+            'name'     => $member?->name,
+            'label'    => $label,
+            'platform' => $member?->platform,
         ];
     }
 

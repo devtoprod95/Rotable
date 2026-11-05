@@ -3,6 +3,12 @@
 @section('title', '만남 이력 기본 조회')
 
 @section('content')
+<style>
+    /* 행사별 신원 표: 간격을 좁게 (한눈에 많은 행사·정보 비교) */
+    .me-by-event td, .me-by-event th { padding: 4px 8px; font-size: 0.82rem; white-space: nowrap; }
+    .me-by-event .fw-bold { font-size: 0.85rem; }
+    .me-by-event .text-muted { white-space: normal; }
+</style>
 <div class="row row-cards mt-2">
 
     {{-- 검색 --}}
@@ -34,10 +40,14 @@
     {{-- 검색 대상(나) 요약 --}}
     <div class="col-12 d-none" id="meCard">
         <div class="card">
-            <div class="card-body d-flex align-items-center gap-3 flex-wrap">
-                <span class="avatar avatar-lg" id="meAvatar">?</span>
-                <div id="meInfo"></div>
-                <div id="meEventsBadges" class="d-flex align-items-center gap-2 flex-wrap"></div>
+            <div class="card-header">
+                <h3 class="card-title mb-0"><i class="ti ti-user me-1"></i> 검색한 회원 (본인)</h3>
+            </div>
+            <div class="card-body">
+                {{-- 유형별 참여 횟수 뱃지 (종합) --}}
+                <div id="meEventsBadges" class="d-flex align-items-center gap-2 flex-wrap mb-3"></div>
+                {{-- 본인이 참여한 행사별 신원 (플랫폼·닉네임·번호표 등은 행사마다 다를 수 있음) --}}
+                <div id="meByEvent"></div>
             </div>
         </div>
     </div>
@@ -46,7 +56,7 @@
     <div class="col-12 d-none" id="resultCard">
         <div class="card">
             <div class="card-header d-flex align-items-center gap-2 flex-wrap">
-                <h3 class="card-title mb-0 me-2">함께 참여한 상대</h3>
+                <h3 class="card-title mb-0 me-2"><i class="ti ti-users-group me-1"></i> 함께 참여한 상대</h3>
                 <select class="form-select form-select-sm" id="genderFilter" style="width: 110px;">
                     <option value="opposite" selected>이성만</option>
                     <option value="same">동성만</option>
@@ -136,11 +146,88 @@
 
         function personCell(p, platform){
             if(!p){ return '-'; }
-            var line = specLine(p);
-            var pf = (platform !== undefined && platform !== null) ? platformBadge(platform) : '';
-            return `<div><span class="fw-bold">${esc(p.label || (p.name ? p.name + '호' : '-'))}</span> ${genderBadge(p.gender)} ${pf}</div>`
-                 + (line ? `<div class="text-muted" style="font-size:0.85em;">${line}</div>` : '')
-                 + (p.phone ? `<div class="text-muted" style="font-size:0.85em;">${esc(p.phone)}</div>` : '');
+            var spec = specLine(p);
+            // 플랫폼명(한글): 행사별 platform 인자가 오면 그 코드로, 없으면 payload 의 platform_label.
+            var pfName;
+            if(platform !== undefined && platform !== null){
+                pfName = (platform === 'frip' ? '프립' : (platform === 'munto' ? '문토' : '-'));
+            } else {
+                pfName = p.platform_label ? esc(p.platform_label) : '-';
+            }
+            // 번호표: p.ticket 우선, 없으면 label 끝 "_N호".
+            var ticketNo = (p.ticket != null && p.ticket !== '') ? (esc(p.ticket) + '호') : '';
+            if(!ticketNo){ var mTicket = /_([0-9]+호)\s*$/.exec(p.label || ''); if(mTicket){ ticketNo = mTicket[1]; } }
+            var nickName   = p.nickname ? esc(p.nickname) : '-';
+            var genderName = p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '-');
+
+            function line(label, value){
+                return `<div style="font-size:0.85em;"><span class="text-muted">${label}:</span> <b>${value}</b></div>`;
+            }
+
+            return line('플랫폼', pfName)
+                 + line('닉네임', nickName)
+                 + line('번호표', ticketNo || '-')
+                 + line('성별', genderName)
+                 + line('전화번호', esc(p.phone || '-'))
+                 + (spec ? line('프로필', esc(spec)) : '');
+        }
+
+        // 본인이 참여한 "행사별 신원" 표. 행사마다 플랫폼·닉네임·번호표가 다를 수 있어 행사 단위로 보여준다.
+        //  list: [{ event:{title,type_label,event_time,...}, person:{platform_label,nickname,ticket,gender,...} }]
+        function renderMeByEvent(list){
+            if(!list || !list.length){ return ''; }
+
+            function platName(p){ return p.platform_label ? esc(p.platform_label) : '-'; }
+            function nickName(p){ return p.nickname ? esc(p.nickname) : '-'; }
+            function ticketName(p){
+                if(p.ticket != null && p.ticket !== ''){ return esc(p.ticket) + '호'; }
+                var mTicket = /_([0-9]+호)\s*$/.exec(p.label || '');
+                return mTicket ? mTicket[1] : '-';
+            }
+            function genderName(p){ return p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '-'); }
+            function ageName(p){
+                if(p.birth_year && p.age){ return p.birth_year + '년생<br><span class="text-muted">(' + p.age + '세)</span>'; }
+                if(p.birth_year){ return p.birth_year + '년생'; }
+                return p.age ? (p.age + '세') : '-';
+            }
+            function txt(v){ return (v === null || v === undefined || v === '') ? '-' : esc(v); }
+            function heightName(p){ return p.height ? (p.height + 'cm') : '-'; }
+            function smokeName(p){ return p.is_smoker === true ? '흡연' : (p.is_smoker === false ? '비흡연' : '-'); }
+
+            var rows = list.map(function(it){
+                var e = it.event || {}, p = it.person || {};
+                var t = e.event_time ? new Date(e.event_time).toLocaleDateString('ko-KR') : '';
+                var typeCls = (VISIT_TYPE_BADGE && VISIT_TYPE_BADGE[e.type]) ? VISIT_TYPE_BADGE[e.type] : 'bg-azure-lt';
+                var evLabel = `<div class="fw-bold">${esc(e.title) || '행사'}</div>`
+                            + `<div class="text-muted" style="font-size:0.8em;">`
+                            + `<span class="badge ${typeCls}">${esc(e.type_label) || ''}</span> ${t}</div>`;
+                return `<tr>`
+                     + `<td>${evLabel}</td>`
+                     + `<td>${platName(p)}</td>`
+                     + `<td>${nickName(p)}</td>`
+                     + `<td class="text-center">${ticketName(p)}</td>`
+                     + `<td class="text-center">${genderName(p)}</td>`
+                     + `<td class="text-center">${ageName(p)}</td>`
+                     + `<td>${txt(p.job)}</td>`
+                     + `<td class="text-center">${heightName(p)}</td>`
+                     + `<td class="text-center">${txt(p.mbti)}</td>`
+                     + `<td>${txt(p.region)}</td>`
+                     + `<td class="text-center">${smokeName(p)}</td>`
+                     + `</tr>`;
+            }).join('');
+
+            return `<div class="table-responsive"><table class="table table-sm table-vcenter mb-0 me-by-event">`
+                 + `<thead><tr>`
+                     + `<th>행사</th><th>플랫폼</th><th>닉네임</th>`
+                     + `<th class="text-center">번호표</th>`
+                     + `<th class="text-center">성별</th>`
+                     + `<th class="text-center">나이</th>`
+                     + `<th>직업</th>`
+                     + `<th class="text-center">키</th>`
+                     + `<th class="text-center">MBTI</th>`
+                     + `<th>지역</th>`
+                     + `<th class="text-center">흡연</th>`
+                 + `</tr></thead><tbody>${rows}</tbody></table></div>`;
         }
 
         // 방문 횟수 컬럼 셀: 행사 유형별 누적 방문 횟수. (예: 와인파티 3회 · 1:1 2회)
@@ -285,11 +372,9 @@
                 return;
             }
 
-            // 나 요약
-            var me = res.me || {};
-            $('#meAvatar').text((me.name || '?').slice(0,1));
-            $('#meInfo').html(personCell(me));
+            // 나 요약 — 유형별 참여 뱃지 + 행사별 신원 표
             $('#meEventsBadges').html(eventsBadges(res.events_count_by_type, res.events_count));
+            $('#meByEvent').html(renderMeByEvent(res.me_by_event));
             $('#meCard').removeClass('d-none');
 
             if(!(res.partners || []).length){

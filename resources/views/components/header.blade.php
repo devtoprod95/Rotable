@@ -5,9 +5,9 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <a href="{{ route('admin.dashboard') }}" class="navbar-brand navbar-brand-autodark d-flex align-items-center gap-2">
-                <img src="{{ asset('images/logo.png') }}" alt="logo" style="height: 42px; width: 42px; object-fit: contain;">
-                <span class="fw-bold fs-3">{{ env('APP_NAME') }}</span>
+            <a href="{{ route('admin.dashboard') }}" class="navbar-brand navbar-brand-autodark d-flex align-items-center gap-2 text-truncate" style="max-width: 60vw;">
+                <img src="{{ asset('images/logo.png') }}" alt="logo" style="height: 42px; width: 42px; object-fit: contain; flex: 0 0 auto;">
+                <span class="fw-bold fs-3 text-truncate">{{ env('APP_NAME') }}</span>
             </a>
 
             <div class="navbar-nav flex-row order-md-last">
@@ -20,7 +20,7 @@
                             @php
                                 $telegramEnabled = \App\Services\TelegramNotifier::isEnabled();
                             @endphp
-                            <div class="nav-item d-flex align-items-center me-2">
+                            <div class="nav-item d-none d-md-flex align-items-center me-2">
                                 <label class="form-check form-switch form-switch-lg m-0 d-flex flex-column align-items-center" title="텔레그램 알림 on/off" style="padding-left:0;">
                                     <input class="form-check-input m-0" type="checkbox" id="telegramToggle"
                                            data-url="{{ route('admin.settings.telegram.toggle') }}"
@@ -30,10 +30,10 @@
                                     </span>
                                 </label>
                             </div>
-                            <div class="nav-item d-flex align-items-center me-2">
+                            <div class="nav-item d-none d-md-flex align-items-center me-2">
                                 <span class="vr" style="width:2px; height:32px; background-color:#adb5bd; opacity:1;"></span>
                             </div>
-                            <div class="nav-item dropdown d-flex align-items-center me-2">
+                            <div class="nav-item dropdown d-none d-md-flex align-items-center me-2">
                                 <button type="button" class="btn btn-outline-primary btn-sm px-3 fw-bold" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="ti ti-device-gamepad-2 me-1"></i> 미니게임 · 안내
                                 </button>

@@ -7,7 +7,48 @@
 
 @section('title', $isEdit ? '행사 상세' : '행사 생성')
 
+{{-- 행사 상세/생성은 메뉴에 없는 하위 화면이라, 브레드크럼 마지막에 실제 화면명을 명시한다.
+     (그대로 두면 부모 메뉴인 '행사 목록'이 현재 페이지처럼 표기됨) --}}
+@section('breadcrumbCurrent', $isEdit ? '행사 상세' : '행사 생성')
+
 @section('content')
+
+<style>
+    /* 행사 상세 상단 버튼 영역 */
+    .eventform-actions{ display:flex; align-items:center; gap:.5rem; }
+    .eventform-result-grid{ display:flex; gap:.5rem; flex-wrap:wrap; }
+    @media (max-width: 767.98px){
+        /* 모바일: 버튼 영역을 카드 폭 전체로, 결과 버튼은 2열 그리드, 목록은 아래 한 줄 */
+        .card-header .eventform-actions{ width:100%; flex-direction:column; align-items:stretch; }
+        .eventform-result-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+        .eventform-result-grid .btn{ width:100%; }
+        .eventform-list-btn{ width:100%; }
+    }
+
+    /* 참여자 표: 모바일에서는 가로 스크롤 대신 '카드형'으로 세로 재배치한다.
+       각 td 의 data-label 을 왼쪽 항목명으로 보여줘, 좁은 화면에서도 스크롤 없이 읽힌다. */
+    @media (max-width: 767.98px){
+        .members-table thead{ display:none; }
+        .members-table, .members-table tbody, .members-table tr, .members-table td{ display:block; width:100%; }
+        .members-table tr{
+            border:1px solid #e6e8eb; border-radius:12px;
+            padding:10px 12px; margin-bottom:12px; background:#fff;
+            box-shadow:0 1px 3px rgba(0,0,0,.05);
+        }
+        .members-table td{
+            border:0 !important; padding:4px 0 !important; text-align:left !important;
+            display:flex; gap:10px; align-items:flex-start;
+        }
+        .members-table td::before{
+            content: attr(data-label);
+            flex:0 0 84px; color:#8a92a0; font-weight:700; font-size:0.82rem;
+        }
+        /* 회원 정보 셀은 라벨 없이 넓게(카드 제목처럼) */
+        .members-table td.m-headcell{ display:block; border-bottom:1px solid #f1f3f5 !important; padding-bottom:8px !important; margin-bottom:4px; }
+        .members-table td.m-headcell::before{ display:none; }
+        .members-table td .d-flex.flex-column{ align-items:flex-start !important; }
+    }
+</style>
 
 {{-- 수정(상세) 화면에서만: 행사 운영 공용 탭바 [행사 상세][체크인][로테이션 진행] --}}
 @if ($isEdit)
@@ -23,23 +64,27 @@
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <h3 class="card-title mb-0">{{ $isEdit ? '행사 정보 수정' : '행사 생성' }}</h3>
-                <div class="d-flex gap-2 flex-wrap">
+                <div class="eventform-actions">
                     @if ($isEdit)
-                        {{-- 체크인/로테이션 진행은 위 탭바로 이동. 여기는 결과 조회만 모아 둔다. --}}
-                        <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
-                            <i class="ti ti-heart me-1"></i> 전체 매칭
-                        </button>
-                        <button type="button" id="goMatchedBtn" class="btn btn-sm btn-outline-pink">
-                            <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
-                        </button>
-                        <button type="button" id="goMessagesBtn" class="btn btn-sm btn-outline-primary">
-                            <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
-                        </button>
-                        <button type="button" id="goRequestsBtn" class="btn btn-sm btn-outline-yellow">
-                            <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
-                        </button>
+                        {{-- 결과 조회 버튼: 모바일에선 2열 그리드로, 데스크톱에선 한 줄로 --}}
+                        <div class="eventform-result-grid">
+                            <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
+                                <i class="ti ti-heart me-1"></i> 전체 매칭
+                            </button>
+                            <button type="button" id="goMatchedBtn" class="btn btn-sm btn-outline-pink">
+                                <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
+                            </button>
+                            <button type="button" id="goMessagesBtn" class="btn btn-sm btn-outline-primary">
+                                <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
+                            </button>
+                            <button type="button" id="goRequestsBtn" class="btn btn-sm btn-outline-yellow">
+                                <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
+                            </button>
+                        </div>
                     @endif
-                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary">목록</a>
+                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary eventform-list-btn">
+                        <i class="ti ti-list me-1"></i> 목록
+                    </a>
                 </div>
             </div>
             <div class="card-body">
@@ -105,7 +150,7 @@
         @endphp
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex align-items-center justify-content-between">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <h3 class="card-title mb-0">참여자</h3>
                     <div class="d-flex gap-2 flex-wrap">
                         <span class="badge bg-secondary-lt">총 {{ $event->members->count() }}명</span>
@@ -120,7 +165,7 @@
                         <div class="text-center text-muted py-4">참여자가 없습니다.</div>
                     @else
                         <div class="table-responsive">
-                            <table class="table table-vcenter card-table">
+                            <table class="table table-vcenter card-table members-table">
                                 <thead>
                                     <tr>
                                         <th class="w-1">No</th>
@@ -136,8 +181,8 @@
                                 <tbody>
                                     @foreach ($event->members as $i => $member)
                                         <tr>
-                                            <td>{{ $i + 1 }}</td>
-                                            <td>
+                                            <td data-label="No" class="d-none d-md-table-cell">{{ $i + 1 }}</td>
+                                            <td class="m-headcell">
                                                 @php
                                                     $memberData = $member->toArray();
                                                     if ($isSuperAdmin) {
@@ -199,7 +244,7 @@
                                                     </div>
                                                 @endif
                                             </td>
-                                            <td class="text-center">
+                                            <td class="text-center" data-label="방문 횟수">
                                                 @php
                                                     $visitCounts = $member->visit_counts ?? [];
                                                     $typeLabels  = \App\Models\EventRound::typeOptions();
@@ -221,7 +266,7 @@
                                                     <span class="text-muted">-</span>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td data-label="직업/키/MBTI">
                                                 <div>{{ $member->job ?? '-' }}</div>
                                                 <div class="text-muted" style="font-size: 0.85em;">
                                                     {{ $member->height ? $member->height . 'cm' : '-' }}
@@ -230,7 +275,7 @@
                                                     @endif
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td data-label="지역/흡연">
                                                 <div>{{ $member->region ?? '-' }}</div>
                                                 <div style="font-size: 0.85em;">
                                                     @if (is_null($member->is_smoker))
@@ -242,7 +287,7 @@
                                                     @endif
                                                 </div>
                                             </td>
-                                            <td class="text-center">
+                                            <td class="text-center" data-label="투표(보낸/받은)">
                                                 <div class="d-flex flex-column align-items-center gap-1">
                                                     {{-- 보낸 투표: 이 회원이 선택한 상대 (VotedModal) --}}
                                                     @if ($member->cast_votes_count > 0)
@@ -268,7 +313,7 @@
                                                     @endif
                                                 </div>
                                             </td>
-                                            <td class="text-center">
+                                            <td class="text-center" data-label="보낸 메시지">
                                                 @if ($member->sent_messages_count > 0)
                                                     <button type="button"
                                                             class="btn btn-outline-primary btn-sent-messages"
@@ -280,7 +325,7 @@
                                                     <span class="text-muted">0건</span>
                                                 @endif
                                             </td>
-                                            <td class="text-center">
+                                            <td class="text-center" data-label="보낸 요청수">
                                                 @if ($member->admin_requests_count > 0)
                                                     <button type="button"
                                                             class="btn btn-outline-yellow btn-sent-requests"
@@ -307,7 +352,7 @@
     @if ($isEdit)
         <div class="col-12">
             <div class="card">
-                <div class="card-header d-flex align-items-center justify-content-between">
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                     <h3 class="card-title mb-0">테이블 관리</h3>
                     <div class="d-flex gap-2 ms-auto">
                         <button type="button" class="btn btn-danger btn-remove">
@@ -522,15 +567,18 @@
 
         table = new Tabulator("#table-table", {
             ajaxURL: "{{ route('admin.rotation.event.tables', $event->id) }}",
+            layout: "fitColumns",
+            responsiveLayout: "collapse",
+            responsiveLayoutCollapseStartOpen: false,
             initialSort:[{column: "table_no", dir: "asc"}],
             columns: [
-                { formatter: "rowSelection", titleFormatter: "rowSelection", headerSort: false, width: 60 },
-                { title: "No", field: "id", width: 80 },
-                { title: "테이블 번호", field: "table_no", hozAlign: "center" },
-                { title: "등록일", field: "created_at", width: 200,
+                { formatter: "rowSelection", titleFormatter: "rowSelection", headerSort: false, width: 48, responsive: 0 },
+                { title: "No", field: "id", width: 80, responsive: 4 },
+                { title: "테이블 번호", field: "table_no", hozAlign: "center", responsive: 0 },
+                { title: "등록일", field: "created_at", width: 200, responsive: 3,
                     formatter: function(cell){ return cell.getValue() ? new Date(cell.getValue()).toLocaleString('ko-KR') : '-'; }
                 },
-                { title: "관리", width: 120, headerSort: false,
+                { title: "관리", width: 110, headerSort: false, responsive: 1,
                     formatter: function(cell){
                         var data = cell.getRow().getData();
                         var $del = $("<button>").addClass("btn btn-sm btn-danger w-100").text("삭제")

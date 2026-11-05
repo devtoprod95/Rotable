@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('title', '로테이션 행사 관리')
+@section('title', '행사 목록')
 
 @section('content')
 <style>
@@ -138,8 +138,8 @@
             <div class="card-header"><h3 class="card-title">검색 필터</h3></div>
             <div class="card-body">
                 <form id="searchForm">
-                    <div class="col-12 d-flex gap-2 align-items-end">
-                        <div class="col-md-2">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6 col-md-2">
                             <label class="form-label">타입</label>
                             <select class="form-select" name="type">
                                 <option value="">전체</option>
@@ -148,7 +148,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-6 col-md-2">
                             <label class="form-label">상태</label>
                             <select class="form-select" name="status">
                                 <option value="">전체</option>
@@ -157,13 +157,13 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col">
+                        <div class="col-12 col-md">
                             <label class="form-label">검색어</label>
                             <input type="text" class="form-control" name="searchText" value="{{ $searchText }}" placeholder="행사명 / 참여자 이름 / 전화번호 검색" onkeydown="if(event.keyCode === 13) { event.preventDefault(); $('.btn-submit').click(); }">
                         </div>
-                        <div class="col-auto">
-                            <button type="button" class="btn btn-primary px-4 btn-submit">검색</button>
-                            <a href="{{ request()->url() }}" class="btn btn-outline-secondary px-4">초기화</a>
+                        <div class="col-12 col-md-auto d-flex gap-2">
+                            <button type="button" class="btn btn-primary flex-fill px-4 btn-submit">검색</button>
+                            <a href="{{ request()->url() }}" class="btn btn-outline-secondary flex-fill px-4">초기화</a>
                         </div>
                     </div>
                 </form>
@@ -174,7 +174,7 @@
     {{-- 목록 --}}
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <span class="page-count badge bg-secondary-lt"></span>
                 </div>
@@ -236,12 +236,16 @@
 
         table = new Tabulator("#example-table", {
             ajaxURL: "{{ route('admin.rotation.event.list') }}",
+            layout: "fitColumns",
+            // 모바일 대응: 좁은 화면에서 우선순위 낮은 컬럼을 접어 '펼치기(+)' 행으로 보여준다.
+            responsiveLayout: "collapse",
+            responsiveLayoutCollapseStartOpen: false,
             initialSort:[{column: "{{ $sort['field'] }}", dir: "{{ $sort['dir'] }}"}],
             paginationInitialPage: parseInt("{{ $page }}") || 1,
             columns: [
-                { formatter: "rowSelection", titleFormatter: "rowSelection", headerSort: false, width: 60 },
-                { title: "No", field: "id", width: 80 },
-                { title: "행사명<br>일시", field: "title", hozAlign: "center", minWidth: 240,
+                { formatter: "rowSelection", titleFormatter: "rowSelection", headerSort: false, width: 48, responsive: 0 },
+                { title: "No", field: "id", width: 70, responsive: 4 },
+                { title: "행사명<br>일시", field: "title", hozAlign: "center", minWidth: 200, responsive: 0,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
                         var t = d.event_time ? new Date(d.event_time).toLocaleString('ko-KR') : '-';
@@ -255,7 +259,7 @@
                              + `<div style="font-size: 0.9em; color: #888;">${t}</div>`;
                     }
                 },
-                { title: "타입<br>테이블", field: "type", hozAlign: "center", width: 100, headerSort: false,
+                { title: "타입<br>테이블", field: "type", hozAlign: "center", width: 100, headerSort: false, responsive: 2,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
                         var typeLabel   = TYPE_LABEL[d.type] ?? d.type ?? '-';
@@ -265,21 +269,21 @@
                             + `<div class="mt-1"><span class="badge bg-green-lt">테이블 ${tableCount}개</span></div>`;
                     }
                 },
-                { title: "참여자<br>(남/여)", field: "male_count", hozAlign: "center", width: 90, headerSort: false,
+                { title: "참여자<br>(남/여)", field: "male_count", hozAlign: "center", width: 90, headerSort: false, responsive: 2,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
                         var m = d.male_count ?? 0, f = d.female_count ?? 0;
                         return `<span class="badge bg-blue-lt">남 ${m}</span><br><span class="badge bg-pink-lt mt-1">여 ${f}</span>`;
                     }
                 },
-                { title: "플랫폼", field: "munto_count", hozAlign: "center", width: 100, headerSort: false,
+                { title: "플랫폼", field: "munto_count", hozAlign: "center", width: 100, headerSort: false, responsive: 3,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
                         var mu = d.munto_count ?? 0, fr = d.frip_count ?? 0;
                         return `<span class="badge bg-orange-lt">문토 ${mu}</span><br><span class="badge bg-cyan-lt mt-1">프립 ${fr}</span>`;
                     }
                 },
-                { title: "매칭수", field: "match_count", hozAlign: "center", width: 110, headerSort: false,
+                { title: "매칭수", field: "match_count", hozAlign: "center", width: 110, headerSort: false, responsive: 3,
                     formatter: function(cell){
                         var v = cell.getValue() ?? 0;
                         if(v > 0){
@@ -294,7 +298,7 @@
                         }
                     }
                 },
-                { title: "등록자<br>생성일/수정일", field: "created_at", width: 190,
+                { title: "등록자<br>생성일/수정일", field: "created_at", width: 190, responsive: 5,
                     formatter: function(cell){
                         var d = cell.getRow().getData();
                         var name = d.creator && d.creator.name ? $('<div>').text(d.creator.name).html() : '-';
@@ -305,7 +309,7 @@
                             + `<span style="font-size: 0.9em; color: #888;">${u}</span>`;
                     }
                 },
-                { title: "관리", width: 110, headerSort: false,
+                { title: "관리", width: 120, headerSort: false, responsive: 1,
                     formatter: function(cell){
                         var data = cell.getRow().getData();
                         var $wrap = $("<div>").addClass("d-flex flex-column gap-1");

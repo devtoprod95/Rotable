@@ -58,12 +58,18 @@
 
                         @if(!empty($breadcrumbs))
                             <ol class="breadcrumb breadcrumb-arrows mb-0 ms-md-auto">
+                                @php
+                                    // 현재 페이지가 메뉴에 없는 하위 화면(예: 행사 상세)일 때,
+                                    // 뷰가 @section('breadcrumbCurrent') 로 실제 화면명을 지정하면 마지막 크럼으로 덧붙인다.
+                                    $breadcrumbCurrent = trim($__env->yieldContent('breadcrumbCurrent'));
+                                @endphp
                                 @foreach($breadcrumbs as $breadcrumb)
+                                    @php $isLastCrumb = $loop->last && $breadcrumbCurrent === ''; @endphp
                                     <li class="breadcrumb-item">
                                         @if(!empty($breadcrumb['route']))
                                             <a
                                                 href="{{ route($breadcrumb['route']) }}"
-                                                class="{{ $loop->last ? 'text-primary fw-semibold' : '' }}"
+                                                class="{{ $isLastCrumb ? 'text-primary fw-semibold' : '' }}"
                                             >
                                                 {{ $breadcrumb['name'] }}
                                             </a>
@@ -72,6 +78,11 @@
                                         @endif
                                     </li>
                                 @endforeach
+                                @if($breadcrumbCurrent !== '')
+                                    <li class="breadcrumb-item active" aria-current="page">
+                                        <span class="text-primary fw-semibold">{{ $breadcrumbCurrent }}</span>
+                                    </li>
+                                @endif
                             </ol>
                         @endif
                     </div>

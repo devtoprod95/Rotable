@@ -10,7 +10,24 @@
     .checkin-row:focus-visible{ outline:3px solid #3b82f6; outline-offset:-3px; }
     .checkin-in{ background:#ecfdf5 !important; border-left:4px solid #34d399; }
     .checkin-out{ background:#ffffff; border-left:4px solid transparent; }
-    .checkin-stat{ min-width:96px; }
+    .checkin-stat{ margin:0; }
+
+    /* 현황 통계: 모바일은 4등분 그리드로 꽉 차게, md↑ 에선 콤팩트하게 우측 정렬 */
+    @media (min-width: 768px){
+        .w-md-auto{ width:auto !important; }
+        .flex-md-grow-0{ flex-grow:0 !important; }
+        .checkin-stat .card-body{ min-width:92px; }
+        .h1-md{ font-size:2.5rem; }
+    }
+    @media (max-width: 767.98px){
+        /* 모바일: 숫자 적당히, 카드 패딩 축소 */
+        .checkin-stat .card-body{ padding:.4rem .25rem !important; }
+        /* 리스트 행: 긴 닉네임이어도 오른쪽 액션과 겹치지 않게 줄바꿈 허용 */
+        .checkin-row{ flex-wrap:wrap; }
+        .checkin-row > div:first-child{ flex:1 1 60%; min-width:0; }
+        .checkin-row > div:last-child{ flex:1 1 auto; align-items:flex-start !important; }
+        .checkin-row .fs-3{ font-size:1.05rem !important; }
+    }
 </style>
 
 <div class="mt-2">
@@ -29,23 +46,24 @@
                         {{ $event->event_time ? $event->event_time->format('Y-m-d H:i') : '' }}
                     </div>
                 </div>
-                <div class="d-flex gap-2 flex-wrap" aria-live="polite">
-                    <div class="card checkin-stat"><div class="card-body p-2 text-center">
+                {{-- 현황 통계: 모바일에선 4등분 그리드로 꽉 차게, 데스크톱에선 카드 나열 --}}
+                <div class="row g-2 w-100 w-md-auto flex-grow-1 flex-md-grow-0" aria-live="polite">
+                    <div class="col-3"><div class="card checkin-stat"><div class="card-body p-2 text-center">
                         <div class="text-secondary small">전체</div>
-                        <div class="h1 mb-0" id="statTotal">0</div>
-                    </div></div>
-                    <div class="card checkin-stat"><div class="card-body p-2 text-center">
+                        <div class="h2 h1-md mb-0" id="statTotal">0</div>
+                    </div></div></div>
+                    <div class="col-3"><div class="card checkin-stat"><div class="card-body p-2 text-center">
                         <div class="text-success small">참석</div>
-                        <div class="h1 mb-0 text-success" id="statIn">0</div>
-                    </div></div>
-                    <div class="card checkin-stat"><div class="card-body p-2 text-center">
+                        <div class="h2 h1-md mb-0 text-success" id="statIn">0</div>
+                    </div></div></div>
+                    <div class="col-3"><div class="card checkin-stat"><div class="card-body p-2 text-center">
                         <div class="text-secondary small">미도착</div>
-                        <div class="h1 mb-0 text-secondary" id="statOut">0</div>
-                    </div></div>
-                    <div class="card checkin-stat"><div class="card-body p-2 text-center">
+                        <div class="h2 h1-md mb-0 text-secondary" id="statOut">0</div>
+                    </div></div></div>
+                    <div class="col-3"><div class="card checkin-stat"><div class="card-body p-2 text-center">
                         <div class="text-teal small">입장등록</div>
-                        <div class="h1 mb-0 text-teal" id="statReg">0</div>
-                    </div></div>
+                        <div class="h2 h1-md mb-0 text-teal" id="statReg">0</div>
+                    </div></div></div>
                 </div>
             </div>
         </div>
@@ -97,8 +115,8 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body py-2">
-                <div class="d-flex align-items-start gap-2 flex-wrap">
-                    <div class="flex-grow-1" style="min-width:220px;">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="flex-grow-1">
                         <label for="checkinSearch" class="visually-hidden">참가자 검색 (닉네임 또는 번호표)</label>
                         <div class="input-icon">
                             <span class="input-icon-addon"><i class="ti ti-search"></i></span>
@@ -108,16 +126,17 @@
                                    aria-describedby="checkinSearchHint">
                         </div>
                     </div>
-                    <div class="d-flex flex-column align-items-end gap-1">
-                        <button type="button" class="btn btn-outline-primary" id="checkinRefreshBtn">
-                            새로고침
-                        </button>
-                        <span class="text-secondary small" id="lastUpdated" aria-live="polite"></span>
+                    <button type="button" class="btn btn-outline-primary btn-lg flex-shrink-0" id="checkinRefreshBtn">
+                        <i class="ti ti-refresh me-1"></i><span class="d-none d-sm-inline">새로고침</span>
+                    </button>
+                </div>
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mt-1">
+                    <div id="checkinSearchHint" class="form-hint mb-0">
+                        미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
                     </div>
+                    <span class="text-secondary small flex-shrink-0" id="lastUpdated" aria-live="polite"></span>
                 </div>
-                <div id="checkinSearchHint" class="form-hint mt-1">
-                    미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
-                </div>
+            </div>
             </div>
         </div>
     </div>
@@ -128,9 +147,9 @@
             {{-- 남 --}}
             <div class="col-12 col-lg-6">
                 <div class="card">
-                    <div class="card-header bg-blue-lt d-flex align-items-center justify-content-between">
+                    <div class="card-header bg-blue-lt d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <h3 class="card-title mb-0">남</h3>
-                        <div>
+                        <div class="d-flex flex-wrap gap-1">
                             <span class="badge bg-blue text-white">참석 <span id="maleIn">0</span></span>
                             <span class="badge bg-teal text-white">등록 <span id="maleReg">0</span></span>
                             <span class="badge bg-secondary-lt">전체 <span id="maleTotal">0</span></span>
@@ -143,9 +162,9 @@
             {{-- 여 --}}
             <div class="col-12 col-lg-6">
                 <div class="card">
-                    <div class="card-header bg-pink-lt d-flex align-items-center justify-content-between">
+                    <div class="card-header bg-pink-lt d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <h3 class="card-title mb-0">여</h3>
-                        <div>
+                        <div class="d-flex flex-wrap gap-1">
                             <span class="badge bg-pink text-white">참석 <span id="femaleIn">0</span></span>
                             <span class="badge bg-teal text-white">등록 <span id="femaleReg">0</span></span>
                             <span class="badge bg-secondary-lt">전체 <span id="femaleTotal">0</span></span>
@@ -306,7 +325,7 @@
             if(loading){ return; }
             loading = true;
             var $btn = $('#checkinRefreshBtn');
-            $btn.prop('disabled', true).text('새로고침 중…');
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
             $.get(listUrl, function(res){
                 rosters = (res && res.data) ? res.data : [];
                 render();
@@ -318,7 +337,7 @@
                     .text('갱신 실패 — 새로고침을 눌러 주세요');
             }).always(function(){
                 loading = false;
-                $btn.prop('disabled', false).text('새로고침');
+                $btn.prop('disabled', false).html('<i class="ti ti-refresh me-1"></i><span class="d-none d-sm-inline">새로고침</span>');
             });
         }
 

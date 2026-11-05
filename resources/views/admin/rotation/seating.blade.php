@@ -18,6 +18,14 @@
     /* 칩 제거(x) 버튼: 클릭 영역을 넓히고 hover 시 배경 피드백 */
     .seat-chips .chip-remove { transition: background-color .12s ease; cursor: pointer; }
     .seat-chips .chip-remove:hover { background-color: rgba(214, 57, 57, 0.15); }
+
+    /* 상단 결과조회 버튼: 데스크톱은 한 줄, 모바일은 2열 그리드로 가지런히 */
+    .seating-result-grid { display: flex; gap: .5rem; flex-wrap: wrap; }
+    @media (max-width: 767.98px){
+        .card-header .seating-actions { width: 100%; }
+        .seating-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; width: 100%; }
+        .seating-result-grid .btn { width: 100%; }
+    }
 </style>
 
 {{-- 행사 운영 공용 탭바: 행사 선택 + [행사 정보][체크인][로테이션 진행] --}}
@@ -33,21 +41,23 @@
                     <h3 class="card-title mb-0">로테이션 진행</h3>
                     <span class="badge d-none" id="eventStatusBadge"></span>
                 </div>
-                {{-- 결과 조회(보조): 진행 중 참고용이라 오른쪽에 작게 모아 둔다. --}}
-                <div class="d-flex align-items-center gap-2 flex-wrap">
+                {{-- 결과 조회(보조): 진행 중 참고용. 모바일에선 2열 그리드로 정렬 --}}
+                <div class="d-flex align-items-center gap-2 seating-actions">
                     <span class="text-secondary small d-none d-lg-inline">결과 보기</span>
-                    <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
-                        <i class="ti ti-heart me-1"></i> 전체 매칭
-                    </button>
-                    <button type="button" id="goMatchedBtn" class="btn btn-sm btn-outline-pink">
-                        <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
-                    </button>
-                    <button type="button" id="goMessagesBtn" class="btn btn-sm btn-outline-primary">
-                        <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
-                    </button>
-                    <button type="button" id="goRequestsBtn" class="btn btn-sm btn-outline-yellow">
-                        <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
-                    </button>
+                    <div class="seating-result-grid">
+                        <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
+                            <i class="ti ti-heart me-1"></i> 전체 매칭
+                        </button>
+                        <button type="button" id="goMatchedBtn" class="btn btn-sm btn-outline-pink">
+                            <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
+                        </button>
+                        <button type="button" id="goMessagesBtn" class="btn btn-sm btn-outline-primary">
+                            <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
+                        </button>
+                        <button type="button" id="goRequestsBtn" class="btn btn-sm btn-outline-yellow">
+                            <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="card-body">
@@ -73,7 +83,7 @@
                         <small class="form-hint text-muted" id="roundHint">턴을 이동하며 배치를 볼 수 있습니다.</small>
                     </div>
                     <div class="col-md-8">
-                        <label class="form-label d-block" id="actionLabel">&nbsp;</label>
+                        <label class="form-label d-none d-md-block" id="actionLabel">&nbsp;</label>
                         <div class="d-flex align-items-center" style="min-height: 38px;">
                             <button type="button" class="btn btn-primary w-100 d-none" id="rotateBtn">
                                 <i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행

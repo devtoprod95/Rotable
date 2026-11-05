@@ -488,7 +488,8 @@
                         $('input[name="sampleType"][value="' + type + '"]').prop('checked', true).trigger('change');
                     }
                     suppressUrlSync = false;
-                    setHtml((res && res.html) ? res.html : '');
+                    // 저장된 HTML 의 '마지막 업데이트' 문구는 지금 접속한 시각으로 교체해 노출한다.
+                    setHtml((res && res.html) ? applyUpdatedAtToSample(res.html) : '');
                     CURRENT[type] = { id: (res && res.id) ? res.id : id, title: (res && res.title) || '' };
                     SAVED[type] = getHtml();
                     activeType = type;
@@ -817,7 +818,18 @@
                 non_empty_elements: 'div[data-detail-settings],div[data-roster-grid]',
                 keep_styles: true,
                 verify_html: false,
-                content_style: "@import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap'); body{font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; font-size:14px;}"
+                content_style: "@import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap'); body{font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; font-size:14px;}",
+                // 에디터 초기화가 끝나면, 서버가 심어둔 저장본 HTML 의 '마지막 업데이트' 문구를
+                // 지금 이 페이지에 접속한 시각으로 교체한다. (saveId 로 바로 접속한 경우 포함)
+                setup: function(editor){
+                    editor.on('init', function(){
+                        var cur = editor.getContent();
+                        if (cur) {
+                            var next = applyUpdatedAtToSample(cur);
+                            if (next !== cur) { editor.setContent(next); }
+                        }
+                    });
+                }
             });
         }
 
@@ -1175,7 +1187,8 @@
             var newGrid = buildRosterGrid(data);
             // 분리된 DOM 에서 기존 그리드 요소를 새 그리드로 교체한 뒤 전체 HTML 직렬화.
             loc.grid.replaceWith(newGrid);
-            setHtml(loc.root.html());
+            // 명단을 바꾼 지금 시각으로 '마지막 업데이트' 문구도 최신화한다.
+            setHtml(applyUpdatedAtToSample(loc.root.html()));
 
             var m = getRosterModal();
             if (m) { m.hide(); }
@@ -1468,7 +1481,8 @@
                 return;
             }
             var s = collectSettingsForm();
-            setHtml(applySettingsToHtml(html, s));
+            // 설정을 바꾼 지금 시각으로 '마지막 업데이트' 문구도 최신화한다.
+            setHtml(applyUpdatedAtToSample(applySettingsToHtml(html, s)));
 
             var m = getSettingsModal();
             if (m) { m.hide(); }
@@ -1485,13 +1499,39 @@
             return applySettingsToHtml(sampleHtml, curSettings);
         }
 
+        // 샘플/저장본 HTML 의 '마지막 업데이트' 문구를 "지금 이 페이지에 접속한 시각"으로 교체한다.
+        //  - 1순위: data-updated-at 마커 span 의 텍스트를 교체.
+        //  - 2순위(마커 없는 기존 저장본 호환): '마지막 업데이트 : ... 기준' 텍스트 패턴을 직접 치환.
+        //  - 포맷은 'n월 j일 H:i' (예: 11월 5일 14:49). 접속 시점 값으로 박혀 저장/다운로드에도 유지된다.
+        function applyUpdatedAtToSample(sampleHtml){
+            if (!sampleHtml) { return sampleHtml; }
+            var d = new Date();
+            var p = function(n){ return (n < 10 ? '0' : '') + n; };
+            var stamp = (d.getMonth() + 1) + '월 ' + d.getDate() + '일 '
+                + p(d.getHours()) + ':' + p(d.getMinutes());
+            var label = '마지막 업데이트 : ' + stamp + ' 기준';
+
+            var $root = $('<div></div>').html(sampleHtml);
+            var $marked = $root.find('[data-updated-at]');
+            if ($marked.length) {
+                $marked.text(label);
+                return $root.html();
+            }
+            // 마커가 없으면(구 저장본) 텍스트 패턴으로 치환. '마지막 업데이트 : {무엇이든} 기준'
+            return sampleHtml.replace(
+                /마지막 업데이트\s*:\s*[^<]*?기준/g,
+                label
+            );
+        }
+
         // 1열 샘플 (선택한 유형 기준)
         $('.btn-sample-one').on('click', async function(){
             var type = currentType();
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
             if(await salert({text: '현재 작성 내용을 [' + label + '] 1열 샘플로 교체하시겠습니까?\n(현재 참여자 명단·행사명/시간·페이지 설정은 그대로 유지됩니다)'})){
                 // 참여자 명단에 이어 페이지 설정(행사명·나이·키)도 현재 값으로 이식한다.
-                setHtml(applyCurrentSettingsToSample(applyCurrentRosterToSample(SAMPLES[type][1])));
+                // '마지막 업데이트' 문구는 지금 접속한 시각으로 교체한다.
+                setHtml(applyUpdatedAtToSample(applyCurrentSettingsToSample(applyCurrentRosterToSample(SAMPLES[type][1]))));
             }
         });
 
@@ -1501,7 +1541,8 @@
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
             if(await salert({text: '현재 작성 내용을 [' + label + '] 2열 샘플로 교체하시겠습니까?\n(현재 참여자 명단·행사명/시간·페이지 설정은 그대로 유지됩니다)'})){
                 // 참여자 명단에 이어 페이지 설정(행사명·나이·키)도 현재 값으로 이식한다.
-                setHtml(applyCurrentSettingsToSample(applyCurrentRosterToSample(SAMPLES[type][2])));
+                // '마지막 업데이트' 문구는 지금 접속한 시각으로 교체한다.
+                setHtml(applyUpdatedAtToSample(applyCurrentSettingsToSample(applyCurrentRosterToSample(SAMPLES[type][2]))));
             }
         });
 

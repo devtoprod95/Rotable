@@ -249,7 +249,7 @@
         </div>
         <div style="background:#ffffff; border:2px dashed #a78bfa; border-radius:14px; padding:18px 14px; margin-top:18px; font-size:27px; color:#5b21b6; line-height:1.7; word-break:keep-all;">
             💜 명단은 <b>신청 현황에 따라 실시간으로 채워지는 중</b>이에요.<br>
-            <span style="font-size:24px; color:#7c3aed;">마지막 업데이트 : {{ now()->format('n월 j일 H:i') }} 기준</span>
+            <span data-updated-at="1" style="font-size:24px; color:#7c3aed;">마지막 업데이트 : {{ now()->format('n월 j일 H:i') }} 기준</span>
         </div>
         <div style="font-size:28px; font-weight:800; color:#be185d; margin-top:16px; line-height:1.6; word-break:keep-all;">
             🔥 자리는 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">선착순 마감</b>! 망설이면 마감될 수 있어요.<br>

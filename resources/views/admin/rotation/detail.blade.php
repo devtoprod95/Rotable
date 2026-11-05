@@ -428,6 +428,77 @@
             return $('input[name="sampleType"]:checked').val() === 'solo' ? 'solo' : 'wine';
         }
 
+        /* =====================================================================
+         * 선택 상태 ↔ 주소 쿼리파라미터 동기화
+         *  - ?type=wine|solo : 현재 편집 중인 유형
+         *  - ?saveId=N       : 현재 편집 중인 저장본 id (없으면 생략)
+         *  새로고침·뒤로/앞으로 가기에도 선택이 유지된다.
+         * =================================================================== */
+        var detailPageUrl = window.location.pathname;
+        var suppressUrlSync = false; // popstate/초기화 중 중복 pushState 방지
+
+        // 현재 상태(유형+편집 저장본)를 주소에 반영한다.
+        //  replace=true 면 history 를 쌓지 않고 현재 항목만 교체(유형 전환 등 빈번한 변경용).
+        function syncUrl(replace){
+            if (suppressUrlSync) { return; }
+            var t = currentType();
+            var cur = CURRENT[t] || {};
+            var qs = '?type=' + encodeURIComponent(t);
+            if (cur.id) { qs += '&saveId=' + encodeURIComponent(cur.id); }
+            if (window.location.search === qs) { return; } // 동일하면 그대로
+            var state = { type: t, saveId: cur.id || null };
+            if (replace) { history.replaceState(state, '', detailPageUrl + qs); }
+            else { history.pushState(state, '', detailPageUrl + qs); }
+        }
+
+        // 주소의 쿼리파라미터를 읽어 선택 상태를 복원한다. (초기 진입/뒤로가기)
+        //  - type 이 현재와 다르면 유형 라디오를 전환한다.
+        //  - saveId 가 있으면 그 저장본을 불러온다(없으면 최근 저장본/샘플 그대로).
+        function restoreFromUrl(){
+            var q = new URLSearchParams(window.location.search);
+            var t = q.get('type') === 'solo' ? 'solo' : (q.get('type') === 'wine' ? 'wine' : null);
+            var saveId = q.get('saveId');
+
+            suppressUrlSync = true;
+            if (t && t !== currentType()) {
+                $('input[name="sampleType"][value="' + t + '"]').prop('checked', true).trigger('change');
+            }
+            suppressUrlSync = false;
+
+            if (saveId) {
+                // 이미 그 저장본을 편집 중이면 재로딩 불필요.
+                var cur = CURRENT[currentType()] || {};
+                if (String(cur.id) !== String(saveId)) {
+                    loadSnapshotById(parseInt(saveId, 10), false);
+                }
+            }
+        }
+
+        // 저장본 id 로 에디터에 로드한다. (저장 목록의 '불러오기'와 동일 동작을 재사용)
+        //  pushUrl=true 면 주소도 갱신한다.
+        function loadSnapshotById(id, pushUrl){
+            if (!id) { return; }
+            $.ajax({
+                url: "{{ url('admin/rotation/detail/saves') }}/" + id,
+                type: 'GET',
+                success: function(res){
+                    var type = (res && res.type === 'solo') ? 'solo' : (res && res.type === 'wine' ? 'wine' : currentType());
+                    suppressUrlSync = true;
+                    if (type !== currentType()) {
+                        $('input[name="sampleType"][value="' + type + '"]').prop('checked', true).trigger('change');
+                    }
+                    suppressUrlSync = false;
+                    setHtml((res && res.html) ? res.html : '');
+                    CURRENT[type] = { id: (res && res.id) ? res.id : id, title: (res && res.title) || '' };
+                    SAVED[type] = getHtml();
+                    activeType = type;
+                    renderSavedInfo();
+                    if (pushUrl) { syncUrl(false); }
+                },
+                error: function(){ /* 없는 id 면 무시하고 기본 상태 유지 */ }
+            });
+        }
+
         // 제목 옆 배지를 현재 유형의 "편집 중 저장본 제목 + 마지막 저장(누가·언제)"으로 갱신한다.
         function renderSavedInfo(){
             var t = currentType();
@@ -1114,6 +1185,7 @@
             setHtml(SAVED[next] || '');      // 대상 유형 내용 로드
             activeType = next;
             renderSavedInfo();               // 선택 유형의 저장 정보로 갱신
+            syncUrl(true);                   // 주소 쿼리파라미터(type/saveId) 갱신
         });
 
         // 샘플 HTML 의 명단을 "현재 에디터에 작성된 명단"으로 바꿔서 돌려준다.
@@ -1434,7 +1506,7 @@
             CURRENT[type] = { id: item.id, title: item.title };
             META[type] = { saved_by: item.saved_by, saved_at: item.saved_at };
             SAVED[type] = getHtml();
-            if (type === currentType()) { renderSavedInfo(); }
+            if (type === currentType()) { renderSavedInfo(); syncUrl(true); }
         }
 
         // 현재 HTML 을 "새 저장본"으로 만든다. (이름 입력받음) → 성공 시 CURRENT 를 그 항목으로.
@@ -1606,6 +1678,7 @@
                     SAVED[type] = getHtml();
                     activeType = type;
                     renderSavedInfo();
+                    syncUrl(false); // 주소에 type/saveId 반영 (뒤로가기로 이전 선택 복귀 가능)
                     var m = getSavesModal();
                     if (m) { m.hide(); }
                     await salert({text: "'" + ((res && res.title) || '') + "' 를 불러왔어요. 수정 후 [저장]을 누르면 이 저장본이 갱신됩니다.", cancel: false});
@@ -1922,6 +1995,25 @@
                 hideExportOverlay();
             }
         });
+
+        /* =====================================================================
+         * 선택 상태 복원 — 초기 진입 / 뒤로·앞으로 가기
+         * =================================================================== */
+        // 뒤로/앞으로 가기: 주소의 type/saveId 로 선택을 다시 맞춘다.
+        window.addEventListener('popstate', function(){
+            restoreFromUrl();
+        });
+
+        // 최초 진입: 주소에 type/saveId 가 있으면 그 선택을 복원한다.
+        //  - 아무 파라미터도 없으면, 현재(기본) 상태를 주소에 한 번 심어 둔다(replaceState).
+        (function(){
+            var q = new URLSearchParams(window.location.search);
+            if (q.get('type') || q.get('saveId')) {
+                restoreFromUrl();
+            } else {
+                syncUrl(true);
+            }
+        })();
     });
 </script>
 @endsection

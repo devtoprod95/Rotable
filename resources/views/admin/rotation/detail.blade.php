@@ -1117,14 +1117,15 @@
         });
 
         // 샘플 HTML 의 명단을 "현재 에디터에 작성된 명단"으로 바꿔서 돌려준다.
-        // - 현재 에디터에 명단(data-roster-grid)이 있으면 그 남/여 인원을 추출해,
-        //   새 샘플의 모든 행사 카드에 동일하게 채운다. (행사명/날짜는 샘플 값 유지)
+        // - 현재 에디터에 명단(data-roster-grid)이 있으면 그 남/여 인원 + 행사명/날짜를 추출해 새 샘플에 채운다.
+        // - 행사명/날짜(시간)는 같은 위치(카드 인덱스)의 현재 값을 유지하고, 없으면 첫 카드 값으로 채운다.
         // - 현재 명단이 없거나 비어 있으면 샘플 기본(더미) 명단을 그대로 둔다.
         function applyCurrentRosterToSample(sampleHtml){
             // 1) 현재 에디터 명단 추출
             var $cur = $('<div></div>').html(getHtml());
             var curData = parseRoster($cur.find('[data-roster-grid]').first());
-            var curCard = (curData && curData.cards && curData.cards[0]) ? curData.cards[0] : null;
+            var curCards = (curData && curData.cards && curData.cards.length) ? curData.cards : null;
+            var curCard  = curCards ? curCards[0] : null;
             var hasCurrent = curCard && ((curCard.males && curCard.males.length) || (curCard.females && curCard.females.length));
             if (!hasCurrent) { return sampleHtml; } // 현재 명단 없으면 샘플 그대로
 
@@ -1136,10 +1137,15 @@
             var sampleData = parseRoster($grid);
             if (!sampleData || !sampleData.cards.length) { return sampleHtml; }
 
-            // 3) 샘플의 각 카드 명단을 현재 명단으로 교체 (행사명/날짜는 샘플 유지)
-            sampleData.cards.forEach(function(card){
+            // 3) 샘플의 각 카드에 현재 값을 채운다.
+            //    - 명단(males/females): 첫 현재 카드 기준 (기존 동작 유지)
+            //    - 행사명/날짜(title/date): 같은 인덱스의 현재 카드 값 우선, 없으면 첫 카드 값으로 유지
+            sampleData.cards.forEach(function(card, i){
+                var src = curCards[i] || curCard; // 같은 위치 현재 카드 없으면 첫 카드로 폴백
                 card.males   = curCard.males.slice();
                 card.females = curCard.females.slice();
+                card.title   = (src && src.title != null) ? src.title : card.title;
+                card.date    = (src && src.date  != null) ? src.date  : card.date;
             });
 
             // 4) 새 그리드로 다시 그려 샘플 HTML 의 명단 영역만 치환
@@ -1176,6 +1182,75 @@
             if (isNaN(lo) || isNaN(hi)) { return ''; }
             if (lo > hi) { var t = lo; lo = hi; hi = t; }
             return settingYy(hi) + '~' + settingYy(lo) + '년생';
+        }
+
+        // 출생연도 뒤 2자리(yy) → 나이(세) 역산. (올해 기준 한국식)
+        //  - yy 는 1900/2000 어느 쪽인지 모호하므로 "결과 나이가 15~80 범위"가 되는 쪽을 택한다.
+        function settingAgeFromYy(yy){
+            var n = parseInt(yy, 10);
+            if (isNaN(n)) { return null; }
+            // 2000년대 출생으로 가정한 나이 / 1900년대 출생으로 가정한 나이
+            var age2000 = SETTINGS_THIS_YEAR - (2000 + n) + 1;
+            var age1900 = SETTINGS_THIS_YEAR - (1900 + n) + 1;
+            var ok = function(a){ return a >= 15 && a <= 80; };
+            if (ok(age2000) && !ok(age1900)) { return age2000; }
+            if (ok(age1900) && !ok(age2000)) { return age1900; }
+            // 둘 다 유효하면 더 'young' 쪽(2000년대)을 우선.
+            return ok(age2000) ? age2000 : (ok(age1900) ? age1900 : age2000);
+        }
+
+        // "88~02년생" 같은 텍스트 → {min, max} 나이(세). 파싱 실패 시 빈 문자열.
+        //  - 표기는 "최대나이(=작은 yy) ~ 최소나이(=큰 yy)" 순이므로, 역산 후 min/max 로 정렬한다.
+        function settingAgesFromText(text){
+            var m = String(text || '').match(/(\d{1,2})\s*~\s*(\d{1,2})/);
+            if (!m) { return { min: '', max: '' }; }
+            var a = settingAgeFromYy(m[1]);
+            var b = settingAgeFromYy(m[2]);
+            if (a == null || b == null) { return { min: '', max: '' }; }
+            return { min: String(Math.min(a, b)), max: String(Math.max(a, b)) };
+        }
+
+        // 캐리어가 없거나 숫자 나이가 비었을 때, 화면에 보이는 마커(data-setting)에서 설정을 복원한다.
+        //  - 최초 접근 시 에디터가 캐리어를 지웠어도, 참여 조건/자격요건에 "보이는 값"으로 폼을 채운다.
+        //  - 입력: 분리된 DOM($root). 출력: 폼 채우기용 설정 객체.
+        function readSettingsFromDom($root){
+            var s = {};
+            // 1) 캐리어가 있으면 우선 사용.
+            var $carrier = $root.find('[data-detail-settings]').first();
+            if ($carrier.length) {
+                try { s = JSON.parse($carrier.attr('data-detail-settings') || '{}'); } catch(e){ s = {}; }
+            }
+
+            // 2) 숫자 나이(min/max)가 비어 있으면 참여 조건 라인에서 역산해 채운다.
+            var needAges = (s.maleAgeMin == null || s.maleAgeMin === '')
+                        || (s.femaleAgeMin == null || s.femaleAgeMin === '');
+            if (needAges) {
+                var line = $root.find('[data-setting="ageConditionLine"]').first().text() || '';
+                // "남성 88~02년생 / 여성 88~02년생" → 남/녀 구간 분리
+                var parts = line.split('/');
+                var maleSeg   = parts[0] || '';
+                var femaleSeg = parts[1] || '';
+                var ma = settingAgesFromText(maleSeg);
+                var fa = settingAgesFromText(femaleSeg);
+                if (s.maleAgeMin == null || s.maleAgeMin === '')   { s.maleAgeMin = ma.min; }
+                if (s.maleAgeMax == null || s.maleAgeMax === '')   { s.maleAgeMax = ma.max; }
+                if (s.femaleAgeMin == null || s.femaleAgeMin === ''){ s.femaleAgeMin = fa.min; }
+                if (s.femaleAgeMax == null || s.femaleAgeMax === ''){ s.femaleAgeMax = fa.max; }
+            }
+
+            // 3) 키(신장)도 비어 있으면 마커 텍스트("175cm 이상")에서 숫자/단위만 뽑아 채운다.
+            var stripHeight = function(t){
+                return String(t || '').replace(/\s*이상\s*$/, '').trim();
+            };
+            if (s.maleHeight == null || s.maleHeight === '') {
+                s.maleHeight = stripHeight($root.find('[data-setting="maleHeight"]').first().text());
+            }
+            if (s.femaleHeight == null || s.femaleHeight === '') {
+                s.femaleHeight = stripHeight($root.find('[data-setting="femaleHeight"]').first().text());
+            }
+
+            SETTING_KEYS.forEach(function(k){ if (s[k] == null) { s[k] = ''; } });
+            return s;
         }
 
         function getSettingsModal(){
@@ -1291,7 +1366,7 @@
             .on('input', updateAgePreview);
 
         // '페이지 설정' 열기 — 현재 에디터의 설정을 읽어 폼에 채운다.
-        // 캐리어가 없어도(예전 저장본 등) 폼은 열고, 빈/기본값으로 시작한다. ([적용] 시 캐리어 생성)
+        // 캐리어가 없어도(최초 접근·예전 저장본 등) 화면에 보이는 값(참여조건/자격요건)에서 복원해 채운다.
         $('.btn-open-settings').on('click', function(){
             var html = getHtml();
             if (!html || !html.trim()) {
@@ -1301,8 +1376,8 @@
             } else {
                 $('#settingsEmpty').hide();
                 $('#settingsFormBody').show();
-                var loc = locateSettings(html);
-                fillSettingsForm(loc ? parseSettings(loc.carrier) : {});
+                var $root = $('<div></div>').html(html);
+                fillSettingsForm(readSettingsFromDom($root));
             }
             var m = getSettingsModal();
             if (m) { m.show(); }
@@ -1324,12 +1399,12 @@
         });
 
         // 샘플 HTML 에 "현재 에디터의 설정값"을 이식해서 돌려준다. (참여자 명단과 동일 원리)
-        // - 현재 에디터에 설정 캐리어가 있으면 그 값을 추출해 새 샘플에 그대로 반영한다.
-        // - 현재 설정이 없으면 샘플 기본값을 그대로 둔다.
+        // - 캐리어가 없어도 화면 마커에서 복원(readSettingsFromDom)해 새 샘플에 그대로 반영한다.
         function applyCurrentSettingsToSample(sampleHtml){
-            var curLoc = locateSettings(getHtml());
-            if (!curLoc) { return sampleHtml; } // 현재 설정 없으면 샘플 그대로
-            var curSettings = parseSettings(curLoc.carrier);
+            var html = getHtml();
+            if (!html || !html.trim()) { return sampleHtml; }
+            var $root = $('<div></div>').html(html);
+            var curSettings = readSettingsFromDom($root);
             return applySettingsToHtml(sampleHtml, curSettings);
         }
 
@@ -1337,7 +1412,7 @@
         $('.btn-sample-one').on('click', async function(){
             var type = currentType();
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
-            if(await salert({text: '현재 작성 내용을 [' + label + '] 1열 샘플로 교체하시겠습니까?\n(현재 참여자 명단·페이지 설정은 그대로 옮겨집니다)'})){
+            if(await salert({text: '현재 작성 내용을 [' + label + '] 1열 샘플로 교체하시겠습니까?\n(현재 참여자 명단·행사명/시간·페이지 설정은 그대로 유지됩니다)'})){
                 // 참여자 명단에 이어 페이지 설정(행사명·나이·키)도 현재 값으로 이식한다.
                 setHtml(applyCurrentSettingsToSample(applyCurrentRosterToSample(SAMPLES[type][1])));
             }
@@ -1347,7 +1422,7 @@
         $('.btn-sample-two').on('click', async function(){
             var type = currentType();
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
-            if(await salert({text: '현재 작성 내용을 [' + label + '] 2열 샘플로 교체하시겠습니까?\n(현재 참여자 명단·페이지 설정은 그대로 옮겨집니다)'})){
+            if(await salert({text: '현재 작성 내용을 [' + label + '] 2열 샘플로 교체하시겠습니까?\n(현재 참여자 명단·행사명/시간·페이지 설정은 그대로 유지됩니다)'})){
                 // 참여자 명단에 이어 페이지 설정(행사명·나이·키)도 현재 값으로 이식한다.
                 setHtml(applyCurrentSettingsToSample(applyCurrentRosterToSample(SAMPLES[type][2])));
             }

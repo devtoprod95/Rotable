@@ -191,11 +191,13 @@
 </style>
 <div style="font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:800; color:#4b4453; line-height:1.35; width:100%;">
 
-    {{-- 페이지 설정(행사명·남/녀 나이·남/녀 키) 캐리어.
+    {{-- 페이지 설정(남/녀 나이·남/녀 키) 캐리어.
          상세페이지 제작 화면의 "페이지 설정"이 이 요소의 data-detail-settings(JSON)를 읽고,
          아래 data-setting="키" 로 마킹된 노출 지점의 값을 갈아끼운다.
-         샘플을 다시 불러와도 현재 설정이 그대로 따라오도록 쓰이는 숨김 캐리어다. (화면엔 안 보임) --}}
-    <div data-detail-settings='{{ $settingsJson }}' style="display:none;"></div>
+         샘플을 다시 불러와도 현재 설정이 그대로 따라오도록 쓰이는 숨김 캐리어다. (화면엔 안 보임)
+         ※ 비어 있으면 TinyMCE 가 '빈 요소'로 보고 저장 시 통째로 지워 설정이 유실되므로,
+            보이지 않는 문자(zero-width space)를 넣어 항상 non-empty 로 유지한다. --}}
+    <div data-detail-settings='{{ $settingsJson }}' style="display:none;">&#8203;</div>
 
     {{-- 최상단 상세 이미지 --}}
     <div style="text-align:center; margin-bottom:36px;">

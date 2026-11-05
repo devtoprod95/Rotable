@@ -144,21 +144,26 @@ class DetailPageService
      * ==================================================================== */
 
     /**
-     * 특정 유형의 "저장 목록"을 최신순으로 반환한다. (html 본문은 제외한 경량 목록)
+     * "저장 목록"을 최신순으로 반환한다. (html 본문은 제외한 경량 목록)
      *
-     * @param  string  $type  상세페이지 유형 ('wine' | 'solo')
-     * @return array<int, array{id:int, title:string, saved_by:?string, saved_at:?string}>
+     * @param  string  $type  상세페이지 유형 ('wine' | 'solo' | 'all'). 'all' 이면 유형 무관 전체.
+     * @return array<int, array{id:int, title:string, type:string, saved_by:?string, saved_at:?string}>
      */
     public function snapshotList(string $type = 'wine'): array
     {
-        $type = $this->detailType($type);
+        $query = EventPageDetailSave::query()->orderByDesc('id');
 
-        return EventPageDetailSave::where('type', $type)
-            ->orderByDesc('id')
-            ->get(['id', 'title', 'saved_by', 'updated_at'])
+        // 'all'(또는 알 수 없는 값이 아닌 명시 유형)일 때만 유형 필터를 건다.
+        if ($type !== 'all') {
+            $query->where('type', $this->detailType($type));
+        }
+
+        return $query
+            ->get(['id', 'title', 'type', 'saved_by', 'updated_at'])
             ->map(fn (EventPageDetailSave $s): array => [
                 'id'       => (int) $s->id,
                 'title'    => (string) $s->title,
+                'type'     => (string) $s->type,
                 'saved_by' => $s->saved_by,
                 'saved_at' => $s->updated_at?->format('Y-m-d H:i'),
             ])

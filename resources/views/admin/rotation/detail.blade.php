@@ -312,14 +312,15 @@
             <div class="modal-header">
                 <h5 class="modal-title">
                     <i class="ti ti-list-details me-1"></i> 저장 목록
-                    <span class="badge bg-pink-lt ms-1" id="savesTypeBadge">와인파티</span>
+                    <span class="badge bg-dark ms-1" id="savesTypeBadge">전체</span>
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="text-secondary small mb-3">
                     <i class="ti ti-info-circle me-1"></i>
-                    현재 선택한 유형의 저장본만 보여집니다. <b>불러오기</b> 하면 그 저장본이 <b>현재 편집 대상</b>이 되고,
+                    <b>와인파티·1:1 소개팅 모든 유형</b>의 저장본이 함께 보여집니다. (각 항목 앞 뱃지로 유형 구분)
+                    <b>불러오기</b> 하면 그 저장본의 유형으로 에디터가 전환되고 <b>현재 편집 대상</b>이 되며,
                     이후 상단 <b>[저장]</b> 을 누르면 그 저장본이 그대로 갱신됩니다.
                     (다른 이름으로 남기려면 <b>다른 이름으로 저장</b>)
                 </div>
@@ -729,6 +730,17 @@
                 toolbar: 'undo redo | blocks fontsize | bold italic underline forecolor backcolor | '
                     + 'alignleft aligncenter alignright | bullist numlist | link image media table | emoticons | code fullscreen',
                 toolbar_mode: 'wrap',
+                // ── 저장 시 커스텀 마커(설정 캐리어/명단)가 유실되지 않도록 정리 규칙 완화 ──
+                // 기본 TinyMCE 는 ① 빈 요소(예: 빈 div)를 지우고 ② 모르는 data-* 속성을 떼어낸다.
+                //  → 페이지 설정 캐리어(<div data-detail-settings style="display:none"></div>)가 '빈 div' 라
+                //    저장 때 통째로 제거돼 설정값이 함께 저장되지 않는 문제가 있었다.
+                //  → data-* 속성 전체를 허용하고, 설정 캐리어 div 는 '비어 있어도' 보존하도록 명시한다.
+                extended_valid_elements: '*[*]',
+                valid_children: '+body[style],+div[div|span|b|i|img|style]',
+                // 빈 블록으로 취급돼 삭제되지 않도록, 캐리어/스페이서 류를 non-empty 로 등록.
+                non_empty_elements: 'div[data-detail-settings],div[data-roster-grid]',
+                keep_styles: true,
+                verify_html: false,
                 content_style: "@import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap'); body{font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; font-size:14px;}"
             });
         }
@@ -1205,9 +1217,19 @@
             s.maleAgeText   = settingAgeText(s.maleAgeMin, s.maleAgeMax);
             s.femaleAgeText = settingAgeText(s.femaleAgeMin, s.femaleAgeMax);
 
-            // 1) 캐리어 JSON 갱신
+            // 1) 캐리어 JSON 갱신 — 없으면 새로 만들어 콘텐츠 맨 앞에 끼운다.
+            //    (예전 저장본이거나 에디터가 캐리어를 지운 경우에도 설정이 HTML 에 반드시 실리도록)
             var $carrier = $root.find('[data-detail-settings]').first();
-            if ($carrier.length) { $carrier.attr('data-detail-settings', JSON.stringify(s)); }
+            if ($carrier.length === 0) {
+                // 콘텐츠 최상위 래퍼(첫 div)가 있으면 그 안 맨 앞에, 없으면 root 맨 앞에 삽입.
+                var $wrapper = $root.children('div').first();
+                var $target  = $wrapper.length ? $wrapper : $root;
+                // zero-width space 로 non-empty 유지 (TinyMCE 가 빈 요소로 보고 지우지 못하게).
+                $carrier = $('<div data-detail-settings style="display:none;">\u200b</div>');
+                $target.prepend($carrier);
+            }
+            $carrier.attr('data-detail-settings', JSON.stringify(s));
+            if (($carrier.text() || '').length === 0) { $carrier.text('\u200b'); }
 
             // 2) 참여 조건 나이 라인 — "남성 OOO / 여성 OOO" (한쪽이라도 비면 그쪽은 빈칸)
             var ageLine = '남성 ' + (s.maleAgeText || '') + ' / 여성 ' + (s.femaleAgeText || '');
@@ -1225,11 +1247,11 @@
         }
 
         // 현재 에디터 HTML 에 설정 s 를 반영한 새 HTML 문자열을 돌려준다.
+        // 캐리어가 없어도 applySettingsToDom 이 새로 만들어 끼우므로 항상 설정이 실린다.
         function applySettingsToHtml(html, s){
-            var loc = locateSettings(html);
-            if (!loc) { return html; }
-            applySettingsToDom(loc.root, s);
-            return loc.root.html();
+            var $root = $('<div></div>').html(html || '');
+            applySettingsToDom($root, s);
+            return $root.html();
         }
 
         // 폼 입력 → 설정 객체
@@ -1269,30 +1291,32 @@
             .on('input', updateAgePreview);
 
         // '페이지 설정' 열기 — 현재 에디터의 설정을 읽어 폼에 채운다.
+        // 캐리어가 없어도(예전 저장본 등) 폼은 열고, 빈/기본값으로 시작한다. ([적용] 시 캐리어 생성)
         $('.btn-open-settings').on('click', function(){
-            var loc = locateSettings(getHtml());
-            if (!loc) {
+            var html = getHtml();
+            if (!html || !html.trim()) {
+                // 아예 내용이 없을 때만 안내.
                 $('#settingsFormBody').hide();
                 $('#settingsEmpty').show();
             } else {
                 $('#settingsEmpty').hide();
                 $('#settingsFormBody').show();
-                fillSettingsForm(parseSettings(loc.carrier));
+                var loc = locateSettings(html);
+                fillSettingsForm(loc ? parseSettings(loc.carrier) : {});
             }
             var m = getSettingsModal();
             if (m) { m.show(); }
         });
 
-        // [설정 적용] → 마커 지점 값을 갈아끼워 에디터에 반영
+        // [설정 적용] → 마커 지점 값을 갈아끼워 에디터에 반영 (캐리어 없으면 생성)
         $('.btn-settings-apply').on('click', async function(){
-            var loc = locateSettings(getHtml());
-            if (!loc) {
-                await salert({text: '설정 영역을 찾지 못했습니다. 샘플을 먼저 불러와 주세요.', cancel: false});
+            var html = getHtml();
+            if (!html || !html.trim()) {
+                await salert({text: '먼저 샘플을 불러오거나 내용을 작성해 주세요.', cancel: false});
                 return;
             }
             var s = collectSettingsForm();
-            applySettingsToDom(loc.root, s);
-            setHtml(loc.root.html());
+            setHtml(applySettingsToHtml(html, s));
 
             var m = getSettingsModal();
             if (m) { m.hide(); }
@@ -1428,9 +1452,15 @@
             }
             $('#savesEmpty').hide();
             var rows = items.map(function(it){
+                var typeLabel = it.type === 'solo' ? '1:1 소개팅' : '와인파티';
+                var typeTone  = it.type === 'solo' ? 'bg-azure-lt' : 'bg-pink-lt';
                 return ''
-                  + '<tr data-id="' + it.id + '">'
-                  +   '<td class="w-100"><div class="fw-bold">' + savesEsc(it.title) + '</div>'
+                  + '<tr data-id="' + it.id + '" data-type="' + savesEsc(it.type || 'wine') + '">'
+                  +   '<td class="w-100">'
+                  +       '<div class="fw-bold">'
+                  +         '<span class="badge ' + typeTone + ' me-1">' + typeLabel + '</span>'
+                  +         savesEsc(it.title)
+                  +       '</div>'
                   +       '<div class="text-secondary small">' + savesEsc(it.saved_by || '') + ' · ' + savesEsc(it.saved_at || '') + '</div></td>'
                   +   '<td class="text-nowrap text-end">'
                   +     '<button type="button" class="btn btn-sm btn-primary saves-load"><i class="ti ti-folder-open me-1"></i>불러오기</button> '
@@ -1441,16 +1471,15 @@
             $body.html('<table class="table table-vcenter card-table"><tbody>' + rows + '</tbody></table>');
         }
 
-        // 현재 유형의 목록을 서버에서 불러와 렌더
+        // 저장 목록을 서버에서 불러와 렌더 — 행사 타입 상관없이 "전체"를 보여준다.
         function reloadSavesList(){
-            var type = currentType();
-            $('#savesTypeBadge').text(type === 'solo' ? '1:1 소개팅' : '와인파티');
+            $('#savesTypeBadge').text('전체');
             $('#savesListBody').html('<div class="text-center text-secondary py-4"><span class="spinner-border spinner-border-sm me-2"></span>불러오는 중…</div>');
             $('#savesEmpty').hide();
             $.ajax({
                 url: "{{ route('admin.rotation.detail.saves.list') }}",
                 type: 'GET',
-                data: { type: type },
+                data: { type: 'all' },
                 success: function(res){ renderSavesList(res && res.items ? res.items : []); },
                 error: function(){ $('#savesListBody').html('<div class="text-danger text-center py-4">목록을 불러오지 못했습니다.</div>'); }
             });
@@ -1478,19 +1507,29 @@
         });
 
         // 불러오기 (선택한 저장본을 에디터에 로드 → 그 저장본이 현재 편집 대상이 됨)
+        // 목록이 '전체' 유형을 보여주므로, 다른 유형을 불러오면 에디터 유형도 그 유형으로 전환한다.
         $('#savesListBody').on('click', '.saves-load', async function(){
-            var id = $(this).closest('tr').data('id');
+            var $tr     = $(this).closest('tr');
+            var id      = $tr.data('id');
+            var rowType = ($tr.data('type') === 'solo') ? 'solo' : 'wine'; // 서버 res.type 우선, 폴백용
             if (!(await salert({text: '이 저장본으로 현재 작성 내용을 교체하시겠습니까?'}))) { return; }
-            var type = currentType();
             $.ajax({
                 url: "{{ url('admin/rotation/detail/saves') }}/" + id,
                 type: 'GET',
                 success: async function(res){
                     // apiRes 는 200 응답에서 isSuccess 를 제거하므로, success 콜백이면 로드 성공으로 본다.
+                    var type = (res && res.type === 'solo') ? 'solo' : (res && res.type === 'wine' ? 'wine' : rowType);
+
+                    // 불러온 저장본의 유형으로 에디터 유형 라디오를 전환한다. (change 핸들러가 SAVED 보관/activeType 갱신)
+                    if (type !== currentType()) {
+                        $('input[name="sampleType"][value="' + type + '"]').prop('checked', true).trigger('change');
+                    }
+
                     setHtml((res && res.html) ? res.html : '');
                     // 불러온 저장본을 "현재 편집 중"으로 설정 → 이후 [저장] 은 이 항목을 덮어쓴다.
                     CURRENT[type] = { id: (res && res.id) ? res.id : id, title: (res && res.title) || '' };
                     SAVED[type] = getHtml();
+                    activeType = type;
                     renderSavedInfo();
                     var m = getSavesModal();
                     if (m) { m.hide(); }
@@ -1505,14 +1544,15 @@
             var $tr = $(this).closest('tr');
             var id  = parseInt($tr.data('id'), 10);
             if (!(await salert({text: '이 저장본을 삭제하시겠습니까?'}))) { return; }
-            var type = currentType();
+            var rowType = ($tr.data('type') === 'solo') ? 'solo' : 'wine';
             $.ajax({
                 url: "{{ url('admin/rotation/detail/saves') }}/" + id,
                 type: 'DELETE',
                 success: function(res){
                     alert(res?.msg);
-                    if (CURRENT[type] && parseInt(CURRENT[type].id, 10) === id) {
-                        CURRENT[type] = { id: null, title: null };
+                    // 삭제한 저장본이 '현재 편집 중'이었다면(유형 무관) 미저장 상태로 전환.
+                    if (CURRENT[rowType] && parseInt(CURRENT[rowType].id, 10) === id) {
+                        CURRENT[rowType] = { id: null, title: null };
                         renderSavedInfo();
                     }
                     reloadSavesList();

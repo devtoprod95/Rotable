@@ -22,7 +22,7 @@ use Illuminate\Console\Command;
 class SnapshotVisitStats extends Command
 {
     protected $signature   = 'rotation:snapshot-visit-stats {--date= : 기준 자정 날짜(YYYY-MM-DD). 생략 시 오늘 자정}';
-    protected $description = '방문 통계(총 방문/남/여/1~5번·6번이상 방문자 수)를 일일 스냅샷으로 적재한다.';
+    protected $description = '방문 통계(총 방문/남/여/1~5번·6번이상 방문자 수, 노쇼 인원)를 일일 스냅샷으로 적재한다.';
 
     public function __construct(protected VisitStatService $visitStatService)
     {

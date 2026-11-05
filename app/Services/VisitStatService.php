@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\EventRoster;
 use App\Models\Member;
 use Carbon\CarbonInterface;
 
@@ -20,6 +21,7 @@ class VisitStatService
      *
      * 방문 횟수 구간(1~5번, 6번 이상)별로 사람(전화번호) 수를 전체/남/여로 나눠 집계한다.
      * 전화번호의 성별은 그 전화번호의 "가장 최근 방문 레코드" 기준으로 1개로 확정한다.
+     * 아울러 노쇼(신청했으나 미참석, event_rosters.checked_in_at is null)를 성별·플랫폼으로 함께 집계한다.
      *
      * @param CarbonInterface|null $until 이 시각 "이전(미만)"에 생성된 회원만 집계. null 이면 전체.
      * @return array<string, int|array<string, int>> 집계 결과. platform_counts 만 [플랫폼=>수] 중첩 배열이고 나머지는 int.
@@ -99,7 +101,52 @@ class VisitStatService
             'total_male'      => $totalMale,
             'total_female'    => $totalFemale,
             'platform_counts' => $platformCounts,
-        ], $buckets);
+        ], $buckets, $this->aggregateNoShow($until));
+    }
+
+    /**
+     * 노쇼(신청했으나 미참석) 인원을 집계한다.
+     *
+     * 기준: 체크인 명단(event_rosters) 중 checked_in_at 이 null 인 행 = 미참석(노쇼).
+     * 방문 통계와 같은 축(성별·플랫폼)으로 분류한다.
+     *  - 성별: roster.gender 기준. 'F' 가 아니면 남(M)으로 귀속한다. (체크인 추가 시 성별은 M/F 필수)
+     *  - 플랫폼: Member::platformOptions() 의 모든 플랫폼 키를 0 으로 채운 뒤 실제 값으로 집계.
+     *
+     * @param CarbonInterface|null $until 이 시각 "이전(미만)"에 생성된 명단만 집계. null 이면 전체.
+     * @return array{no_show_total:int, no_show_male:int, no_show_female:int, no_show_platform_counts:array<string,int>}
+     */
+    private function aggregateNoShow(?CarbonInterface $until = null): array
+    {
+        $base = EventRoster::query()->whereNull('checked_in_at');
+        if ($until !== null) {
+            $base->where('event_rosters.created_at', '<', $until);
+        }
+
+        $total  = (clone $base)->count();
+        $female = (clone $base)->where('gender', Member::GENDER_FEMALE)->count();
+        // 성별은 M/F 필수이나, 혹시 모를 null/기타 값은 남(M)으로 귀속한다. (여를 뺀 나머지)
+        $male = $total - $female;
+
+        // 플랫폼별 노쇼 수. 방문 플랫폼 집계와 동일하게 모든 플랫폼 키를 0 으로 선채운다.
+        $platformCounts = [];
+        foreach (Member::platformOptions() as $opt) {
+            $platformCounts[$opt['id']] = 0;
+        }
+        $platformRows = (clone $base)
+            ->selectRaw('event_rosters.platform as platform, COUNT(*) as cnt')
+            ->groupBy('event_rosters.platform')
+            ->get();
+        foreach ($platformRows as $row) {
+            $key = $row->platform ?? Member::PLATFORM_MUNTO; // null 은 기본(문토)로 귀속
+            $platformCounts[$key] = ($platformCounts[$key] ?? 0) + (int) $row->cnt;
+        }
+
+        return [
+            'no_show_total'           => $total,
+            'no_show_male'            => $male,
+            'no_show_female'          => $female,
+            'no_show_platform_counts' => $platformCounts,
+        ];
     }
 
     /**

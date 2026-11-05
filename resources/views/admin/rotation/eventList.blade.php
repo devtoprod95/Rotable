@@ -125,6 +125,27 @@
                             </span>
                         @endforeach
                     </div>
+
+                    {{-- 노쇼(신청했으나 미참석) — 성별·플랫폼으로 분류. 체크인 명단(event_rosters) 중 미참석 기준 --}}
+                    @php
+                        $noShowPlatform = $visitSnapshot->no_show_platform_counts ?? [];
+                    @endphp
+                    <div class="mt-3 d-flex align-items-center gap-2 flex-wrap">
+                        <span class="text-muted" style="font-size:0.9em;">노쇼(미참석)</span>
+                        <span class="badge bg-secondary-lt">총 {{ number_format($visitSnapshot->no_show_total) }}명</span>
+                        <span class="badge bg-blue-lt">남 {{ number_format($visitSnapshot->no_show_male) }}명</span>
+                        <span class="badge bg-pink-lt">여 {{ number_format($visitSnapshot->no_show_female) }}명</span>
+                        <span class="text-muted" style="font-size:0.85em;">·</span>
+                        @foreach (\App\Models\Member::platformOptions() as $opt)
+                            <span class="badge {{ $platformBadgeCls[$opt['id']] ?? 'bg-secondary-lt' }}">
+                                {{ $opt['label'] }} {{ number_format($noShowPlatform[$opt['id']] ?? 0) }}명
+                            </span>
+                        @endforeach
+                        <i class="ti ti-info-circle text-muted ms-1"
+                           data-bs-toggle="tooltip" data-bs-placement="top" data-bs-html="true"
+                           style="cursor: help;"
+                           title="체크인 명단에 올라왔으나 당일 참석(체크인)하지 않은 신청자 수예요.<br>성별·플랫폼은 신청 시 등록한 값 기준입니다."></i>
+                    </div>
                 @else
                     <div class="text-center text-muted py-3">표시할 통계 데이터가 없습니다.</div>
                 @endif

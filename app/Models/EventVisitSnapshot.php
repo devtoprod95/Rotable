@@ -30,6 +30,10 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $visit_6_plus
  * @property int $visit_6_plus_male
  * @property int $visit_6_plus_female
+ * @property int $no_show_total
+ * @property int $no_show_male
+ * @property int $no_show_female
+ * @property array<string, int> $no_show_platform_counts
  */
 class EventVisitSnapshot extends Model
 {
@@ -48,6 +52,7 @@ class EventVisitSnapshot extends Model
         'visit_4', 'visit_4_male', 'visit_4_female',
         'visit_5', 'visit_5_male', 'visit_5_female',
         'visit_6_plus', 'visit_6_plus_male', 'visit_6_plus_female',
+        'no_show_total', 'no_show_male', 'no_show_female', 'no_show_platform_counts',
     ];
 
     /**
@@ -80,6 +85,12 @@ class EventVisitSnapshot extends Model
             'visit_6_plus'       => 'integer',
             'visit_6_plus_male'  => 'integer',
             'visit_6_plus_female' => 'integer',
+            // 노쇼(신청했으나 미참석) 인원 — event_rosters.checked_in_at is null 기준
+            'no_show_total'   => 'integer',
+            'no_show_male'    => 'integer',
+            'no_show_female'  => 'integer',
+            // 플랫폼별 노쇼 수. 예: ['munto' => 4, 'frip' => 2] (플랫폼 확장 대비 JSON)
+            'no_show_platform_counts' => 'array',
         ];
     }
 }

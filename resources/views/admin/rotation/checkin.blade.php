@@ -129,6 +129,14 @@
                     <button type="button" class="btn btn-outline-primary btn-lg flex-shrink-0" id="checkinRefreshBtn">
                         <i class="ti ti-refresh me-1"></i><span class="d-none d-sm-inline">새로고침</span>
                     </button>
+                    @isset($devMode)
+                        @if ($devMode)
+                            <button type="button" class="btn btn-outline-warning btn-lg flex-shrink-0" id="checkinDevSeedBtn"
+                                    title="참석(체크인)한 사람 기준으로 입장등록 더미 데이터를 생성합니다 (개발용)">
+                                <i class="ti ti-flask me-1"></i><span class="d-none d-sm-inline">더미 입장등록</span>
+                            </button>
+                        @endif
+                    @endisset
                 </div>
                 <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mt-1">
                     <div id="checkinSearchHint" class="form-hint mb-0">
@@ -185,6 +193,7 @@
         var deleteUrl = "{{ route('admin.rotation.event.rosters.delete', ['id' => $event->id]) }}";
         var addUrl    = "{{ route('admin.rotation.event.rosters.add', ['id' => $event->id]) }}";
         var ticketTpl = "{{ route('admin.rotation.event.rosters.ticket', ['id' => $event->id, 'rosterId' => '__RID__']) }}";
+        var devSeedUrl = "{{ route('admin.rotation.event.rosters.devSeed', ['id' => $event->id]) }}";
 
         var rosters = [];
 
@@ -343,6 +352,43 @@
 
         // 수동 새로고침 버튼
         $('#checkinRefreshBtn').on('click', load);
+
+        // [개발용] 더미 입장등록: 참석(체크인)한 사람 기준으로 회원·좌석을 생성한다.
+        $('#checkinDevSeedBtn').on('click', async function(){
+            var inCnt = rosters.filter(function(r){ return r.checked_in; }).length;
+            if(inCnt === 0){
+                await salert({ text: '참석(체크인)한 사람이 없습니다. 먼저 체크인을 진행해 주세요.', cancel: false });
+                return;
+            }
+            var ok = await Swal.fire({
+                icon: 'question',
+                title: '더미 입장등록 생성',
+                html: '현재 <b>참석(체크인) ' + inCnt + '명</b> 기준으로<br>입장등록(회원) 더미 데이터를 생성할까요?'
+                    + '<div class="text-secondary small mt-1">이미 입장등록된 번호는 건너뜁니다. (개발용)</div>',
+                showCancelButton: true, reverseButtons: true,
+                confirmButtonText: '생성', cancelButtonText: '취소',
+                confirmButtonColor: '#3085d6', cancelButtonColor: '#d33'
+            });
+            if(!ok.isConfirmed){ return; }
+
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            $.ajax({
+                url: devSeedUrl, type: 'POST',
+                success: function(res){
+                    Swal.fire({
+                        icon: 'success',
+                        title: '완료',
+                        html: '생성 <b>' + (res?.created ?? 0) + '건</b>, 건너뜀 ' + (res?.skipped ?? 0) + '건',
+                        confirmButtonText: '확인', confirmButtonColor: '#3085d6'
+                    });
+                    load();
+                },
+                error: function(xhr){ showError(xhr, '더미 입장등록 생성에 실패했습니다.'); }
+            }).always(function(){
+                $btn.prop('disabled', false).html('<i class="ti ti-flask me-1"></i><span class="d-none d-sm-inline">더미 입장등록</span>');
+            });
+        });
 
         function showError(xhr, fallback){
             return Swal.fire({

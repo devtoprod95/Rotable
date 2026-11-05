@@ -468,4 +468,163 @@ class RosterService
 
         return ['ok' => true, 'ticket' => $ticket];
     }
+
+    /**
+     * [개발용] 현재 체크인(참석)된 사람들 기준으로 입장등록(회원)을 더미 데이터로 생성한다.
+     *
+     * 실제 입장등록 흐름과 동일하게:
+     *  - 체크인되어 번호표가 배정된 행 중, 아직 그 번호표로 가입한 회원이 없는 사람만 대상으로 한다.
+     *  - 회원(members)을 더미 프로필(팩토리)로 생성하되 번호표(members.name)·성별·플랫폼은 체크인 값을 따른다.
+     *  - 로테이션 기준(홈) 좌석(rotation_seats)을 테이블에 배치한다.
+     *    (1:1 행사는 테이블당 같은 성별 1명 제약을 지키고, 그 외는 성별별 라운드로빈)
+     *
+     * 운영 데이터가 아닌 테스트 편의용이므로 비밀번호는 고정값('q')으로 둔다.
+     *
+     * @return array{isSuccess:bool, msg?:string, created?:int, skipped?:int}
+     */
+    public function devSeedRegistrations(int $eventId): array
+    {
+        try {
+            $event = \App\Models\EventRound::find($eventId);
+            if ($event === null) {
+                return helpersFailMessage('행사를 찾을 수 없습니다.');
+            }
+
+            $tables = \App\Models\RotationTable::where('event_id', $eventId)
+                ->orderBy('table_no')
+                ->get();
+            if ($tables->isEmpty()) {
+                return helpersFailMessage('테이블이 없어 좌석을 배치할 수 없습니다. 먼저 테이블을 생성해 주세요.');
+            }
+
+            $isOne = $event->isOneToOne();
+
+            // 체크인되어 번호표가 있는 사람만 (성별 → 번호표 순)
+            $rosters = EventRoster::where('event_id', $eventId)
+                ->whereNotNull('checked_in_at')
+                ->whereNotNull('ticket_no')
+                ->orderBy('gender')
+                ->orderBy('ticket_no')
+                ->get();
+
+            return DB::transaction(function () use ($event, $eventId, $rosters, $tables, $isOne): array {
+                // 이미 어떤 성별이 앉은 테이블 집합 (1:1 제약 판정용). [table_id => ['M'=>bool,'F'=>bool]]
+                $occupied = [];
+                \App\Models\RotationSeat::with('member:id,gender')
+                    ->where('event_id', $eventId)
+                    ->get()
+                    ->each(function ($seat) use (&$occupied): void {
+                        $g = $seat->member?->gender;
+                        $occupied[$seat->rotation_table_id][$g] = true;
+                    });
+
+                // 성별별 라운드로빈 커서 (와인파티 균등 배치용)
+                $cursor = ['M' => 0, 'F' => 0];
+
+                // 더미 전화번호 충돌 방지: 이 행사에 이미 쓰인 번호 뒤에서부터 채운다.
+                $usedPhones = \App\Models\Member::where('event_id', $eventId)->pluck('phone')->flip();
+
+                $created = 0;
+                $skipped = 0;
+
+                foreach ($rosters as $roster) {
+                    $gender = (string) $roster->gender;
+                    $ticket = (int) $roster->ticket_no;
+
+                    // 이미 그 번호표로 가입한 회원이 있으면 건너뛴다.
+                    if ($this->memberByTicket($eventId, $gender, $ticket) !== null) {
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    // 배치할 테이블 선택
+                    $table = $this->pickTableForSeed($tables, $gender, $isOne, $occupied, $cursor);
+                    if ($table === null) {
+                        // 1:1 인데 그 성별을 더 앉힐 자리가 없으면 건너뛴다.
+                        $skipped++;
+
+                        continue;
+                    }
+
+                    // 유일한 더미 전화번호 생성 (이 행사 내 unique 제약 충족)
+                    $phone = $this->nextDummyPhone($usedPhones);
+
+                    $factory = \App\Models\Member::factory()->for($event, 'eventRound');
+                    $factory = $gender === Member::GENDER_FEMALE ? $factory->female() : $factory->male();
+
+                    $member = $factory->create([
+                        'name'     => (string) $ticket,
+                        'phone'    => $phone,
+                        'password' => 'q',
+                        'platform' => $this->normalizePlatform($roster->platform),
+                    ]);
+
+                    \App\Models\RotationSeat::create([
+                        'event_id'          => $eventId,
+                        'member_id'         => $member->id,
+                        'rotation_table_id' => $table->id,
+                    ]);
+
+                    $occupied[$table->id][$gender] = true;
+                    $created++;
+                }
+
+                $res            = helpersSuccessMessage("입장등록 더미 {$created}건 생성, {$skipped}건 건너뜀 (이미 등록/자리 없음)");
+                $res['created'] = $created;
+                $res['skipped'] = $skipped;
+
+                return $res;
+            });
+        } catch (\Throwable $th) {
+            return helpersFailMessage($th->getMessage());
+        }
+    }
+
+    /**
+     * [개발용] 더미 좌석 배치용 테이블을 고른다.
+     *
+     * - 1:1(one): 그 성별이 아직 앉지 않은 테이블 중 테이블 번호가 가장 작은 곳. 없으면 null.
+     * - 그 외(와인파티 등): 성별별 라운드로빈으로 순환 배정.
+     *
+     * @param \Illuminate\Support\Collection<int, \App\Models\RotationTable> $tables
+     * @param array<int, array<string, bool>>                               $occupied
+     * @param array<string, int>                                            $cursor
+     */
+    private function pickTableForSeed($tables, string $gender, bool $isOne, array $occupied, array &$cursor): ?\App\Models\RotationTable
+    {
+        if ($isOne) {
+            foreach ($tables as $table) {
+                if (empty($occupied[$table->id][$gender])) {
+                    return $table;
+                }
+            }
+
+            return null;
+        }
+
+        $count = $tables->count();
+        $table = $tables[$cursor[$gender] % $count];
+        $cursor[$gender]++;
+
+        return $table;
+    }
+
+    /**
+     * [개발용] 아직 쓰이지 않은 더미 전화번호(010 + 8자리)를 만든다.
+     *
+     * @param \Illuminate\Support\Collection<string, int> $usedPhones 사용 중인 번호 집합(flip). 생성한 번호를 넣어 갱신한다.
+     */
+    private function nextDummyPhone(\Illuminate\Support\Collection &$usedPhones): string
+    {
+        $seq = 10000000; // 01010000000 부터 순차
+        do {
+            $phone = '010' . $seq;
+            $seq++;
+        } while ($usedPhones->has($phone));
+
+        $usedPhones->put($phone, true);
+
+        return $phone;
+    }
 }

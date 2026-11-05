@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Dtos\RotationTableListRequestDto;
+use App\Enums\Role;
 use App\Http\Requests\Admin\RotationSeatingStoreRequest;
 use App\Models\EventRound;
 use App\Models\EventBepEstimate;
@@ -244,6 +245,8 @@ class RotationController extends Controller
         return view('admin.rotation.checkin', [
             'event'           => $event,
             'platformOptions' => Member::platformOptions(),
+            // 더미 입장등록 시더 버튼은 최고관리자에게만 노출한다.
+            'devMode'         => auth('admin')->user()?->hasRole(Role::SuperAdmin->value) ?? false,
         ]);
     }
 
@@ -382,6 +385,23 @@ class RotationController extends Controller
         }
 
         $result = $this->rosterService->rosterSetTicket($rosterId, (int) $this->request->input('ticket_no'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
+    }
+
+    /**
+     * [운영 도구] 현재 체크인(참석)된 사람들 기준으로 입장등록(회원)을 더미 데이터로 생성한다.
+     *
+     * 체크인 화면에서 최고관리자에게만 노출되는 버튼에서 호출한다.
+     * (라우트도 superAdmin 미들웨어로 보호되며, 여기서도 한 번 더 확인한다.)
+     */
+    public function rosterDevSeed(int $id): JsonResponse
+    {
+        if (! (auth('admin')->user()?->hasRole(Role::SuperAdmin->value) ?? false)) {
+            return apiRes(Response::HTTP_FORBIDDEN, helpersFailMessage('최고관리자만 사용할 수 있습니다.'));
+        }
+
+        $result = $this->rosterService->devSeedRegistrations($id);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
     }

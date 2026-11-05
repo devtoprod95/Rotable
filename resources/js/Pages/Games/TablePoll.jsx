@@ -404,6 +404,9 @@ export default function TablePoll({
                             <br />
                             넘어가면 이 질문은 끝이에요!
                         </p>
+                        <p className="mt-2 text-xs font-semibold leading-relaxed text-primary">
+                            같은 테이블 사람들의 화면에서도 다음 질문으로 넘어가요.
+                        </p>
                         <div className="mt-5 flex gap-2">
                             <button
                                 type="button"

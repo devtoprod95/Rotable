@@ -49,6 +49,8 @@ Route::middleware('role')->group(function () {
                 Route::delete('/{id}/rosters', [RotationController::class, 'rosterDelete'])->whereNumber('id')->name('rosters.delete');
                 Route::patch('/{id}/rosters/{rosterId}/check-in', [RotationController::class, 'rosterToggleCheckIn'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.checkIn');
                 Route::patch('/{id}/rosters/{rosterId}/ticket', [RotationController::class, 'rosterSetTicket'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.ticket');
+                // [개발용] 체크인된 사람 기준 입장등록 더미 생성 (최고관리자 전용)
+                Route::post('/{id}/rosters/dev-seed', [RotationController::class, 'rosterDevSeed'])->whereNumber('id')->middleware('superAdmin')->name('rosters.devSeed');
                 Route::get('/{id}/matches/list', [RotationController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
                 Route::get('/{id}/members/{memberId}/voters/list', [RotationController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
                 Route::get('/{id}/members/{memberId}/voted/list', [RotationController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');

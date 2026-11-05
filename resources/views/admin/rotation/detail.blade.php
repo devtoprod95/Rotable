@@ -523,9 +523,14 @@
         // 캔버스 크기 한계를 넘지 않는 안전한 scale 을 계산한다.
         // 브라우저 캔버스는 한 변 최대 ~16384px(그리고 면적 제한)을 넘으면 빈(흰) 이미지가 된다.
         // 원하는 품질 scale(desired)을 쓰되, (폭/높이 × scale) 이 안전 한계를 넘으면 자동으로 낮춘다.
+        //
+        // [화질 최우선 설정]
+        // - 한 변 한계는 데스크톱 브라우저 실한계(16384px)에 근접한 16000px 로 둔다.
+        // - 면적 한계는 세로로 긴 상세페이지에서도 배율이 과하게 깎이지 않도록 크게(약 2.5억 px²) 둔다.
+        //   (1080px 폭 기준, 높이 수천 px 까지도 desired 배율을 거의 그대로 유지)
         function computeSafeScale(cssWidth, cssHeight, desired){
-            var MAX_SIDE = 12000;             // 한 변 최대 안전 픽셀 (여유 있게)
-            var MAX_AREA = 40 * 1000 * 1000;  // 최대 면적(px^2) — 모바일 메모리 안전치
+            var MAX_SIDE = 16000;              // 한 변 최대 안전 픽셀 (데스크톱 브라우저 실한계 근접)
+            var MAX_AREA = 250 * 1000 * 1000;  // 최대 면적(px^2) — 화질 우선(넉넉히)
             var w = Math.max(1, cssWidth);
             var h = Math.max(1, cssHeight);
             var s = desired || 3;
@@ -541,7 +546,7 @@
          *   줄여 10MB 이하가 되는 가장 큰 PNG 를 저장한다. (텍스트 뭉개짐 없이 선명 유지)
          * - 아주 극단적으로 못 맞추는 경우에만 최후수단으로 고품질 JPEG 로 저장한다.
          * =================================================================== */
-        var EXPORT_MAX_BYTES = 20 * 1024 * 1024; // 20MB (선명도 우선, 상한)
+        var EXPORT_MAX_BYTES = 45 * 1024 * 1024; // 45MB (화질 최우선 — 원본 PNG 를 최대한 그대로 저장)
 
         // 이미지 생성 로딩 오버레이 제어 (드롭다운 닫힘과 무관하게 항상 보인다)
         function showExportOverlay(text){
@@ -1754,7 +1759,8 @@
                 var capH = holder.scrollHeight || holder.offsetHeight || 1080;
 
                 // 선명도(scale)는 높이되, 캔버스 크기 한계를 넘지 않는 안전값으로.
-                var detailScale = computeSafeScale(capW, capH, 3.5);
+                // 화질 최우선: 데스크톱 기준 4배 렌더(1080px → 4320px 폭). 긴 페이지는 한계 내에서 자동 보정.
+                var detailScale = computeSafeScale(capW, capH, 4);
 
                 var canvas = await modernScreenshot.domToCanvas(holder, {
                     backgroundColor: '#ffffff',
@@ -1974,7 +1980,7 @@
 
                 var feedW = target.offsetWidth || 1080;
                 var feedH = target.scrollHeight || target.offsetHeight || 1080;
-                var feedScale = computeSafeScale(feedW, feedH, 3.5);
+                var feedScale = computeSafeScale(feedW, feedH, 4);
 
                 var canvas = await modernScreenshot.domToCanvas(target, {
                     backgroundColor: '#ffffff',

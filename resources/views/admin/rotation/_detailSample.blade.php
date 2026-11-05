@@ -72,12 +72,52 @@
     //  - 나이 범위를 한국식 나이 기준으로 출생연도(2자리)로 환산해 "OO~OO년생"으로 표기한다.
     //  - 1:1 소개팅(solo): 남 25~37세 / 여 23~37세.  와인파티(wine): 기존 범위 유지.
     $yy = fn (int $age): string => sprintf('%02d', ($thisYear - $age + 1) % 100); // 출생연도 뒤 2자리
-    if ($type === 'solo') {
-        // 나이 많을수록 출생연도가 작음 → (최고령 → 최연소) 순서로 "OO~OO년생"
-        $ageConditionLine = '남성 ' . $yy(37) . '~' . $yy(25) . '년생 / 여성 ' . $yy(37) . '~' . $yy(23) . '년생';
-    } else {
-        $ageConditionLine = '남성 00~88년생 / 여성 02~88년생';
-    }
+
+    /* ──────────────────────────────────────────────────────────────────
+     | 페이지 설정 (남/녀 나이 · 남/녀 키)
+     |  - 상세페이지 제작 화면의 "페이지 설정"에서 수정 가능한 값들의 "기본값".
+     |  - 이 값들은 data-detail-settings(JSON) 로 HTML 에 함께 심어지고,
+     |    각 노출 지점에는 data-setting="키" 마커가 붙어 JS 가 값만 갈아끼운다.
+     |  - 샘플을 다시 불러와도(참여자 명단처럼) 현재 설정값이 그대로 따라오도록 설계.
+     | ─────────────────────────────────────────────────────────────────*/
+    // 나이(최소/최대 세) → "OO~OO년생" 문자열로 환산하는 헬퍼.
+    //  - 한국식: 출생연도 = 올해 - 나이 + 1.
+    //  - 나이 많을수록 출생연도가 작으므로 (최대나이 → 최소나이) 순서로 "OO~OO년생".
+    //  - 둘 중 하나라도 비면 빈 문자열.
+    $ageText = function (?int $minAge, ?int $maxAge) use ($yy): string {
+        if ($minAge === null || $maxAge === null) {
+            return '';
+        }
+        $lo = min($minAge, $maxAge);
+        $hi = max($minAge, $maxAge);
+
+        return $yy($hi) . '~' . $yy($lo) . '년생';
+    };
+
+    // 나이 기본값(최소/최대 세) — 남/녀·유형 공통 25~39세.
+    $maleAgeMin   = 25;
+    $maleAgeMax   = 39;
+    $femaleAgeMin = 25;
+    $femaleAgeMax = 39;
+
+    $settings = [
+        'maleAgeMin'   => $maleAgeMin,                           // 남성 최소 나이(세)
+        'maleAgeMax'   => $maleAgeMax,                           // 남성 최대 나이(세)
+        'femaleAgeMin' => $femaleAgeMin,                         // 여성 최소 나이(세)
+        'femaleAgeMax' => $femaleAgeMax,                         // 여성 최대 나이(세)
+        'maleHeight'   => $type === 'solo' ? '173cm' : '175cm',  // 남성 최소 신장
+        'femaleHeight' => '',                                    // 여성 최소 신장 (빈값이면 미표기)
+    ];
+
+    // 나이(세) → 년생 텍스트 (참여 조건 표기용). JS 와 동일한 환산.
+    $settings['maleAgeText']   = $ageText($maleAgeMin, $maleAgeMax);
+    $settings['femaleAgeText'] = $ageText($femaleAgeMin, $femaleAgeMax);
+
+    // 참여 조건의 나이 라인 — 설정값(남/녀 나이)으로 조립.
+    $ageConditionLine = '남성 ' . $settings['maleAgeText'] . ' / 여성 ' . $settings['femaleAgeText'];
+
+    // data 속성에 실어 JS 가 현재 설정을 읽게 할 JSON.
+    $settingsJson = json_encode($settings, JSON_UNESCAPED_UNICODE);
 
     $maleSample = [
         ['no' => 1, 'height' => 177, 'job' => '쇼핑몰',   'age' => $type === 'solo' ? $maleSoloYears[0] : '30대 초반'],
@@ -108,8 +148,8 @@
     $cellDateSize    = $columns === 1 ? '21px' : '16px'; // 날짜
     $cellHeadSize    = $columns === 1 ? '21px' : '17px'; // 남/여 헤더
     $cellNoSize      = $columns === 1 ? '23px' : '18px'; // N호
-    $cellInfoSize    = $columns === 1 ? '19px' : '14px'; // 키·직업·나이
-    $cellHeight      = $columns === 1 ? '84px' : '70px'; // 셀 높이
+    $cellInfoSize    = $columns === 1 ? '26px' : '20px'; // 키·직업·나이 (정보가 더 잘 보이도록 상향)
+    $cellHeight      = $columns === 1 ? '108px' : '92px'; // 셀 높이 (더 잘 보이도록 상향)
     $cellPadding     = $columns === 1 ? '10px' : '6px';  // 셀 패딩
 
     // 이용안내 스텝 (유형별) — 번호 카드 그리드로 노출
@@ -150,6 +190,12 @@
     @import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap');
 </style>
 <div style="font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; color:#4b4453; line-height:1.35; width:100%;">
+
+    {{-- 페이지 설정(행사명·남/녀 나이·남/녀 키) 캐리어.
+         상세페이지 제작 화면의 "페이지 설정"이 이 요소의 data-detail-settings(JSON)를 읽고,
+         아래 data-setting="키" 로 마킹된 노출 지점의 값을 갈아끼운다.
+         샘플을 다시 불러와도 현재 설정이 그대로 따라오도록 쓰이는 숨김 캐리어다. (화면엔 안 보임) --}}
+    <div data-detail-settings='{{ $settingsJson }}' style="display:none;"></div>
 
     {{-- 최상단 상세 이미지 --}}
     <div style="text-align:center; margin-bottom:36px;">
@@ -547,7 +593,7 @@
             참여 조건
         </div>
         <div style="background:#eff6ff; padding:22px 14px; text-align:center; font-size:31px; color:#374151; line-height:2.2;">
-            <div>- {{ $ageConditionLine }}</div>
+            <div>- <span data-setting="ageConditionLine">{{ $ageConditionLine }}</span></div>
             <div>- 미혼이신 분 (돌싱·기혼은 참여가 어려워요)</div>
             <div>- 안정적인 직업과 경제력을 갖추신 분 (신분·재직 확인에 협조해 주세요)</div>
             <div>- 진지하게 좋은 인연을 찾고 싶으신 분</div>
@@ -557,7 +603,7 @@
         {{-- 남성 자격요건 / 우선 승인 안내 --}}
         <div style="background:#dbeafe; border-top:2px solid #bfdbfe; padding:22px 14px; text-align:center; font-size:30px; color:#1e3a8a; line-height:2.0;">
             <div style="font-weight:900; font-size:33px; margin-bottom:12px;">👔 남성 참가 자격요건</div>
-            <div>- 신장 <b>{{ $type === 'solo' ? '173cm' : '175cm' }} 이상</b></div>
+            <div>- 신장 <b data-setting="maleHeight">{{ $settings['maleHeight'] }} 이상</b></div>
             <div>- <b>대기업 · 공기업 · 전문직</b> <b>우선 승인</b></div>
             <div>- 공무원 · 교사 · 금융권 · 사업체 운영 · 사무직 등 안정적인 전문 직군 우대</div>
             <div style="background:#bfdbfe; border-radius:10px; padding:16px 10px; margin-top:16px; font-size:28px; color:#1e3a8a; line-height:1.6;">
@@ -569,6 +615,7 @@
         {{-- 여성 자격요건 (외적 요소 위주) --}}
         <div style="background:#fce7f3; border-top:2px solid #f9a8d4; padding:22px 14px; text-align:center; font-size:30px; color:#9d174d; line-height:2.0;">
             <div style="font-weight:900; font-size:33px; margin-bottom:12px;">💄 여성 참가 자격요건</div>
+            <div data-setting-row="femaleHeight" style="{{ $settings['femaleHeight'] === '' ? 'display:none;' : '' }}">- 신장 <b data-setting="femaleHeight">{{ $settings['femaleHeight'] !== '' ? $settings['femaleHeight'] . ' 이상' : '' }}</b></div>
             <div>- 밝고 호감 가는 <b>단정한 외모</b>와 분위기를 지니신 분</div>
             <div>- 자기관리가 잘 되어 있고 <b>스타일 감각</b>이 있으신 분</div>
             <div>- 긍정적이고 <b>대화 매너</b>가 좋은 분</div>

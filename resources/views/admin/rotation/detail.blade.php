@@ -73,7 +73,10 @@
 
                     <span class="vr d-none d-md-inline"></span>
 
-                    {{-- 편집 그룹: 참여자 명단 편집 / 샘플 불러오기 --}}
+                    {{-- 편집 그룹: 페이지 설정 / 참여자 명단 편집 / 샘플 불러오기 --}}
+                    <button type="button" class="btn btn-pink btn-open-settings">
+                        <i class="ti ti-adjustments me-1"></i> 페이지 설정
+                    </button>
                     <button type="button" class="btn btn-pink btn-open-roster">
                         <i class="ti ti-users-group me-1"></i> 참여자 명단 편집
                     </button>
@@ -156,6 +159,84 @@
                 <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
                 <button type="button" class="btn btn-dark btn-detail-download">
                     <i class="ti ti-download me-1"></i> 이미지 다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- 페이지 설정 모달 (행사명 · 남/녀 나이 · 남/녀 키) --}}
+{{-- 에디터 HTML 안의 data-detail-settings(현재 설정)을 읽어 폼에 채우고,
+     [설정 적용] 시 data-setting 마커가 붙은 노출 지점의 값을 갈아끼운다.
+     (참여자 명단 편집과 동일하게 "요소 기준"이라 주석이 지워져도 안전하게 동작한다.) --}}
+<div class="modal modal-blur fade" id="detailSettingsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ti ti-adjustments me-1"></i> 페이지 설정
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <div class="text-secondary">
+                        <b>남/녀 나이 · 남/녀 키</b>를 입력하고 <b>[설정 적용]</b> 을 누르면
+                        상세페이지의 해당 부분(참여 조건·자격요건)에 바로 반영돼요.
+                        <br>샘플을 다시 불러와도 <b>설정값은 참여자 명단처럼 그대로 따라옵니다.</b>
+                    </div>
+                </div>
+
+                <div id="settingsFormBody">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">남성 나이 (최소 ~ 최대)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="settingMaleAgeMin" placeholder="최소" min="19" max="99">
+                                <span class="input-group-text">~</span>
+                                <input type="number" class="form-control" id="settingMaleAgeMax" placeholder="최대" min="19" max="99">
+                                <span class="input-group-text">세</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">여성 나이 (최소 ~ 최대)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="settingFemaleAgeMin" placeholder="최소" min="19" max="99">
+                                <span class="input-group-text">~</span>
+                                <input type="number" class="form-control" id="settingFemaleAgeMax" placeholder="최대" min="19" max="99">
+                                <span class="input-group-text">세</span>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="form-hint text-muted d-block mt-1 mb-3">
+                        나이(세)를 입력하면 <b>자동으로 "OO~OO년생"</b> 으로 환산돼 참여 조건에 "남성 OOO / 여성 OOO" 로 표기돼요.
+                        <span id="settingAgePreview" class="text-azure fw-bold"></span>
+                    </small>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">남성 키 (최소 신장)</label>
+                            <input type="text" class="form-control" id="settingMaleHeight" placeholder="예: 175cm">
+                            <small class="form-hint text-muted">남성 참가 자격요건에 "신장 OOO 이상" 으로 표기돼요.</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">여성 키 (최소 신장)</label>
+                            <input type="text" class="form-control" id="settingFemaleHeight" placeholder="미입력 시 표기 안 함">
+                            <small class="form-hint text-muted">입력하면 여성 참가 자격요건에 "신장 OOO 이상" 이 추가돼요. (비우면 미표기)</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="settingsEmpty" class="text-center text-secondary py-5" style="display:none;">
+                    <i class="ti ti-alert-triangle fs-1 d-block mb-2"></i>
+                    현재 내용에서 설정 영역을 찾지 못했어요.<br>
+                    먼저 <b>1열 / 2열 샘플</b>을 불러온 뒤 다시 시도해 주세요.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary btn-settings-apply">
+                    <i class="ti ti-check me-1"></i> 설정 적용
                 </button>
             </div>
         </div>
@@ -698,8 +779,8 @@
             var cellDateSize  = c.cellDateSize  || '21px';
             var cellHeadSize  = c.cellHeadSize  || '21px';
             var cellNoSize    = c.cellNoSize    || '23px';
-            var cellInfoSize  = c.cellInfoSize  || '19px';
-            var cellHeight    = c.cellHeight    || '84px';
+            var cellInfoSize  = c.cellInfoSize  || '26px';
+            var cellHeight    = c.cellHeight    || '108px';
             var cellPadding   = c.cellPadding   || '10px';
             var balance       = c.balance !== false; // 기본 ON
             var recruitLabel  = (c.recruitLabel && String(c.recruitLabel).trim()) || '모집중';
@@ -1007,12 +1088,187 @@
             return $sample.html();
         }
 
+        /* =====================================================================
+         * 페이지 설정 (남/녀 나이 · 남/녀 키)
+         * - 에디터 HTML 안의 data-detail-settings(JSON) 로 현재 설정을 읽고,
+         *   data-setting="키" 로 마킹된 노출 지점의 값을 갈아끼운다.
+         * - 참여자 명단과 동일하게 "요소/data 속성 기준"이라 주석이 지워져도 안전.
+         * - 샘플을 다시 불러와도 현재 설정이 그대로 따라오게 한다. (applyCurrentSettingsToSample)
+         * =================================================================== */
+        var settingsModal = null;
+        // 설정 키 목록과 기본값. (data-detail-settings 가 없을 때의 폴백)
+        // 나이는 숫자(세) 최소/최대로 보관하고, 표기용 년생 텍스트(maleAgeText/femaleAgeText)는 파생값이다.
+        var SETTING_KEYS = ['maleAgeMin', 'maleAgeMax', 'femaleAgeMin', 'femaleAgeMax',
+                            'maleAgeText', 'femaleAgeText', 'maleHeight', 'femaleHeight'];
+
+        // 한국식 나이(세) → 출생연도 뒤 2자리. (Blade $yy 와 동일: 올해 - 나이 + 1)
+        var SETTINGS_THIS_YEAR = {{ (int) now()->year }};
+        function settingYy(age){
+            var n = parseInt(age, 10);
+            if (isNaN(n)) { return ''; }
+            var yr = (SETTINGS_THIS_YEAR - n + 1) % 100;
+            if (yr < 0) { yr += 100; }
+            return (yr < 10 ? '0' : '') + yr;
+        }
+        // 최소/최대 나이(세) → "OO~OO년생". (나이 많을수록 출생연도 작음 → 최대나이~최소나이)
+        function settingAgeText(minAge, maxAge){
+            var lo = parseInt(minAge, 10);
+            var hi = parseInt(maxAge, 10);
+            if (isNaN(lo) || isNaN(hi)) { return ''; }
+            if (lo > hi) { var t = lo; lo = hi; hi = t; }
+            return settingYy(hi) + '~' + settingYy(lo) + '년생';
+        }
+
+        function getSettingsModal(){
+            if (settingsModal) { return settingsModal; }
+            var el = document.getElementById('detailSettingsModal');
+            var ModalClass =
+                (window.tabler && window.tabler.Modal) ||
+                (window.tabler && window.tabler.bootstrap && window.tabler.bootstrap.Modal) ||
+                (window.bootstrap && window.bootstrap.Modal) ||
+                (window.coreui && window.coreui.Modal) ||
+                window.Modal;
+            if(!ModalClass){ console.error('Modal 클래스를 찾을 수 없습니다.'); return null; }
+            settingsModal = new ModalClass(el);
+            return settingsModal;
+        }
+
+        // HTML 전체를 분리된 DOM 으로 파싱해, 설정 캐리어([data-detail-settings])를 찾는다.
+        // 반환: { root: 분리된 래퍼 jQuery, carrier: 캐리어 요소 jQuery } | null
+        function locateSettings(html){
+            var $root = $('<div></div>').html(html);
+            var $carrier = $root.find('[data-detail-settings]').first();
+            if ($carrier.length === 0) { return null; }
+            return { root: $root, carrier: $carrier };
+        }
+
+        // 캐리어의 data-detail-settings(JSON) → 설정 객체. 누락 키는 빈 문자열로 채운다.
+        function parseSettings($carrier){
+            var s = {};
+            try { s = JSON.parse($carrier.attr('data-detail-settings') || '{}'); } catch(e){ s = {}; }
+            SETTING_KEYS.forEach(function(k){ if (s[k] == null) { s[k] = ''; } });
+            return s;
+        }
+
+        // 분리된 DOM($root) 에 설정값을 반영한다.
+        //  - 캐리어 data-detail-settings 갱신 (다음 번 읽기/샘플 이식용 단일 소스)
+        //  - data-setting 마커 지점의 텍스트/표시 갱신
+        function applySettingsToDom($root, s){
+            // 나이 표기 텍스트는 숫자(세) 최소/최대에서 파생해 항상 최신값으로 재계산한다.
+            s.maleAgeText   = settingAgeText(s.maleAgeMin, s.maleAgeMax);
+            s.femaleAgeText = settingAgeText(s.femaleAgeMin, s.femaleAgeMax);
+
+            // 1) 캐리어 JSON 갱신
+            var $carrier = $root.find('[data-detail-settings]').first();
+            if ($carrier.length) { $carrier.attr('data-detail-settings', JSON.stringify(s)); }
+
+            // 2) 참여 조건 나이 라인 — "남성 OOO / 여성 OOO" (한쪽이라도 비면 그쪽은 빈칸)
+            var ageLine = '남성 ' + (s.maleAgeText || '') + ' / 여성 ' + (s.femaleAgeText || '');
+            $root.find('[data-setting="ageConditionLine"]').text(ageLine);
+
+            // 3) 남성 키 — "신장 OOO 이상" (비우면 "이상"만 남지 않게 빈 문자열)
+            $root.find('[data-setting="maleHeight"]').text((s.maleHeight || '').trim() !== '' ? (s.maleHeight + ' 이상') : '');
+
+            // 4) 여성 키 — 입력 시 "신장 OOO 이상" 표시, 비우면 줄 숨김
+            var hasFemaleHeight = (s.femaleHeight || '').trim() !== '';
+            $root.find('[data-setting="femaleHeight"]').text(hasFemaleHeight ? (s.femaleHeight + ' 이상') : '');
+            $root.find('[data-setting-row="femaleHeight"]').css('display', hasFemaleHeight ? '' : 'none');
+
+            return $root;
+        }
+
+        // 현재 에디터 HTML 에 설정 s 를 반영한 새 HTML 문자열을 돌려준다.
+        function applySettingsToHtml(html, s){
+            var loc = locateSettings(html);
+            if (!loc) { return html; }
+            applySettingsToDom(loc.root, s);
+            return loc.root.html();
+        }
+
+        // 폼 입력 → 설정 객체
+        function collectSettingsForm(){
+            return {
+                maleAgeMin:    ($('#settingMaleAgeMin').val()    || '').trim(),
+                maleAgeMax:    ($('#settingMaleAgeMax').val()    || '').trim(),
+                femaleAgeMin:  ($('#settingFemaleAgeMin').val()  || '').trim(),
+                femaleAgeMax:  ($('#settingFemaleAgeMax').val()  || '').trim(),
+                maleHeight:    ($('#settingMaleHeight').val()   || '').trim(),
+                femaleHeight:  ($('#settingFemaleHeight').val() || '').trim()
+            };
+        }
+
+        // 설정 객체 → 폼 입력 채우기
+        function fillSettingsForm(s){
+            $('#settingMaleAgeMin').val(s.maleAgeMin || '');
+            $('#settingMaleAgeMax').val(s.maleAgeMax || '');
+            $('#settingFemaleAgeMin').val(s.femaleAgeMin || '');
+            $('#settingFemaleAgeMax').val(s.femaleAgeMax || '');
+            $('#settingMaleHeight').val(s.maleHeight || '');
+            $('#settingFemaleHeight').val(s.femaleHeight || '');
+            updateAgePreview();
+        }
+
+        // 입력한 나이(세)를 년생으로 환산한 결과를 폼 아래 실시간 미리보기로 보여준다.
+        function updateAgePreview(){
+            var male   = settingAgeText($('#settingMaleAgeMin').val(), $('#settingMaleAgeMax').val());
+            var female = settingAgeText($('#settingFemaleAgeMin').val(), $('#settingFemaleAgeMax').val());
+            var parts = [];
+            if (male)   { parts.push('남성 ' + male); }
+            if (female) { parts.push('여성 ' + female); }
+            $('#settingAgePreview').text(parts.length ? ('→ ' + parts.join(' / ')) : '');
+        }
+        // 나이 입력칸을 바꿀 때마다 미리보기 갱신.
+        $('#settingMaleAgeMin, #settingMaleAgeMax, #settingFemaleAgeMin, #settingFemaleAgeMax')
+            .on('input', updateAgePreview);
+
+        // '페이지 설정' 열기 — 현재 에디터의 설정을 읽어 폼에 채운다.
+        $('.btn-open-settings').on('click', function(){
+            var loc = locateSettings(getHtml());
+            if (!loc) {
+                $('#settingsFormBody').hide();
+                $('#settingsEmpty').show();
+            } else {
+                $('#settingsEmpty').hide();
+                $('#settingsFormBody').show();
+                fillSettingsForm(parseSettings(loc.carrier));
+            }
+            var m = getSettingsModal();
+            if (m) { m.show(); }
+        });
+
+        // [설정 적용] → 마커 지점 값을 갈아끼워 에디터에 반영
+        $('.btn-settings-apply').on('click', async function(){
+            var loc = locateSettings(getHtml());
+            if (!loc) {
+                await salert({text: '설정 영역을 찾지 못했습니다. 샘플을 먼저 불러와 주세요.', cancel: false});
+                return;
+            }
+            var s = collectSettingsForm();
+            applySettingsToDom(loc.root, s);
+            setHtml(loc.root.html());
+
+            var m = getSettingsModal();
+            if (m) { m.hide(); }
+            await salert({text: '설정을 반영했어요. 내용을 확인한 뒤 [저장]을 눌러 주세요.', cancel: false});
+        });
+
+        // 샘플 HTML 에 "현재 에디터의 설정값"을 이식해서 돌려준다. (참여자 명단과 동일 원리)
+        // - 현재 에디터에 설정 캐리어가 있으면 그 값을 추출해 새 샘플에 그대로 반영한다.
+        // - 현재 설정이 없으면 샘플 기본값을 그대로 둔다.
+        function applyCurrentSettingsToSample(sampleHtml){
+            var curLoc = locateSettings(getHtml());
+            if (!curLoc) { return sampleHtml; } // 현재 설정 없으면 샘플 그대로
+            var curSettings = parseSettings(curLoc.carrier);
+            return applySettingsToHtml(sampleHtml, curSettings);
+        }
+
         // 1열 샘플 (선택한 유형 기준)
         $('.btn-sample-one').on('click', async function(){
             var type = currentType();
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
-            if(await salert({text: '현재 작성 내용을 [' + label + '] 1열 샘플로 교체하시겠습니까?\n(현재 참여자 명단은 그대로 옮겨집니다)'})){
-                setHtml(applyCurrentRosterToSample(SAMPLES[type][1]));
+            if(await salert({text: '현재 작성 내용을 [' + label + '] 1열 샘플로 교체하시겠습니까?\n(현재 참여자 명단·페이지 설정은 그대로 옮겨집니다)'})){
+                // 참여자 명단에 이어 페이지 설정(행사명·나이·키)도 현재 값으로 이식한다.
+                setHtml(applyCurrentSettingsToSample(applyCurrentRosterToSample(SAMPLES[type][1])));
             }
         });
 
@@ -1020,8 +1276,9 @@
         $('.btn-sample-two').on('click', async function(){
             var type = currentType();
             var label = type === 'solo' ? '1:1 소개팅' : '와인파티';
-            if(await salert({text: '현재 작성 내용을 [' + label + '] 2열 샘플로 교체하시겠습니까?\n(현재 참여자 명단은 그대로 옮겨집니다)'})){
-                setHtml(applyCurrentRosterToSample(SAMPLES[type][2]));
+            if(await salert({text: '현재 작성 내용을 [' + label + '] 2열 샘플로 교체하시겠습니까?\n(현재 참여자 명단·페이지 설정은 그대로 옮겨집니다)'})){
+                // 참여자 명단에 이어 페이지 설정(행사명·나이·키)도 현재 값으로 이식한다.
+                setHtml(applyCurrentSettingsToSample(applyCurrentRosterToSample(SAMPLES[type][2])));
             }
         });
 

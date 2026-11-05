@@ -116,3 +116,24 @@ input[type="number"] {
     -moz-appearance: textfield;
 }
 
+/* ============================================================
+   모바일 모달 공통 — 매칭 조회/결과·메시지·요청·투표 등 재사용 모달
+   ------------------------------------------------------------
+   - 모달 안 테이블은 폰트/패딩을 줄여 좁은 화면에서 가로 스크롤을 최소화한다.
+   - 전체화면으로 띄우지 않고(Tabler 기본 모달 유지) 여백만 적절히 둔다.
+   ============================================================ */
+@media (max-width: 575.98px) {
+    /* 모달 헤더/바디 패딩 축소 */
+    .modal .modal-header { padding: .75rem 1rem; }
+    .modal .modal-body { padding: .75rem; }
+
+    /* 모달 안 테이블: 글씨/셀 패딩 축소 + 고정폭 완화로 가로 스크롤 양 줄임 */
+    .modal .card-table th,
+    .modal .card-table td {
+        padding: .4rem .5rem !important;
+        font-size: .82rem;
+    }
+    .modal .card-table th { white-space: nowrap; }
+}
+
+

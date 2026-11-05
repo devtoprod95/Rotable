@@ -361,7 +361,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
 // 버튼 추가 로직 (이전과 동일)
 function addControls(instance, getStart, getEnd) {
-    const container = instance.calendarContainer;
+    const container = instance && instance.calendarContainer;
+    if (!container) { return; } // container 미준비 시 방어 (TypeError 방지)
     const today = new Date();
 
     const btnGroup = document.createElement("div");

@@ -34,8 +34,8 @@
 
             <div class="modal-body">
                 <form id="rm-searchForm" class="mb-2">
-                    <div class="d-flex gap-2 align-items-end flex-wrap">
-                        <div style="min-width: 130px;">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-12 col-md-auto">
                             <label class="form-label mb-1">확인 여부</label>
                             <select class="form-select" name="read">
                                 <option value="">전체</option>
@@ -43,18 +43,20 @@
                                 <option value="N">미확인</option>
                             </select>
                         </div>
-                        <div class="col">
+                        <div class="col-12 col-md">
                             <label class="form-label mb-1">검색어</label>
                             <input type="text" class="form-control" name="searchText"
                                    placeholder="회원 이름 / 요청 내용 검색"
                                    onkeydown="if(event.keyCode === 13){ event.preventDefault(); RequestsModal.search(); }">
                         </div>
-                        <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-primary px-3" onclick="RequestsModal.search()">검색</button>
-                            <button type="button" class="btn btn-outline-secondary px-3" onclick="RequestsModal.search()">
+                        <div class="col-12 col-md-auto d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-primary flex-fill px-3" onclick="RequestsModal.search()">
+                                <i class="ti ti-search me-1"></i> 검색
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary flex-fill px-3" onclick="RequestsModal.search()">
                                 <i class="ti ti-refresh me-1"></i> 새로고침
                             </button>
-                            <button type="button" class="btn btn-outline-success px-3" id="rm-readAll">모두 확인</button>
+                            <button type="button" class="btn btn-outline-success flex-fill px-3" id="rm-readAll">모두 확인</button>
                         </div>
                     </div>
                 </form>

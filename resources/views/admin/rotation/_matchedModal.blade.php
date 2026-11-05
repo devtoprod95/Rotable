@@ -20,9 +20,9 @@
             </div>
 
             <div class="modal-body">
-                <div class="d-flex align-items-center mb-2">
+                <div class="d-flex align-items-center mb-2 flex-wrap gap-1">
                     <span id="matched-pageCount" class="badge bg-secondary-lt"></span>
-                    <small class="text-muted ms-2">서로 선택해 <span class="badge bg-pink-lt">매칭</span>된 쌍만 남자 기준으로 표시합니다.</small>
+                    <small class="text-muted ms-2 d-none d-md-inline">서로 선택해 <span class="badge bg-pink-lt">매칭</span>된 쌍만 남자 기준으로 표시합니다.</small>
                     <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" onclick="MatchedModal.refresh()">
                         <i class="ti ti-refresh me-1"></i> 새로고침
                     </button>

@@ -379,7 +379,8 @@
                 dateFormat: "Y-m-d H:i",
                 locale: "ko",
                 onReady: function(selectedDates, dateStr, instance){
-                    var container = instance.calendarContainer;
+                    var container = instance && instance.calendarContainer;
+                    if(!container){ return; } // 간혹 container 가 준비 안 된 경우 방어 (TypeError 방지)
                     if(container.querySelector('.fp-custom-controls')) return;
 
                     var btnGroup = document.createElement('div');

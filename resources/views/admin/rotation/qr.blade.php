@@ -6,6 +6,35 @@
 {{-- QR 이미지 생성용 라이브러리 (상세페이지 html2canvas 와 동일하게 cdnjs 사용) --}}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
+<style>
+    /* QR 목록: 모바일에서는 가로 스크롤 대신 '카드형'으로 세로 재배치 */
+    @media (max-width: 767.98px){
+        .qr-table thead{ display:none; }
+        .qr-table, .qr-table tbody, .qr-table tr, .qr-table td{ display:block; width:100%; }
+        .qr-table tr{
+            border:1px solid #e6e8eb; border-radius:12px;
+            padding:10px 12px; margin-bottom:12px; background:#fff;
+            box-shadow:0 1px 3px rgba(0,0,0,.05); position:relative;
+        }
+        .qr-table td{
+            border:0 !important; padding:4px 0 !important; text-align:left !important;
+            display:flex; gap:10px; align-items:flex-start;
+        }
+        .qr-table td::before{
+            content: attr(data-label);
+            flex:0 0 72px; color:#8a92a0; font-weight:700; font-size:0.8rem;
+        }
+        /* 체크박스 셀: 우상단 모서리에 배치 */
+        .qr-table td.qr-check{ position:absolute; top:10px; right:10px; padding:0 !important; width:auto; }
+        .qr-table td.qr-check::before{ display:none; }
+        /* 이름/주소 셀은 라벨 없이 넓게(카드 제목처럼) */
+        .qr-table td.qr-name{ display:block; padding-right:28px !important; border-bottom:1px solid #f1f3f5 !important; padding-bottom:8px !important; margin-bottom:4px; }
+        .qr-table td.qr-name::before{ display:none; }
+        .qr-table td.qr-target{ max-width:none !important; }
+        .qr-table td.qr-target .text-truncate{ white-space:normal; word-break:break-all; }
+    }
+</style>
+
 @php
     // 공개 리다이렉트 주소의 베이스. JS 에서 code 를 붙여 전체 주소를 만든다. (예: https://site/qr/abcd1234)
     $qrBase = url('/qr');
@@ -67,14 +96,14 @@
     {{-- 목록 --}}
     <div class="col-12 col-lg-7">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <h3 class="card-title mb-0"><i class="ti ti-list me-1"></i> QR코드 목록</h3>
                 <button type="button" class="btn btn-outline-danger btn-sm" id="btnDeleteSelected">
                     <i class="ti ti-trash me-1"></i> 선택 삭제
                 </button>
             </div>
             <div class="table-responsive">
-                <table class="table table-vcenter card-table">
+                <table class="table table-vcenter card-table qr-table">
                     <thead>
                         <tr>
                             <th style="width:32px;"><input type="checkbox" id="checkAll" class="form-check-input m-0"></th>
@@ -93,25 +122,25 @@
                                 data-active="{{ $link->is_active ? 1 : 0 }}"
                                 data-code="{{ $link->code }}"
                                 data-url="{{ $link->public_url }}">
-                                <td><input type="checkbox" class="form-check-input m-0 rowCheck" value="{{ $link->id }}"></td>
-                                <td>
+                                <td class="qr-check"><input type="checkbox" class="form-check-input m-0 rowCheck" value="{{ $link->id }}"></td>
+                                <td class="qr-name">
                                     <div class="fw-bold">{{ $link->title ?: '(이름 없음)' }}</div>
                                     <div class="text-muted" style="font-size:0.85em;">
                                         <a href="{{ $link->public_url }}" target="_blank" rel="noopener">{{ $link->public_url }}</a>
                                     </div>
                                 </td>
-                                <td style="max-width:220px;">
+                                <td class="qr-target" data-label="대상 URL" style="max-width:220px;">
                                     <div class="text-truncate" title="{{ $link->target_url }}">{{ $link->target_url }}</div>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center" data-label="상태">
                                     @if($link->is_active)
                                         <span class="badge bg-green-lt">활성</span>
                                     @else
                                         <span class="badge bg-secondary-lt">비활성</span>
                                     @endif
                                 </td>
-                                <td class="text-center">{{ number_format($link->hit_count) }}</td>
-                                <td class="text-center">
+                                <td class="text-center" data-label="이동수">{{ number_format($link->hit_count) }}</td>
+                                <td class="text-center" data-label="QR / 관리">
                                     <button type="button" class="btn btn-sm btn-outline-dark btnQr"
                                             data-code="{{ $link->code }}" data-url="{{ $link->public_url }}"
                                             data-title="{{ $link->title }}">

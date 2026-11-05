@@ -21,9 +21,9 @@
             </div>
 
             <div class="modal-body">
-                <div class="d-flex align-items-center mb-2">
+                <div class="d-flex align-items-center mb-2 flex-wrap gap-1">
                     <span id="match-pageCount" class="badge bg-secondary-lt"></span>
-                    <small class="text-muted ms-2">같은 사람이 선택한 상대를 한 줄에 모아 표시합니다. (서로 선택 시 <span class="badge bg-pink-lt">매칭</span>)</small>
+                    <small class="text-muted ms-2 d-none d-md-inline">같은 사람이 선택한 상대를 한 줄에 모아 표시합니다. (서로 선택 시 <span class="badge bg-pink-lt">매칭</span>)</small>
                     <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" onclick="MatchesModal.refresh()">
                         <i class="ti ti-refresh me-1"></i> 새로고침
                     </button>

@@ -260,10 +260,12 @@
                                 <div class="fw-bold text-blue mb-1"><i class="ti ti-user-cog me-1"></i> 관리자가 하는 일</div>
                                 <ul class="lh-lg">
                                     <li><b>유형 선택</b>: 상단에서 <span class="badge bg-pink-lt">와인파티</span> <span class="badge bg-pink-lt">1:1 소개팅</span> 중 하나를 먼저 고릅니다. <mark>유형별로 상단 이미지 · 로테이블 포인트 · 이용안내 문구가 다릅니다.</mark></li>
-                                    <li><b>1열/2열 샘플</b> 버튼을 누르면 <b>선택한 유형</b>의 기본 틀을 불러옵니다. <mark>모임 1개면 1열, 여러 개면 2열</mark>을 추천합니다.</li>
+                                    <li><b>1열/2열 샘플</b> 버튼을 누르면 <b>선택한 유형</b>의 기본 틀을 불러옵니다. <mark>모임 1개면 1열, 여러 개면 2열</mark>을 추천합니다. 샘플을 다시 불러와도 <b>참여자 명단·행사명/시간·페이지 설정은 그대로 유지</b>됩니다.</li>
                                     <li>HTML 에디터로 문구·디자인을 수정합니다. (참여조건, 이용안내, FAQ, 로테이블 포인트 등 포함)</li>
-                                    <li><span class="badge bg-primary text-white">저장</span> 은 <mark>유형별로 따로 저장</mark>됩니다. 와인파티에서 저장한 내용과 1:1 소개팅 내용은 서로 영향을 주지 않습니다. 유형을 전환하면 해당 유형의 저장본이 에디터에 나타납니다.</li>
-                                    <li><b>미리보기</b>로 확인하고 <span class="badge bg-dark text-white">이미지 다운로드</span> 로 <mark>PNG 이미지</mark>를 저장합니다.</li>
+                                    <li><b>페이지 설정</b>: 상단 <span class="badge bg-pink-lt">페이지 설정</span> 에서 <b>남/녀 나이(최소~최대 세)·남/녀 키</b>를 입력하면 <mark>자동으로 "OO~OO년생" 으로 환산</mark>되어 참여 조건·자격요건에 반영됩니다.</li>
+                                    <li><b>참여자 명단 편집</b>: 번호표·상단 인원수는 자동 계산되고, 성비 자동 맞춤(모집중 자리 채움)도 지원합니다.</li>
+                                    <li><span class="badge bg-primary text-white">저장</span> <b>저장 목록</b>에 이름을 붙여 보관합니다. <mark>저장 목록은 유형 구분 없이 전부</mark> 보이며, 불러오면 그 저장본의 <b>유형으로 자동 전환</b>됩니다. 유형·편집 중 저장본은 주소(쿼리파라미터)로 유지돼 새로고침·뒤로가기에도 보존됩니다.</li>
+                                    <li><b>미리보기</b>로 확인하고 <span class="badge bg-dark text-white">이미지 다운로드</span>(상세페이지 전체) 또는 <span class="badge bg-pink text-white">피드 이미지 다운</span>(로고+명단)으로 <mark>이미지를 저장</mark>합니다. 미리보기와 다운로드의 여백이 일치합니다.</li>
                                 </ul>
                                 <div class="alert alert-important alert-info py-2 my-2">
                                     <i class="ti ti-info-circle me-1"></i> 유형별 전용 상단 이미지를 쓰려면 <code>public/images/detail_wine.png</code> · <code>detail_solo.png</code> 를 넣으세요. 없으면 기본 이미지로 표시됩니다.

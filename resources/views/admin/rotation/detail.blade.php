@@ -1502,7 +1502,12 @@
                 holder.style.top = '0';
                 holder.style.width = '1080px';
                 holder.style.background = '#ffffff';
-                holder.style.padding = '0';
+                // 콘텐츠 첫/마지막 자식의 margin 이 holder 밖으로 "빠져나가(collapse)" scrollHeight 에
+                // 포함되지 않으면, 캡처 높이가 실제보다 짧아져 아래(그리고 위) 여백이 잘린다(쫍아짐).
+                // → overflow 로 BFC 를 만들어 margin collapse 를 막고, 위아래 여백 버퍼를 둔다.
+                holder.style.overflow = 'hidden';
+                holder.style.paddingTop = '1px';
+                holder.style.paddingBottom = '48px';
                 document.body.appendChild(holder);
             }
             holder.innerHTML = html;

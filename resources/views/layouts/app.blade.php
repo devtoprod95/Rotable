@@ -107,28 +107,47 @@
 
                     <script>
                         $(document).ready(function() {
-                            var loadingSwal;
+                            // 전역 로딩 모달 — 동시/연쇄 ajax 요청에서도 안전하게 닫히도록 "진행 중 요청 수"로 관리한다.
+                            //  문제: 단일 핸들(loadingSwal)로 관리하면, 한 요청의 success 안에서 또 다른 요청을 시작할 때
+                            //        beforeSend 가 핸들을 덮어써 먼저 뜬 로딩이 안 닫히고 무한로딩처럼 남는다.
+                            //        (특히 모바일에서 네이티브 alert 블로킹 + Swal 애니메이션이 겹치며 close 가 씹힘)
+                            //  해결: 진행 중 요청 수(pending)가 0→1 일 때만 열고, 1→0 일 때만 닫는다.
+                            var ajaxPending = 0;
+
+                            function showGlobalLoading(){
+                                if (ajaxPending === 0) {
+                                    Swal.fire({
+                                        title: '처리 중...',
+                                        allowOutsideClick: false,
+                                        allowEscapeKey: false,
+                                        showConfirmButton: false,
+                                        background: 'transparent',
+                                        color: '#ffffff',
+                                        didOpen: () => { Swal.showLoading(); },
+                                    });
+                                }
+                                ajaxPending++;
+                            }
+
+                            function hideGlobalLoading(){
+                                ajaxPending = Math.max(0, ajaxPending - 1);
+                                if (ajaxPending === 0) {
+                                    // 현재 '로딩' Swal 일 때만 닫는다. (salert 등 다른 Swal 이 열려 있으면 건드리지 않음)
+                                    if (Swal.isVisible() && Swal.getTitle() && Swal.getTitle().textContent === '처리 중...') {
+                                        Swal.close();
+                                    }
+                                }
+                            }
 
                             $.ajaxSetup({
                                 headers: {
                                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                                 },
                                 beforeSend: function() {
-                                    loadingSwal = Swal.fire({
-                                        title: '처리 중...',
-                                        allowOutsideClick: false,
-                                        showConfirmButton: false,
-                                        background: 'transparent',
-                                        color: '#ffffff',
-                                        didOpen: () => {
-                                            Swal.showLoading();
-                                        },
-                                    });
+                                    showGlobalLoading();
                                 },
                                 complete: function() {
-                                    if (loadingSwal) {
-                                        loadingSwal.close();
-                                    }
+                                    hideGlobalLoading();
                                 }
                             });
 

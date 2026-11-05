@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\EventRoster;
+use App\Models\EventRound;
 use App\Models\Member;
 use Carbon\CarbonInterface;
 
@@ -23,12 +24,19 @@ class VisitStatService
      * 전화번호의 성별은 그 전화번호의 "가장 최근 방문 레코드" 기준으로 1개로 확정한다.
      * 아울러 노쇼(신청했으나 미참석, event_rosters.checked_in_at is null)를 성별·플랫폼으로 함께 집계한다.
      *
+     * 스냅샷 재생성 멱등성을 위해 삭제(soft delete)된 회원도 포함해 집계한다.
+     * (집계 기준은 오직 created_at 컷오프이며, 같은 기준 시각이면 몇 번을 돌려도 같은 값이 나온다.)
+     *
      * @param CarbonInterface|null $until 이 시각 "이전(미만)"에 생성된 회원만 집계. null 이면 전체.
      * @return array<string, int|array<string, int>> 집계 결과. platform_counts 만 [플랫폼=>수] 중첩 배열이고 나머지는 int.
      */
     public function aggregate(?CarbonInterface $until = null): array
     {
-        $base = Member::query();
+        // 스냅샷은 "그 시점의 누적 사실"을 박제하는 것이므로, 몇 번을 다시 돌려도(= 과거 날짜 재생성)
+        // 같은 값이 나와야 한다(멱등). Member 는 SoftDeletes 라 기본 쿼리는 삭제분을 빼는데,
+        // 그러면 "그 당시엔 있었지만 지금 삭제된 회원"이 재집계 때 빠져 값이 달라진다.
+        // 따라서 created_at 컷오프 기준으로만 거르고, 삭제 여부는 보지 않도록 withTrashed() 로 집계한다.
+        $base = Member::query()->withTrashed();
         if ($until !== null) {
             $base->where('members.created_at', '<', $until);
         }
@@ -107,9 +115,10 @@ class VisitStatService
     /**
      * 노쇼(신청했으나 미참석) 인원을 집계한다.
      *
-     * 기준: 체크인 명단(event_rosters) 중 checked_in_at 이 null 인 행 = 미참석(노쇼).
+     * 기준: **종료(X)된 행사**의 체크인 명단(event_rosters) 중 checked_in_at 이 null 인 행 = 미참석(노쇼).
+     * (진행 전/중 행사는 아직 체크인이 끝나지 않아 노쇼가 확정되지 않으므로 제외한다.)
      * 방문 통계와 같은 축(성별·플랫폼)으로 분류한다.
-     *  - 성별: roster.gender 기준. 'F' 가 아니면 남(M)으로 귀속한다. (체크인 추가 시 성별은 M/F 필수)
+     *  - 성별: roster.gender 기준으로 남/여를 각각 명시적으로 집계한다. (M/F 외 값은 어느 쪽에도 넣지 않음)
      *  - 플랫폼: Member::platformOptions() 의 모든 플랫폼 키를 0 으로 채운 뒤 실제 값으로 집계.
      *
      * @param CarbonInterface|null $until 이 시각 "이전(미만)"에 생성된 명단만 집계. null 이면 전체.
@@ -117,15 +126,20 @@ class VisitStatService
      */
     private function aggregateNoShow(?CarbonInterface $until = null): array
     {
-        $base = EventRoster::query()->whereNull('checked_in_at');
+        // 노쇼는 "행사가 끝나야" 확정된다. 진행 전/중(P·S·V)인 행사의 명단에서 checked_in_at 이
+        // null 인 사람은 아직 체크인 안 한 것일 뿐 노쇼가 아니므로, 종료(X)된 행사만 대상으로 한다.
+        $base = EventRoster::query()
+            ->whereNull('checked_in_at')
+            ->whereHas('eventRound', fn ($q) => $q->where('status', EventRound::STATUS_CLOSED));
         if ($until !== null) {
             $base->where('event_rosters.created_at', '<', $until);
         }
 
         $total  = (clone $base)->count();
+        // 남/여를 각각 명시적으로 센다. (roster.gender 는 체크인 추가 시 M/F 로 정규화되지만,
+        // '여를 뺀 나머지=남' 방식은 혹시 모를 null/기타 값을 남으로 과대 집계하므로 쓰지 않는다.)
+        $male   = (clone $base)->where('gender', Member::GENDER_MALE)->count();
         $female = (clone $base)->where('gender', Member::GENDER_FEMALE)->count();
-        // 성별은 M/F 필수이나, 혹시 모를 null/기타 값은 남(M)으로 귀속한다. (여를 뺀 나머지)
-        $male = $total - $female;
 
         // 플랫폼별 노쇼 수. 방문 플랫폼 집계와 동일하게 모든 플랫폼 키를 0 으로 선채운다.
         $platformCounts = [];

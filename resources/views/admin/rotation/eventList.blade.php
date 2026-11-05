@@ -309,21 +309,22 @@
                     formatter: function(cell){
                         var data = cell.getRow().getData();
                         var $wrap = $("<div>").addClass("d-flex flex-column gap-1");
+                        // 운영 흐름 순서로 버튼을 노출한다: 상세 → 체크인 → 로테이션 진행 → 메시지 → 요청 → 전체 매칭
                         var $edit = $("<button>")
                             .addClass("btn btn-sm btn-primary w-100")
                             .text("상세")
                             .on("click", function(){ location.href = detailBase + "/" + data.id; });
                         $wrap.append($edit);
-                        var $seating = $("<button>")
-                            .addClass("btn btn-sm btn-outline-azure w-100")
-                            .html('로테이션 진행')
-                            .on("click", function(){ location.href = seatingBase + "?eventId=" + data.id; });
-                        $wrap.append($seating);
                         var $checkin = $("<button>")
                             .addClass("btn btn-sm btn-outline-teal w-100")
                             .html('<i class="ti ti-user-check me-1"></i>체크인')
                             .on("click", function(){ location.href = detailBase + "/" + data.id + "/checkin"; });
                         $wrap.append($checkin);
+                        var $seating = $("<button>")
+                            .addClass("btn btn-sm btn-outline-azure w-100")
+                            .html('로테이션 진행')
+                            .on("click", function(){ location.href = seatingBase + "?eventId=" + data.id; });
+                        $wrap.append($seating);
                         if((data.messages_count ?? 0) >= 1){
                             var $msg = $("<button>")
                                 .addClass("btn btn-sm btn-outline-primary w-100")

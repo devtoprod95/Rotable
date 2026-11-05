@@ -189,7 +189,7 @@
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap');
 </style>
-<div style="font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; color:#4b4453; line-height:1.35; width:100%;">
+<div style="font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:800; color:#4b4453; line-height:1.35; width:100%;">
 
     {{-- 페이지 설정(행사명·남/녀 나이·남/녀 키) 캐리어.
          상세페이지 제작 화면의 "페이지 설정"이 이 요소의 data-detail-settings(JSON)를 읽고,
@@ -224,7 +224,7 @@
     {{-- 진정성 어필 배너 (와인파티 전용) — '도파민 만남'이 아닌 소개팅 목적임을 강조 --}}
     <div style="background:#fdf2f8; border:2px solid #f9a8d4; border-radius:16px; padding:28px 20px; margin-bottom:40px; text-align:center;">
         <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; color:#be185d; letter-spacing:0.5px; line-height:1.3;">🍷 진정성을 가지고 좋은 인연을 찾는 자리예요</div>
-        <div style="font-size:30px; font-weight:700; color:#4b5563; margin-top:16px; line-height:1.9;">
+        <div style="font-size:30px; font-weight:800; color:#4b5563; margin-top:16px; line-height:1.9;">
             로테이블 와인파티는 <b style="color:#be185d; background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">진짜 좋은 인연을 찾는 소개팅</b>이 목적인 자리예요.<br>
             순간의 재미나 자극만 좇는 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">단순한 도파민 만남</b>이 아니라,<br>
             서로를 차분히 알아가며 <b style="background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">진정성 있는 대화</b>를 나눌 수 있도록 준비했어요.<br>
@@ -272,7 +272,7 @@
                     {{-- 행사명 + 날짜 --}}
                     <div style="background:#eef2f7; padding:7px 6px; border-bottom:2px solid #cbd5e1; text-align:center;">
                         <div style="font-size:{{ $cellTitleSize }}; font-weight:900; color:#000000; word-break:keep-all;">{{ $event['title'] }}</div>
-                        <div style="font-size:{{ $cellDateSize }}; color:#374151; font-weight:700; margin-top:1px;">{{ $event['date'] }}</div>
+                        <div style="font-size:{{ $cellDateSize }}; color:#374151; font-weight:800; margin-top:1px;">{{ $event['date'] }}</div>
                     </div>
 
                     {{-- 남(좌) / 여(우) 헤더 --}}
@@ -365,7 +365,7 @@
                     <div style="height:100%; border:1px solid #f3d6e6; border-radius:14px; background:#fdf2f8; padding:24px 16px; text-align:center; box-sizing:border-box;">
                         <div style="font-size:52px; line-height:1;">{{ $pt['icon'] }}</div>
                         <div style="font-size:30px; font-weight:900; color:#be185d; margin-top:14px; word-break:keep-all;">{{ $pt['title'] }}</div>
-                        <div style="font-size:28px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; word-break:keep-all;">{{ $pt['desc'] }}</div>
+                        <div style="font-size:28px; font-weight:800; color:#4b5563; margin-top:10px; line-height:1.55; word-break:keep-all;">{{ $pt['desc'] }}</div>
                     </div>
                 </div>
             @endforeach
@@ -413,7 +413,7 @@
                                  style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;">
                         </div>
                         <div style="font-size:30px; font-weight:900; color:#0f172a; margin-top:16px; text-align:center; word-break:keep-all;">{{ $shot['title'] }}</div>
-                        <div style="font-size:26px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; text-align:center; word-break:keep-all;">{{ $shot['desc'] }}</div>
+                        <div style="font-size:26px; font-weight:800; color:#4b5563; margin-top:10px; line-height:1.55; text-align:center; word-break:keep-all;">{{ $shot['desc'] }}</div>
                     </div>
                 </div>
             @endforeach
@@ -457,7 +457,7 @@
                                  style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain;">
                         </div>
                         <div style="font-size:30px; font-weight:900; color:#0f172a; margin-top:16px; text-align:center; word-break:keep-all;">{{ $shot['title'] }}</div>
-                        <div style="font-size:26px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; text-align:center; word-break:keep-all;">{{ $shot['desc'] }}</div>
+                        <div style="font-size:26px; font-weight:800; color:#4b5563; margin-top:10px; line-height:1.55; text-align:center; word-break:keep-all;">{{ $shot['desc'] }}</div>
                     </div>
                 </div>
             @endforeach
@@ -526,7 +526,7 @@
                     <div style="height:100%; border:1px solid #ddd6fe; border-radius:14px; background:#f5f3ff; padding:24px 16px; text-align:center; box-sizing:border-box;">
                         <div style="font-size:52px; line-height:1;">{{ $g['icon'] }}</div>
                         <div style="font-size:30px; font-weight:900; color:#6d28d9; margin-top:14px; word-break:keep-all;">{{ $g['title'] }}</div>
-                        <div style="font-size:27px; font-weight:700; color:#4b5563; margin-top:10px; line-height:1.55; word-break:keep-all;">{{ $g['desc'] }}</div>
+                        <div style="font-size:27px; font-weight:800; color:#4b5563; margin-top:10px; line-height:1.55; word-break:keep-all;">{{ $g['desc'] }}</div>
                     </div>
                 </div>
             @endforeach
@@ -638,7 +638,7 @@
                     {{-- 내용 --}}
                     <div style="flex:1 1 auto; text-align:left;">
                         <div style="font-size:31px; font-weight:900; color:#065f46; word-break:keep-all;">{{ $step['title'] }}</div>
-                        <div style="font-size:29px; font-weight:700; color:#4b5563; margin-top:8px; line-height:1.55; word-break:keep-all;">{{ $step['desc'] }}</div>
+                        <div style="font-size:29px; font-weight:800; color:#4b5563; margin-top:8px; line-height:1.55; word-break:keep-all;">{{ $step['desc'] }}</div>
                     </div>
                 </div>
             @endforeach
@@ -668,23 +668,23 @@
         <div style="background:#fffbeb; padding:24px 16px; font-size:31px; color:#374151; line-height:1.8; text-align:center;">
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 혼자 가도 괜찮나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">그럼요, 대부분 혼자 오세요 😊 한 분씩 1:1로 마주 앉아 대화하고, 시간이 되면 자리를 옮기는 방식이라 자연스럽게 모든 상대와 대화하게 돼요. 진행은 스마트폰 안내를 따라가면 되니 편하게 오세요.</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">그럼요, 대부분 혼자 오세요 😊 한 분씩 1:1로 마주 앉아 대화하고, 시간이 되면 자리를 옮기는 방식이라 자연스럽게 모든 상대와 대화하게 돼요. 진행은 스마트폰 안내를 따라가면 되니 편하게 오세요.</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 매칭 결과는 언제 알 수 있나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">로테이션이 모두 끝나고 <b>전원 퇴실하면 10분 이내</b>에 결과가 발표돼요. 기다릴 필요 없이 그날 바로 확인하실 수 있어요!</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">로테이션이 모두 끝나고 <b>전원 퇴실하면 10분 이내</b>에 결과가 발표돼요. 기다릴 필요 없이 그날 바로 확인하실 수 있어요!</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 내 연락처가 공개되나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">내가 <b>선택한 상대</b>에게는 서로 매칭되지 않더라도 내 연락처가 공개될 수 있어요. 마음에 드는 분을 <b>신중하게</b> 선택해 주세요 🙏</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">내가 <b>선택한 상대</b>에게는 서로 매칭되지 않더라도 내 연락처가 공개될 수 있어요. 마음에 드는 분을 <b>신중하게</b> 선택해 주세요 🙏</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 주차가 되나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">아쉽지만 전용 주차 공간은 없어요 🙏<br>선릉역에서 도보 3분 거리라 접근성이 좋으니<br>가급적 대중교통 이용을 부탁드려요!</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">아쉽지만 전용 주차 공간은 없어요 🙏<br>선릉역에서 도보 3분 거리라 접근성이 좋으니<br>가급적 대중교통 이용을 부탁드려요!</div>
             </div>
             <div>
                 <div style="font-weight:900;">Q. 개인정보는 안전한가요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">네, 안심하셔도 돼요! 🤍<br>투표 결과와 연락처는 선택·매칭된 상대에게만 공유되고,<br>그 외에는 어디에도 공개되지 않아요.<br>소중한 개인정보는 저희가 책임지고 안전하게 지켜드릴게요.</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">네, 안심하셔도 돼요! 🤍<br>투표 결과와 연락처는 선택·매칭된 상대에게만 공유되고,<br>그 외에는 어디에도 공개되지 않아요.<br>소중한 개인정보는 저희가 책임지고 안전하게 지켜드릴게요.</div>
             </div>
         </div>
     </div>
@@ -696,23 +696,23 @@
         <div style="background:#fffbeb; padding:24px 16px; font-size:31px; color:#374151; line-height:1.8; text-align:center;">
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 혼자 가도 괜찮나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다. 정해진 로테이션 순서와 대화 주제·미니게임이 자연스럽게 분위기를 이끌어 주고, 모든 진행이 스마트폰 안내를 따라 흘러가니 편한 마음으로 오세요.</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">그럼요, 전혀 걱정하지 않으셔도 돼요! 😊 사실 대부분의 분들이 혼자 오신답니다. 정해진 로테이션 순서와 대화 주제·미니게임이 자연스럽게 분위기를 이끌어 주고, 모든 진행이 스마트폰 안내를 따라 흘러가니 편한 마음으로 오세요.</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 술을 못 마시면 어떡해요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">걱정 마세요! 술은 전혀 필수가 아니랍니다 🙂<br>와인 대신 음료도 준비되어 있으니 편하게 즐기시면 돼요.<br>중요한 건 술이 아니라 서로를 알아가는 즐거운 대화니까요.<br>못 마셔도 충분히 즐겁게 참여하실 수 있어요!</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">걱정 마세요! 술은 전혀 필수가 아니랍니다 🙂<br>와인 대신 음료도 준비되어 있으니 편하게 즐기시면 돼요.<br>중요한 건 술이 아니라 서로를 알아가는 즐거운 대화니까요.<br>못 마셔도 충분히 즐겁게 참여하실 수 있어요!</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 친구랑 같이 앉을 수 있나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">함께 오시는 건 언제나 환영이에요! 👯<br>다만 로테이션 특성상 자리는 서로 다른 테이블로 배정될 수 있어요. 더 많은 분과 새로운 인연을 만나실 수 있도록 돕기 위함이니 이해 부탁드려요. 행사가 끝난 뒤에는 다시 만나 후기를 나누는 재미도 쏠쏠하답니다 😉</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">함께 오시는 건 언제나 환영이에요! 👯<br>다만 로테이션 특성상 자리는 서로 다른 테이블로 배정될 수 있어요. 더 많은 분과 새로운 인연을 만나실 수 있도록 돕기 위함이니 이해 부탁드려요. 행사가 끝난 뒤에는 다시 만나 후기를 나누는 재미도 쏠쏠하답니다 😉</div>
             </div>
             <div style="margin-bottom:24px;">
                 <div style="font-weight:900;">Q. 주차가 되나요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">아쉽지만 전용 주차 공간은 없어요 🙏<br>선릉역에서 도보 3분 거리라 접근성이 좋으니<br>가급적 대중교통 이용을 부탁드려요!</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">아쉽지만 전용 주차 공간은 없어요 🙏<br>선릉역에서 도보 3분 거리라 접근성이 좋으니<br>가급적 대중교통 이용을 부탁드려요!</div>
             </div>
             <div>
                 <div style="font-weight:900;">Q. 개인정보는 안전한가요?</div>
-                <div style="color:#4b5563; font-weight:700; margin-top:6px;">네, 안심하셔도 돼요! 🤍<br>투표 결과와 연락처는 서로 매칭된 상대에게만 공유되고,<br>그 외에는 어디에도 공개되지 않아요.<br>소중한 개인정보는 저희가 책임지고 안전하게 지켜드릴게요.</div>
+                <div style="color:#4b5563; font-weight:800; margin-top:6px;">네, 안심하셔도 돼요! 🤍<br>투표 결과와 연락처는 서로 매칭된 상대에게만 공유되고,<br>그 외에는 어디에도 공개되지 않아요.<br>소중한 개인정보는 저희가 책임지고 안전하게 지켜드릴게요.</div>
             </div>
         </div>
     </div>

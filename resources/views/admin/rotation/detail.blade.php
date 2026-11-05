@@ -10,8 +10,10 @@
 @endsection
 
 @section('content')
-{{-- 이미지 다운로드용 html2canvas (레이아웃의 html2pdf 번들은 전역 html2canvas 를 노출하지 않아 별도 로드) --}}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+{{-- 이미지 다운로드용 modern-screenshot (html-to-image 계열, SVG foreignObject 렌더).
+     html2canvas 와 달리 브라우저가 그리는 그대로(여백·패딩·height:auto 포함) 캡처하므로
+     미리보기/에디터와 결과물의 여백 차이가 생기지 않는다. UMD 전역: modernScreenshot --}}
+<script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js"></script>
 {{-- 상세페이지용 웹폰트: @import 보다 빠르게 로드되도록 link 로 선로드 (캡처 시 폰트 적용 보장) --}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -150,9 +152,14 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body bg-light">
+                {{-- 다운로드는 1080px 고정폭으로 캡처된다. 미리보기도 "같은 1080px"로 렌더하되,
+                     화면에선 transform:scale 로 '비율 그대로' 축소만 한다. (max-width 로 줄이면
+                     레이아웃이 reflow 되어 좌우/상하 패딩이 다르게 보이므로 금지)
+                     → #detailPreviewScaler 가 축소 래퍼(높이 보정), #detailPreview 가 실제 1080px 캡처 대상. --}}
                 <div class="d-flex justify-content-center">
-                    {{-- 이 영역이 그대로 이미지로 캡처됩니다. --}}
-                    <div id="detailPreview" style="width: 1080px; max-width: 100%; background:#ffffff; border-radius:8px;"></div>
+                    <div id="detailPreviewScaler" style="width:100%; overflow:hidden;">
+                        <div id="detailPreview" style="width: 1080px; transform-origin: top left; background:#ffffff; border-radius:8px;"></div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -651,8 +658,48 @@
         // 모달 미리보기 영역에 현재 HTML 반영
         function renderPreview(){
             var html = getHtml();
-            $('#detailPreview').html(html || '<div style="padding:40px; text-align:center; color:#9ca3af;">내용이 비어 있습니다.<br>1열/2열 샘플을 눌러보세요.</div>');
+            // 다운로드 캡처와 '완전히 동일한' 렌더가 되도록, 다운로드에서 쓰는 하단 스페이서를
+            // 미리보기에도 똑같이 붙인다. (WYSIWYG: 좌우·상하 패딩이 1:1로 일치)
+            var withSpacer = (html || '')
+                + '<div data-capture-spacer="1" style="width:100%; height:48px; background:#ffffff;"></div>';
+            $('#detailPreview').html(html
+                ? withSpacer
+                : '<div style="padding:40px; text-align:center; color:#9ca3af;">내용이 비어 있습니다.<br>1열/2열 샘플을 눌러보세요.</div>');
+            // 내용 반영 후 실제 1080px 렌더 높이에 맞춰 축소 비율을 다시 계산한다.
+            fitPreviewScale();
         }
+
+        // 미리보기를 "다운로드와 동일한 1080px 렌더"로 두고, 화면에선 비율 그대로 축소만 한다.
+        //  - scaler 폭(모달 가용폭)을 1080 으로 나눈 값이 scale (최대 1배 = 확대 안 함).
+        //  - reflow 없이 transform:scale 이라 좌우/상하 패딩이 다운로드와 100% 동일하게 보인다.
+        //  - 축소된 만큼 scaler 높이를 줄여 모달 스크롤 길이를 맞춘다.
+        function fitPreviewScale(){
+            var $scaler  = $('#detailPreviewScaler');
+            var $preview = $('#detailPreview');
+            if (!$scaler.length || !$preview.length) { return; }
+
+            var avail = $scaler.width() || 1080;        // 모달에서 쓸 수 있는 폭
+            var scale = Math.min(1, avail / 1080);      // 1080 기준 축소 비율 (확대는 안 함)
+
+            $preview.css('transform', 'scale(' + scale + ')');
+
+            // transform 은 레이아웃 높이를 바꾸지 않으므로, scaler 높이를 '축소된 실제 높이'로 고정.
+            var realH = $preview[0].scrollHeight || $preview[0].offsetHeight || 0;
+            $scaler.css('height', (realH * scale) + 'px');
+        }
+
+        // 모달이 완전히 열린 뒤/창 크기 변경 시 비율 재계산 (열릴 때 폭이 확정됨).
+        (function bindPreviewScaleEvents(){
+            var el = document.getElementById('detailPreviewModal');
+            if (el) {
+                el.addEventListener('shown.bs.modal', fitPreviewScale);
+            }
+            var rT;
+            $(window).on('resize', function(){
+                clearTimeout(rT);
+                rT = setTimeout(fitPreviewScale, 120);
+            });
+        })();
 
         function getModal(){
             if (previewModal) { return previewModal; }
@@ -842,7 +889,7 @@
                 // 행사명 + 날짜
                 html +=     '<div style="background:#eef2f7; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">';
                 html +=       '<div style="font-size:' + cellTitleSize + '; font-weight:900; word-break:keep-all;">' + esc(card.title) + '</div>';
-                html +=       '<div style="font-size:' + cellDateSize + '; color:#374151; font-weight:600; margin-top:1px;">' + esc(card.date) + '</div>';
+                html +=       '<div style="font-size:' + cellDateSize + '; color:#374151; font-weight:800; margin-top:1px;">' + esc(card.date) + '</div>';
                 html +=     '</div>';
                 // 남/여 헤더 (실제 참여자 수만 표시 — 모집중 더미는 제외)
                 html +=     '<div style="display:flex; font-size:' + cellHeadSize + '; font-weight:900; text-align:center; border-bottom:1px solid #eee;">';
@@ -1476,7 +1523,7 @@
 
         // 이미지(PNG) 다운로드 — 모달 상태와 무관하게 오프스크린 영역에 렌더해서 캡처
         $('.btn-detail-download').on('click', async function(){
-            if (typeof html2canvas === 'undefined') {
+            if (typeof modernScreenshot === 'undefined') {
                 await salert({text: '이미지 변환 모듈을 불러오지 못했습니다. 페이지를 새로고침해주세요.', cancel: false});
                 return;
             }
@@ -1491,8 +1538,8 @@
             showExportOverlay('이미지 생성 중…');
             await new Promise(function(r){ setTimeout(r, 30); });
 
-            // 화면 밖(보이지만 뷰포트 밖)에 캡처 전용 컨테이너를 만든다.
-            // display:none 이면 html2canvas 가 크기를 못 재므로, 화면 밖으로 밀어낸다.
+            // 화면 밖(보이지만 레이아웃은 정상)인 캡처 전용 컨테이너에 '진짜 1080px'로 렌더한다.
+            // modern-screenshot 은 이 노드를 브라우저가 그리는 그대로(여백·패딩 포함) 캡처한다.
             var holder = document.getElementById('detailCaptureHolder');
             if (!holder) {
                 holder = document.createElement('div');
@@ -1500,76 +1547,37 @@
                 holder.style.position = 'fixed';
                 holder.style.left = '-10000px';
                 holder.style.top = '0';
-                holder.style.width = '1080px';
                 holder.style.background = '#ffffff';
-                // 콘텐츠 첫/마지막 자식의 margin 이 holder 밖으로 "빠져나가(collapse)" scrollHeight 에
-                // 포함되지 않으면, 캡처 높이가 실제보다 짧아져 아래(그리고 위) 여백이 잘린다(쫍아짐).
-                // → overflow 로 BFC 를 만들어 margin collapse 를 막고, 위아래 여백 버퍼를 둔다.
-                holder.style.overflow = 'hidden';
-                holder.style.paddingTop = '1px';
-                holder.style.paddingBottom = '48px';
                 document.body.appendChild(holder);
             }
-            holder.innerHTML = html;
+            holder.style.width = '1080px';
+            // 콘텐츠 끝에 미리보기와 '동일한' 하단 스페이서를 붙여 아래 여백을 맞춘다.
+            holder.innerHTML = html
+                + '<div data-capture-spacer="1" style="width:100%; height:48px; background:#ffffff;"></div>';
 
             try {
-                // 캡처 대상 안의 이미지들을 CORS-safe 하게 미리 로드한다. (캔버스 오염 방지)
-                var imgs = holder.querySelectorAll('img');
-                await Promise.all(Array.prototype.map.call(imgs, function(img){
-                    return new Promise(function(resolve){
-                        img.setAttribute('crossorigin', 'anonymous');
-                        if (img.complete && img.naturalWidth) { resolve(); return; }
-                        img.onload = resolve;
-                        img.onerror = resolve;
-                    });
-                }));
-
-                // html2canvas(1.4.1) 는 width:100% + height:auto 이미지의 높이를 0/오계산해
-                // 세로로 눌린(찌그러진) 이미지를 그리는 버그가 있다.
-                // → 렌더된 실제 폭과 natural 비율로 '픽셀 높이'를 명시적으로 고정해 비율을 보존한다.
-                fixImageHeights(holder);
-
-                // 폰트가 캡처 전에 완전히 로드되도록 명시적으로 기다린다. (미로드 시 폴백 폰트로 찍히는 문제 방지)
-                if (document.fonts && document.fonts.load) {
-                    try {
-                        await Promise.all([
-                            document.fonts.load("400 44px 'Jua'"),
-                            document.fonts.load("700 22px 'Gothic A1'"),
-                            document.fonts.load("800 22px 'Gothic A1'"),
-                            document.fonts.load("900 22px 'Gothic A1'")
-                        ]);
-                        await document.fonts.ready;
-                    } catch (fe) { /* 폰트 로드 실패해도 캡처는 진행 */ }
+                // 폰트가 캡처 전에 완전히 로드되도록 기다린다. (미로드 시 폴백 폰트로 찍히는 문제 방지)
+                if (document.fonts && document.fonts.ready) {
+                    try { await document.fonts.ready; } catch (fe) { /* 무시 */ }
                 }
 
-                // 선명도는 높이되, 캔버스 크기 한계(브라우저 최대 ~16384px)를 넘으면
-                // 캡처 대상 폭을 1080 으로 확정한다. (fixed 요소라도 레이아웃 폭을 고정)
-                holder.style.width = '1080px';
-
-                // 폭 확정 '뒤'에 실제 콘텐츠 높이를 픽셀로 측정한다.
+                // 캡처 대상의 실제 크기 (modern-screenshot 이 그대로 반영).
                 var capW = holder.offsetWidth || 1080;
                 var capH = holder.scrollHeight || holder.offsetHeight || 1080;
 
-                // 선명도는 높이되, 캔버스 크기 한계(브라우저 최대 ~16384px)를 넘으면
-                // 빈(흰) 이미지가 되므로 안전 범위 내에서 최대 scale 을 계산한다.
+                // 선명도(scale)는 높이되, 캔버스 크기 한계를 넘지 않는 안전값으로.
                 var detailScale = computeSafeScale(capW, capH, 3.5);
 
-                // width/height/windowWidth 를 명시해 html2canvas 가 뷰포트가 아닌
-                // 1080px 기준으로 레이아웃을 계산하게 한다. (미지정 시 세로로 눌리는 버그 방지)
-                var canvas = await html2canvas(holder, {
+                var canvas = await modernScreenshot.domToCanvas(holder, {
                     backgroundColor: '#ffffff',
-                    scale: detailScale,
                     width: capW,
                     height: capH,
-                    windowWidth: capW,
-                    useCORS: true,
-                    allowTaint: false,
-                    logging: false
+                    scale: detailScale,
+                    // 외부 이미지(폰트/배너/스샷)는 CORS 우회를 위해 fetch 후 data-URI 로 인라인.
+                    fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } }
                 });
 
-                // ===== 10MB 상한 + 화질 최우선 저장 =====
-                // PNG(무손실) 를 유지하면서 10MB 를 넘으면 해상도만 완만히 줄여 맞춘다.
-                // (JPEG 저품질로 글자를 뭉개는 대신, 선명한 PNG 를 우선한다.)
+                // ===== 10MB(실제 20MB) 상한 + 화질 최우선 저장 (기존 로직 재사용) =====
                 await exportCanvasUnder10MB(canvas, buildDownloadBaseName('rotable_상세페이지'));
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
@@ -1623,7 +1631,7 @@
                     p.job || '',
                     p.age || ''
                 ].filter(Boolean);
-                profile = '<div style="color:#1f2937; font-weight:700; font-size:21px; margin-top:3px; word-break:keep-all;">'
+                profile = '<div style="color:#1f2937; font-weight:800; font-size:21px; margin-top:3px; word-break:keep-all;">'
                         + feedEsc(bits.join(' · ')) + '</div>';
             }
             return ''
@@ -1677,7 +1685,7 @@
             +       '<div style="font-family:\'Jua\',sans-serif; font-size:36px; font-weight:400; color:#be185d; margin-top:16px; line-height:1.3;">'
             +         '한 자리에서, 모두와 설레는 만남 💘'
             +       '</div>'
-            +       '<div style="font-size:24px; font-weight:700; color:#8b5cf6; margin-top:8px; line-height:1.5;">'
+            +       '<div style="font-size:24px; font-weight:800; color:#8b5cf6; margin-top:8px; line-height:1.5;">'
             +         '두근거리는 오늘, 당신의 인연이 이 안에 있을지도 몰라요'
             +       '</div>'
 
@@ -1748,7 +1756,7 @@
 
         // 피드 이미지(로고 + 명단) 다운로드
         $('.btn-feed-download').on('click', async function(){
-            if (typeof html2canvas === 'undefined') {
+            if (typeof modernScreenshot === 'undefined') {
                 await salert({text: '이미지 변환 모듈을 불러오지 못했습니다. 페이지를 새로고침해주세요.', cancel: false});
                 return;
             }
@@ -1763,61 +1771,39 @@
             showExportOverlay('피드 이미지 생성 중…');
             await new Promise(function(r){ setTimeout(r, 30); });
 
-            try {
-                // 배너 등 이미지가 완전히 로드된 뒤 캡처 (CORS-safe)
-                var imgs = target.querySelectorAll('img');
-                await Promise.all(Array.prototype.map.call(imgs, function(img){
-                    return new Promise(function(resolve){
-                        img.setAttribute('crossorigin', 'anonymous');
-                        if (img.complete && img.naturalWidth) { resolve(); return; }
-                        img.onload = resolve;
-                        img.onerror = resolve;
-                    });
-                }));
+            // 미리보기 축소(transform)와 폭을 캡처 직전 1080px 로 고정했다가 끝나면 원복.
+            var prevWidth = target.style.width;
+            var prevMaxWidth = target.style.maxWidth;
+            var prevTransform = target.style.transform;
+            target.style.width = '1080px';
+            target.style.maxWidth = 'none';
+            target.style.transform = 'none';
 
+            try {
                 if (document.fonts && document.fonts.ready) {
                     try { await document.fonts.ready; } catch (fe) { /* 무시 */ }
                 }
 
-                // 모달이 좁은 화면이면 #feedCapture 가 1080 미만으로 줄어 캡처 해상도가 떨어진다.
-                // 캡처 직전에 폭을 1080 으로 고정하고 미리보기 축소(transform)를 풀었다가 끝나면 원복한다.
-                var prevWidth = target.style.width;
-                var prevMaxWidth = target.style.maxWidth;
-                var prevTransform = target.style.transform;
-                target.style.width = '1080px';
-                target.style.maxWidth = 'none';
-                target.style.transform = 'none';
-
-                // 폭 고정 '뒤'(렌더 폭 확정 후) 이미지 높이를 픽셀로 고정해 세로 눌림 방지.
-                fixImageHeights(target);
-
-                // 높이는 '명단 길이만큼'(실제 콘텐츠 높이). 폭 1080 기준으로 안전 scale 계산.
-                var feedW = 1080;
+                var feedW = target.offsetWidth || 1080;
                 var feedH = target.scrollHeight || target.offsetHeight || 1080;
                 var feedScale = computeSafeScale(feedW, feedH, 3.5);
 
-                var canvas = await html2canvas(target, {
+                var canvas = await modernScreenshot.domToCanvas(target, {
                     backgroundColor: '#ffffff',
-                    scale: feedScale,
                     width: feedW,
                     height: feedH,
-                    windowWidth: feedW,
-                    useCORS: true,
-                    allowTaint: false,
-                    logging: false
+                    scale: feedScale,
+                    fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } }
                 });
 
-                target.style.width = prevWidth;
-                target.style.maxWidth = prevMaxWidth;
-                target.style.transform = prevTransform;
-                // 박아둔 인라인 높이 제거(모달 DOM 재사용 대비).
-                clearImageHeights(target);
-
-                // 화질 최우선 + 10MB 상한 (상세페이지 다운로드와 동일 로직)
+                // 화질 최우선 + 상한 (상세페이지 다운로드와 동일 로직)
                 await exportCanvasUnder10MB(canvas, buildDownloadBaseName('rotable_피드'));
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
             } finally {
+                target.style.width = prevWidth;
+                target.style.maxWidth = prevMaxWidth;
+                target.style.transform = prevTransform;
                 hideExportOverlay();
             }
         });

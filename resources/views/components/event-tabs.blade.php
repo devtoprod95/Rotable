@@ -17,8 +17,8 @@
 
     $statusLabel = \App\Models\EventRound::statusOptions();
     $typeLabel   = \App\Models\EventRound::typeOptions();
-    // 상태 뱃지 색: 대기=노랑, 진행=초록, 매칭중=분홍, 종료=회색
-    $statusCls   = ['P' => 'bg-yellow-lt', 'S' => 'bg-green-lt', 'V' => 'bg-pink-lt', 'X' => 'bg-secondary-lt'];
+    // 상태 뱃지 색: 대기=노랑, 진행=초록, 매칭중=분홍, 종료=검정
+    $statusCls   = ['P' => 'bg-yellow-lt', 'S' => 'bg-green-lt', 'V' => 'bg-pink-lt', 'X' => 'bg-dark text-white'];
     // 유형 뱃지 색: 와인파티=주황, 1:1=보라 (만남 이력 화면과 동일)
     $typeCls     = ['wine' => 'tab-type-wine', 'one' => 'tab-type-one'];
 
@@ -89,7 +89,9 @@
 
             {{-- 현재 행사 상태/유형 --}}
             <div class="d-flex align-items-center gap-1">
-                <span class="badge {{ $statusCls[$event->status] ?? 'bg-secondary-lt' }}">{{ $statusLabel[$event->status] ?? $event->status }}</span>
+                <span class="badge {{ $statusCls[$event->status] ?? 'bg-secondary-lt' }}"
+                      id="eventTabsStatusBadge"
+                      data-event-id="{{ $event->id }}">{{ $statusLabel[$event->status] ?? $event->status }}</span>
                 <span class="badge {{ $typeCls[$event->type] ?? 'bg-azure-lt' }}">{{ $typeLabel[$event->type] ?? $event->type }}</span>
             </div>
 
@@ -104,8 +106,14 @@
                             @if ($key === 'checkin')
                                 <span class="badge bg-green-lt">참석 {{ $sum['checkin_in'] }}/{{ $sum['checkin_total'] }}</span>
                             @elseif ($key === 'progress')
-                                <span class="badge bg-azure-lt">
-                                    {{ (int) $event->current_round > 0 ? ((int) $event->current_round . '턴') : '진행 전' }}
+                                <span class="badge bg-azure-lt" data-event-tabs-round>
+                                    @if ($event->status === \App\Models\EventRound::STATUS_CLOSED)
+                                        종료
+                                    @elseif ($event->status === \App\Models\EventRound::STATUS_VOTING)
+                                        매칭중
+                                    @else
+                                        {{ (int) $event->current_round > 0 ? ((int) $event->current_round . '턴') : '진행 전' }}
+                                    @endif
                                 </span>
                             @endif
                         </a>

@@ -105,6 +105,14 @@
                         <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 d-none" id="rotateBackBtn">
                             <i class="ti ti-arrow-back-up me-1"></i>로테이션 되돌리기 (이전 턴)
                         </button>
+                        {{-- 종료 되돌리기 (실수로 매칭을 종료했을 때). 종료(X) 상태에서만 노출 --}}
+                        <button type="button" class="btn btn-outline-dark btn-sm w-100 mt-2 d-none" id="reopenBtn">
+                            <i class="ti ti-lock-open me-1"></i>종료 되돌리기 (이전 상태로)
+                        </button>
+                        {{-- 매칭 시작 취소 (실수로 매칭을 시작했을 때). 매칭중(V)·와인파티에서만 노출. 기존 투표는 유지 --}}
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 d-none" id="cancelVotingBtn">
+                            <i class="ti ti-arrow-back-up me-1"></i>매칭 시작 취소 (진행으로)
+                        </button>
                         <small class="form-hint text-muted mt-2 d-block" id="actionHint"></small>
                     </div>
                 </div>
@@ -126,26 +134,74 @@
         const rotateBackUrl = "{{ route('admin.rotation.seating.rotateBack') }}";
         const finishUrl  = "{{ route('admin.rotation.seating.finish') }}";
         const closeVotingUrl = "{{ route('admin.rotation.seating.closeVoting') }}";
+        const cancelVotingUrl = "{{ route('admin.rotation.seating.cancelVoting') }}";
+        const reopenUrl  = "{{ route('admin.rotation.seating.reopen') }}";
         const matchesUrlTemplate = "{{ route('admin.rotation.event.matches.list', ['id' => '__ID__']) }}";
         const messagesUrlTemplate = "{{ route('admin.rotation.event.messages.list', ['id' => '__ID__']) }}";
         const requestsListUrl = "{{ route('admin.requests.list') }}";
 
         // 서버 enum 기반 상태 라벨 (P/S/V/X). 뱃지 표기에 사용.
         const STATUS_LABEL = @json($statuses);
-        // 상태별 Tabler 뱃지 색상 클래스. (모두 light 변형: 밝은 배경 + 진한 글씨로 가독성 확보)
-        const STATUS_BADGE = { P: 'bg-yellow-lt', S: 'bg-green-lt', V: 'bg-pink-lt', X: 'bg-secondary-lt' };
+        // 상태별 Tabler 뱃지 색상 클래스. 종료(X)는 검은 뱃지(bg-dark + 흰 글씨).
+        const STATUS_BADGE = { P: 'bg-yellow-lt', S: 'bg-green-lt', V: 'bg-pink-lt', X: 'bg-dark text-white' };
+        // 상태 뱃지에 쓰일 수 있는 색상 클래스 전부 (갱신 시 먼저 제거할 목록)
+        const STATUS_BADGE_CLASSES = 'bg-yellow-lt bg-green-lt bg-pink-lt bg-secondary-lt bg-secondary bg-dark text-white';
 
         // 현재 행사 상태 뱃지를 최신 상태로 갱신한다.
         function renderStatusBadge(status){
             let $badge = $('#eventStatusBadge');
             if(!status || !STATUS_LABEL[status]){
                 $badge.addClass('d-none').text('');
-                return;
+            } else {
+                let cls = STATUS_BADGE[status] || 'bg-secondary';
+                $badge.removeClass(STATUS_BADGE_CLASSES).removeClass('d-none')
+                      .addClass(cls)
+                      .text('현재 상태: ' + STATUS_LABEL[status]);
             }
-            let cls = STATUS_BADGE[status] || 'bg-secondary';
-            $badge.removeClass('d-none bg-yellow-lt bg-green-lt bg-pink-lt bg-secondary-lt')
-                  .addClass(cls)
-                  .text('현재 상태: ' + STATUS_LABEL[status]);
+            // 상단 탭바(event-tabs)의 상태 표시들도 함께 갱신해, 로테이션 진행/매칭 시작·종료로
+            // 상태가 바뀔 때 화면의 모든 상태 표기가 어긋나지 않게 한다.
+            syncEventTabsStatus(status);
+        }
+
+        // 상단 탭바(event-tabs 컴포넌트)의 상태 표기를 현재 상태/턴에 맞춰 갱신한다.
+        //  - 가운데 상태 뱃지(#eventTabsStatusBadge)의 색/라벨
+        //  - '로테이션 진행' 탭의 턴 뱃지([data-event-tabs-round]) — 종료면 '종료', 아니면 'N턴'/'진행 전'
+        //  - 숨은 행사 선택(#eventTabsSelect)의 선택된 옵션 라벨 접두 [상태]
+        function syncEventTabsStatus(status){
+            if(status && STATUS_LABEL[status]){
+                let cls = STATUS_BADGE[status] || 'bg-secondary-lt';
+                $('#eventTabsStatusBadge')
+                    .removeClass(STATUS_BADGE_CLASSES)
+                    .addClass(cls)
+                    .text(STATUS_LABEL[status]);
+            }
+
+            // 턴 뱃지: 종료(X)면 '종료', 매칭중(V)면 '매칭중'(턴 수 대신 상태 표기),
+            // 그 외엔 1턴 이상이면 'N턴', 아니면 '진행 전'
+            $('[data-event-tabs-round]').text(
+                status === 'X' ? '종료'
+                    : (status === 'V' ? '매칭중'
+                        : (currentRound > 0 ? (currentRound + '턴') : '진행 전'))
+            );
+
+            // 선택된 옵션 라벨의 [상태] 접두를 갱신한다. (형식: "[상태] 제목 · 일시")
+            if(status && STATUS_LABEL[status]){
+                let $opt = $('#eventTabsSelect option:selected');
+                if($opt.length){
+                    let text = $opt.text();
+                    let replaced = text.replace(/^\s*\[[^\]]*\]/, '[' + STATUS_LABEL[status] + ']');
+                    // 원래 접두가 없던 경우엔 앞에 붙인다.
+                    $opt.text(replaced === text && !/^\s*\[/.test(text) ? ('[' + STATUS_LABEL[status] + '] ' + text) : replaced);
+                }
+            }
+        }
+
+        // 액션(로테이션 진행/매칭 시작·종료) 응답으로 상태·턴 표기를 즉시 갱신한다.
+        // 응답 data 에 담긴 status/round_no 를 신뢰 소스로 사용한다. (뒤이은 loadData 전에 선반영)
+        function applyStatusFromResponse(res){
+            let d = res && res.data ? res.data : {};
+            if(typeof d.round_no !== 'undefined'){ currentRound = d.round_no; }
+            renderStatusBadge(d.status || null);
         }
 
         let members = [];
@@ -227,6 +283,8 @@
             let $finish = $('#finishBtn').addClass('d-none');
             let $closeVoting = $('#closeVotingBtn').addClass('d-none');
             let $closed = $('#closedBtn').addClass('d-none');
+            let $reopen = $('#reopenBtn').addClass('d-none');
+            let $cancelVoting = $('#cancelVotingBtn').addClass('d-none');
             let $hint   = $('#actionHint');
             let $roundHint = $('#roundHint');
             let $pastNotice = $('#pastNotice').removeClass('d-flex').addClass('d-none');
@@ -278,12 +336,20 @@
             // 어느 턴을 보고 있든 상태 기준으로 먼저 처리한다.
             if(meta.is_closed){
                 $closed.removeClass('d-none');
-                $hint.text('이미 종료된 행사입니다. (매칭 마감)');
+                $reopen.removeClass('d-none');
+                // 되돌리면 복귀할 상태를 타입별로 안내한다. (와인파티→매칭중 / 1:1→진행)
+                var backLabel = meta.is_one_to_one ? '진행' : '매칭중';
+                $hint.html('이미 종료된 행사입니다. (매칭 마감)<br>실수로 종료했다면 아래에서 <b>' + backLabel + '</b> 상태로 되돌릴 수 있어요.');
                 return;
             }
             if(meta.is_voting){
                 $closeVoting.removeClass('d-none');
-                $hint.html('매칭이 진행 중입니다. 회원들이 상대를 선택하고 있어요.<br>(행사 다음 날 오전 9시 자동 종료)');
+                // 매칭중에서 진행(S)으로 되돌리기 — 와인파티 전용(1:1은 V 단계가 없음). 투표가 삭제됨을 안내.
+                if(!meta.is_one_to_one){
+                    $cancelVoting.removeClass('d-none');
+                }
+                $hint.html('매칭이 진행 중입니다. 회원들이 상대를 선택하고 있어요.<br>(행사 다음 날 오전 9시 자동 종료)'
+                    + (!meta.is_one_to_one ? '<br>실수로 시작했다면 아래에서 <b>진행</b> 상태로 되돌릴 수 있어요. (기존 투표는 유지)' : ''));
                 return;
             }
 
@@ -470,6 +536,9 @@
                 type: 'POST',
                 data: { event_id: $('#eventSelect').val() },
                 success: function(res){
+                    // 응답(권한 있는 최신 값)으로 상태/턴 표기를 먼저 즉시 갱신한다.
+                    // (뒤이은 loadData 조회가 끝나기 전에도 상단 탭바·카드 뱃지가 어긋나지 않게)
+                    applyStatusFromResponse(res);
                     // 진행 후 최신 턴을 보도록 viewRound를 리셋하고, 보드 갱신이 끝난 뒤 알림.
                     viewRound = null;
                     $.when(loadData()).always(function(){ alert(res?.msg); });
@@ -487,6 +556,7 @@
                 type: 'POST',
                 data: { event_id: $('#eventSelect').val() },
                 success: function(res){
+                    applyStatusFromResponse(res);
                     viewRound = null;
                     $.when(loadData()).always(function(){ alert(res?.msg); });
                 },
@@ -503,6 +573,7 @@
                 type: 'POST',
                 data: { event_id: $('#eventSelect').val() },
                 success: function(res){
+                    applyStatusFromResponse(res);
                     viewRound = null;
                     $.when(loadData()).always(function(){ alert(res?.msg); });
                 },
@@ -523,6 +594,43 @@
                 type: 'POST',
                 data: { event_id: $('#eventSelect').val() },
                 success: function(res){
+                    applyStatusFromResponse(res);
+                    viewRound = null;
+                    $.when(loadData()).always(function(){ alert(res?.msg); });
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            });
+        });
+
+        // 종료 되돌리기(reopen): 종료(X)된 행사를 종료 직전 상태로 강제 복구.
+        // 와인파티 → 매칭중(V), 1:1 → 진행(S). 참가자 화면도 실시간으로 재개된다.
+        $('#reopenBtn').on('click', async function(){
+            var backLabel = isOneToOne ? '진행(매칭 선택 재개)' : '매칭중(매칭 선택 재개)';
+            if(!(await salert({html: '종료를 되돌려 <b>' + backLabel + '</b> 상태로 복구하시겠습니까?<br>참가자 화면에서 매칭 선택이 다시 열립니다.'}))) return;
+
+            $.ajax({
+                url: reopenUrl,
+                type: 'POST',
+                data: { event_id: $('#eventSelect').val() },
+                success: function(res){
+                    applyStatusFromResponse(res);
+                    viewRound = null;
+                    $.when(loadData()).always(function(){ alert(res?.msg); });
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            });
+        });
+
+        // 매칭 시작 취소(cancelVoting): 매칭중(V)→진행(S). 기존 투표(매칭 데이터)는 그대로 유지한다.
+        $('#cancelVotingBtn').on('click', async function(){
+            if(!(await salert({html: '매칭 시작을 취소하고 <b>진행</b> 상태로 되돌리시겠습니까?<br>기존 투표(매칭 데이터)는 그대로 유지되며, 다시 매칭을 시작하면 이어서 선택할 수 있어요.'}))) return;
+
+            $.ajax({
+                url: cancelVotingUrl,
+                type: 'POST',
+                data: { event_id: $('#eventSelect').val() },
+                success: function(res){
+                    applyStatusFromResponse(res);
                     viewRound = null;
                     $.when(loadData()).always(function(){ alert(res?.msg); });
                 },

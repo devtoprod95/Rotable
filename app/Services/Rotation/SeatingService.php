@@ -272,6 +272,7 @@ class SeatingService
                 'round_no'  => $nextRoundNo,
                 'is_last'   => $isLast,
                 'max_round' => $tableCount,
+                'status'    => EventRound::STATUS_STARTED,
             ];
 
             // 참가자 홈을 실시간으로 갱신(새 턴 반영). 와인파티·1:1 공통.
@@ -346,6 +347,8 @@ class SeatingService
                 'round_no'  => $result,
                 'is_last'   => $isLast,
                 'max_round' => $tableCount,
+                // 1→0 되돌림이면 대기(P), 그 외엔 진행(S) 유지.
+                'status'    => $result === 0 ? EventRound::STATUS_PENDING : EventRound::STATUS_STARTED,
             ];
 
             broadcast(new \App\Events\RotationUpdated($eventId));
@@ -380,6 +383,53 @@ class SeatingService
             broadcast(new \App\Events\EventVotingOpened($event->id));
 
             $returnMsg = helpersSuccessMessage('매칭을 시작했습니다.');
+            $returnMsg['data'] = ['status' => EventRound::STATUS_VOTING];
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 매칭 시작 취소 — 매칭중(V)인 행사를 진행(S)으로 되돌린다. (openVoting 의 역방향)
+     *
+     * 실수로 "매칭 시작"을 눌렀을 때 로테이션 진행 단계로 복구한다.
+     * 그동안 쌓인 투표(event_votes)는 **그대로 유지**하고, voting_opened_at(자동 마감 기준점)만 비운다.
+     * (다시 매칭 시작을 누르면 이어서 선택/수정할 수 있다.)
+     *
+     * 와인파티(wine) 전용이다. 1:1(one)은 V 단계 없이 진행(S)에서 바로 선택을 받으므로
+     * 이 되돌리기 대상이 아니다. (진행 중 매칭 취소가 필요하면 로테이션 되돌리기를 쓴다)
+     *
+     * @return array{isSuccess:bool, msg?:string, data?:array{status:string}}
+     */
+    public function cancelVoting(int $eventId): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            DB::transaction(function () use ($eventId): void {
+                /** @var EventRound $event */
+                $event = EventRound::lockForUpdate()->find($eventId);
+                if ($event === null) {
+                    throw new Exception('행사를 찾을 수 없습니다.');
+                }
+
+                if ($event->status !== EventRound::STATUS_VOTING) {
+                    throw new Exception('매칭중인 행사만 진행 상태로 되돌릴 수 있습니다.');
+                }
+
+                // 투표(매칭 데이터)는 지우지 않고 유지한다. 상태만 진행(S)으로 되돌린다.
+                $event->status           = EventRound::STATUS_STARTED;
+                $event->voting_opened_at = null;
+                $event->save();
+            });
+
+            // 참가자 화면 복구: '매칭하기' 탭을 닫고 홈(로테이션 진행 화면)으로 되돌린다.
+            broadcast(new \App\Events\RotationUpdated($eventId));
+
+            $returnMsg = helpersSuccessMessage('매칭 시작을 취소하고 진행 상태로 되돌렸습니다. (기존 투표는 유지)');
+            $returnMsg['data'] = ['status' => EventRound::STATUS_STARTED];
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
         }
@@ -413,6 +463,75 @@ class SeatingService
             SendCloseVotingReportJob::dispatch($event->id, $trigger);
 
             $returnMsg = helpersSuccessMessage('매칭을 마감했습니다.');
+            $returnMsg['data'] = ['status' => EventRound::STATUS_CLOSED];
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 종료(X) 되돌리기 — 종료된 행사를 "종료 직전 상태"로 강제 복구한다.
+     *
+     * 실수로 매칭을 종료했을 때, DB의 status 를 직전 운영 상태로 되돌려 다시 진행/매칭을 이어가게 한다.
+     * 행사 타입별로 종료 직전 상태가 다르므로 그에 맞춰 복구한다:
+     *  - 와인파티(wine): 매칭중(V) 에서 종료되므로 X → V 로 되돌린다. (매칭 선택 재개)
+     *  - 1:1(one):      진행(S) 에서 바로 종료되므로 X → S 로 되돌린다. (별도 V 단계 없음)
+     *
+     * current_round(턴)·좌석은 종료로 바뀌지 않으므로 건드리지 않는다.
+     * voting_opened_at 도 유지한다. (자동 9시 마감 기준점. 되돌린 뒤 와인파티는 다시 그 기준이 적용됨)
+     *
+     * @return array{isSuccess:bool, msg?:string, data?:array{status:string}}
+     */
+    public function reopenFromClosed(int $eventId): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $result = DB::transaction(function () use ($eventId): string {
+                /** @var EventRound $event */
+                $event = EventRound::lockForUpdate()->find($eventId);
+                if ($event === null) {
+                    throw new Exception('행사를 찾을 수 없습니다.');
+                }
+
+                if ($event->status !== EventRound::STATUS_CLOSED) {
+                    throw new Exception('이미 종료되지 않은 행사입니다. 되돌릴 수 없습니다.');
+                }
+
+                // 타입별로 "종료 직전" 상태로 복구한다.
+                //  - 1:1(one): 진행(S) 에서 바로 종료되므로 S 로.
+                //  - 와인파티(wine): 매칭중(V) 에서 종료되므로 V 로.
+                $target = $event->isOneToOne()
+                    ? EventRound::STATUS_STARTED
+                    : EventRound::STATUS_VOTING;
+
+                $event->status = $target;
+
+                // 되돌리는 시점에 매칭 선택 기준점이 비어 있으면 지금으로 채운다.
+                // (정상 흐름이라면 진행/매칭 시작 때 이미 기록돼 있어 유지된다.)
+                if ($event->voting_opened_at === null) {
+                    $event->voting_opened_at = now();
+                }
+
+                $event->save();
+
+                return $target;
+            });
+
+            // 참가자 화면 실시간 복구:
+            //  - V(와인파티): '매칭하기' 탭을 다시 열어야 하므로 EventVotingOpened.
+            //  - S(1:1):      홈/매칭 선택을 다시 노출해야 하므로 RotationUpdated.
+            if ($result === EventRound::STATUS_VOTING) {
+                broadcast(new \App\Events\EventVotingOpened($eventId));
+            } else {
+                broadcast(new \App\Events\RotationUpdated($eventId));
+            }
+
+            $label     = EventRound::statusOptions()[$result] ?? $result;
+            $returnMsg = helpersSuccessMessage("종료를 되돌렸습니다. (현재 상태: {$label})");
+            $returnMsg['data'] = ['status' => $result];
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
         }
@@ -451,7 +570,7 @@ class SeatingService
      * 종료 요약 리포트 본문(텔레그램 HTML)을 조립한다.
      *
      * 포함 정보: 행사명/타입/일시, 마감 방식(수동/자동), 참가 수(남/여/합계),
-     * 투표 참여자 수, 상호 매칭 쌍 수, 메시지/요청 건수.
+     * 노쇼 수(남/여/합계), 투표 참여자 수, 상호 매칭 쌍 수, 메시지/요청 건수.
      *
      * @param  string  $trigger  'manual' | 'auto'
      */
@@ -484,6 +603,13 @@ class SeatingService
         // 상호 매칭 쌍 수 (남자 기준 1회 노출된 쌍 목록의 길이).
         $pairCount = count($this->matchService->matchedPairList($event->id));
 
+        // 노쇼: 체크인 명단(event_rosters)에 있었으나 당일 참석(체크인)하지 않은 신청자 수.
+        // checked_in_at 이 null 이면 미참석(노쇼)으로 본다. 성별이 F 가 아니면 남(M)으로 귀속한다.
+        $noShowBase = $event->rosters()->whereNull('checked_in_at');
+        $noShowTotal  = (clone $noShowBase)->count();
+        $noShowFemale = (clone $noShowBase)->where('gender', Member::GENDER_FEMALE)->count();
+        $noShowMale   = $noShowTotal - $noShowFemale;
+
         $messageCount = $event->messages()->count();
         $requestCount = $event->adminRequests()->count();
 
@@ -504,6 +630,7 @@ class SeatingService
             "⏱ <b>마감종류</b> : {$triggerLabel}",
             '',
             '👥 <b>참가</b> : 총 ' . number_format($totalCount) . '명 (남 ' . number_format($maleCount) . ' / 여 ' . number_format($femaleCount) . ')',
+            '🚫 <b>노쇼</b> : 총 ' . number_format($noShowTotal) . '명 (남 ' . number_format($noShowMale) . ' / 여 ' . number_format($noShowFemale) . ')',
             '🗳 <b>투표 참여</b> : ' . number_format($voterCount) . '명 (남 ' . number_format($maleVoterCount) . ' / 여 ' . number_format($femaleVoterCount) . ')',
             '❤️ <b>상호 매칭</b> : ' . number_format($pairCount) . '쌍',
             '',

@@ -1187,8 +1187,40 @@ class RotationController extends Controller
     }
 
     /**
-     * ids 공통 검증 (벌크 삭제용).
+     * 종료(X) 되돌리기: 종료된 행사를 "종료 직전 상태"로 강제 복구한다.
+     * (와인파티 → 매칭중 V, 1:1 → 진행 S). 실수로 종료했을 때 운영 재개용.
      */
+    public function seatingReopen(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'event_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
+        }
+
+        $result = $this->seatingService->reopenFromClosed((int) $this->request->input('event_id'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
+    }
+
+    /**
+     * 매칭 시작 취소: 매칭중(V)인 행사를 진행(S)으로 되돌린다. (투표 데이터 삭제)
+     * 와인파티 전용. 실수로 매칭을 시작했을 때 로테이션 진행 단계로 복구용.
+     */
+    public function seatingCancelVoting(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'event_id' => 'required|integer',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage());
+        }
+
+        $result = $this->seatingService->cancelVoting((int) $this->request->input('event_id'));
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
+    }
     private function invalidIds(): bool
     {
         $validator = Validator::make($this->request->all(), [

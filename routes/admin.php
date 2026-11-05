@@ -66,6 +66,10 @@ Route::middleware('role')->group(function () {
                 Route::post('/rotate-back', [RotationController::class, 'seatingRotateBack'])->name('rotateBack');
                 Route::post('/finish', [RotationController::class, 'seatingFinish'])->name('finish');
                 Route::post('/close-voting', [RotationController::class, 'seatingCloseVoting'])->name('closeVoting');
+                // 매칭 시작 취소 — 매칭중(V)→진행(S), 투표 데이터 삭제 (와인파티)
+                Route::post('/cancel-voting', [RotationController::class, 'seatingCancelVoting'])->name('cancelVoting');
+                // 종료(X) 되돌리기 — 실수 종료 복구 (와인파티→V, 1:1→S)
+                Route::post('/reopen', [RotationController::class, 'seatingReopen'])->name('reopen');
                 Route::delete('/delete', [RotationController::class, 'seatingDelete'])->name('delete');
             });
 

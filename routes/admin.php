@@ -99,6 +99,9 @@ Route::middleware('role')->group(function () {
                 Route::get('/exception', [RotationController::class, 'guideException'])->name('exception');
             });
 
+            // 공개 페이지 모음 — 공개 게임/안내 슬라이드/호스트 멘트 등 외부 공유용 링크를 한 곳에 모아 보여준다.
+            Route::get('/public-hub', [RotationController::class, 'publicHub'])->name('public-hub');
+
             // 만남 이력 조회 — 전화번호(정확 일치) 기준. 만남 = 같은 행사 공동 참여.
             Route::prefix('history')->name('history.')->group(function () {
                 // 만남 이력 기본 조회 (번호 1개 → 함께 참여한 상대)

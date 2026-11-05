@@ -53,6 +53,7 @@ enum Menu: string
                             ['name' => '예외 상황 대처', 'route' => 'admin.rotation.guide.exception', 'pattern' => 'admin.rotation.guide.exception*'],
                         ],
                     ],
+                    ['name' => '공개 페이지', 'route' => 'admin.rotation.public-hub', 'pattern' => 'admin.rotation.public-hub*'],
                     [
                         'name'     => '분석·도구',
                         'pattern'  => ['admin.rotation.history*', 'admin.rotation.bep*'],

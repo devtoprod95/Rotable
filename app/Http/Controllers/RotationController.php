@@ -729,6 +729,15 @@ class RotationController extends Controller
     }
 
     /**
+     * 공개 페이지 모음(허브) — 외부 공유/현장 안내용으로 흩어져 있는 공개 페이지 링크를
+     * 한 화면에 카드로 모아 보여준다. (공개 게임 · 안내 슬라이드 · 호스트 멘트 · 채팅방 공지 등)
+     */
+    public function publicHub(): View
+    {
+        return view('admin.rotation.publicHub');
+    }
+
+    /**
      * 손익분기점(BEP) 계산기 — 객단가/비용 항목(기타 추가금 포함)으로 "1인당 흑자전환 참가비"를 계산하는 화면.
      * 계산 자체는 클라이언트(JS)에서 실시간으로 수행하고, 입력값은 저장/불러오기(event_bep_estimates)할 수 있다.
      * 와인파티/1:1 타입별로 기본 비용 프리셋이 다르다.

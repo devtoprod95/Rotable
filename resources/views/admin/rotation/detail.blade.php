@@ -1839,15 +1839,28 @@
 
         // 최상위 블록들을 "목표 높이(targetH)"를 넘지 않게 순서대로 묶어 페이지 그룹을 만든다.
         //  - 한 블록이 혼자서 targetH 보다 크면 그 블록만으로 한 페이지가 된다.
+        //  - maxPages 가 주어지면 그 장수를 넘지 않도록 목표 높이를 자동으로 키운다.
+        //    (전체 높이를 maxPages 로 나눈 값 이상으로 targetH 를 올려 페이지 수를 제한)
         //  - 반환: 블록 요소 배열의 배열. 예) [[b0,b1],[b2],[b3,b4]]
-        function groupBlocksByHeight(blocks, targetH){
+        function groupBlocksByHeight(blocks, targetH, maxPages){
+            var heights = blocks.map(function(el){
+                return el.getBoundingClientRect().height || el.offsetHeight || 0;
+            });
+            // 장수 상한이 있으면, "전체 높이 / maxPages" 보다 목표 높이를 작게 두지 않는다.
+            if (maxPages && maxPages > 0) {
+                var total = heights.reduce(function(a, b){ return a + b; }, 0);
+                targetH = Math.max(targetH, Math.ceil(total / maxPages));
+            }
+
             var pages = [];
             var cur = [];
             var curH = 0;
-            blocks.forEach(function(el){
-                var h = el.getBoundingClientRect().height || el.offsetHeight || 0;
+            blocks.forEach(function(el, i){
+                var h = heights[i];
                 // 현재 페이지에 내용이 있고, 더 넣으면 목표를 넘기면 페이지를 끊는다.
-                if (cur.length && (curH + h) > targetH) {
+                // 단, 이미 마지막 허용 장(maxPages)에 도달했으면 더 끊지 않고 모두 담는다.
+                var atLastPage = maxPages && pages.length >= (maxPages - 1);
+                if (cur.length && !atLastPage && (curH + h) > targetH) {
                     pages.push(cur);
                     cur = [];
                     curH = 0;
@@ -1928,8 +1941,10 @@
                 });
 
                 // 목표 페이지 높이 — 폭(1080)의 약 2.2배. 이 정도면 4배 캡처해도 캔버스 한계에 안 걸린다.
+                //  - 단, 최대 5장을 넘지 않도록 제한한다. (넘치면 목표 높이를 자동으로 키워 장수를 줄임)
                 var TARGET_PAGE_H = 1080 * 2.2;
-                var pages = groupBlocksByHeight(blocks, TARGET_PAGE_H);
+                var MAX_PAGES = 5;
+                var pages = groupBlocksByHeight(blocks, TARGET_PAGE_H, MAX_PAGES);
                 if (!pages.length) {
                     await salert({text: '분할할 내용이 없습니다.', cancel: false});
                     return;

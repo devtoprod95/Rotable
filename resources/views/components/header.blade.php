@@ -264,7 +264,7 @@
                                     <li>HTML 에디터로 문구·디자인을 수정합니다. (참여조건, 이용안내, FAQ, 로테이블 포인트 등 포함)</li>
                                     <li><b>페이지 설정 · 명단 편집</b>: 상단 <span class="badge bg-pink-lt">페이지 설정 · 명단 편집</span> 한 화면에서 <b>남/녀 나이·키</b>(입력 시 <mark>"OO~OO년생"으로 자동 환산</mark>)와 <b>참여자 명단</b>을 함께 편집하고 <b>[적용]</b> 한 번으로 반영합니다. 번호표·상단 인원수는 자동 계산되고, 부족한 쪽은 <b>모집중 추가</b> 버튼으로 "모집중" 자리를 직접 끼워 넣습니다.</li>
                                     <li><span class="badge bg-primary text-white">저장</span> <b>저장 목록</b>에 이름을 붙여 보관합니다. <mark>저장 목록은 유형 구분 없이 전부</mark> 보이며, 불러오면 그 저장본의 <b>유형으로 자동 전환</b>됩니다. 유형·편집 중 저장본은 주소(쿼리파라미터)로 유지돼 새로고침·뒤로가기에도 보존됩니다.</li>
-                                    <li><b>미리보기</b>로 확인하고 <span class="badge bg-dark text-white">이미지 다운로드</span>(상세페이지 전체) 또는 <span class="badge bg-pink text-white">피드 이미지 다운</span>(로고+명단)으로 <mark>이미지를 저장</mark>합니다. 미리보기와 다운로드의 여백이 일치합니다.</li>
+                                    <li><b>미리보기</b>로 확인하고 <span class="badge bg-dark text-white">이미지 다운로드</span>(블록 경계로 끊어 <mark>여러 장·모바일에서 더 선명</mark>) 또는 <span class="badge bg-pink text-white">피드 이미지 다운</span>(로고+명단)으로 <mark>이미지를 저장</mark>합니다. 미리보기와 다운로드의 여백이 일치합니다.</li>
                                 </ul>
                                 <div class="alert alert-important alert-info py-2 my-2">
                                     <i class="ti ti-info-circle me-1"></i> 유형별 전용 상단 이미지를 쓰려면 <code>public/images/detail_wine.png</code> · <code>detail_solo.png</code> 를 넣으세요. 없으면 기본 이미지로 표시됩니다.

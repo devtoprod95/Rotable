@@ -107,7 +107,7 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-end">
                             <button type="button" class="dropdown-item btn-detail-download">
-                                <i class="ti ti-download me-2 fs-2"></i> 이미지 다운로드
+                                <i class="ti ti-download me-2 fs-2"></i> 이미지 다운로드 <span class="text-secondary small ms-1">(여러 장·고화질)</span>
                             </button>
                             <button type="button" class="dropdown-item btn-open-feed">
                                 <i class="ti ti-photo-down me-2 fs-2"></i> 피드 이미지 다운
@@ -358,6 +358,9 @@
 
         // 현재 에디터에 올라와 있는 유형 (초기값: 와인)
         var activeType = 'wine';
+
+        // TinyMCE 초기화(또는 폴백) 완료 플래그 — 주소 복원은 이 이후에만 실행한다.
+        var detailEditorReady = false;
 
         function currentType(){
             return $('input[name="sampleType"]:checked').val() === 'solo' ? 'solo' : 'wine';
@@ -763,9 +766,12 @@
                             var next = applyUpdatedAtToSample(cur);
                             if (next !== cur) { editor.setContent(next); }
                         }
+                        detailEditorReady = true;   // 복원 트리거(아래 ready 말미에서 대기)
                     });
                 }
             });
+        } else {
+            detailEditorReady = true; // TinyMCE 없으면(폴백 textarea) 즉시 준비 완료로 간주
         }
 
         // 미리보기 버튼(상단/플로팅 공통) → 모달 열기
@@ -1822,7 +1828,58 @@
             });
         });
 
-        // 이미지(PNG) 다운로드 — 모달 상태와 무관하게 오프스크린 영역에 렌더해서 캡처
+        /* =====================================================================
+         * 이미지 "분할" 다운로드 — 블록 경계 기준으로 여러 장(고화질)으로 저장
+         * - 긴 상세페이지를 한 장으로 캡처하면 캔버스 한계 때문에 배율(선명도)이 깎여
+         *   모바일에서 눌려/흐려 보인다. 최상위 블록 단위로 "목표 높이"를 넘지 않게 묶어
+         *   여러 장으로 나누면 각 장이 짧아져 4배 선명도를 유지할 수 있다.
+         * - 블록(최상위 자식 요소) 경계에서만 자르므로 글자/명단 카드/이미지가 중간에 잘리지 않는다.
+         * - 캐리어 등 숨은 요소(높이 0)는 자연히 첫 장에 묶여 영향 없음.
+         * =================================================================== */
+
+        // 최상위 블록들을 "목표 높이(targetH)"를 넘지 않게 순서대로 묶어 페이지 그룹을 만든다.
+        //  - 한 블록이 혼자서 targetH 보다 크면 그 블록만으로 한 페이지가 된다.
+        //  - 반환: 블록 요소 배열의 배열. 예) [[b0,b1],[b2],[b3,b4]]
+        function groupBlocksByHeight(blocks, targetH){
+            var pages = [];
+            var cur = [];
+            var curH = 0;
+            blocks.forEach(function(el){
+                var h = el.getBoundingClientRect().height || el.offsetHeight || 0;
+                // 현재 페이지에 내용이 있고, 더 넣으면 목표를 넘기면 페이지를 끊는다.
+                if (cur.length && (curH + h) > targetH) {
+                    pages.push(cur);
+                    cur = [];
+                    curH = 0;
+                }
+                cur.push(el);
+                curH += h;
+            });
+            if (cur.length) { pages.push(cur); }
+            return pages;
+        }
+
+        // 실제 "블록들"이 들어있는 콘텐츠 컨테이너를 찾는다.
+        //  - 상세페이지 HTML 은 보통 바깥 wrapper div 하나(폰트/색 상속) 안에 섹션들이 들어있다.
+        //  - 블록 자식이 1개뿐인 wrapper 는 계속 더 안으로 내려가며, 블록이 여러 개인 곳을 컨테이너로 본다.
+        //  - 반환: { container: 블록들을 가진 요소, wrapperChain: 바깥→안 순서의 wrapper 요소 배열 }
+        function findBlockContainer(root){
+            var chain = [];
+            var node = root;
+            while (true) {
+                var elChildren = Array.prototype.filter.call(node.children, function(c){
+                    return c.tagName !== 'STYLE' && c.tagName !== 'SCRIPT';
+                });
+                if (elChildren.length === 1 && elChildren[0].children && elChildren[0].children.length) {
+                    chain.push(elChildren[0]);
+                    node = elChildren[0];
+                    continue;
+                }
+                break;
+            }
+            return { container: node, wrapperChain: chain };
+        }
+
         $('.btn-detail-download').on('click', async function(){
             if (typeof modernScreenshot === 'undefined') {
                 await salert({text: '이미지 변환 모듈을 불러오지 못했습니다. 페이지를 새로고침해주세요.', cancel: false});
@@ -1835,12 +1892,10 @@
                 return;
             }
 
-            // 드롭다운이 닫혀도 보이도록 화면 전체 로딩 오버레이로 진행 표시.
-            showExportOverlay('이미지 생성 중…');
+            showExportOverlay('이미지 분할 준비 중…');
             await new Promise(function(r){ setTimeout(r, 30); });
 
-            // 화면 밖(보이지만 레이아웃은 정상)인 캡처 전용 컨테이너에 '진짜 1080px'로 렌더한다.
-            // modern-screenshot 은 이 노드를 브라우저가 그리는 그대로(여백·패딩 포함) 캡처한다.
+            // 측정 전용 holder 에 전체 HTML 을 1080px 로 렌더해 블록 높이를 잰다.
             var holder = document.getElementById('detailCaptureHolder');
             if (!holder) {
                 holder = document.createElement('div');
@@ -1852,35 +1907,86 @@
                 document.body.appendChild(holder);
             }
             holder.style.width = '1080px';
-            // 콘텐츠 끝에 미리보기와 '동일한' 하단 스페이서를 붙여 아래 여백을 맞춘다.
-            holder.innerHTML = html
-                + '<div data-capture-spacer="1" style="width:100%; height:48px; background:#ffffff;"></div>';
+            holder.innerHTML = html;
 
             try {
-                // 폰트가 캡처 전에 완전히 로드되도록 기다린다. (미로드 시 폴백 폰트로 찍히는 문제 방지)
                 if (document.fonts && document.fonts.ready) {
                     try { await document.fonts.ready; } catch (fe) { /* 무시 */ }
                 }
 
-                // 캡처 대상의 실제 크기 (modern-screenshot 이 그대로 반영).
-                var capW = holder.offsetWidth || 1080;
-                var capH = holder.scrollHeight || holder.offsetHeight || 1080;
+                // 폰트 @import 등 <style> 은 모든 페이지에 공통으로 넣어야 폰트가 유지된다.
+                var styleHtml = Array.prototype.map.call(
+                    holder.querySelectorAll('style'),
+                    function(s){ return s.outerHTML; }
+                ).join('');
 
-                // 선명도(scale)는 높이되, 캔버스 크기 한계를 넘지 않는 안전값으로.
-                // 화질 최우선: 데스크톱 기준 4배 렌더(1080px → 4320px 폭). 긴 페이지는 한계 내에서 자동 보정.
-                var detailScale = computeSafeScale(capW, capH, 4);
-
-                var canvas = await modernScreenshot.domToCanvas(holder, {
-                    backgroundColor: '#ffffff',
-                    width: capW,
-                    height: capH,
-                    scale: detailScale,
-                    // 외부 이미지(폰트/배너/스샷)는 CORS 우회를 위해 fetch 후 data-URI 로 인라인.
-                    fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } }
+                // 실제 섹션들이 있는 컨테이너와 바깥 wrapper 체인을 찾는다.
+                var found = findBlockContainer(holder);
+                var container = found.container;
+                var blocks = Array.prototype.slice.call(container.children).filter(function(c){
+                    return c.tagName !== 'STYLE' && c.tagName !== 'SCRIPT';
                 });
 
-                // ===== 10MB(실제 20MB) 상한 + 화질 최우선 저장 (기존 로직 재사용) =====
-                await exportCanvasUnder10MB(canvas, buildDownloadBaseName('rotable_상세페이지'));
+                // 목표 페이지 높이 — 폭(1080)의 약 2.2배. 이 정도면 4배 캡처해도 캔버스 한계에 안 걸린다.
+                var TARGET_PAGE_H = 1080 * 2.2;
+                var pages = groupBlocksByHeight(blocks, TARGET_PAGE_H);
+                if (!pages.length) {
+                    await salert({text: '분할할 내용이 없습니다.', cancel: false});
+                    return;
+                }
+
+                var baseName = buildDownloadBaseName('rotable_상세페이지');
+
+                // 각 페이지 그룹의 블록들을, "바깥 wrapper(폰트/색 상속)를 그대로 복제한" 구조 안에 넣어 캡처한다.
+                for (var i = 0; i < pages.length; i++) {
+                    showExportOverlay('이미지 생성 중… (' + (i + 1) + '/' + pages.length + ')');
+                    await new Promise(function(r){ setTimeout(r, 20); });
+
+                    var pageHolder = document.createElement('div');
+                    pageHolder.style.position = 'fixed';
+                    pageHolder.style.left = '-10000px';
+                    pageHolder.style.top = '0';
+                    pageHolder.style.width = '1080px';
+                    pageHolder.style.background = '#ffffff';
+                    // 공통 <style> 먼저.
+                    pageHolder.innerHTML = styleHtml;
+
+                    // 바깥 wrapper 체인을 "속이 빈" 상태로 복제해 중첩한 뒤, 가장 안쪽에 이 페이지 블록을 넣는다.
+                    var innermost = pageHolder;
+                    found.wrapperChain.forEach(function(w){
+                        var clone = w.cloneNode(false); // 속성/스타일만, 자식은 비움
+                        innermost.appendChild(clone);
+                        innermost = clone;
+                    });
+                    pages[i].forEach(function(el){ innermost.appendChild(el.cloneNode(true)); });
+
+                    // 하단 여백 스페이서(미리보기/1장 다운로드와 동일) — 가장 바깥에 붙인다.
+                    var spacer = document.createElement('div');
+                    spacer.setAttribute('data-capture-spacer', '1');
+                    spacer.style.cssText = 'width:100%; height:48px; background:#ffffff;';
+                    pageHolder.appendChild(spacer);
+                    document.body.appendChild(pageHolder);
+
+                    try {
+                        var capW = pageHolder.offsetWidth || 1080;
+                        var capH = pageHolder.scrollHeight || pageHolder.offsetHeight || 1080;
+                        var scale = computeSafeScale(capW, capH, 4);
+
+                        var canvas = await modernScreenshot.domToCanvas(pageHolder, {
+                            backgroundColor: '#ffffff',
+                            width: capW,
+                            height: capH,
+                            scale: scale,
+                            fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } }
+                        });
+
+                        // 파일명: 여러 장이면 _1, _2 … suffix. (한 장이면 suffix 없이)
+                        var suffix = pages.length > 1 ? ('_' + (i + 1)) : '';
+                        await exportCanvasUnder10MB(canvas, baseName + suffix);
+                    } finally {
+                        document.body.removeChild(pageHolder);
+                    }
+                }
             } catch (e) {
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
             } finally {
@@ -2113,21 +2219,36 @@
         /* =====================================================================
          * 선택 상태 복원 — 초기 진입 / 뒤로·앞으로 가기
          * =================================================================== */
+        // 에디터(TinyMCE)가 준비된 뒤 콜백을 실행한다. (setHtml/유형전환이 에디터에 의존)
+        //  - detailEditorReady 는 TinyMCE init 콜백(또는 폴백)에서 true 로 바뀐다.
+        //  - 모든 핸들러(유형전환 change 등)가 바인딩된 이 시점 이후에 복원해야 안전하다.
+        function whenEditorReady(cb){
+            if (detailEditorReady) { cb(); return; }
+            var tries = 0;
+            var timer = setInterval(function(){
+                tries++;
+                if (detailEditorReady || tries > 200) { // 최대 ~10초 대기
+                    clearInterval(timer);
+                    cb();
+                }
+            }, 50);
+        }
+
         // 뒤로/앞으로 가기: 주소의 type/saveId 로 선택을 다시 맞춘다.
         window.addEventListener('popstate', function(){
-            restoreFromUrl();
+            whenEditorReady(restoreFromUrl);
         });
 
         // 최초 진입: 주소에 type/saveId 가 있으면 그 선택을 복원한다.
         //  - 아무 파라미터도 없으면, 현재(기본) 상태를 주소에 한 번 심어 둔다(replaceState).
-        (function(){
+        whenEditorReady(function(){
             var q = new URLSearchParams(window.location.search);
             if (q.get('type') || q.get('saveId')) {
                 restoreFromUrl();
             } else {
                 syncUrl(true);
             }
-        })();
+        });
     });
 </script>
 @endsection

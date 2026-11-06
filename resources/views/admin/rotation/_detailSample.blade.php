@@ -181,8 +181,8 @@
         'cellInfoSize'  => $cellInfoSize,
         'cellHeight'    => $cellHeight,
         'cellPadding'   => $cellPadding,
-        // 성비 자동 맞춤: 부족한 쪽을 "모집중" 자리로 채워 N:N 으로 보이게 (기본 ON)
-        'balance'       => true,
+        // 성비 자동 맞춤 제거됨: 자동 채움 없음. 부족한 쪽은 '모집중 추가'로 직접 넣는다.
+        'balance'       => false,
         'recruitLabel'  => '모집중',
     ], JSON_UNESCAPED_UNICODE);
 @endphp

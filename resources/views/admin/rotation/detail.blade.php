@@ -75,12 +75,9 @@
 
                     <span class="vr d-none d-md-inline"></span>
 
-                    {{-- 편집 그룹: 페이지 설정 / 참여자 명단 편집 / 샘플 불러오기 --}}
+                    {{-- 편집 그룹: 페이지 설정·참여자 명단(통합) / 샘플 불러오기 --}}
                     <button type="button" class="btn btn-pink btn-open-settings">
-                        <i class="ti ti-adjustments me-1"></i> 페이지 설정
-                    </button>
-                    <button type="button" class="btn btn-pink btn-open-roster">
-                        <i class="ti ti-users-group me-1"></i> 참여자 명단 편집
+                        <i class="ti ti-adjustments me-1"></i> 페이지 설정 · 명단 편집
                     </button>
                     <div class="dropdown">
                         <button type="button" class="btn btn-outline-secondary dropdown-toggle"
@@ -173,23 +170,28 @@
 </div>
 
 {{-- 페이지 설정 모달 (행사명 · 남/녀 나이 · 남/녀 키) --}}
-{{-- 에디터 HTML 안의 data-detail-settings(현재 설정)을 읽어 폼에 채우고,
-     [설정 적용] 시 data-setting 마커가 붙은 노출 지점의 값을 갈아끼운다.
-     (참여자 명단 편집과 동일하게 "요소 기준"이라 주석이 지워져도 안전하게 동작한다.) --}}
+{{-- 에디터 HTML 안의 data-detail-settings(현재 설정)/data-roster-grid(명단)를 읽어 폼에 채우고,
+     [적용] 시 data-setting 마커 지점의 값과 명단 그리드를 한 번에 갈아끼운다.
+     (요소/data 속성 기준이라 주석이 지워져도 안전하게 동작한다.)
+     ※ 페이지 설정과 참여자 명단 편집을 한 모달로 통합했다. --}}
 <div class="modal modal-blur fade" id="detailSettingsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
-                    <i class="ti ti-adjustments me-1"></i> 페이지 설정
+                    <i class="ti ti-adjustments me-1"></i> 페이지 설정 · 참여자 명단
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <h3 class="mb-2 d-flex align-items-center gap-2">
+                    <i class="ti ti-adjustments text-pink"></i> 페이지 설정
+                    <span class="text-secondary fs-4 fw-normal">— 참여 조건 · 자격요건</span>
+                </h3>
                 <div class="alert alert-info mb-3">
                     <div class="text-secondary">
-                        <b>남/녀 나이 · 남/녀 키</b>를 입력하고 <b>[설정 적용]</b> 을 누르면
-                        상세페이지의 해당 부분(참여 조건·자격요건)에 바로 반영돼요.
+                        <b>남/녀 나이 · 남/녀 키</b>를 입력하면
+                        상세페이지의 해당 부분(참여 조건·자격요건)에 반영돼요.
                         <br>샘플을 다시 불러와도 <b>설정값은 참여자 명단처럼 그대로 따라옵니다.</b>
                     </div>
                 </div>
@@ -239,52 +241,21 @@
                     현재 내용에서 설정 영역을 찾지 못했어요.<br>
                     먼저 <b>1열 / 2열 샘플</b>을 불러온 뒤 다시 시도해 주세요.
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
-                <button type="button" class="btn btn-primary btn-settings-apply">
-                    <i class="ti ti-check me-1"></i> 설정 적용
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
-{{-- 참여자 명단 편집 모달 --}}
-<div class="modal modal-blur fade" id="detailRosterModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="ti ti-users-group me-1"></i> 참여자 명단 편집
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
+                <hr class="my-4">
+
+                {{-- ===== 참여자 명단 편집 섹션 (설정과 한 모달로 통합) ===== --}}
+                <h3 class="mb-2 d-flex align-items-center gap-2">
+                    <i class="ti ti-users-group text-pink"></i> 참여자 명단 편집
+                    <span class="text-secondary fs-4 fw-normal">— 행사별 남/녀 명단</span>
+                </h3>
                 <div class="alert alert-info mb-3">
                     <div class="text-secondary">
                         표에 <b>키 · 직업 · 나이</b>만 입력하면 됩니다. <b>번호(N호)와 상단 인원수(남/여)</b>는 자동으로 매겨져요.
-                        HTML 을 직접 건드릴 필요 없이, 아래에서 행을 추가/삭제한 뒤 <b>[명단 적용]</b> 을 누르세요.
+                        부족한 쪽은 <b>모집중 추가</b> 버튼으로 "모집중" 자리를 직접 끼워 넣으세요.
                     </div>
                 </div>
 
-                {{-- 성비 자동 맞춤 토글 --}}
-                <div class="card mb-3">
-                    <div class="card-body py-2 d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <label class="form-check form-switch mb-0">
-                            <input class="form-check-input" type="checkbox" id="rosterBalanceToggle" checked>
-                            <span class="form-check-label fw-bold">
-                                성비 자동 맞춤
-                                <span class="text-secondary fw-normal">— 부족한 쪽을 "모집중" 자리로 채워 N:N 으로 보이게</span>
-                            </span>
-                        </label>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="text-secondary small">표시 문구</span>
-                            <input type="text" class="form-control form-control-sm" id="rosterRecruitLabel"
-                                   style="width:120px;" value="모집중" maxlength="10">
-                        </div>
-                    </div>
-                </div>
                 {{-- 행사 카드별 편집 영역이 여기에 동적으로 렌더링됨 --}}
                 <div id="rosterEditorBody"></div>
                 {{-- 명단 영역을 못 찾았을 때 안내 --}}
@@ -296,8 +267,8 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
-                <button type="button" class="btn btn-primary btn-roster-apply">
-                    <i class="ti ti-check me-1"></i> 명단 적용
+                <button type="button" class="btn btn-primary btn-settings-apply">
+                    <i class="ti ti-check me-1"></i> 적용 (설정 · 명단)
                 </button>
             </div>
         </div>
@@ -846,22 +817,8 @@
          * - [명단 적용] 시 입력값으로 그 요소를 통째로 재생성해 되돌려 넣는다.
          * - 번호(N호)와 상단 인원수(남/여)는 행 수로 자동 계산된다.
          * - 요소(data 속성) 기준이라 에디터가 주석 마커를 지워도 안전하게 동작한다.
+         * - 명단 편집 UI 는 '페이지 설정' 모달 안에 통합되어 있다.
          * =================================================================== */
-        var rosterModal = null;
-
-        function getRosterModal(){
-            if (rosterModal) { return rosterModal; }
-            var el = document.getElementById('detailRosterModal');
-            var ModalClass =
-                (window.tabler && window.tabler.Modal) ||
-                (window.tabler && window.tabler.bootstrap && window.tabler.bootstrap.Modal) ||
-                (window.bootstrap && window.bootstrap.Modal) ||
-                (window.coreui && window.coreui.Modal) ||
-                window.Modal;
-            if(!ModalClass){ console.error('Modal 클래스를 찾을 수 없습니다.'); return null; }
-            rosterModal = new ModalClass(el);
-            return rosterModal;
-        }
 
         // HTML 전체를 분리된 DOM 으로 파싱해, 명단 그리드 요소([data-roster-grid])를 찾는다.
         // 주석 마커가 아니라 DOM 요소 기준이라, 에디터가 주석을 지워도 안전하게 동작한다.
@@ -929,7 +886,7 @@
             var cellInfoSize  = c.cellInfoSize  || '26px';
             var cellHeight    = c.cellHeight    || '108px';
             var cellPadding   = c.cellPadding   || '10px';
-            var balance       = c.balance !== false; // 기본 ON
+            var balance       = c.balance === true; // 성비 자동 맞춤 제거됨: 기본 OFF
             var recruitLabel  = (c.recruitLabel && String(c.recruitLabel).trim()) || '모집중';
 
             function esc(s){
@@ -1134,8 +1091,8 @@
 
         var rosterBaseConfig = {};
 
-        // '참여자 명단 편집' 열기
-        $('.btn-open-roster').on('click', function(){
+        // 명단 편집 섹션을 현재 에디터 HTML 기준으로 채운다. (통합 모달이 열릴 때 호출)
+        function populateRosterEditor(){
             var loc  = locateRosterGrid(getHtml());
             var data = loc ? parseRoster(loc.grid) : null;
 
@@ -1145,15 +1102,10 @@
             } else {
                 $('#rosterEditorEmpty').hide();
                 rosterBaseConfig = data.config || {};
-                // 성비 자동 맞춤 토글/문구를 config 값으로 초기화 (기본 ON, '모집중')
-                $('#rosterBalanceToggle').prop('checked', rosterBaseConfig.balance !== false);
-                $('#rosterRecruitLabel').val(rosterBaseConfig.recruitLabel || '모집중');
                 renderRosterEditor(data);
                 renumberRoster();
             }
-            var m = getRosterModal();
-            if (m) { m.show(); }
-        });
+        }
 
         // 행 추가/삭제 (이벤트 위임)
         $('#rosterEditorBody').on('click', '.roster-add', function(){
@@ -1171,29 +1123,23 @@
             renumberRoster($card);
         });
 
-        // [명단 적용] → 그리드 재생성해 에디터에 반영
-        $('.btn-roster-apply').on('click', async function(){
-            var loc = locateRosterGrid(getHtml());
-            if (!loc) {
-                await salert({text: '명단 영역을 찾지 못했습니다. 샘플을 먼저 불러와 주세요.', cancel: false});
-                return;
-            }
-            // 성비 자동 맞춤 토글/문구를 config 에 반영한다.
+        // 명단 편집 섹션 → 현재 HTML 의 그리드를 재생성해 반영한 새 HTML 을 돌려준다.
+        // 명단 영역이 없으면 입력 HTML 을 그대로 반환한다. (설정만 바꾸는 경우 안전)
+        function applyRosterToHtml(html){
+            var loc = locateRosterGrid(html);
+            if (!loc) { return html; }
+            // 성비 자동 맞춤은 제거됨: 자동 채움 없이 명단 그대로 반영한다.
+            // (부족한 쪽은 '모집중 추가' 버튼으로 직접 끼워 넣는다.)
             var cfg = Object.assign({}, rosterBaseConfig, {
-                balance:      $('#rosterBalanceToggle').is(':checked'),
-                recruitLabel: ($('#rosterRecruitLabel').val() || '모집중').trim() || '모집중'
+                balance:      false,
+                recruitLabel: (rosterBaseConfig.recruitLabel || '모집중').trim() || '모집중'
             });
             var data    = collectRoster(cfg);
             var newGrid = buildRosterGrid(data);
             // 분리된 DOM 에서 기존 그리드 요소를 새 그리드로 교체한 뒤 전체 HTML 직렬화.
             loc.grid.replaceWith(newGrid);
-            // 명단을 바꾼 지금 시각으로 '마지막 업데이트' 문구도 최신화한다.
-            setHtml(applyUpdatedAtToSample(loc.root.html()));
-
-            var m = getRosterModal();
-            if (m) { m.hide(); }
-            await salert({text: '명단을 반영했어요. 내용을 확인한 뒤 [저장]을 눌러 주세요.', cancel: false});
-        });
+            return loc.root.html();
+        }
 
         // 유형 전환: 현재 작업 내용을 활성 유형에 보관하고, 대상 유형 저장본을 에디터에 로드
         $('input[name="sampleType"]').on('change', function(){
@@ -1455,7 +1401,7 @@
         $('#settingMaleAgeMin, #settingMaleAgeMax, #settingFemaleAgeMin, #settingFemaleAgeMax')
             .on('input', updateAgePreview);
 
-        // '페이지 설정' 열기 — 현재 에디터의 설정을 읽어 폼에 채운다.
+        // '페이지 설정 · 명단 편집' 열기 — 현재 에디터의 설정/명단을 읽어 폼·표에 채운다.
         // 캐리어가 없어도(최초 접근·예전 저장본 등) 화면에 보이는 값(참여조건/자격요건)에서 복원해 채운다.
         $('.btn-open-settings').on('click', function(){
             var html = getHtml();
@@ -1469,24 +1415,28 @@
                 var $root = $('<div></div>').html(html);
                 fillSettingsForm(readSettingsFromDom($root));
             }
+            // 명단 편집 섹션도 같은 모달 안에서 함께 채운다.
+            populateRosterEditor();
             var m = getSettingsModal();
             if (m) { m.show(); }
         });
 
-        // [설정 적용] → 마커 지점 값을 갈아끼워 에디터에 반영 (캐리어 없으면 생성)
+        // [적용] → 페이지 설정 + 참여자 명단을 한 번의 HTML 갱신으로 반영한다.
         $('.btn-settings-apply').on('click', async function(){
             var html = getHtml();
             if (!html || !html.trim()) {
                 await salert({text: '먼저 샘플을 불러오거나 내용을 작성해 주세요.', cancel: false});
                 return;
             }
-            var s = collectSettingsForm();
-            // 설정을 바꾼 지금 시각으로 '마지막 업데이트' 문구도 최신화한다.
-            setHtml(applyUpdatedAtToSample(applySettingsToHtml(html, s)));
+            // 1) 설정 반영 → 2) 그 결과 HTML 에 명단 반영 → 3) 업데이트 시각 갱신.
+            var s      = collectSettingsForm();
+            var withS  = applySettingsToHtml(html, s);
+            var withSR = applyRosterToHtml(withS);
+            setHtml(applyUpdatedAtToSample(withSR));
 
             var m = getSettingsModal();
             if (m) { m.hide(); }
-            await salert({text: '설정을 반영했어요. 내용을 확인한 뒤 [저장]을 눌러 주세요.', cancel: false});
+            await salert({text: '설정과 명단을 반영했어요. 내용을 확인한 뒤 [저장]을 눌러 주세요.', cancel: false});
         });
 
         // 샘플 HTML 에 "현재 에디터의 설정값"을 이식해서 돌려준다. (참여자 명단과 동일 원리)

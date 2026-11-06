@@ -257,7 +257,9 @@
     @endif
 
     {{-- 실시간 명단 업데이트 + 멀티 플랫폼 모집 안내 (마케팅 강조) --}}
-    <div style="background:#ede9fe; border:3px solid #a78bfa; border-radius:16px; padding:24px 18px; margin-bottom:40px; text-align:center;">
+    {{-- data-section="roster-intro": 이미지 분할 다운로드에서 "2장(참가자 명단)"의 시작점.
+         이 블록부터 명단 그리드까지가 한 장(참가자 명단)으로 묶인다. --}}
+    <div data-section="roster-intro" style="background:#ede9fe; border:3px solid #a78bfa; border-radius:16px; padding:24px 18px; margin-bottom:40px; text-align:center;">
         <div style="display:inline-block; background:#7c3aed; color:#ffffff; border-radius:999px; padding:6px 22px; font-size:26px; font-weight:900; margin-bottom:14px;">⚡ LIVE 모집 중</div>
         <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; color:#6d28d9; letter-spacing:0.5px; line-height:1.3;">명단이 적어 보여도 걱정 마세요!</div>
         <div style="font-size:30px; color:#5b21b6; margin-top:14px; line-height:1.7; word-break:keep-all;">

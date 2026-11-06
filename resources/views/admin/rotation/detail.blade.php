@@ -107,7 +107,10 @@
                         </button>
                         <div class="dropdown-menu dropdown-menu-end">
                             <button type="button" class="dropdown-item btn-detail-download">
-                                <i class="ti ti-download me-2 fs-2"></i> 이미지 다운로드 <span class="text-secondary small ms-1">(여러 장·고화질)</span>
+                                <i class="ti ti-download me-2 fs-2"></i> 이미지 다운로드 <span class="text-secondary small ms-1">(전체·최대 5장)</span>
+                            </button>
+                            <button type="button" class="dropdown-item btn-detail-download-page" data-page-only="참가자명단">
+                                <i class="ti ti-user-heart me-2 fs-2"></i> 참가자 명단만 <span class="text-secondary small ms-1">(2번 장)</span>
                             </button>
                             <button type="button" class="dropdown-item btn-open-feed">
                                 <i class="ti ti-photo-down me-2 fs-2"></i> 피드 이미지 다운
@@ -481,11 +484,11 @@
         /* =====================================================================
          * 공통 이미지 저장 유틸 — "화질 최우선 + 10MB 상한 엄수"
          * - 무손실 PNG 를 우선한다. (글자/단색 배경이 가장 선명)
-         * - PNG 가 10MB 를 넘으면 JPEG 로 품질을 떨어뜨리는 대신, 해상도만 완만히(0.92배씩)
-         *   줄여 10MB 이하가 되는 가장 큰 PNG 를 저장한다. (텍스트 뭉개짐 없이 선명 유지)
+         * - PNG 가 10MB 를 넘으면 해상도만 완만히(0.92배씩) 줄여 10MB 이하가 되는
+         *   가장 큰 PNG 를 저장한다. (텍스트 뭉개짐 없이 선명 유지)
          * - 아주 극단적으로 못 맞추는 경우에만 최후수단으로 고품질 JPEG 로 저장한다.
          * =================================================================== */
-        var EXPORT_MAX_BYTES = 45 * 1024 * 1024; // 45MB (화질 최우선 — 원본 PNG 를 최대한 그대로 저장)
+        var EXPORT_MAX_BYTES = 10 * 1024 * 1024; // 10MB 상한 (분할 다운로드 시 장당 과용량 방지)
 
         // 이미지 생성 로딩 오버레이 제어 (드롭다운 닫힘과 무관하게 항상 보인다)
         function showExportOverlay(text){
@@ -623,7 +626,7 @@
                 if (cur.width <= 300) { break; }
             }
 
-            await salert({text: '이미지를 20MB 이하로 저장하지 못했습니다. 내용을 줄인 뒤 다시 시도해주세요.', cancel: false});
+            await salert({text: '이미지를 10MB 이하로 저장하지 못했습니다. 내용을 줄인 뒤 다시 시도해주세요.', cancel: false});
         }
 
         // 다운로드 파일명 베이스를 만든다. (현재 저장본 제목 + 유형을 포함)
@@ -1872,6 +1875,72 @@
             return pages;
         }
 
+        /* ---------------------------------------------------------------
+         * 고정 5장 레이아웃 (방안 A — 장 번호를 "의미 기준"으로 고정)
+         *  - 1장: 메인 이미지 ~ "참가자 명단 인트로" 직전까지(상단 인트로/배너).
+         *  - 2장: "명단이 적어 보여도~" 인트로(data-section="roster-intro") ~ 참가자 명단 그리드까지.
+         *         → 자주 교체하는 장. 인트로 블록이 없으면 명단 그리드만으로 2장 구성.
+         *  - 3~5장: 명단 이후 나머지 블록을 높이 기준으로 최대 3장 분배.
+         *  → 내용이 바뀌어도 "2장 = 항상 (명단 인트로 ~) 참가자 명단"이라 특정 번호만 교체가 안전하다.
+         *  - 명단 블록을 못 찾으면(커스텀 HTML 등) 전체를 높이 기준 5장으로 폴백.
+         * 반환: { pages: 블록배열의 배열, labels: 각 장 라벨 }
+         * ------------------------------------------------------------- */
+        function buildFixedPages(blocks){
+            // 참가자 명단(프로필) 블록의 인덱스 — 자신 또는 자손에 data-roster-grid 가 있는 최상위 블록.
+            var rosterIdx = -1;
+            for (var i = 0; i < blocks.length; i++) {
+                var el = blocks[i];
+                if (el.matches && (el.matches('[data-roster-grid]') || el.querySelector('[data-roster-grid]'))) {
+                    rosterIdx = i;
+                    break;
+                }
+            }
+
+            // 명단을 못 찾으면: 기존 높이 기준 5장 폴백.
+            if (rosterIdx < 0) {
+                var fb = groupBlocksByHeight(blocks, 1080 * 2.2, 5);
+                return { pages: fb, labels: fb.map(function(_, k){ return '상세페이지'; }) };
+            }
+
+            // 2장 시작점: "명단 인트로"(data-section="roster-intro") 블록. 없으면 명단 그리드 자체.
+            //  - 인트로가 명단보다 앞에 있을 때만 유효(그 사이 블록도 2장에 포함).
+            // 2장 시작점 탐색: 명단보다 앞에 있는 블록 중 "명단 인트로"를 찾는다.
+            //  우선순위: ① data-section="roster-intro" 마커(신규 샘플)
+            //           ② data-updated-at 마커(LIVE 모집 블록 안에만 있음 — 구 저장본 호환)
+            //           ③ "명단이 적어" 문구 포함 블록(최후 폴백)
+            //  아무것도 없으면 introStart = rosterIdx (명단 그리드만 2장).
+            var introStart = rosterIdx;
+            for (var j = 0; j < rosterIdx; j++) {
+                var b = blocks[j];
+                var isIntro =
+                    (b.matches && b.matches('[data-section="roster-intro"]')) ||
+                    (b.querySelector && b.querySelector('[data-section="roster-intro"]')) ||
+                    (b.querySelector && b.querySelector('[data-updated-at]')) ||
+                    (/명단이\s*적어/.test(b.textContent || ''));
+                if (isIntro) { introStart = j; break; }
+            }
+
+            var pages = [];
+            var labels = [];
+
+            // 1장: 2장 시작점 직전까지(상단 인트로/메인 이미지).
+            var intro = blocks.slice(0, introStart);
+            if (intro.length) { pages.push(intro); labels.push('메인'); }
+
+            // 2장: (명단 인트로 ~) 참가자 명단 그리드까지.
+            pages.push(blocks.slice(introStart, rosterIdx + 1)); labels.push('참가자명단');
+
+            // 3~5장: 명단 이후 나머지를 높이 기준으로 (남은 장수만큼) 분배.
+            var rest = blocks.slice(rosterIdx + 1);
+            if (rest.length) {
+                var remainSlots = Math.max(1, 5 - pages.length); // 남은 허용 장수(보통 3)
+                var restPages = groupBlocksByHeight(rest, 1080 * 2.2, remainSlots);
+                restPages.forEach(function(p){ pages.push(p); labels.push('안내'); });
+            }
+
+            return { pages: pages, labels: labels };
+        }
+
         // 실제 "블록들"이 들어있는 콘텐츠 컨테이너를 찾는다.
         //  - 상세페이지 HTML 은 보통 바깥 wrapper div 하나(폰트/색 상속) 안에 섹션들이 들어있다.
         //  - 블록 자식이 1개뿐인 wrapper 는 계속 더 안으로 내려가며, 블록이 여러 개인 곳을 컨테이너로 본다.
@@ -1893,7 +1962,8 @@
             return { container: node, wrapperChain: chain };
         }
 
-        $('.btn-detail-download').on('click', async function(){
+        // onlyPage: 특정 장만 저장. 숫자(1-base) 또는 라벨 문자열('참가자명단' 등). 비우면 전체.
+        async function runDetailDownload(onlyPage){
             if (typeof modernScreenshot === 'undefined') {
                 await salert({text: '이미지 변환 모듈을 불러오지 못했습니다. 페이지를 새로고침해주세요.', cancel: false});
                 return;
@@ -1940,21 +2010,38 @@
                     return c.tagName !== 'STYLE' && c.tagName !== 'SCRIPT';
                 });
 
-                // 목표 페이지 높이 — 폭(1080)의 약 2.2배. 이 정도면 4배 캡처해도 캔버스 한계에 안 걸린다.
-                //  - 단, 최대 5장을 넘지 않도록 제한한다. (넘치면 목표 높이를 자동으로 키워 장수를 줄임)
-                var TARGET_PAGE_H = 1080 * 2.2;
-                var MAX_PAGES = 5;
-                var pages = groupBlocksByHeight(blocks, TARGET_PAGE_H, MAX_PAGES);
+                // 고정 5장 레이아웃: 1=메인, 2=참가자명단, 3~5=나머지(안내).
+                var built  = buildFixedPages(blocks);
+                var pages  = built.pages;
+                var labels = built.labels;
                 if (!pages.length) {
                     await salert({text: '분할할 내용이 없습니다.', cancel: false});
                     return;
+                }
+
+                // onlyPage 가 라벨 문자열이면 해당 라벨의 장 번호로 변환. (숫자면 그대로)
+                var onlyPageNo = null;
+                if (onlyPage != null && onlyPage !== '') {
+                    if (typeof onlyPage === 'number') {
+                        onlyPageNo = onlyPage;
+                    } else {
+                        var idx = labels.indexOf(String(onlyPage));
+                        onlyPageNo = idx >= 0 ? (idx + 1) : NaN;
+                    }
+                    if (isNaN(onlyPageNo) || onlyPageNo < 1 || onlyPageNo > pages.length) {
+                        await salert({text: '해당 장을 찾지 못했습니다. (현재 ' + pages.length + '장)', cancel: false});
+                        return;
+                    }
                 }
 
                 var baseName = buildDownloadBaseName('rotable_상세페이지');
 
                 // 각 페이지 그룹의 블록들을, "바깥 wrapper(폰트/색 상속)를 그대로 복제한" 구조 안에 넣어 캡처한다.
                 for (var i = 0; i < pages.length; i++) {
-                    showExportOverlay('이미지 생성 중… (' + (i + 1) + '/' + pages.length + ')');
+                    var pageNo = i + 1;
+                    if (onlyPageNo && pageNo !== onlyPageNo) { continue; } // 특정 장만 모드면 건너뜀
+
+                    showExportOverlay('이미지 생성 중… (' + pageNo + '/' + pages.length + ')');
                     await new Promise(function(r){ setTimeout(r, 20); });
 
                     var pageHolder = document.createElement('div');
@@ -1975,12 +2062,27 @@
                     });
                     pages[i].forEach(function(el){ innermost.appendChild(el.cloneNode(true)); });
 
-                    // 하단 여백 스페이서(미리보기/1장 다운로드와 동일) — 가장 바깥에 붙인다.
+                    // 하단 여백 스페이서 — 최소한의 안전 여백만. (너무 크면 장 사이가 떠 보임)
                     var spacer = document.createElement('div');
                     spacer.setAttribute('data-capture-spacer', '1');
-                    spacer.style.cssText = 'width:100%; height:48px; background:#ffffff;';
+                    spacer.style.cssText = 'width:100%; height:12px; background:#ffffff;';
                     pageHolder.appendChild(spacer);
                     document.body.appendChild(pageHolder);
+
+                    // (DOM 삽입 후) 장 상·하단 빈 공간 축소 — 구분마다 여백이 커 보이는 문제 해소.
+                    //  - "보이는" 첫 블록의 위 마진 / 마지막 블록의 아래 마진을 0 으로.
+                    //  - 숨은 요소(설정 캐리어 등 display:none)는 제외해야 실제 첫/끝 블록을 잡는다.
+                    //  - getComputedStyle 은 DOM 삽입 이후라야 정확하므로 여기서 처리한다.
+                    var kids = Array.prototype.filter.call(innermost.children, function(c){
+                        if (c.tagName === 'STYLE' || c.tagName === 'SCRIPT') { return false; }
+                        var cs = window.getComputedStyle(c);
+                        if (cs.display === 'none' || cs.visibility === 'hidden') { return false; }
+                        return true;
+                    });
+                    if (kids.length) {
+                        kids[0].style.marginTop = '0';
+                        kids[kids.length - 1].style.marginBottom = '0';
+                    }
 
                     try {
                         var capW = pageHolder.offsetWidth || 1080;
@@ -1996,8 +2098,14 @@
                         });
 
                         // 파일명: 여러 장이면 _1, _2 … suffix. (한 장이면 suffix 없이)
-                        var suffix = pages.length > 1 ? ('_' + (i + 1)) : '';
-                        await exportCanvasUnder10MB(canvas, baseName + suffix);
+                        // 파일명: 여러 장이면 순서 번호를 "앞에" 붙인다(1_, 2_ …). 한 장이면 접두 없음.
+                        // 파일명: "번호_라벨_기본이름" (예: 2_참가자명단_rotable_상세페이지_...).
+                        //  - 번호를 앞에 붙여 정렬 순서를 보장하고, 라벨로 어떤 장인지 식별.
+                        var label = labels[i] || '상세페이지';
+                        var fileName = (pages.length > 1 || onlyPageNo)
+                            ? (pageNo + '_' + label + '_' + baseName)
+                            : baseName;
+                        await exportCanvasUnder10MB(canvas, fileName);
                     } finally {
                         document.body.removeChild(pageHolder);
                     }
@@ -2007,6 +2115,15 @@
             } finally {
                 hideExportOverlay();
             }
+        }
+
+        // 전체 다운로드(드롭다운/미리보기 버튼) — 5장 모두.
+        $('.btn-detail-download').on('click', function(){ runDetailDownload(null); });
+        // 특정 장만 다운로드 — data-page-only 가 숫자면 그 번호, 문자열이면 그 라벨의 장.
+        $('.btn-detail-download-page').on('click', function(){
+            var raw = $(this).attr('data-page-only');
+            var num = parseInt(raw, 10);
+            runDetailDownload((raw != null && String(num) === String(raw)) ? num : raw);
         });
 
         /* =====================================================================

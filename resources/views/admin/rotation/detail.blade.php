@@ -190,51 +190,15 @@
                 </h3>
                 <div class="alert alert-info mb-3">
                     <div class="text-secondary">
-                        <b>남/녀 나이 · 남/녀 키</b>를 입력하면
-                        상세페이지의 해당 부분(참여 조건·자격요건)에 반영돼요.
-                        <br>샘플을 다시 불러와도 <b>설정값은 참여자 명단처럼 그대로 따라옵니다.</b>
+                        각 <b>행사별로 남/녀 나이 · 남/녀 키</b>를 따로 입력할 수 있어요.
+                        (아래 <b>참여자 명단</b>의 행사 카드와 1:1로 대응돼요.)
+                        <br>나이(세)를 넣으면 <b>자동으로 "OO~OO년생"</b> 으로 환산돼 참여 조건에 표기되고,
+                        샘플을 다시 불러와도 <b>설정값은 그대로 따라옵니다.</b>
                     </div>
                 </div>
 
-                <div id="settingsFormBody">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">남성 나이 (최소 ~ 최대)</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="settingMaleAgeMin" placeholder="최소" min="19" max="99">
-                                <span class="input-group-text">~</span>
-                                <input type="number" class="form-control" id="settingMaleAgeMax" placeholder="최대" min="19" max="99">
-                                <span class="input-group-text">세</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">여성 나이 (최소 ~ 최대)</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="settingFemaleAgeMin" placeholder="최소" min="19" max="99">
-                                <span class="input-group-text">~</span>
-                                <input type="number" class="form-control" id="settingFemaleAgeMax" placeholder="최대" min="19" max="99">
-                                <span class="input-group-text">세</span>
-                            </div>
-                        </div>
-                    </div>
-                    <small class="form-hint text-muted d-block mt-1 mb-3">
-                        나이(세)를 입력하면 <b>자동으로 "OO~OO년생"</b> 으로 환산돼 참여 조건에 "남성 OOO / 여성 OOO" 로 표기돼요.
-                        <span id="settingAgePreview" class="text-azure fw-bold"></span>
-                    </small>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">남성 키 (최소 신장)</label>
-                            <input type="text" class="form-control" id="settingMaleHeight" placeholder="예: 175cm">
-                            <small class="form-hint text-muted">남성 참가 자격요건에 "신장 OOO 이상" 으로 표기돼요.</small>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">여성 키 (최소 신장)</label>
-                            <input type="text" class="form-control" id="settingFemaleHeight" placeholder="미입력 시 표기 안 함">
-                            <small class="form-hint text-muted">입력하면 여성 참가 자격요건에 "신장 OOO 이상" 이 추가돼요. (비우면 미표기)</small>
-                        </div>
-                    </div>
-                </div>
+                {{-- 행사 카드별 설정(나이/키) 입력 영역 — JS 가 행사 수에 맞춰 렌더링 --}}
+                <div id="settingsEventsBody"></div>
 
                 <div id="settingsEmpty" class="text-center text-secondary py-5" style="display:none;">
                     <i class="ti ti-alert-triangle fs-1 d-block mb-2"></i>
@@ -1190,17 +1154,56 @@
         }
 
         /* =====================================================================
-         * 페이지 설정 (남/녀 나이 · 남/녀 키)
-         * - 에디터 HTML 안의 data-detail-settings(JSON) 로 현재 설정을 읽고,
-         *   data-setting="키" 로 마킹된 노출 지점의 값을 갈아끼운다.
+         * 페이지 설정 (행사별 남/녀 나이 · 남/녀 키) — 방안 B
+         * - 에디터 HTML 안의 data-detail-settings(JSON = {events:[...]}) 로 현재 설정을 읽고,
+         *   data-setting-block="age|maleHeight|femaleHeight" 컨테이너를 행사 수에 맞춰 다시 그린다.
+         * - 2열(행사 2개)이면 각 블록에 행사별 한 줄씩 노출("N회 · " 라벨).
+         * - 구버전 flat 캐리어는 events[0] 로 승격(하위호환).
          * - 참여자 명단과 동일하게 "요소/data 속성 기준"이라 주석이 지워져도 안전.
          * - 샘플을 다시 불러와도 현재 설정이 그대로 따라오게 한다. (applyCurrentSettingsToSample)
          * =================================================================== */
         var settingsModal = null;
-        // 설정 키 목록과 기본값. (data-detail-settings 가 없을 때의 폴백)
+        // 한 행사(event)의 설정 키 목록과 기본값. (data-detail-settings 가 없을 때의 폴백)
         // 나이는 숫자(세) 최소/최대로 보관하고, 표기용 년생 텍스트(maleAgeText/femaleAgeText)는 파생값이다.
-        var SETTING_KEYS = ['maleAgeMin', 'maleAgeMax', 'femaleAgeMin', 'femaleAgeMax',
-                            'maleAgeText', 'femaleAgeText', 'maleHeight', 'femaleHeight'];
+        var SETTING_EVENT_KEYS = ['maleAgeMin', 'maleAgeMax', 'femaleAgeMin', 'femaleAgeMax',
+                                  'maleAgeText', 'femaleAgeText', 'maleHeight', 'femaleHeight'];
+
+        // 남성 키 기본값 — 빈 값이면 항상 이 값으로 보이게 한다. (요구사항: 디폴트 173cm)
+        var DEFAULT_MALE_HEIGHT = '173cm';
+
+        // 한 행사 설정 객체의 누락 키를 빈 문자열로 채운다.
+        //  - 단, 남성 키(maleHeight)는 비면 기본값(173cm)으로 채워 "항상 노출"되게 한다.
+        function normalizeEventSetting(e){
+            var s = (e && typeof e === 'object') ? Object.assign({}, e) : {};
+            SETTING_EVENT_KEYS.forEach(function(k){ if (s[k] == null) { s[k] = ''; } });
+            if (String(s.maleHeight || '').trim() === '') { s.maleHeight = DEFAULT_MALE_HEIGHT; }
+            return s;
+        }
+
+        // 임의의 설정 객체를 "행사 배열({events:[...]})" 형태로 표준화한다.
+        //  - 신버전: { events:[ {...}, {...} ] } 그대로.
+        //  - 구버전(flat): { maleAgeMin, ... } → events:[그 객체] 로 승격(하위호환).
+        //  - 그 외/비어있음: events:[] (호출부에서 행사 수에 맞춰 채움).
+        function toEventsModel(raw){
+            var obj = (raw && typeof raw === 'object') ? raw : {};
+            if (Array.isArray(obj.events)) {
+                return { events: obj.events.map(normalizeEventSetting) };
+            }
+            // flat 구버전: 나이/키 키가 하나라도 있으면 단일 행사로 승격.
+            var hasFlat = SETTING_EVENT_KEYS.some(function(k){ return obj[k] != null && obj[k] !== ''; });
+            if (hasFlat) { return { events: [normalizeEventSetting(obj)] }; }
+            return { events: [] };
+        }
+
+        // 행사 수(count)에 맞춰 events 배열 길이를 맞춘다. (부족하면 첫 설정 복제, 없으면 빈 설정)
+        function fitEventsToCount(model, count){
+            var evs = (model && Array.isArray(model.events)) ? model.events.slice() : [];
+            count = Math.max(1, count || 1);
+            var base = evs.length ? normalizeEventSetting(evs[0]) : normalizeEventSetting({});
+            while (evs.length < count) { evs.push(Object.assign({}, base)); }
+            if (evs.length > count) { evs = evs.slice(0, count); }
+            return { events: evs.map(normalizeEventSetting) };
+        }
 
         // 한국식 나이(세) → 출생연도 뒤 2자리. (Blade $yy 와 동일: 올해 - 나이 + 1)
         var SETTINGS_THIS_YEAR = {{ (int) now()->year }};
@@ -1246,47 +1249,56 @@
             return { min: String(Math.min(a, b)), max: String(Math.max(a, b)) };
         }
 
-        // 캐리어가 없거나 숫자 나이가 비었을 때, 화면에 보이는 마커(data-setting)에서 설정을 복원한다.
-        //  - 최초 접근 시 에디터가 캐리어를 지웠어도, 참여 조건/자격요건에 "보이는 값"으로 폼을 채운다.
-        //  - 입력: 분리된 DOM($root). 출력: 폼 채우기용 설정 객체.
+        // 캐리어/화면에서 "행사 배열 설정"을 복원한다.
+        //  - 1순위: data-detail-settings 캐리어(JSON) → toEventsModel 로 표준화(구버전 flat 자동 승격).
+        //  - 2순위(캐리어 없음/비었음): 화면의 행사별 블록(data-setting-block)에서 보이는 값으로 복원.
+        //  - 입력: 분리된 DOM($root). 출력: { events:[ {...}, ... ] }
         function readSettingsFromDom($root){
-            var s = {};
-            // 1) 캐리어가 있으면 우선 사용.
+            // 1) 캐리어 우선
+            var raw = {};
             var $carrier = $root.find('[data-detail-settings]').first();
             if ($carrier.length) {
-                try { s = JSON.parse($carrier.attr('data-detail-settings') || '{}'); } catch(e){ s = {}; }
+                try { raw = JSON.parse($carrier.attr('data-detail-settings') || '{}'); } catch(e){ raw = {}; }
             }
+            var model = toEventsModel(raw);
+            if (model.events.length) { return model; }
 
-            // 2) 숫자 나이(min/max)가 비어 있으면 참여 조건 라인에서 역산해 채운다.
-            var needAges = (s.maleAgeMin == null || s.maleAgeMin === '')
-                        || (s.femaleAgeMin == null || s.femaleAgeMin === '');
-            if (needAges) {
-                var line = $root.find('[data-setting="ageConditionLine"]').first().text() || '';
-                // "남성 88~02년생 / 여성 88~02년생" → 남/녀 구간 분리
-                var parts = line.split('/');
-                var maleSeg   = parts[0] || '';
-                var femaleSeg = parts[1] || '';
-                var ma = settingAgesFromText(maleSeg);
-                var fa = settingAgesFromText(femaleSeg);
-                if (s.maleAgeMin == null || s.maleAgeMin === '')   { s.maleAgeMin = ma.min; }
-                if (s.maleAgeMax == null || s.maleAgeMax === '')   { s.maleAgeMax = ma.max; }
-                if (s.femaleAgeMin == null || s.femaleAgeMin === ''){ s.femaleAgeMin = fa.min; }
-                if (s.femaleAgeMax == null || s.femaleAgeMax === ''){ s.femaleAgeMax = fa.max; }
-            }
-
-            // 3) 키(신장)도 비어 있으면 마커 텍스트("175cm 이상")에서 숫자/단위만 뽑아 채운다.
-            var stripHeight = function(t){
-                return String(t || '').replace(/\s*이상\s*$/, '').trim();
+            // 2) 캐리어가 없거나 비었으면 화면 블록에서 복원.
+            //    나이 블록의 각 줄(행사 1줄씩)을 파싱해 행사 수를 추정한다.
+            var evs = [];
+            // 줄 앞의 "- " 와 "행사명 · " 라벨(있으면)을 떼어 실제 값만 남긴다.
+            //  - 멀티 행사일 때만 "행사명 · " 접두가 붙으므로, 첫 " · " 앞부분을 라벨로 보고 제거.
+            var stripPrefix = function(t){
+                var s = String(t || '').replace(/^\s*-\s*/, '');
+                var idx = s.indexOf(' · ');
+                if (idx >= 0) { s = s.slice(idx + 3); }
+                return s.trim();
             };
-            if (s.maleHeight == null || s.maleHeight === '') {
-                s.maleHeight = stripHeight($root.find('[data-setting="maleHeight"]').first().text());
-            }
-            if (s.femaleHeight == null || s.femaleHeight === '') {
-                s.femaleHeight = stripHeight($root.find('[data-setting="femaleHeight"]').first().text());
-            }
+            var $ageBlock = $root.find('[data-setting-block="age"]').first();
+            var $ageLines = $ageBlock.children('div');
+            var $maleBlock = $root.find('[data-setting-block="maleHeight"]').first();
+            var $femaleBlock = $root.find('[data-setting-block="femaleHeight"]').first();
+            var stripHeight = function(t){
+                return stripPrefix(t).replace(/^\s*신장\s*/, '').replace(/\s*이상\s*$/, '').trim();
+            };
+            var maleHeights = $maleBlock.children('div').map(function(){ return stripHeight($(this).text()); }).get();
+            var femaleHeights = $femaleBlock.children('div').map(function(){ return stripHeight($(this).text()); }).get();
 
-            SETTING_KEYS.forEach(function(k){ if (s[k] == null) { s[k] = ''; } });
-            return s;
+            $ageLines.each(function(i){
+                var line = stripPrefix($(this).text());  // "남성 88~02년생 / 여성 88~02년생"
+                var parts = line.split('/');
+                var ma = settingAgesFromText(parts[0] || '');
+                var fa = settingAgesFromText(parts[1] || '');
+                evs.push(normalizeEventSetting({
+                    maleAgeMin: ma.min, maleAgeMax: ma.max,
+                    femaleAgeMin: fa.min, femaleAgeMax: fa.max,
+                    maleHeight:  maleHeights[i] || '',
+                    femaleHeight: femaleHeights[i] || ''
+                }));
+            });
+
+            if (!evs.length) { evs.push(normalizeEventSetting({})); }
+            return { events: evs };
         }
 
         function getSettingsModal(){
@@ -1312,94 +1324,198 @@
             return { root: $root, carrier: $carrier };
         }
 
-        // 캐리어의 data-detail-settings(JSON) → 설정 객체. 누락 키는 빈 문자열로 채운다.
+        // 캐리어의 data-detail-settings(JSON) → 행사 배열 설정 모델로 표준화.
         function parseSettings($carrier){
-            var s = {};
-            try { s = JSON.parse($carrier.attr('data-detail-settings') || '{}'); } catch(e){ s = {}; }
-            SETTING_KEYS.forEach(function(k){ if (s[k] == null) { s[k] = ''; } });
-            return s;
+            var raw = {};
+            try { raw = JSON.parse($carrier.attr('data-detail-settings') || '{}'); } catch(e){ raw = {}; }
+            return toEventsModel(raw);
         }
 
-        // 분리된 DOM($root) 에 설정값을 반영한다.
-        //  - 캐리어 data-detail-settings 갱신 (다음 번 읽기/샘플 이식용 단일 소스)
-        //  - data-setting 마커 지점의 텍스트/표시 갱신
-        function applySettingsToDom($root, s){
-            // 나이 표기 텍스트는 숫자(세) 최소/최대에서 파생해 항상 최신값으로 재계산한다.
-            s.maleAgeText   = settingAgeText(s.maleAgeMin, s.maleAgeMax);
-            s.femaleAgeText = settingAgeText(s.femaleAgeMin, s.femaleAgeMax);
+        // 행사 라벨: 참여 조건에 "정확한 행사명 전체"를 그대로 쓴다. (제목 없으면 "N회")
+        function settingEventLabel(title, i){
+            var t = String(title || '').trim();
+            return t !== '' ? t : ((i + 1) + '회');
+        }
+
+        // $root(분리된 DOM) 안 명단 그리드에서 행사 제목 배열을 뽑는다. (설정 블록 라벨/카드 매칭용)
+        function eventTitlesFromDom($root){
+            var titles = [];
+            $root.find('[data-roster-grid]').first().find('[data-roster-card]').each(function(){
+                titles.push($(this).attr('data-event-title') || '');
+            });
+            return titles;
+        }
+
+        // 분리된 DOM($root) 에 "행사 배열 설정"을 반영한다.
+        //  - 캐리어 data-detail-settings 갱신 (= {events:[...]})
+        //  - 참여 조건 나이 블록 / 남·여 키 블록을 행사 수에 맞춰 다시 그린다.
+        //  - model.events 길이는 화면 행사(명단 카드) 수에 맞춘다.
+        function applySettingsToDom($root, model){
+            var titles = eventTitlesFromDom($root);
+            var count  = Math.max(1, titles.length || (model.events ? model.events.length : 1));
+            model = fitEventsToCount(model, count);
+            var multi = count > 1;
+
+            // 나이 표기 텍스트는 숫자(세) 최소/최대에서 파생해 항상 최신값으로 재계산.
+            model.events.forEach(function(s){
+                s.maleAgeText   = settingAgeText(s.maleAgeMin, s.maleAgeMax);
+                s.femaleAgeText = settingAgeText(s.femaleAgeMin, s.femaleAgeMax);
+            });
 
             // 1) 캐리어 JSON 갱신 — 없으면 새로 만들어 콘텐츠 맨 앞에 끼운다.
-            //    (예전 저장본이거나 에디터가 캐리어를 지운 경우에도 설정이 HTML 에 반드시 실리도록)
             var $carrier = $root.find('[data-detail-settings]').first();
             if ($carrier.length === 0) {
-                // 콘텐츠 최상위 래퍼(첫 div)가 있으면 그 안 맨 앞에, 없으면 root 맨 앞에 삽입.
                 var $wrapper = $root.children('div').first();
                 var $target  = $wrapper.length ? $wrapper : $root;
-                // zero-width space 로 non-empty 유지 (TinyMCE 가 빈 요소로 보고 지우지 못하게).
                 $carrier = $('<div data-detail-settings style="display:none;">\u200b</div>');
                 $target.prepend($carrier);
             }
-            $carrier.attr('data-detail-settings', JSON.stringify(s));
+            $carrier.attr('data-detail-settings', JSON.stringify({ events: model.events }));
             if (($carrier.text() || '').length === 0) { $carrier.text('\u200b'); }
 
-            // 2) 참여 조건 나이 라인 — "남성 OOO / 여성 OOO" (한쪽이라도 비면 그쪽은 빈칸)
-            var ageLine = '남성 ' + (s.maleAgeText || '') + ' / 여성 ' + (s.femaleAgeText || '');
-            $root.find('[data-setting="ageConditionLine"]').text(ageLine);
+            var esc = function(s){
+                return String(s == null ? '' : s)
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            };
+            var label = function(i){ return multi ? (esc(settingEventLabel(titles[i], i)) + ' · ') : ''; };
 
-            // 3) 남성 키 — "신장 OOO 이상" (비우면 "이상"만 남지 않게 빈 문자열)
-            $root.find('[data-setting="maleHeight"]').text((s.maleHeight || '').trim() !== '' ? (s.maleHeight + ' 이상') : '');
+            // 2) 나이 블록 — 행사마다 한 줄.
+            var $ageBlock = $root.find('[data-setting-block="age"]').first();
+            if ($ageBlock.length) {
+                var ageHtml = model.events.map(function(s, i){
+                    return '<div>- ' + label(i)
+                        + '남성 ' + esc(s.maleAgeText || '') + ' / 여성 ' + esc(s.femaleAgeText || '') + '</div>';
+                }).join('');
+                $ageBlock.html(ageHtml);
+            }
 
-            // 4) 여성 키 — 입력 시 "신장 OOO 이상" 표시, 비우면 줄 숨김
-            var hasFemaleHeight = (s.femaleHeight || '').trim() !== '';
-            $root.find('[data-setting="femaleHeight"]').text(hasFemaleHeight ? (s.femaleHeight + ' 이상') : '');
-            $root.find('[data-setting-row="femaleHeight"]').css('display', hasFemaleHeight ? '' : 'none');
+            // 3) 남성 키 블록 — 입력된 행사만 한 줄.
+            var $maleBlock = $root.find('[data-setting-block="maleHeight"]').first();
+            if ($maleBlock.length) {
+                var maleHtml = model.events.map(function(s, i){
+                    var h = (s.maleHeight || '').trim();
+                    if (h === '') { return ''; }
+                    return '<div>- ' + label(i) + '신장 <b>' + esc(h) + ' 이상</b></div>';
+                }).join('');
+                $maleBlock.html(maleHtml);
+            }
+
+            // 4) 여성 키 블록 — 입력된 행사만 한 줄. (전부 비면 빈 블록)
+            var $femaleBlock = $root.find('[data-setting-block="femaleHeight"]').first();
+            if ($femaleBlock.length) {
+                var femaleHtml = model.events.map(function(s, i){
+                    var h = (s.femaleHeight || '').trim();
+                    if (h === '') { return ''; }
+                    return '<div>- ' + label(i) + '신장 <b>' + esc(h) + ' 이상</b></div>';
+                }).join('');
+                $femaleBlock.html(femaleHtml);
+            }
 
             return $root;
         }
 
-        // 현재 에디터 HTML 에 설정 s 를 반영한 새 HTML 문자열을 돌려준다.
-        // 캐리어가 없어도 applySettingsToDom 이 새로 만들어 끼우므로 항상 설정이 실린다.
-        function applySettingsToHtml(html, s){
+        // 현재 에디터 HTML 에 설정 모델을 반영한 새 HTML 문자열을 돌려준다.
+        function applySettingsToHtml(html, model){
             var $root = $('<div></div>').html(html || '');
-            applySettingsToDom($root, s);
+            applySettingsToDom($root, model);
             return $root.html();
         }
 
-        // 폼 입력 → 설정 객체
+        // 설정 편집 카드 한 장(행사 1개)의 HTML. (명단 편집 카드와 시각적으로 맞춤)
+        function settingsEventCard(title, i, s){
+            s = s || {};
+            var titleText = $('<i>').text(title || ((i + 1) + '번째 행사')).html();
+            return ''
+              + '<div class="card mb-3" data-setting-card="' + i + '">'
+              +   '<div class="card-header py-2">'
+              +     '<i class="ti ti-calendar-event text-pink me-1"></i>'
+              +     '<b class="roster-ev-title-echo">' + titleText + '</b>'
+              +   '</div>'
+              +   '<div class="card-body">'
+              +     '<div class="row g-3">'
+              +       '<div class="col-md-6">'
+              +         '<label class="form-label">남성 나이 (최소 ~ 최대)</label>'
+              +         '<div class="input-group">'
+              +           '<input type="number" class="form-control s-male-age-min" placeholder="최소" min="19" max="99" value="' + (s.maleAgeMin || '') + '">'
+              +           '<span class="input-group-text">~</span>'
+              +           '<input type="number" class="form-control s-male-age-max" placeholder="최대" min="19" max="99" value="' + (s.maleAgeMax || '') + '">'
+              +           '<span class="input-group-text">세</span>'
+              +         '</div>'
+              +       '</div>'
+              +       '<div class="col-md-6">'
+              +         '<label class="form-label">여성 나이 (최소 ~ 최대)</label>'
+              +         '<div class="input-group">'
+              +           '<input type="number" class="form-control s-female-age-min" placeholder="최소" min="19" max="99" value="' + (s.femaleAgeMin || '') + '">'
+              +           '<span class="input-group-text">~</span>'
+              +           '<input type="number" class="form-control s-female-age-max" placeholder="최대" min="19" max="99" value="' + (s.femaleAgeMax || '') + '">'
+              +           '<span class="input-group-text">세</span>'
+              +         '</div>'
+              +       '</div>'
+              +     '</div>'
+              +     '<small class="form-hint text-muted d-block mt-1 mb-3">'
+              +       '나이(세) → <b>"OO~OO년생"</b> 자동 환산. <span class="s-age-preview text-azure fw-bold"></span>'
+              +     '</small>'
+              +     '<div class="row g-3">'
+              +       '<div class="col-md-6">'
+              +         '<label class="form-label">남성 키 (최소 신장)</label>'
+              +         '<input type="text" class="form-control s-male-height" placeholder="미입력 시 173cm" value="' + $('<i>').text(s.maleHeight || '').html() + '">'
+              +         '<small class="form-hint text-muted">비우면 자동으로 <b>173cm</b> 로 표기돼요.</small>'
+              +       '</div>'
+              +       '<div class="col-md-6">'
+              +         '<label class="form-label">여성 키 (최소 신장)</label>'
+              +         '<input type="text" class="form-control s-female-height" placeholder="미입력 시 표기 안 함" value="' + $('<i>').text(s.femaleHeight || '').html() + '">'
+              +       '</div>'
+              +     '</div>'
+              +   '</div>'
+              + '</div>';
+        }
+
+        // 설정 모델 + 행사 제목 배열 → 행사 카드들을 #settingsEventsBody 에 렌더.
+        function renderSettingsForm(model, titles){
+            titles = titles || [];
+            var count = Math.max(1, titles.length || (model.events ? model.events.length : 1));
+            model = fitEventsToCount(model, count);
+            var $body = $('#settingsEventsBody').empty();
+            for (var i = 0; i < count; i++) {
+                $body.append(settingsEventCard(titles[i], i, model.events[i]));
+            }
+            updateAllAgePreviews();
+        }
+
+        // #settingsEventsBody 의 입력들을 모아 설정 모델({events:[...]})로 반환.
         function collectSettingsForm(){
-            return {
-                maleAgeMin:    ($('#settingMaleAgeMin').val()    || '').trim(),
-                maleAgeMax:    ($('#settingMaleAgeMax').val()    || '').trim(),
-                femaleAgeMin:  ($('#settingFemaleAgeMin').val()  || '').trim(),
-                femaleAgeMax:  ($('#settingFemaleAgeMax').val()  || '').trim(),
-                maleHeight:    ($('#settingMaleHeight').val()   || '').trim(),
-                femaleHeight:  ($('#settingFemaleHeight').val() || '').trim()
-            };
+            var events = [];
+            $('#settingsEventsBody [data-setting-card]').each(function(){
+                var $c = $(this);
+                events.push(normalizeEventSetting({
+                    maleAgeMin:   ($c.find('.s-male-age-min').val()   || '').trim(),
+                    maleAgeMax:   ($c.find('.s-male-age-max').val()   || '').trim(),
+                    femaleAgeMin: ($c.find('.s-female-age-min').val() || '').trim(),
+                    femaleAgeMax: ($c.find('.s-female-age-max').val() || '').trim(),
+                    maleHeight:   ($c.find('.s-male-height').val()    || '').trim(),
+                    femaleHeight: ($c.find('.s-female-height').val()  || '').trim()
+                }));
+            });
+            if (!events.length) { events.push(normalizeEventSetting({})); }
+            return { events: events };
         }
 
-        // 설정 객체 → 폼 입력 채우기
-        function fillSettingsForm(s){
-            $('#settingMaleAgeMin').val(s.maleAgeMin || '');
-            $('#settingMaleAgeMax').val(s.maleAgeMax || '');
-            $('#settingFemaleAgeMin').val(s.femaleAgeMin || '');
-            $('#settingFemaleAgeMax').val(s.femaleAgeMax || '');
-            $('#settingMaleHeight').val(s.maleHeight || '');
-            $('#settingFemaleHeight').val(s.femaleHeight || '');
-            updateAgePreview();
-        }
-
-        // 입력한 나이(세)를 년생으로 환산한 결과를 폼 아래 실시간 미리보기로 보여준다.
-        function updateAgePreview(){
-            var male   = settingAgeText($('#settingMaleAgeMin').val(), $('#settingMaleAgeMax').val());
-            var female = settingAgeText($('#settingFemaleAgeMin').val(), $('#settingFemaleAgeMax').val());
+        // 한 카드의 나이 미리보기 갱신.
+        function updateAgePreviewFor($card){
+            var male   = settingAgeText($card.find('.s-male-age-min').val(), $card.find('.s-male-age-max').val());
+            var female = settingAgeText($card.find('.s-female-age-min').val(), $card.find('.s-female-age-max').val());
             var parts = [];
             if (male)   { parts.push('남성 ' + male); }
             if (female) { parts.push('여성 ' + female); }
-            $('#settingAgePreview').text(parts.length ? ('→ ' + parts.join(' / ')) : '');
+            $card.find('.s-age-preview').text(parts.length ? ('→ ' + parts.join(' / ')) : '');
         }
-        // 나이 입력칸을 바꿀 때마다 미리보기 갱신.
-        $('#settingMaleAgeMin, #settingMaleAgeMax, #settingFemaleAgeMin, #settingFemaleAgeMax')
-            .on('input', updateAgePreview);
+        function updateAllAgePreviews(){
+            $('#settingsEventsBody [data-setting-card]').each(function(){ updateAgePreviewFor($(this)); });
+        }
+        // 나이 입력칸 변경 시 해당 카드 미리보기 갱신 (이벤트 위임).
+        $('#settingsEventsBody').on('input',
+            '.s-male-age-min, .s-male-age-max, .s-female-age-min, .s-female-age-max',
+            function(){ updateAgePreviewFor($(this).closest('[data-setting-card]')); });
 
         // '페이지 설정 · 명단 편집' 열기 — 현재 에디터의 설정/명단을 읽어 폼·표에 채운다.
         // 캐리어가 없어도(최초 접근·예전 저장본 등) 화면에 보이는 값(참여조건/자격요건)에서 복원해 채운다.
@@ -1407,13 +1523,14 @@
             var html = getHtml();
             if (!html || !html.trim()) {
                 // 아예 내용이 없을 때만 안내.
-                $('#settingsFormBody').hide();
+                $('#settingsEventsBody').empty();
                 $('#settingsEmpty').show();
             } else {
                 $('#settingsEmpty').hide();
-                $('#settingsFormBody').show();
-                var $root = $('<div></div>').html(html);
-                fillSettingsForm(readSettingsFromDom($root));
+                var $root   = $('<div></div>').html(html);
+                var titles  = eventTitlesFromDom($root);
+                var model   = readSettingsFromDom($root);
+                renderSettingsForm(model, titles);
             }
             // 명단 편집 섹션도 같은 모달 안에서 함께 채운다.
             populateRosterEditor();
@@ -1428,11 +1545,11 @@
                 await salert({text: '먼저 샘플을 불러오거나 내용을 작성해 주세요.', cancel: false});
                 return;
             }
-            // 1) 설정 반영 → 2) 그 결과 HTML 에 명단 반영 → 3) 업데이트 시각 갱신.
-            var s      = collectSettingsForm();
-            var withS  = applySettingsToHtml(html, s);
-            var withSR = applyRosterToHtml(withS);
-            setHtml(applyUpdatedAtToSample(withSR));
+            // 1) 명단 반영(행사 제목/개수 확정) → 2) 그 결과에 행사별 설정 반영 → 3) 업데이트 시각.
+            var model   = collectSettingsForm();
+            var withR   = applyRosterToHtml(html);
+            var withRS  = applySettingsToHtml(withR, model);
+            setHtml(applyUpdatedAtToSample(withRS));
 
             var m = getSettingsModal();
             if (m) { m.hide(); }

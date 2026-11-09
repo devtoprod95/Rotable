@@ -150,8 +150,20 @@
     if (empty($eventSettings)) {
         $eventSettings = [$settings];
     }
-    // data 속성에 실어 JS 가 현재 설정을 읽게 할 JSON.
-    $settingsJson = json_encode(['events' => $eventSettings], JSON_UNESCAPED_UNICODE);
+
+    /* ──────────────────────────────────────────────────────────────────
+     | 이전 로테이블 기록 (페이지 전역 데이터)
+     |  - 행사별(events)과 달리, 기록표는 페이지에 하나뿐이라 전역 배열(records)로 보관한다.
+     |  - 페이지 설정 모달에서 추가/삭제/수정하며, 샘플을 다시 불러와도 그대로 따라온다.
+     |  - data-detail-settings(JSON) 에 events 와 함께 records 로 실린다.
+     |  - 기록표 div(data-setting-block="records")를 JS 가 이 배열로 다시 그린다.
+     | ─────────────────────────────────────────────────────────────────*/
+    $records = [
+        ['date' => '2026.11.07', 'title' => '1회 ' . $typeConfig['eventName'], 'people' => '22명 (12/10)', 'couples' => '6커플'],
+    ];
+
+    // data 속성에 실어 JS 가 현재 설정을 읽게 할 JSON. (events + records)
+    $settingsJson = json_encode(['events' => $eventSettings, 'records' => $records], JSON_UNESCAPED_UNICODE);
 
     // 행사 수가 2개 이상일 때만 각 줄 앞에 행사명(전체)을 붙여 구분한다.
     $multiEvent = count($sampleEvents) > 1;
@@ -264,7 +276,7 @@
         <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; color:#6d28d9; letter-spacing:0.5px; line-height:1.3;">명단이 적어 보여도 걱정 마세요!</div>
         <div style="font-size:30px; color:#5b21b6; margin-top:14px; line-height:1.7; word-break:keep-all;">
             지금 이 명단은 <b style="color:#6d28d9; background:linear-gradient(transparent 55%, #ddd6fe 55%); padding:0 4px;">전체의 일부</b>일 뿐이에요.<br>
-            <b style="color:#6d28d9;">문토 · 프립 등 여러 플랫폼</b>에서 <b style="background:linear-gradient(transparent 55%, #ddd6fe 55%); padding:0 4px;">동시에 모집</b>하고 있어,<br>
+            <b style="color:#6d28d9;">여러 플랫폼</b>에서 <b style="background:linear-gradient(transparent 55%, #ddd6fe 55%); padding:0 4px;">동시에 모집</b>하고 있어,<br>
             실제 참여 인원은 <b style="color:#be185d; background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px; font-weight:900;">참여자 명단 보다 많아요.</b>
         </div>
         <div style="background:#ffffff; border:2px dashed #a78bfa; border-radius:14px; padding:18px 14px; margin-top:18px; font-size:27px; color:#5b21b6; line-height:1.7; word-break:keep-all;">
@@ -356,24 +368,16 @@
                 <div style="width:25%; border-right:1px solid #cbd5e1;">인원 (남/여)</div>
                 <div style="width:20%;">매칭</div>
             </div>
-            {{-- 행사 기록 (더미) --}}
-            <div style="display:flex; font-size:29px; color:#374151; padding:14px 0; border-bottom:1px solid #d7e3ef;">
-                <div style="width:28%; border-right:1px solid #d7e3ef;">2025.12.20</div>
-                <div style="width:27%; border-right:1px solid #d7e3ef;">3회 {{ $typeConfig['eventName'] }}</div>
-                <div style="width:25%; border-right:1px solid #d7e3ef;">16명 (8/8)</div>
-                <div style="width:20%; color:#be185d; font-weight:800;">4커플</div>
-            </div>
-            <div style="display:flex; font-size:29px; color:#374151; padding:14px 0; border-bottom:1px solid #d7e3ef;">
-                <div style="width:28%; border-right:1px solid #d7e3ef;">2025.11.15</div>
-                <div style="width:27%; border-right:1px solid #d7e3ef;">2회 {{ $typeConfig['eventName'] }}</div>
-                <div style="width:25%; border-right:1px solid #d7e3ef;">14명 (7/7)</div>
-                <div style="width:20%; color:#be185d; font-weight:800;">3커플</div>
-            </div>
-            <div style="display:flex; font-size:29px; color:#374151; padding:14px 0;">
-                <div style="width:28%; border-right:1px solid #d7e3ef;">2025.10.18</div>
-                <div style="width:27%; border-right:1px solid #d7e3ef;">1회 {{ $typeConfig['eventName'] }}</div>
-                <div style="width:25%; border-right:1px solid #d7e3ef;">18명 (9/9)</div>
-                <div style="width:20%; color:#be185d; font-weight:800;">5커플</div>
+            {{-- 행사 기록 — JS(페이지 설정)가 records 배열로 이 블록을 다시 그린다. --}}
+            <div data-setting-block="records">
+                @foreach ($records as $rec)
+                    <div data-record-row style="display:flex; font-size:29px; color:#374151; padding:14px 0;{{ ! $loop->last ? ' border-bottom:1px solid #d7e3ef;' : '' }}">
+                        <div style="width:28%; border-right:1px solid #d7e3ef;">{{ $rec['date'] }}</div>
+                        <div style="width:27%; border-right:1px solid #d7e3ef;">{{ $rec['title'] }}</div>
+                        <div style="width:25%; border-right:1px solid #d7e3ef;">{{ $rec['people'] }}</div>
+                        <div style="width:20%; color:#be185d; font-weight:800;">{{ $rec['couples'] }}</div>
+                    </div>
+                @endforeach
             </div>
         </div>
     </div>

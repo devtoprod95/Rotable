@@ -231,6 +231,24 @@
                     현재 내용에서 참여자 명단 영역을 찾지 못했어요.<br>
                     먼저 <b>1열 / 2열 샘플</b>을 불러온 뒤 다시 시도해 주세요.
                 </div>
+
+                <hr class="my-4">
+
+                {{-- ===== 이전 로테이블 기록 편집 섹션 (명단 아래) ===== --}}
+                <h3 class="mb-2 d-flex align-items-center gap-2">
+                    <i class="ti ti-history text-pink"></i> 이전 로테이블 기록
+                    <span class="text-secondary fs-4 fw-normal">— 날짜 · 행사명 · 인원 · 매칭</span>
+                </h3>
+                <div class="alert alert-info mb-3">
+                    <div class="text-secondary">
+                        지난 행사 기록을 직접 추가/수정/삭제할 수 있어요.
+                        <b>샘플을 다시 불러와도 입력한 기록은 그대로 유지</b>됩니다.
+                    </div>
+                </div>
+                <div id="recordsEditorBody"></div>
+                <button type="button" class="btn btn-outline-pink btn-record-add">
+                    <i class="ti ti-plus me-1"></i> 기록 추가
+                </button>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
@@ -756,7 +774,7 @@
                 extended_valid_elements: '*[*]',
                 valid_children: '+body[style],+div[div|span|b|i|img|style]',
                 // 빈 블록으로 취급돼 삭제되지 않도록, 캐리어/스페이서 류를 non-empty 로 등록.
-                non_empty_elements: 'div[data-detail-settings],div[data-roster-grid]',
+                non_empty_elements: 'div[data-detail-settings],div[data-roster-grid],div[data-setting-block]',
                 keep_styles: true,
                 verify_html: false,
                 content_style: "@import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap'); body{font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; font-size:14px;}",
@@ -1180,6 +1198,22 @@
         // 남성 키 기본값 — 빈 값이면 항상 이 값으로 보이게 한다. (요구사항: 디폴트 173cm)
         var DEFAULT_MALE_HEIGHT = '173cm';
 
+        // 이전 로테이블 기록(records) 한 건의 키. (페이지 전역 데이터 — 행사별 events 와 별개)
+        var RECORD_KEYS = ['date', 'title', 'people', 'couples'];
+
+        // 기록 배열 정규화: 각 행의 누락 키를 빈 문자열로 채우고, 완전히 빈 행은 버린다.
+        function normalizeRecords(list){
+            if (!Array.isArray(list)) { return []; }
+            return list.map(function(r){
+                var o = (r && typeof r === 'object') ? r : {};
+                var out = {};
+                RECORD_KEYS.forEach(function(k){ out[k] = (o[k] == null ? '' : String(o[k])).trim(); });
+                return out;
+            }).filter(function(r){
+                return RECORD_KEYS.some(function(k){ return r[k] !== ''; });
+            });
+        }
+
         // 한 행사 설정 객체의 누락 키를 빈 문자열로 채운다.
         //  - 단, 남성 키(maleHeight)는 비면 기본값(173cm)으로 채워 "항상 노출"되게 한다.
         function normalizeEventSetting(e){
@@ -1195,13 +1229,14 @@
         //  - 그 외/비어있음: events:[] (호출부에서 행사 수에 맞춰 채움).
         function toEventsModel(raw){
             var obj = (raw && typeof raw === 'object') ? raw : {};
+            var records = normalizeRecords(obj.records);
             if (Array.isArray(obj.events)) {
-                return { events: obj.events.map(normalizeEventSetting) };
+                return { events: obj.events.map(normalizeEventSetting), records: records };
             }
             // flat 구버전: 나이/키 키가 하나라도 있으면 단일 행사로 승격.
             var hasFlat = SETTING_EVENT_KEYS.some(function(k){ return obj[k] != null && obj[k] !== ''; });
-            if (hasFlat) { return { events: [normalizeEventSetting(obj)] }; }
-            return { events: [] };
+            if (hasFlat) { return { events: [normalizeEventSetting(obj)], records: records }; }
+            return { events: [], records: records };
         }
 
         // 행사 수(count)에 맞춰 events 배열 길이를 맞춘다. (부족하면 첫 설정 복제, 없으면 빈 설정)
@@ -1211,7 +1246,7 @@
             var base = evs.length ? normalizeEventSetting(evs[0]) : normalizeEventSetting({});
             while (evs.length < count) { evs.push(Object.assign({}, base)); }
             if (evs.length > count) { evs = evs.slice(0, count); }
-            return { events: evs.map(normalizeEventSetting) };
+            return { events: evs.map(normalizeEventSetting), records: normalizeRecords(model && model.records) };
         }
 
         // 한국식 나이(세) → 출생연도 뒤 2자리. (Blade $yy 와 동일: 올해 - 나이 + 1)
@@ -1270,7 +1305,18 @@
                 try { raw = JSON.parse($carrier.attr('data-detail-settings') || '{}'); } catch(e){ raw = {}; }
             }
             var model = toEventsModel(raw);
-            if (model.events.length) { return model; }
+            if (model.events.length) {
+                // 구 저장본: 캐리어에 events 는 있으나 records 가 없을 수 있음 → 화면 기록표에서 보강.
+                if (!model.records || !model.records.length) {
+                    model.records = readRecordsFromDom($root);
+                }
+                return model;
+            }
+
+            // 캐리어에 records 가 없었다면(또는 캐리어 자체가 없으면) 화면 기록표에서 복원.
+            if (!model.records || !model.records.length) {
+                model.records = readRecordsFromDom($root);
+            }
 
             // 2) 캐리어가 없거나 비었으면 화면 블록에서 복원.
             //    나이 블록의 각 줄(행사 1줄씩)을 파싱해 행사 수를 추정한다.
@@ -1307,7 +1353,25 @@
             });
 
             if (!evs.length) { evs.push(normalizeEventSetting({})); }
-            return { events: evs };
+            return { events: evs, records: model.records || [] };
+        }
+
+        // 화면의 기록표 블록([data-setting-block="records"])에서 기록 행들을 복원한다.
+        //  - 각 행(data-record-row)의 4개 셀(날짜/행사명/인원/매칭) 텍스트를 읽는다.
+        function readRecordsFromDom($root){
+            var $block = $root.find('[data-setting-block="records"]').first();
+            if (!$block.length) { return []; }
+            var rows = [];
+            $block.children('[data-record-row]').each(function(){
+                var cells = $(this).children('div').map(function(){ return $(this).text().trim(); }).get();
+                rows.push({
+                    date:    cells[0] || '',
+                    title:   cells[1] || '',
+                    people:  cells[2] || '',
+                    couples: cells[3] || ''
+                });
+            });
+            return normalizeRecords(rows);
         }
 
         function getSettingsModal(){
@@ -1379,7 +1443,7 @@
                 $carrier = $('<div data-detail-settings style="display:none;">\u200b</div>');
                 $target.prepend($carrier);
             }
-            $carrier.attr('data-detail-settings', JSON.stringify({ events: model.events }));
+            $carrier.attr('data-detail-settings', JSON.stringify({ events: model.events, records: normalizeRecords(model.records) }));
             if (($carrier.text() || '').length === 0) { $carrier.text('\u200b'); }
 
             var esc = function(s){
@@ -1418,6 +1482,22 @@
                     return '<div>- ' + label(i) + '신장 <b>' + esc(h) + ' 이상</b></div>';
                 }).join('');
                 $femaleBlock.html(femaleHtml);
+            }
+
+            // 5) 이전 로테이블 기록 블록 — records 배열로 행을 다시 그린다. (페이지 전역)
+            var $recBlock = $root.find('[data-setting-block="records"]').first();
+            if ($recBlock.length) {
+                var recs = normalizeRecords(model.records);
+                var recHtml = recs.map(function(r, i){
+                    var border = (i < recs.length - 1) ? ' border-bottom:1px solid #d7e3ef;' : '';
+                    return '<div data-record-row style="display:flex; font-size:29px; color:#374151; padding:14px 0;' + border + '">'
+                        +   '<div style="width:28%; border-right:1px solid #d7e3ef;">' + esc(r.date) + '</div>'
+                        +   '<div style="width:27%; border-right:1px solid #d7e3ef;">' + esc(r.title) + '</div>'
+                        +   '<div style="width:25%; border-right:1px solid #d7e3ef;">' + esc(r.people) + '</div>'
+                        +   '<div style="width:20%; color:#be185d; font-weight:800;">' + esc(r.couples) + '</div>'
+                        + '</div>';
+                }).join('');
+                $recBlock.html(recHtml);
             }
 
             return $root;
@@ -1509,6 +1589,51 @@
             return { events: events };
         }
 
+        /* ---- 이전 로테이블 기록 편집 ---- */
+        // 기록 한 행의 편집 UI(입력 4칸 + 삭제 버튼).
+        function recordEditorRow(r){
+            r = r || {};
+            var v = function(s){ return $('<i>').text(s == null ? '' : s).html(); };
+            return ''
+              + '<div class="row g-2 mb-2 align-items-center" data-record-edit>'
+              +   '<div class="col"><input type="text" class="form-control form-control-sm r-date" placeholder="날짜 (예: 2026.11.07)" value="' + v(r.date) + '"></div>'
+              +   '<div class="col"><input type="text" class="form-control form-control-sm r-title" placeholder="행사명 (예: 1회차 와인파티)" value="' + v(r.title) + '"></div>'
+              +   '<div class="col"><input type="text" class="form-control form-control-sm r-people" placeholder="인원 (예: 22명 (12/10))" value="' + v(r.people) + '"></div>'
+              +   '<div class="col"><input type="text" class="form-control form-control-sm r-couples" placeholder="매칭 (예: 6커플)" value="' + v(r.couples) + '"></div>'
+              +   '<div class="col-auto"><button type="button" class="btn btn-outline-danger btn-record-del"><i class="ti ti-trash me-1"></i> 삭제</button></div>'
+              + '</div>';
+        }
+
+        // 기록 배열 → #recordsEditorBody 에 행들을 렌더.
+        function renderRecordsEditor(records){
+            var list = normalizeRecords(records);
+            var $body = $('#recordsEditorBody').empty();
+            list.forEach(function(r){ $body.append(recordEditorRow(r)); });
+        }
+
+        // #recordsEditorBody 의 입력들을 모아 records 배열로 반환.
+        function collectRecordsEditor(){
+            var rows = [];
+            $('#recordsEditorBody [data-record-edit]').each(function(){
+                var $r = $(this);
+                rows.push({
+                    date:    ($r.find('.r-date').val()    || '').trim(),
+                    title:   ($r.find('.r-title').val()   || '').trim(),
+                    people:  ($r.find('.r-people').val()  || '').trim(),
+                    couples: ($r.find('.r-couples').val() || '').trim()
+                });
+            });
+            return normalizeRecords(rows);
+        }
+
+        // 기록 추가/삭제 (이벤트 위임)
+        $('.btn-record-add').on('click', function(){
+            $('#recordsEditorBody').append(recordEditorRow({}));
+        });
+        $('#recordsEditorBody').on('click', '.btn-record-del', function(){
+            $(this).closest('[data-record-edit]').remove();
+        });
+
         // 한 카드의 나이 미리보기 갱신.
         function updateAgePreviewFor($card){
             var male   = settingAgeText($card.find('.s-male-age-min').val(), $card.find('.s-male-age-max').val());
@@ -1540,6 +1665,7 @@
                 var titles  = eventTitlesFromDom($root);
                 var model   = readSettingsFromDom($root);
                 renderSettingsForm(model, titles);
+                renderRecordsEditor(model.records);
             }
             // 명단 편집 섹션도 같은 모달 안에서 함께 채운다.
             populateRosterEditor();
@@ -1556,6 +1682,7 @@
             }
             // 1) 명단 반영(행사 제목/개수 확정) → 2) 그 결과에 행사별 설정 반영 → 3) 업데이트 시각.
             var model   = collectSettingsForm();
+            model.records = collectRecordsEditor();
             var withR   = applyRosterToHtml(html);
             var withRS  = applySettingsToHtml(withR, model);
             setHtml(applyUpdatedAtToSample(withRS));
@@ -1572,6 +1699,12 @@
             if (!html || !html.trim()) { return sampleHtml; }
             var $root = $('<div></div>').html(html);
             var curSettings = readSettingsFromDom($root);
+            // 현재 화면에 기록이 하나도 없으면, 새 샘플의 기본 기록을 그대로 둔다.
+            // (빈 records 로 샘플 기본 기록을 지워버리지 않도록)
+            if (!curSettings.records || !curSettings.records.length) {
+                var $sampleRoot = $('<div></div>').html(sampleHtml);
+                curSettings.records = readSettingsFromDom($sampleRoot).records;
+            }
             return applySettingsToHtml(sampleHtml, curSettings);
         }
 

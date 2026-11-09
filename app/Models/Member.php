@@ -158,12 +158,12 @@ class Member extends Authenticatable
 
     /**
      * 현재 턴(event_rounds.current_round) 기준으로 이 회원이 앉아 있는 테이블 번호.
-     * 기준 좌석이 없거나 로테이션 시작 전(current_round=0)이면 null.
+     * 로테이션 시작 전(0턴)에는 기준(홈) 테이블을 그대로 반환한다. 기준 좌석이 없으면 null.
      */
     public function currentTableNo(): ?int
     {
         $event = $this->eventRound;
-        if ($event === null || (int) $event->current_round < 1) {
+        if ($event === null) {
             return null;
         }
 
@@ -178,13 +178,19 @@ class Member extends Authenticatable
             return null;
         }
 
+        // 로테이션 시작 전(0턴)에는 아직 이동이 없으므로 기준(홈) 테이블을 그대로 쓴다.
+        $round = (int) $event->current_round;
+        if ($round < 1) {
+            return (int) $homeTableNo;
+        }
+
         $tableNos = RotationTable::where('event_id', $this->event_id)
             ->orderBy('table_no')
             ->pluck('table_no')
             ->all();
 
         return EventRound::seatedTableNoFor(
-            round: (int) $event->current_round,
+            round: $round,
             isFemale: $this->gender === self::GENDER_FEMALE,
             homeTableNo: (int) $homeTableNo,
             tableNos: array_map('intval', $tableNos),

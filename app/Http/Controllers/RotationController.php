@@ -95,6 +95,7 @@ class RotationController extends Controller
             'type'        => ['required', Rule::in([EventRound::TYPE_WINE, EventRound::TYPE_ONE])],
             'event_time'  => 'required|date',
             'table_count' => 'nullable|integer|min:0|max:100',
+            'review_gate_enabled' => 'nullable|boolean',
         ]);
         if ($validator->fails()) {
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
@@ -164,6 +165,7 @@ class RotationController extends Controller
             'title'      => 'required|string|max:255',
             'type'       => ['required', Rule::in([EventRound::TYPE_WINE, EventRound::TYPE_ONE])],
             'event_time' => 'required|date',
+            'review_gate_enabled' => 'nullable|boolean',
         ]);
         if ($validator->fails()) {
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));

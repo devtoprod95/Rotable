@@ -43,10 +43,13 @@ class HandleInertiaRequests extends Middleware
             ? \App\Models\EventRound::whereKey($member->event_id)->first(['title', 'type', 'status'])
             : null;
 
-        // 게임 탭 노출 조건: 와인파티(wine) && 진행중(S).
+        // 게임 탭 노출 조건: 와인파티(wine) && 대기(P)·진행중(S).
         $gameTabVisible = $event !== null
             && $event->type === \App\Models\EventRound::TYPE_WINE
-            && $event->status === \App\Models\EventRound::STATUS_STARTED;
+            && in_array($event->status, [
+                \App\Models\EventRound::STATUS_PENDING,
+                \App\Models\EventRound::STATUS_STARTED,
+            ], true);
 
         return [
             ...parent::share($request),

@@ -13,7 +13,7 @@ use App\Models\EventRound;
 class EventNoticeService
 {
     /** 행사 장소 기본값 (화면에서 수정 가능) */
-    public const DEFAULT_PLACE = '서울 강남구 언주로98길 23, B1';
+    public const DEFAULT_PLACE = '서울특별시 강남구 역삼동 697-13, B1 (공간나인 선릉점)';
 
     /**
      * 공지 문구를 만든다.
@@ -25,6 +25,8 @@ class EventNoticeService
         $place    = trim((string) $place) !== '' ? trim((string) $place) : self::DEFAULT_PLACE;
         $isOne    = $event->isOneToOne();
         $startAt  = $event->event_time ? $event->event_time->format('H:i') : '시간 미정';
+        // 입장 가능 시간은 시작 10분 전부터로 안내한다.
+        $entryAt  = $event->event_time ? $event->event_time->copy()->subMinutes(10)->format('H:i') : '시간 미정';
 
         $lines = [
             '[공지 안내]',
@@ -32,6 +34,7 @@ class EventNoticeService
             '행사 관련 안내드리니 꼭 확인 부탁드려요!',
             '',
             '📍 장소: ' . $place,
+            '🚪 입장 가능 시간: ' . $entryAt . ' 부터 (너무 일찍 오시면 입장이 어려울 수 있어요!)',
             '🕖 시작 시간: ' . $startAt . ' (원활한 진행을 위해 지각하지 않게 부탁드려요!)',
             '🚇 교통: 선릉역 도보 4분 / 전용 주차가 없어 대중교통 이용 권장드려요',
             '',

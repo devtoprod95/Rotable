@@ -53,7 +53,7 @@ class EventRound extends Model
     protected $table = 'event_rounds';
 
     /** @var list<string> */
-    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'current_round', 'created_by'];
+    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'current_round', 'created_by'];
 
     /**
      * @return array<string, string>
@@ -63,6 +63,7 @@ class EventRound extends Model
         return [
             'event_time'       => 'datetime',
             'voting_opened_at' => 'datetime',
+            'review_gate_enabled' => 'boolean',
             'current_round'    => 'integer',
         ];
     }

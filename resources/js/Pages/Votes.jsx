@@ -172,6 +172,137 @@ function CandidateCard({ candidate, tone, selected, disabled, closed, onToggle, 
     );
 }
 
+/**
+ * 매칭 결과 리뷰 인증 게이트.
+ * - 종료(X) + 행사의 리뷰 게이트 ON + 아직 미인증일 때, 결과 대신 이곳을 보여준다.
+ * - 리뷰 캡처 이미지를 올리면(형식만 검증) 서버가 저장하고 결과를 열어준다.
+ * - 업로드 성공 여부는 서버(result_reviewed_at)가 최종 판단하며, 로컬스토리지는
+ *   같은 기기에서 재요청을 줄이기 위한 "보조 캐시"로만 쓴다.
+ */
+function ReviewGate({ eventId }) {
+    const [file, setFile] = useState(null);
+    const [preview, setPreview] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const [error, setError] = useState(null);
+
+    const onPick = (e) => {
+        const f = e.target.files?.[0] ?? null;
+        setError(null);
+        if (!f) {
+            setFile(null);
+            setPreview(null);
+            return;
+        }
+        // 형식(이미지)만 가볍게 확인. 최종 검증은 서버가 한다.
+        if (!f.type.startsWith('image/')) {
+            setError('이미지 파일만 올릴 수 있어요.');
+            setFile(null);
+            setPreview(null);
+            return;
+        }
+        setFile(f);
+        setPreview(URL.createObjectURL(f));
+    };
+
+    const submit = () => {
+        if (!file || uploading) return;
+        setUploading(true);
+        setError(null);
+        router.post(
+            '/votes/review',
+            { review_image: file },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    // 보조 캐시: 이 기기에서 올린 기록을 남겨둔다. (실제 판단은 서버)
+                    try {
+                        if (eventId) {
+                            localStorage.setItem(`rotable_reviewed_${eventId}`, '1');
+                        }
+                    } catch (err) {
+                        // 스토리지 사용 불가(시크릿 등)여도 무시 — 서버 플래그가 본체.
+                    }
+                },
+                onError: (errors) => {
+                    setError(errors?.review_image || '업로드에 실패했어요. 다시 시도해 주세요.');
+                },
+                onFinish: () => setUploading(false),
+            },
+        );
+    };
+
+    return (
+        <AppLayout center>
+            <Head title="Rotable" />
+            <div className="flex w-full flex-1 flex-col items-center justify-center bg-gray-50 px-5 py-10">
+                <div className="w-full max-w-sm rounded-3xl border border-rose-100 bg-white p-6 text-center shadow-sm">
+                    <p className="text-4xl">⭐</p>
+                    <h1 className="mt-3 text-lg font-extrabold text-secondary-800">
+                        리뷰 인증하고 결과 확인하기
+                    </h1>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-500">
+                        오픈 기념 할인 행사로 진행된 자리예요 🙏<br />
+                        신청하신 플랫폼(문토·프립 등)에 남겨주신<br />
+                        <b className="text-rose-500">리뷰 캡처 이미지</b>를 올리면<br />
+                        매칭 결과를 바로 확인할 수 있어요!
+                    </p>
+
+                    <label className="mt-5 block cursor-pointer">
+                        <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={onPick}
+                        />
+                        <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-rose-200 bg-rose-50/50 px-4 py-6 transition hover:bg-rose-50">
+                            {preview ? (
+                                <img
+                                    src={preview}
+                                    alt="리뷰 미리보기"
+                                    className="max-h-48 w-auto rounded-xl object-contain shadow"
+                                />
+                            ) : (
+                                <>
+                                    <span className="text-3xl">📷</span>
+                                    <span className="mt-2 text-sm font-semibold text-rose-500">
+                                        리뷰 캡처 이미지 선택
+                                    </span>
+                                    <span className="mt-1 text-[11px] text-gray-400">
+                                        jpg · png · webp (최대 10MB)
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    </label>
+
+                    {error && (
+                        <p className="mt-3 text-xs font-semibold text-red-500">{error}</p>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={submit}
+                        disabled={!file || uploading}
+                        className={
+                            'mt-5 w-full rounded-2xl py-3 text-center text-sm font-bold shadow-lg transition ' +
+                            (file && !uploading
+                                ? 'bg-primary text-white hover:bg-primary-600 active:scale-[0.99]'
+                                : 'cursor-not-allowed bg-secondary-200 text-secondary-400')
+                        }
+                    >
+                        {uploading ? '업로드 중...' : '인증하고 결과 보기 💘'}
+                    </button>
+
+                    <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
+                        ※ 소중한 후기가 저희에게 큰 힘이 돼요. 좋은 후기 부탁드려요!
+                    </p>
+                </div>
+            </div>
+        </AppLayout>
+    );
+}
+
 export default function Votes() {
     const {
         auth,
@@ -185,6 +316,8 @@ export default function Votes() {
         receivedCount = 0,
         coupleCount = 0,
         partnerGender,
+        reviewGateEnabled = false,
+        reviewed = false,
     } = usePage().props;
 
     const tone = partnerGender === 'F' ? 'female' : 'male';
@@ -270,6 +403,13 @@ export default function Votes() {
     const pickedMeList = isClosed && isOneToOne
         ? candidates.filter((c) => c.voted_for_me && !c.voted)
         : [];
+
+    // 매칭 결과 리뷰 인증 게이트:
+    // 종료(X) + 행사의 리뷰 게이트 ON + 아직 미인증이면, 결과 대신 업로드 화면을 보여준다.
+    // (최종 판단은 서버가 내려준 reviewed 플래그. 로컬스토리지는 보조 캐시로만 사용)
+    if (isClosed && reviewGateEnabled && !reviewed) {
+        return <ReviewGate eventId={eventId} />;
+    }
 
     // 매칭중(V)이지만 마감 시각이 지나 투표만 닫힌 '결과 집계 대기' 상태
     if (votingEnded) {

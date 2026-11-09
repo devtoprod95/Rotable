@@ -117,6 +117,7 @@ class RotationService
                     'type'       => $data->type,
                     'event_time' => $data->event_time,
                     'status'     => EventRound::STATUS_PENDING, // 생성 시 상태는 무조건 대기(P)
+                    'review_gate_enabled' => (bool) ($data->review_gate_enabled ?? false),
                     'created_by' => $data->created_by ?? null,
                 ]);
 
@@ -161,6 +162,10 @@ class RotationService
             $event->title      = $data->title;
             $event->type       = $data->type;
             $event->event_time = $data->event_time;
+            // 리뷰 인증 게이트 on/off (전달된 경우에만 반영)
+            if (property_exists($data, 'review_gate_enabled')) {
+                $event->review_gate_enabled = (bool) $data->review_gate_enabled;
+            }
             $event->save();
 
             $returnMsg = helpersSuccessMessage('행사 정보를 수정했습니다.');

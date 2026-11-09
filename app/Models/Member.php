@@ -63,6 +63,8 @@ class Member extends Authenticatable
         'tmi',
         // 신청 플랫폼 (문토/프립)
         'platform',
+        // 매칭 결과 리뷰 인증 완료 시각
+        'result_reviewed_at',
     ];
 
     /** @var list<string> */
@@ -80,6 +82,7 @@ class Member extends Authenticatable
             'birth_year' => 'integer',
             'height'     => 'integer',
             'is_smoker'  => 'boolean',
+            'result_reviewed_at' => 'datetime',
         ];
     }
 

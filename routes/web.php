@@ -78,6 +78,11 @@ Route::middleware('auth:web')->group(function () {
     Route::post('/votes', [MemberPageController::class, 'saveVotes'])
         ->middleware('throttle:20,1')
         ->name('votes.save');
+    // 매칭 결과 리뷰 인증 이미지 업로드 — 종료(X) + 리뷰 게이트 ON 일 때, 결과를 보기 전에 올린다.
+    // 이미지 "형식"만 검증하고(진위 미검사) 저장한 뒤, 결과 게이트 통과 플래그(result_reviewed_at)를 기록한다.
+    Route::post('/votes/review', [MemberPageController::class, 'submitReview'])
+        ->middleware('throttle:10,1')
+        ->name('votes.review');
     Route::get('/requests', [MemberPageController::class, 'requests'])->name('requests');
     Route::get('/games', [MemberPageController::class, 'games'])->name('games');
     Route::get('/games/{slug}', [MemberPageController::class, 'gameShow'])

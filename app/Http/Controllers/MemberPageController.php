@@ -581,6 +581,10 @@ class MemberPageController extends Controller
             'receivedCount' => count($votedForMeIds),
             'coupleCount'   => $coupleCount,
             'partnerGender' => $oppositeGen,
+            // 리뷰 인증 게이트: 행사별 on/off + 내가 이미 인증했는지 여부.
+            // (종료(X) + gate ON + 미인증 이면 결과 대신 업로드 화면을 보여준다.)
+            'reviewGateEnabled' => (bool) ($event?->review_gate_enabled ?? false),
+            'reviewed'          => $me->result_reviewed_at !== null,
         ]);
     }
 
@@ -644,6 +648,46 @@ class MemberPageController extends Controller
         });
 
         return back()->with('success', '매칭 선택을 저장했어요!');
+    }
+
+    /**
+     * 매칭 결과 리뷰 인증 이미지 업로드.
+     *
+     * - 종료(X) + 해당 행사의 리뷰 게이트(review_gate_enabled)가 켜져 있을 때만 의미가 있다.
+     * - 업로드 이미지는 "형식(이미지 파일)"만 검증하고, 실제 리뷰인지(진위)는 검사하지 않는다.
+     * - 저장 후 result_review_image(경로)와 result_reviewed_at(인증 시각)을 기록한다.
+     *   result_reviewed_at 이 채워지면 결과 게이트를 통과한 것으로 본다.
+     */
+    public function submitReview(Request $request): RedirectResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me = Auth::guard('web')->user();
+
+        $event = EventRound::find($me->event_id);
+
+        // 종료(X) + 리뷰 게이트 ON 상태에서만 업로드를 받는다.
+        if ($event === null
+            || $event->status !== EventRound::STATUS_CLOSED
+            || ! $event->review_gate_enabled) {
+            return back()->with('error', '지금은 리뷰 인증을 할 수 없어요.');
+        }
+
+        // 이미 인증했다면 중복 업로드 없이 통과.
+        if ($me->result_reviewed_at !== null) {
+            return back()->with('success', '이미 리뷰 인증이 완료되었어요!');
+        }
+
+        // 이미지 "형식"만 검증한다. (진위는 보지 않고, 파일 자체도 저장하지 않는다.)
+        $request->validate([
+            'review_image' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,heic,heif', 'max:10240'],
+        ]);
+
+        // 이미지는 저장하지 않는다. 형식 검증만 통과하면 인증 완료로 처리한다.
+        $me->forceFill([
+            'result_reviewed_at' => now(),
+        ])->save();
+
+        return back()->with('success', '리뷰 인증이 완료되었어요! 결과를 확인하세요 💘');
     }
 
     /**
@@ -726,7 +770,7 @@ class MemberPageController extends Controller
             // 아직 좌석(테이블)이 배정되지 않았으면 플레이할 수 없다 → 목록으로.
             if ($tableNo === null) {
                 return redirect()->route('games')
-                    ->with('error', '아직 테이블이 배정되지 않았어요. 자리에 앉은 뒤 다시 시도해 주세요.');
+                    ->with('error', '아직 로테이션이 진행되지 않았어요. 로테이션이 시작되면 이용할 수 있어요.');
             }
 
             // 현재 테이블의 진행 상태(진행 중인 질문/집계)를 Redis 에서 읽어 함께 내려준다.
@@ -861,7 +905,7 @@ class MemberPageController extends Controller
     /**
      * 게임을 즐길 수 있는 상태인지 판정한다.
      * - 와인파티(wine) 타입이면서
-     * - 진행중(S) 상태일 때만 true. (매칭중 V·종료 X 등은 불가)
+     * - 대기(P)·진행중(S) 상태일 때 true. (매칭중 V·종료 X 등은 불가)
      */
     private function isGamePlayable(): bool
     {
@@ -877,7 +921,7 @@ class MemberPageController extends Controller
         }
 
         return $event->type === EventRound::TYPE_WINE
-            && $event->status === EventRound::STATUS_STARTED;
+            && in_array($event->status, [EventRound::STATUS_PENDING, EventRound::STATUS_STARTED], true);
     }
 
     /**

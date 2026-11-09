@@ -116,10 +116,29 @@
                                 <input type="text" class="form-control" value="{{ $statuses[$event->status] ?? $event->status }}" disabled readonly>
                                 <small class="form-hint text-muted mt-2 d-block">상태는 로테이션 진행에서 관리됩니다.</small>
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label">리뷰 인증 게이트</label>
+                                <label class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" id="reviewGateToggle"
+                                           {{ $event->review_gate_enabled ? 'checked' : '' }}>
+                                    <span class="form-check-label" id="reviewGateLabel">
+                                        {{ $event->review_gate_enabled ? '켜짐 (결과 전 리뷰 인증 요구)' : '꺼짐' }}
+                                    </span>
+                                </label>
+                                <small class="form-hint text-muted mt-1 d-block">켜면 종료(X) 후 참가자가 매칭 결과를 보기 전 리뷰 이미지를 올려야 합니다.</small>
+                            </div>
                         @else
                             <div class="col-md-2">
                                 <label class="form-label">테이블 수</label>
                                 <input type="number" min="0" max="100" class="form-control" name="table_count" placeholder="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">리뷰 인증 게이트</label>
+                                <label class="form-check form-switch mt-1">
+                                    <input class="form-check-input" type="checkbox" checked id="reviewGateToggle">
+                                    <span class="form-check-label" id="reviewGateLabel">꺼짐</span>
+                                </label>
+                                <small class="form-hint text-muted mt-1 d-block">켜면 종료(X) 후 참가자가 매칭 결과를 보기 전 리뷰 이미지를 올려야 합니다.</small>
                             </div>
                         @endif
                     </div>
@@ -406,6 +425,11 @@
         }
 
         @unless ($isEdit)
+        // ===== 생성: 리뷰 인증 게이트 토글 라벨 동기화 =====
+        $('#reviewGateToggle').on('change', function(){
+            $('#reviewGateLabel').text(this.checked ? '켜짐 (결과 전 리뷰 인증 요구)' : '꺼짐');
+        });
+
         // ===== 생성 =====
         $('.btn-create').click(async function(){
             let $f = $('#eventForm');
@@ -422,7 +446,8 @@
                         title: title,
                         type: $f.find('[name=type]').val(),
                         event_time: time,
-                        table_count: $f.find('[name=table_count]').val() || 0
+                        table_count: $f.find('[name=table_count]').val() || 0,
+                        review_gate_enabled: $('#reviewGateToggle').is(':checked') ? 1 : 0
                     },
                     success: function(res){
                         alert(res?.msg);
@@ -513,6 +538,11 @@
             MemberDetailModal.open(member);
         });
 
+        // ===== 상세: 리뷰 인증 게이트 토글 라벨 동기화 =====
+        $('#reviewGateToggle').on('change', function(){
+            $('#reviewGateLabel').text(this.checked ? '켜짐 (결과 전 리뷰 인증 요구)' : '꺼짐');
+        });
+
         // ===== 상세: 행사 정보 수정 =====
         $('.btn-update').click(async function(){
             let $f = $('#eventForm');
@@ -528,7 +558,8 @@
                     data: {
                         title: title,
                         type: $f.find('[name=type]').val(),
-                        event_time: time
+                        event_time: time,
+                        review_gate_enabled: $('#reviewGateToggle').is(':checked') ? 1 : 0
                     },
                     success: function(res){ alert(res?.msg); },
                     error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }

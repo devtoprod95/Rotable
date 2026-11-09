@@ -104,6 +104,9 @@ Route::middleware('role')->group(function () {
                     ->name('index');
                 // 채팅방 공지 문구 — 행사 시간/타입에 맞춰 자동 생성, 복사해서 채팅방에 붙여넣기
                 Route::get('/notice', [RotationController::class, 'guideNotice'])->name('notice');
+                // 호스트 발표 멘트 편집 — 유형별 대본을 섹션 단위로 편집/저장(DB)
+                Route::get('/script', [RotationController::class, 'scriptIndex'])->name('script');
+                Route::post('/script', [RotationController::class, 'scriptSave'])->name('script.save');
                 // 예외 상황 대처 설명서 (별도 페이지)
                 Route::get('/exception', [RotationController::class, 'guideException'])->name('exception');
             });

@@ -882,8 +882,84 @@ class RotationController extends Controller
      */
     public function scriptPublic(?string $type = null): View
     {
-        $type = $type === 'solo' ? 'solo' : 'wine';
+        $scriptService = app(\App\Services\Rotation\ScriptService::class);
+        $type   = $scriptService->normalizeType($type);
+        $script = $scriptService->get($type);
 
+        return view('public.script', [
+            'type'   => $type,
+            'script' => $script,
+        ]);
+    }
+
+    /**
+     * 호스트 발표 멘트 편집 화면 (관리자). 유형별 현재 멘트(저장값 또는 기본값)를 불러와 편집한다.
+     */
+    public function scriptIndex(): View
+    {
+        $scriptService = app(\App\Services\Rotation\ScriptService::class);
+        $type = $scriptService->normalizeType($this->request->query('type'));
+
+        return view('admin.rotation.script', [
+            'type'    => $type,
+            'wine'    => $scriptService->get('wine'),
+            'solo'    => $scriptService->get('solo'),
+            'defaults' => \App\Services\Rotation\ScriptService::DEFAULTS,
+        ]);
+    }
+
+    /**
+     * 호스트 발표 멘트 저장 (관리자). 유형별 섹션 구조를 저장한다.
+     */
+    public function scriptSave(): JsonResponse
+    {
+        $validator = Validator::make($this->request->all(), [
+            'type'                 => ['required', Rule::in(['wine', 'solo'])],
+            'title'                => 'nullable|string|max:255',
+            'sections'             => 'present|array',
+            'sections.*.no'        => 'nullable|string|max:20',
+            'sections.*.heading'   => 'nullable|string|max:255',
+            'sections.*.lines'     => 'present|array',
+            'sections.*.lines.*'   => 'nullable|string|max:2000',
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $data = $validator->validated();
+
+        // 빈 줄 제거 + 줄이 하나도 없거나 제목/번호도 비어있는 섹션은 버린다.
+        $sections = collect($data['sections'] ?? [])
+            ->map(function ($s) {
+                $lines = collect($s['lines'] ?? [])
+                    ->map(fn ($l) => trim((string) $l))
+                    ->filter(fn ($l) => $l !== '')
+                    ->values()
+                    ->all();
+
+                return [
+                    'no'      => trim((string) ($s['no'] ?? '')),
+                    'heading' => trim((string) ($s['heading'] ?? '')),
+                    'lines'   => $lines,
+                ];
+            })
+            ->filter(fn ($s) => $s['heading'] !== '' || ! empty($s['lines']))
+            ->values()
+            ->all();
+
+        app(\App\Services\Rotation\ScriptService::class)
+            ->save($data['type'], (string) ($data['title'] ?? ''), $sections);
+
+        return apiRes(Response::HTTP_OK, ['msg' => '발표 멘트를 저장했습니다.']);
+    }
+
+    /**
+     * (사용 안 함) 과거 하드코딩 멘트 — ScriptService::DEFAULTS 로 이전됨.
+     * @deprecated
+     */
+    private function legacyScriptsUnused(): array
+    {
+        $type = 'wine';
         /** @var array<string, array{title: string, sections: list<array{no: string, heading: string, lines: list<string>}>}> $scripts */
         $scripts = [
             'wine' => [
@@ -995,10 +1071,7 @@ class RotationController extends Controller
             ],
         ];
 
-        return view('public.script', [
-            'type' => $type,
-            'script' => $scripts[$type],
-        ]);
+        return $scripts;
     }
 
     /* ======================================================================

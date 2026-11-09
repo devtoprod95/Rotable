@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\MemberAuthController;
 use App\Http\Controllers\MemberPageController;
 use App\Http\Middleware\RedirectIfRegistered;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\QrRedirectController;
 
 /*
 |--------------------------------------------------------------------------
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [MemberPageController::class, 'landing'])->name('landing');
 
 // QR 코드 공개 리다이렉트 — 관리자가 설정한 대상 URL 로 이동한다. (게스트 포함 누구나)
-Route::get('/qr/{code}', [\App\Http\Controllers\QrRedirectController::class, 'redirect'])
+Route::get('/qr/{code}', [QrRedirectController::class, 'redirect'])
     ->where('code', '[A-Za-z0-9]+')
     ->name('qr.redirect');
 

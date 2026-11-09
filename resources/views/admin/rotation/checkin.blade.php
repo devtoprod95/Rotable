@@ -130,6 +130,10 @@
                                     title="참석(체크인)한 사람 기준으로 입장등록 더미 데이터를 생성합니다 (개발용)">
                                 <i class="ti ti-flask me-1"></i><span class="d-none d-sm-inline">더미 입장등록</span>
                             </button>
+                            <button type="button" class="btn btn-outline-azure flex-shrink-0" id="checkinSyncTablesBtn"
+                                    title="이미 입장등록된 좌석(테이블)을 체크인 명단에 역동기화합니다 (기존 데이터 보정용)">
+                                <i class="ti ti-refresh-dot me-1"></i><span class="d-none d-sm-inline">기존 테이블 동기화</span>
+                            </button>
                         @endif
                     @endisset
                     <span class="text-secondary small flex-shrink-0 ms-auto" id="lastUpdated" aria-live="polite"></span>
@@ -192,6 +196,7 @@
         var addUrl    = "{{ route('admin.rotation.event.rosters.add', ['id' => $event->id]) }}";
         var ticketTpl = "{{ route('admin.rotation.event.rosters.ticket', ['id' => $event->id, 'rosterId' => '__RID__']) }}";
         var devSeedUrl = "{{ route('admin.rotation.event.rosters.devSeed', ['id' => $event->id]) }}";
+        var syncTablesUrl = "{{ route('admin.rotation.event.rosters.syncTables', ['id' => $event->id]) }}";
 
         var rosters = [];
         var tableRatios = [];  // 테이블별 성비 (load 때 갱신, 번호표 모달에서도 재사용)
@@ -457,6 +462,38 @@
                 error: function(xhr){ showError(xhr, '더미 입장등록 생성에 실패했습니다.'); }
             }).always(function(){
                 $btn.prop('disabled', false).html('<i class="ti ti-flask me-1"></i><span class="d-none d-sm-inline">더미 입장등록</span>');
+            });
+        });
+
+        // [기존 데이터 보정] 좌석(rotation_seats) 테이블을 체크인 명단(event_rosters)에 역동기화
+        $('#checkinSyncTablesBtn').on('click', async function(){
+            var ok = await Swal.fire({
+                icon: 'question',
+                title: '기존 테이블 동기화',
+                html: '이미 <b>입장등록된 좌석</b>의 테이블 번호를<br>체크인 명단에 채워 넣을까요?'
+                    + '<div class="text-secondary small mt-1">명단에 이미 테이블이 지정된 경우는 건너뜁니다.</div>',
+                showCancelButton: true, reverseButtons: true,
+                confirmButtonText: '동기화', cancelButtonText: '취소',
+                confirmButtonColor: '#3085d6', cancelButtonColor: '#d33'
+            });
+            if(!ok.isConfirmed){ return; }
+
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            $.ajax({
+                url: syncTablesUrl, type: 'POST',
+                success: function(res){
+                    Swal.fire({
+                        icon: 'success',
+                        title: '동기화 완료',
+                        html: '반영 <b>' + (res?.updated ?? 0) + '건</b>, 건너뜀 ' + (res?.skipped ?? 0) + '건',
+                        confirmButtonText: '확인', confirmButtonColor: '#3085d6'
+                    });
+                    load();
+                },
+                error: function(xhr){ showError(xhr, '테이블 동기화에 실패했습니다.'); }
+            }).always(function(){
+                $btn.prop('disabled', false).html('<i class="ti ti-refresh-dot me-1"></i><span class="d-none d-sm-inline">기존 테이블 동기화</span>');
             });
         });
 

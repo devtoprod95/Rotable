@@ -419,6 +419,21 @@ class RotationController extends Controller
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
     }
 
+    /**
+     * [마이그레이션용] 기존 좌석(rotation_seats)의 테이블을 체크인 명단(event_rosters)에 역동기화한다.
+     * 옵션A 이전 데이터 보정용. 최고관리자 전용.
+     */
+    public function rosterSyncTables(int $id): JsonResponse
+    {
+        if (! (auth('admin')->user()?->hasRole(Role::SuperAdmin->value) ?? false)) {
+            return apiRes(Response::HTTP_FORBIDDEN, helpersFailMessage('최고관리자만 사용할 수 있습니다.'));
+        }
+
+        $result = $this->rosterService->syncTablesFromSeats($id);
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
+    }
+
     /* ======================================================================
      | 메시지 — 누가 누구에게 보냈는지 조회
      * ==================================================================== */

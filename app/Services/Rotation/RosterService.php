@@ -558,6 +558,69 @@ class RosterService
     }
 
     /**
+     * [마이그레이션용] 기존 좌석(rotation_seats)의 테이블을 체크인 명단(event_rosters)에 역동기화한다.
+     *
+     * 옵션A 이전에 입장등록한 회원들은 event_rosters.rotation_table_id 가 비어 있다.
+     * 이미 만들어진 rotation_seats(= 실제 좌석)의 테이블을 읽어, 같은 번호표·성별의 roster 행에 채운다.
+     *  - 연결 키: member(gender, name=번호표) ↔ roster(gender, ticket_no)
+     *  - 이미 roster 에 테이블이 있으면 덮어쓰지 않는다. (수동 지정 보존)
+     *
+     * @return array{isSuccess:bool, msg?:string, updated?:int, skipped?:int}
+     */
+    public function syncTablesFromSeats(int $eventId): array
+    {
+        try {
+            // 이 행사의 좌석(회원 성별 + 번호표 + 좌석 테이블번호) 로드.
+            $seats = \App\Models\RotationSeat::with(['member:id,gender,name', 'table:id,table_no'])
+                ->where('event_id', $eventId)
+                ->get();
+
+            if ($seats->isEmpty()) {
+                return helpersFailMessage('동기화할 좌석(입장등록)이 없습니다.');
+            }
+
+            $updated = 0;
+            $skipped = 0;
+
+            DB::transaction(function () use ($eventId, $seats, &$updated, &$skipped): void {
+                foreach ($seats as $seat) {
+                    $gender   = $seat->member?->gender;
+                    $ticketNo = $seat->member?->name; // 번호표는 members.name 에 숫자 문자열로 저장
+                    $tableId  = $seat->rotation_table_id;
+
+                    if ($gender === null || $ticketNo === null || $tableId === null || ! ctype_digit((string) $ticketNo)) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    // 같은 행사·성별·번호표의 roster 를 찾아, 테이블이 비어 있으면 채운다.
+                    $roster = EventRoster::where('event_id', $eventId)
+                        ->where('gender', $gender)
+                        ->where('ticket_no', (int) $ticketNo)
+                        ->first();
+
+                    if ($roster === null || $roster->rotation_table_id !== null) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    $roster->rotation_table_id = (int) $tableId;
+                    $roster->save();
+                    $updated++;
+                }
+            });
+
+            $res            = helpersSuccessMessage("좌석 기준으로 명단 테이블을 동기화했습니다. 반영 {$updated}건, 건너뜀 {$skipped}건");
+            $res['updated'] = $updated;
+            $res['skipped'] = $skipped;
+
+            return $res;
+        } catch (\Throwable $th) {
+            return helpersFailMessage($th->getMessage());
+        }
+    }
+
+    /**
      * [개발용] 현재 체크인(참석)된 사람들 기준으로 입장등록(회원)을 더미 데이터로 생성한다.
      *
      * 실제 입장등록 흐름과 동일하게:

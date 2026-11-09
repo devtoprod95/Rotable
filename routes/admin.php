@@ -51,6 +51,8 @@ Route::middleware('role')->group(function () {
                 Route::patch('/{id}/rosters/{rosterId}/ticket', [RotationController::class, 'rosterSetTicket'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.ticket');
                 // [개발용] 체크인된 사람 기준 입장등록 더미 생성 (최고관리자 전용)
                 Route::post('/{id}/rosters/dev-seed', [RotationController::class, 'rosterDevSeed'])->whereNumber('id')->middleware('superAdmin')->name('rosters.devSeed');
+                // [운영/마이그레이션용] 기존 좌석(rotation_seats) 테이블을 체크인 명단(event_rosters)에 역동기화 (최고관리자 전용)
+                Route::post('/{id}/rosters/sync-tables', [RotationController::class, 'rosterSyncTables'])->whereNumber('id')->middleware('superAdmin')->name('rosters.syncTables');
                 Route::get('/{id}/matches/list', [RotationController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
                 Route::get('/{id}/members/{memberId}/voters/list', [RotationController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
                 Route::get('/{id}/members/{memberId}/voted/list', [RotationController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');

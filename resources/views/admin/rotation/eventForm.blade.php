@@ -48,6 +48,15 @@
         .members-table td.m-headcell::before{ display:none; }
         .members-table td .d-flex.flex-column{ align-items:flex-start !important; }
     }
+
+    /* 테이블 관리 표: 엑셀(격자) 느낌 제거 — 세로 격자선 없이 일반 테이블처럼. (모바일 접기 동작은 유지) */
+    #table-table.tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
+    #table-table.tabulator .tabulator-header { background: #f6f8fb; border-bottom: 1px solid #e9ecf1; }
+    #table-table.tabulator .tabulator-header .tabulator-col { background: transparent; border-right: none; font-weight: 700; color: #495057; }
+    #table-table.tabulator .tabulator-row .tabulator-cell { border-right: none; }
+    #table-table.tabulator .tabulator-row { border-bottom: 1px solid #f0f2f6; }
+    #table-table.tabulator .tabulator-row.tabulator-row-even { background: #fcfcfd; }
+    #table-table.tabulator .tabulator-row:hover { background: #f3f7ff; }
 </style>
 
 {{-- 수정(상세) 화면에서만: 행사 운영 공용 탭바 [행사 상세][체크인][로테이션 진행] --}}

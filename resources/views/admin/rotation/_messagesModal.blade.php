@@ -16,6 +16,59 @@
     $messagesUrlTemplate = route('admin.rotation.event.messages.list', ['id' => '__ID__']);
 @endphp
 
+<style>
+    /* 메시지 모달: Tabulator 의 "엑셀(격자)" 느낌을 걷어내고 일반 테이블처럼 보이게 한다.
+       - 셀의 세로 경계선 제거(가로줄만 남김)
+       - 헤더는 연한 회색 배경 + 굵은 글씨로 깔끔하게
+       - 행 호버 하이라이트 */
+    #messagesModal .tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
+    #messagesModal .tabulator .tabulator-header { background: #f6f8fb; border-bottom: 1px solid #e9ecf1; }
+    #messagesModal .tabulator .tabulator-header .tabulator-col {
+        background: transparent; border-right: none; font-weight: 700; color: #495057;
+    }
+    #messagesModal .tabulator .tabulator-row .tabulator-cell {
+        border-right: none;            /* 세로 격자선 제거 */
+        padding: 12px 14px;            /* 넉넉한 여백 */
+    }
+    #messagesModal .tabulator .tabulator-row { border-bottom: 1px solid #f0f2f6; }
+    #messagesModal .tabulator .tabulator-row.tabulator-row-even { background: #fcfcfd; }
+    #messagesModal .tabulator .tabulator-row:hover { background: #f3f7ff; }
+
+    /* ── 모바일: 표를 "세로 카드"처럼 재배치 (PC 는 위 스타일 그대로) ──
+       각 행을 카드로, 각 셀을 "라벨 : 값" 한 줄로 쌓는다. Tabulator 가 셀에 붙여주는
+       tabulator-field 속성으로 각 항목 앞에 라벨을 CSS 로 표시한다. */
+    @media (max-width: 767.98px) {
+        #messagesModal .tabulator .tabulator-header { display: none; }  /* 헤더 숨김 */
+        #messagesModal .tabulator { border: none; }
+        #messagesModal .tabulator .tabulator-tableholder { overflow-x: hidden !important; }
+        #messagesModal .tabulator .tabulator-row {
+            display: block; width: 100% !important;
+            border: 1px solid #e9ecf1; border-radius: 12px;
+            background: #fff !important; box-shadow: 0 1px 3px rgba(20,30,60,.05);
+            margin-bottom: 12px; padding: 6px 4px;
+        }
+        #messagesModal .tabulator .tabulator-row .tabulator-cell {
+            display: flex !important; width: 100% !important;
+            white-space: normal !important; height: auto !important;
+            border: none !important; padding: 7px 12px !important;
+            text-align: left !important;
+        }
+        /* 각 셀 앞 라벨 */
+        #messagesModal .tabulator .tabulator-row .tabulator-cell::before {
+            content: attr(data-mlabel);
+            flex: 0 0 72px; color: #8a92a0; font-weight: 700; font-size: 0.82rem;
+        }
+        /* '내용' 셀은 라벨 없이 넓게 (제일 중요) */
+        #messagesModal .tabulator .tabulator-row .tabulator-cell[tabulator-field="body"] {
+            flex-direction: column; background: #f4f7ff; border-radius: 10px;
+            margin: 2px 8px; padding: 10px 12px !important;
+        }
+        #messagesModal .tabulator .tabulator-row .tabulator-cell[tabulator-field="body"]::before {
+            flex: none; margin-bottom: 4px;
+        }
+    }
+</style>
+
 <div class="modal modal-blur fade" id="messagesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -144,12 +197,21 @@
             table = new Tabulator("#mm-table", {
                 ajaxURL: listUrl(eventId),
                 ajaxParams: filters,
-                layout: "fitColumns",
+                layout: "fitColumns",       // 가로를 꽉 채운다
                 height: "55vh",
+                resizableColumns: false,    // 컬럼 리사이즈 핸들 제거(엑셀 느낌 제거)
                 initialSort: [{column: "id", dir: "desc"}],
+                // 각 셀에 모바일 라벨(data-mlabel)을 달아둔다. (CSS 가 모바일에서만 ::before 로 표시)
+                rowFormatter: function(row){
+                    var labels = { id: 'No', sender_id: '보낸/받는', body: '내용', read_at: '읽음', created_at: '보낸 시각' };
+                    row.getCells().forEach(function(cell){
+                        var f = cell.getField();
+                        if(f && labels[f]){ cell.getElement().setAttribute('data-mlabel', labels[f]); }
+                    });
+                },
                 columns: [
                     { title: "No", field: "id", width: 70, hozAlign: "center" },
-                    { title: "보낸사람 → 받는사람", field: "sender_id", width: 200, headerSort: false,
+                    { title: "보낸사람 → 받는사람", field: "sender_id", width: 220, headerSort: false,
                         formatter: function(cell){
                             var d = cell.getRow().getData();
                             var from = nameWithGender(d.sender ? d.sender.name : null, d.sender ? d.sender.gender : null, d.sender ? d.sender.label : null);
@@ -162,7 +224,10 @@
                         }
                     },
                     { title: "내용", field: "body",
-                        formatter: function(cell){ return $('<div>').text(cell.getValue() || '').html(); }
+                        formatter: function(cell){
+                            return '<div style="white-space:pre-wrap; word-break:break-word; line-height:1.5;">'
+                                + $('<div>').text(cell.getValue() || '').html() + '</div>';
+                        }
                     },
                     { title: "읽음", field: "read_at", width: 170, hozAlign: "center", headerSort: false,
                         formatter: function(cell){
@@ -178,7 +243,6 @@
                         formatter: function(cell){
                             if(!cell.getValue()){ return '-'; }
                             var s = new Date(cell.getValue()).toLocaleString('ko-KR');
-                            // "2026. 10. 13. 오전 11:34:00" → 오전/오후 앞에서 줄바꿈
                             return s.replace(/\s(오전|오후)/, '<br>$1');
                         }
                     },

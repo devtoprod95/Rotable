@@ -16,6 +16,38 @@
     ];
 @endphp
 
+<style>
+    /* requestsModal: 엑셀(격자) 느낌 제거 + 모바일 카드화 */
+    #requestsModal .tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
+    #requestsModal .tabulator .tabulator-header { background: #f6f8fb; border-bottom: 1px solid #e9ecf1; }
+    #requestsModal .tabulator .tabulator-header .tabulator-col { background: transparent; border-right: none; font-weight: 700; color: #495057; }
+    #requestsModal .tabulator .tabulator-row .tabulator-cell { border-right: none; padding: 12px 14px; }
+    #requestsModal .tabulator .tabulator-row { border-bottom: 1px solid #f0f2f6; }
+    #requestsModal .tabulator .tabulator-row.tabulator-row-even { background: #fcfcfd; }
+    #requestsModal .tabulator .tabulator-row:hover { background: #f3f7ff; }
+    @media (max-width: 767.98px) {
+        #requestsModal .tabulator .tabulator-header { display: none; }
+        #requestsModal .tabulator { border: none; }
+        #requestsModal .tabulator .tabulator-tableholder { overflow-x: hidden !important; }
+        #requestsModal .tabulator .tabulator-row {
+            display: block; width: 100% !important; border: 1px solid #e9ecf1; border-radius: 12px;
+            background: #fff !important; box-shadow: 0 1px 3px rgba(20,30,60,.05); margin-bottom: 12px; padding: 6px 4px;
+        }
+        #requestsModal .tabulator .tabulator-row .tabulator-cell {
+            display: flex !important; width: 100% !important; white-space: normal !important; height: auto !important;
+            border: none !important; padding: 7px 12px !important; text-align: left !important;
+        }
+        #requestsModal .tabulator .tabulator-row .tabulator-cell::before {
+            content: attr(data-mlabel); flex: 0 0 72px; color: #8a92a0; font-weight: 700; font-size: 0.82rem;
+        }
+        /* 요청 내용은 라벨 아래로 넓게 (가장 중요) */
+        #requestsModal .tabulator .tabulator-row .tabulator-cell[tabulator-field="body"] {
+            flex-direction: column; background: #f4f7ff; border-radius: 10px; margin: 2px 8px; padding: 10px 12px !important;
+        }
+        #requestsModal .tabulator .tabulator-row .tabulator-cell[tabulator-field="body"]::before { flex: none; margin-bottom: 4px; }
+    }
+</style>
+
 <div class="modal modal-blur fade" id="requestsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -165,7 +197,15 @@
                 ajaxParams: filters,
                 layout: "fitColumns",
                 height: "55vh",
+                resizableColumns: false,
                 initialSort: [{column: "id", dir: "desc"}],
+                rowFormatter: function(row){
+                    var labels = { id: 'No', member: '회원', table_no: '테이블', body: '요청 내용', created_at: '요청 시각', read_at: '상태' };
+                    row.getCells().forEach(function(cell){
+                        var f = cell.getField();
+                        if(f && labels[f]){ cell.getElement().setAttribute('data-mlabel', labels[f]); }
+                    });
+                },
                 columns: [
                     { title: "No", field: "id", width: 70, hozAlign: "center" },
                     { title: "회원", field: "member", width: 150, headerSort: false,

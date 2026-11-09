@@ -8,6 +8,33 @@
     $votedUrlTemplate = route('admin.rotation.event.members.voted.list', ['id' => '__ID__', 'memberId' => '__MID__']);
 @endphp
 
+<style>
+    /* votedModal: 엑셀(격자) 느낌 제거 + 모바일 카드화 (메시지 모달과 동일 패턴) */
+    #votedModal .tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
+    #votedModal .tabulator .tabulator-header { background: #f6f8fb; border-bottom: 1px solid #e9ecf1; }
+    #votedModal .tabulator .tabulator-header .tabulator-col { background: transparent; border-right: none; font-weight: 700; color: #495057; }
+    #votedModal .tabulator .tabulator-row .tabulator-cell { border-right: none; padding: 12px 14px; }
+    #votedModal .tabulator .tabulator-row { border-bottom: 1px solid #f0f2f6; }
+    #votedModal .tabulator .tabulator-row.tabulator-row-even { background: #fcfcfd; }
+    #votedModal .tabulator .tabulator-row:hover { background: #f3f7ff; }
+    @media (max-width: 767.98px) {
+        #votedModal .tabulator .tabulator-header { display: none; }
+        #votedModal .tabulator { border: none; }
+        #votedModal .tabulator .tabulator-tableholder { overflow-x: hidden !important; }
+        #votedModal .tabulator .tabulator-row {
+            display: block; width: 100% !important; border: 1px solid #e9ecf1; border-radius: 12px;
+            background: #fff !important; box-shadow: 0 1px 3px rgba(20,30,60,.05); margin-bottom: 12px; padding: 6px 4px;
+        }
+        #votedModal .tabulator .tabulator-row .tabulator-cell {
+            display: flex !important; width: 100% !important; white-space: normal !important; height: auto !important;
+            border: none !important; padding: 7px 12px !important; text-align: left !important;
+        }
+        #votedModal .tabulator .tabulator-row .tabulator-cell::before {
+            content: attr(data-mlabel); flex: 0 0 60px; color: #8a92a0; font-weight: 700; font-size: 0.82rem;
+        }
+    }
+</style>
+
 <div class="modal modal-blur fade" id="votedModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
@@ -77,7 +104,15 @@
                 layout: "fitColumns",
                 height: "55vh",
                 pagination: false,
+                resizableColumns: false,
                 placeholder: "이 회원이 선택한 상대가 없습니다.",
+                rowFormatter: function(row){
+                    var labels = { name: '이름', job: '직업', phone: '번호', age: '나이', height: '키' };
+                    row.getCells().forEach(function(cell){
+                        var f = cell.getField();
+                        if(f && labels[f]){ cell.getElement().setAttribute('data-mlabel', labels[f]); }
+                    });
+                },
                 columns: [
                     { title: "이름", field: "name", minWidth: 150, headerSort: false,
                         formatter: nameCell },

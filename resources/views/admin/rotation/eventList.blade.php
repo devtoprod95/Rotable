@@ -25,6 +25,15 @@
         border-top-color: #374151;
         border-bottom-color: #374151;
     }
+
+    /* 행사 목록 표: 엑셀(격자) 느낌 제거 — 세로 격자선 없이 일반 테이블처럼. (모바일 접기 동작은 유지) */
+    #example-table.tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
+    #example-table.tabulator .tabulator-header { background: #f6f8fb; border-bottom: 1px solid #e9ecf1; }
+    #example-table.tabulator .tabulator-header .tabulator-col { background: transparent; border-right: none; font-weight: 700; color: #495057; }
+    #example-table.tabulator .tabulator-row .tabulator-cell { border-right: none; }
+    #example-table.tabulator .tabulator-row { border-bottom: 1px solid #f0f2f6; }
+    #example-table.tabulator .tabulator-row.tabulator-row-even { background: #fcfcfd; }
+    #example-table.tabulator .tabulator-row:hover { background: #f3f7ff; }
 </style>
 <div class="row row-cards mt-2">
 

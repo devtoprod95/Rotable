@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $gender     M|F
  * @property string      $platform   munto|frip
  * @property int|null    $ticket_no  번호표 숫자(같은 행사·같은 성별 안에서 유일). null=미배정
+ * @property int|null    $rotation_table_id 체크인 때 지정한 기준(홈) 테이블 (rotation_tables.id)
  * @property \Illuminate\Support\Carbon|null $checked_in_at
  */
 class EventRoster extends Model
@@ -32,6 +33,7 @@ class EventRoster extends Model
         'gender',
         'platform',
         'ticket_no',
+        'rotation_table_id',
         'checked_in_at',
     ];
 
@@ -43,6 +45,7 @@ class EventRoster extends Model
         return [
             'checked_in_at' => 'datetime',
             'ticket_no'     => 'integer',
+            'rotation_table_id' => 'integer',
         ];
     }
 
@@ -54,6 +57,16 @@ class EventRoster extends Model
     public function eventRound(): BelongsTo
     {
         return $this->belongsTo(EventRound::class, 'event_id');
+    }
+
+    /**
+     * 체크인 때 지정한 기준(홈) 테이블.
+     *
+     * @return BelongsTo<RotationTable, EventRoster>
+     */
+    public function rotationTable(): BelongsTo
+    {
+        return $this->belongsTo(RotationTable::class, 'rotation_table_id');
     }
 
     /**

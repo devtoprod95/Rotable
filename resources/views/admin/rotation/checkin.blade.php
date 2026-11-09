@@ -141,7 +141,7 @@
                 {{-- 성비 그리드 (입장등록 좌석 없으면 안내) --}}
                 <div class="row g-2" id="tableRatioBody"></div>
                 <div class="text-secondary small text-center py-2" id="tableRatioEmpty">
-                    입장등록한 참가자가 생기면 테이블별 성비가 여기에 표시됩니다.
+                    이 회차에 생성된 테이블이 없어요. 행사 상세에서 테이블을 먼저 추가해 주세요.
                 </div>
             </div>
         </div>
@@ -195,6 +195,10 @@
 
         var rosters = [];
         var tableRatios = [];  // 테이블별 성비 (load 때 갱신, 번호표 모달에서도 재사용)
+        // 이 행사의 테이블 목록 (체크인 때 테이블 지정용)
+        var TABLES = @json($tables->map(fn($t) => ['id' => $t->id, 'table_no' => $t->table_no])->values());
+        // 1:1 소개팅 여부 — true 면 테이블당 같은 성별 1명 제약(이미 찬 테이블은 드롭다운에서 숨김)
+        var IS_ONE_TO_ONE = @json($event->isOneToOne());
 
         // 플랫폼 표시 라벨/색상 (문토/프립)
         var PLATFORM_LABEL = @json(collect($platformOptions)->pluck('label', 'id'));
@@ -267,6 +271,13 @@
             var toneCls = r.gender === 'F' ? 'bg-pink' : 'bg-blue';
             var ticket = r.ticket_no
                 ? `<span class="badge ${toneCls} text-white fs-3 me-2">${genderText(r.gender)} ${r.ticket_no}번</span>` : '';
+            // 체크인된 사람의 지정 테이블 (미지정이면 경고 뱃지 → 참가자 입장등록이 막히므로 눈에 띄게)
+            var tableBadge = '';
+            if(inState){
+                tableBadge = r.rotation_table_id
+                    ? `<span class="badge bg-azure-lt fs-3 me-2"><i class="ti ti-armchair me-1"></i>${tableNoById(r.rotation_table_id)}번 테이블</span>`
+                    : `<span class="badge bg-red-lt fs-3 me-2"><i class="ti ti-alert-triangle me-1"></i>테이블 미지정</span>`;
+            }
             // 입장등록을 마친 사람은 번호 변경·삭제 버튼을 아예 보이지 않게 한다.
             var ticketBtn = (inState && !r.registered)
                 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-checkin-ticket"`
@@ -284,7 +295,7 @@
                 +      ` aria-label="${esc(nickname)} ${esc(pfLabel)} ${inState ? '참석됨, 탭하면 취소' : '미도착, 탭하면 체크인'}">`
                 +   `<div>`
                 +     `<div class="fw-bold fs-3">${ticket}${name}</div>`
-                +     `<div class="mt-1">${pf}</div>`
+                +     `<div class="mt-1">${tableBadge}${pf}</div>`
                 +     when
                 +     regWhen
                 +   `</div>`
@@ -332,9 +343,8 @@
             tableRatios = ratios || [];
             var $body  = $('#tableRatioBody');
             var $empty = $('#tableRatioEmpty');
-            // 입장등록된 좌석이 하나도 없으면(전부 0) 안내 문구만 표시.
-            var anyone = ratios.some(function(r){ return (r.total || 0) > 0; });
-            if(!ratios.length || !anyone){
+            // 테이블 자체가 없을 때만 안내 문구. (테이블이 있으면 입장등록이 없어도 남0·여0 으로 전부 표시)
+            if(!ratios.length){
                 $body.empty();
                 $empty.show();
                 return;
@@ -368,10 +378,9 @@
             $body.html(cards);
         }
 
-        // 번호표 모달 등에 끼워 넣을 "테이블별 성비" 요약 HTML. (입장등록 좌석 없으면 빈 문자열)
+        // 번호표 모달 등에 끼워 넣을 "테이블별 성비" 요약 HTML. (테이블이 없으면 빈 문자열)
         function ratioModalHtml(){
-            var anyone = tableRatios.some(function(r){ return (r.total || 0) > 0; });
-            if(!anyone){ return ''; }
+            if(!tableRatios.length){ return ''; }
             var cells = tableRatios.map(function(r){
                 var m = r.male || 0, f = r.female || 0, total = r.total || 0;
                 var balanced = (m === f);
@@ -458,57 +467,121 @@
             });
         }
 
-        // 번호표 입력창(숫자). 빈 값 허용 여부와 안내 문구는 호출하는 쪽에서 정한다.
+        // 테이블 선택 드롭다운 HTML (현재 성비를 옵션에 함께 표기)
+        //  - 1:1 소개팅은 테이블당 같은 성별 1명 제약 → 체크인하는 사람의 성별이 이미 찬 테이블은 숨긴다.
+        function tableSelectHtml(selectedId, gender){
+            if(!TABLES.length){ return ''; }
+            var ratioByNo = {};
+            tableRatios.forEach(function(r){ ratioByNo[r.table_no] = r; });
+            var opts = ['<option value="">— 테이블을 선택하세요 —</option>'];
+            TABLES.forEach(function(t){
+                var r = ratioByNo[t.table_no];
+                var isSelected = (String(selectedId||'') === String(t.id));
+                // 1:1: 같은 성별이 이미 앉은 테이블은 숨긴다. (단, 지금 이 사람이 이미 지정된 자리는 유지)
+                if(IS_ONE_TO_ONE && !isSelected && r){
+                    var sameGenderCount = (gender === 'F') ? (r.female||0) : (r.male||0);
+                    if(sameGenderCount >= 1){ return; }
+                }
+                var ratioText = r ? ' (남' + (r.male||0) + '·여' + (r.female||0) + ')' : '';
+                var sel = isSelected ? ' selected' : '';
+                opts.push('<option value="' + t.id + '"' + sel + '>' + t.table_no + '번 테이블' + ratioText + '</option>');
+            });
+            return '<div style="margin-top:12px;text-align:left;">'
+                 +   '<label style="font-size:0.85rem;color:#475569;font-weight:700;display:block;margin-bottom:4px;">앉을 테이블</label>'
+                 +   '<select id="swal-table-select" class="swal2-select" style="width:100%;margin:0;">' + opts.join('') + '</select>'
+                 + '</div>';
+        }
+
+        // 번호표 입력창(숫자) + 테이블 선택. 빈 값 허용 여부와 안내 문구는 호출하는 쪽에서 정한다.
+        //  결과값(isConfirmed 시 .value): { ticket: string, tableId: string }
         function askTicket(opts){
             return Swal.fire({
                 title: opts.title,
-                html: (opts.html || '') + ratioModalHtml(),
-                input: 'number',
-                inputLabel: opts.label,
-                inputValue: opts.value || '',
-                inputPlaceholder: opts.placeholder || '',
-                inputAttributes: { min: 1, max: TICKET_MAX, step: 1, inputmode: 'numeric' },
+                html: (opts.html || '')
+                    + '<div style="margin-top:8px;text-align:left;">'
+                    +   '<label style="font-size:0.85rem;color:#475569;font-weight:700;display:block;margin-bottom:4px;">'
+                    +     '번호표' + (opts.hint ? ' <span style="font-weight:400;color:#64748b;">· ' + opts.hint + '</span>' : '')
+                    +   '</label>'
+                    +   '<input id="swal-ticket" type="number" class="swal2-input" placeholder="' + (opts.placeholder || '번호 입력') + '" '
+                    +     'value="' + (opts.value || '') + '" min="1" max="' + TICKET_MAX + '" step="1" inputmode="numeric" '
+                    +     'style="width:100%;margin:0;box-sizing:border-box;">'
+                    + '</div>'
+                    + tableSelectHtml(opts.tableId, opts.gender)
+                    + ratioModalHtml(),
+                focusConfirm: false,
                 showCancelButton: true,
                 reverseButtons: true,
                 confirmButtonText: opts.confirmText,
                 cancelButtonText: '취소',
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
-                inputValidator: function(v){
-                    v = (v == null ? '' : String(v)).trim();
-                    if(v === ''){ return opts.allowEmpty ? undefined : '번호표를 입력해 주세요.'; }
-                    if(!/^\d+$/.test(v) || +v < 1 || +v > TICKET_MAX){ return '1~' + TICKET_MAX + ' 사이 숫자로 입력해 주세요.'; }
+                didOpen: function(){
+                    var el = document.getElementById('swal-ticket');
+                    if(el){ el.focus(); }
+                },
+                preConfirm: function(){
+                    var ticket = (document.getElementById('swal-ticket')?.value || '').trim();
+                    var tableEl = document.getElementById('swal-table-select');
+                    var tableId = tableEl ? (tableEl.value || '') : '';
+                    if(ticket === '' && !opts.allowEmpty){
+                        Swal.showValidationMessage('번호표를 입력해 주세요.');
+                        return false;
+                    }
+                    if(ticket !== '' && (!/^\d+$/.test(ticket) || +ticket < 1 || +ticket > TICKET_MAX)){
+                        Swal.showValidationMessage('1~' + TICKET_MAX + ' 사이 숫자로 입력해 주세요.');
+                        return false;
+                    }
+                    // 체크인 시에는 테이블 지정이 필수.
+                    if(opts.requireTable && tableId === ''){
+                        Swal.showValidationMessage('앉을 테이블을 선택해 주세요.');
+                        return false;
+                    }
+                    return { ticket: ticket, tableId: tableId };
                 }
             });
         }
 
-        // 서버에 체크인/취소 요청. ticket 이 있으면 수동(1순위), 없으면 자동 배정(2순위).
-        function sendCheckIn(id, ticket){
+        // 서버에 체크인/취소 요청. ticket 이 있으면 수동(1순위), 없으면 자동 배정(2순위). tableId 선택 지정.
+        function sendCheckIn(id, ticket, tableId){
             var $row = $(`.checkin-row[data-id="${id}"]`);
             $row.css('opacity', 0.6);
+            var payload = {};
+            if(ticket){ payload.ticket_no = ticket; }
+            if(tableId){ payload.rotation_table_id = tableId; }
             $.ajax({
                 url: checkInTpl.replace('__RID__', id), type: 'PATCH',
-                data: ticket ? { ticket_no: ticket } : {},
+                data: payload,
                 success: function(res){
                     var r = findRoster(id);
                     if(r && res){
                         r.checked_in = !!res.checked_in;
                         r.checked_in_at = res.checked_in_at || null;
                         r.ticket_no = (res.ticket_no == null) ? null : res.ticket_no;
+                        r.rotation_table_id = (res.rotation_table_id == null) ? null : res.rotation_table_id;
                         // 번호표가 새로 배정/회수되면 입장등록 여부는 서버 기준으로 다시 확인된다.
                         r.registered = false;
                         r.registered_at = null;
                     }
                     render();
+                    load();  // 성비(테이블별) 즉시 갱신
                     if(r && res && res.checked_in){
                         var how = { manual: '직접 입력', auto: '자동 배정', existing: '기존 번호 유지' }[res.assigned] || '';
+                        var tableNo = r.rotation_table_id ? tableNoById(r.rotation_table_id) : null;
+                        var nm = esc(r.name || '닉네임 없음');
                         Swal.fire({
                             icon: 'success',
-                            title: genderText(r.gender) + ' ' + res.ticket_no + '번',
-                            html: '<b>' + esc(r.name || '닉네임 없음') + '</b> 님께 번호표를 건네 주세요'
-                                + (how ? '<div class="text-secondary small mt-1">(' + how + ')</div>' : ''),
-                            confirmButtonText: '확인', confirmButtonColor: '#3085d6',
-                            timer: 5000, timerProgressBar: true
+                            title: nm + ' 님 안내',
+                            html:
+                                '<div style="font-size:1.05rem;line-height:1.7;margin-top:4px;">'
+                              +   '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">'
+                              +     '<span style="background:#dbeafe;color:#1d4ed8;font-weight:800;font-size:1.35rem;padding:8px 16px;border-radius:12px;">🎫 ' + res.ticket_no + '번 번호표</span>'
+                              +     (tableNo ? '<span style="background:#e0f2fe;color:#0369a1;font-weight:800;font-size:1.35rem;padding:8px 16px;border-radius:12px;">🪑 ' + tableNo + '번 테이블</span>' : '')
+                              +   '</div>'
+                              +   '<div style="margin-top:12px;font-weight:800;font-size:1.15rem;color:#be185d;">위 자리로 안내해 주세요!</div>'
+                              +   (how ? '<div class="text-secondary small mt-2">(번호표 ' + how + ')</div>' : '')
+                              + '</div>',
+                            confirmButtonText: '확인했어요', confirmButtonColor: '#3085d6',
+                            allowOutsideClick: false
                         });
                     }
                 },
@@ -517,6 +590,12 @@
                     showError(xhr, '오류가 발생했습니다.');
                 }
             });
+        }
+
+        // 테이블 id → 번호
+        function tableNoById(id){
+            var t = TABLES.find(function(x){ return String(x.id) === String(id); });
+            return t ? t.table_no : '';
         }
 
         // 행 탭: 미도착이면 번호표 입력(비우면 자동) 후 체크인, 참석이면 확인 후 취소(번호표 회수)
@@ -551,14 +630,18 @@
             var hint = nextTicketHint(r.gender);
             var ans = await askTicket({
                 title: esc(nick) + ' 체크인',
-                label: genderText(r.gender) + ' 번호표 — 직접 입력하거나, 비워두면 자동 배정돼요',
-                placeholder: '비우면 자동 (예상 ' + hint + '번)',
+                hint: '비우면 자동 배정 <b style="color:#2563eb;">(예상 ' + hint + '번)</b>',
+                placeholder: '비우면 자동',
                 confirmText: '체크인',
-                allowEmpty: true
+                allowEmpty: true,
+                requireTable: true,
+                gender: r.gender,
+                tableId: r.rotation_table_id || ''
             });
-            if(!ans.isConfirmed){ return; }
-            var manual = (ans.value == null ? '' : String(ans.value)).trim();
-            sendCheckIn(id, manual === '' ? null : parseInt(manual, 10));
+            if(!ans.isConfirmed || !ans.value){ return; }
+            var manual = (ans.value.ticket == null ? '' : String(ans.value.ticket)).trim();
+            var tableId = ans.value.tableId || null;
+            sendCheckIn(id, manual === '' ? null : parseInt(manual, 10), tableId);
         }
 
         // 관리자 번호표 변경 (입장등록 전인 사람만. 입장등록을 마친 사람은 버튼이 숨겨진다.)
@@ -567,14 +650,14 @@
             if(!r || !r.ticket_no || r.registered){ return; }
             var ans = await askTicket({
                 title: esc(r.name || '닉네임 없음') + ' 번호 변경',
-                label: genderText(r.gender) + ' 번호표 (현재 ' + r.ticket_no + '번)',
+                hint: genderText(r.gender) + ' · 현재 ' + r.ticket_no + '번',
                 value: r.ticket_no,
                 confirmText: '변경',
                 allowEmpty: false
             });
-            if(!ans.isConfirmed){ return; }
-            var next = parseInt(String(ans.value).trim(), 10);
-            if(next === r.ticket_no){ return; }
+            if(!ans.isConfirmed || !ans.value){ return; }
+            var next = parseInt(String(ans.value.ticket || '').trim(), 10);
+            if(!next || next === r.ticket_no){ return; }
 
             $.ajax({
                 url: ticketTpl.replace('__RID__', id), type: 'PATCH', data: { ticket_no: next },

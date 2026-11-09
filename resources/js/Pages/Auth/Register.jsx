@@ -79,7 +79,6 @@ export default function Register() {
         (typeof window !== 'undefined' && !!new URLSearchParams(window.location.search).get('dev'));
     const { data, setData, post, processing, errors, setError, clearErrors } = useForm({
         event_id: '',
-        rotation_table_id: '',
         phone: '',
         name: '',
         password: '',
@@ -97,41 +96,15 @@ export default function Register() {
         tmi: '',
     });
 
-    // 선택한 회차(event_id)에 해당하는 테이블 옵션.
-    // 1:1 소개팅(is_one)은 테이블당 남/여 각 1명이므로, 내 성별이 이미 앉은 테이블은 제외한다.
-    const tableOptions = useMemo(() => {
-        const all = data.event_id ? (tablesByEvent[data.event_id] ?? []) : [];
-        return all.filter((t) => {
-            if (!t.is_one) {
-                return true; // 와인파티 등은 정원 제한 없음
-            }
-            if (data.gender === 'M' && t.taken_male) {
-                return false;
-            }
-            if (data.gender === 'F' && t.taken_female) {
-                return false;
-            }
-            return true;
-        });
-    }, [data.event_id, data.gender, tablesByEvent]);
-
-    // 회차가 바뀌면 이전에 고른 테이블 선택을 초기화한다.
+    // 회차가 바뀌면 (별도 초기화할 테이블 선택 없음)
     function changeEvent(v) {
         setData('event_id', v);
-        setData('rotation_table_id', '');
     }
 
-    // 성별이 바뀌면(1:1에서 선택 가능한 테이블이 달라지므로) 테이블 선택을 초기화한다.
+    // 성별 변경
     function changeGender(v) {
         setData('gender', v);
-        setData('rotation_table_id', '');
     }
-
-    // 선택한 테이블 라벨 (확인 모달 표시용).
-    const selectedTableLabel = useMemo(() => {
-        const found = tableOptions.find((t) => String(t.id) === String(data.rotation_table_id));
-        return found ? found.label : '';
-    }, [tableOptions, data.rotation_table_id]);
 
     // 회차(event_id)는 유지하고 나머지 필드를 매번 랜덤으로 채운다.
     function autofill() {
@@ -150,7 +123,6 @@ export default function Register() {
         const requiredChecks = [
             { key: 'gender',            empty: !data.gender,            message: '성별을 선택해주세요.',              field: 'gender',            scrollTop: true },
             { key: 'event_id',          empty: !data.event_id,          message: '회차를 선택해주세요.',              field: 'event_id',          scrollTop: true },
-            { key: 'rotation_table_id', empty: !data.rotation_table_id, message: '앉아 계신 테이블을 선택해주세요.',   field: 'rotation_table_id', scrollTop: true },
             { key: 'name',              empty: !data.name,              message: '번호표를 입력해주세요.' },
             { key: 'phone',             empty: !data.phone,             message: '핸드폰 번호를 입력해주세요.' },
             { key: 'password',          empty: !data.password,          message: '비밀번호(4자리)를 입력해주세요.' },
@@ -175,7 +147,7 @@ export default function Register() {
             return;
         }
 
-        clearErrors('gender', 'event_id', 'rotation_table_id');
+        clearErrors('gender', 'event_id');
         setConfirmOpen(true);
     }
 
@@ -268,23 +240,6 @@ export default function Register() {
                             placeholder="회차를 선택해주세요"
                             error={errors.event_id}
                             autoFocus
-                        />
-                        <SelectField
-                            label="테이블 (자리)"
-                            value={data.rotation_table_id}
-                            onChange={(v) => setData('rotation_table_id', v)}
-                            options={tableOptions}
-                            placeholder={
-                                !data.gender
-                                    ? '성별을 먼저 선택해주세요'
-                                    : !data.event_id
-                                        ? '회차를 먼저 선택해주세요'
-                                        : tableOptions.length === 0
-                                            ? '선택 가능한 테이블이 없어요'
-                                            : '앉아 계신 테이블을 선택해주세요'
-                            }
-                            error={errors.rotation_table_id}
-                            disabled={!data.gender || !data.event_id || tableOptions.length === 0}
                         />
                         <TextField
                             label="번호표"
@@ -437,13 +392,10 @@ export default function Register() {
                             )}
                             <span className="font-bold text-primary">{data.name || '회원'}호</span>님,
                             <br />
-                            <span className="font-bold text-primary">
-                                {selectedTableLabel || '선택한 테이블'}
-                            </span>
-                            이 맞으신가요?
+                            번호표가 맞으신가요?
                         </p>
                         <p className="mt-2 text-center text-sm text-secondary-400">
-                            선택하신 테이블로 자리가 배정됩니다.
+                            자리(테이블)는 호스트가 안내해 드린 자리로 자동 배정됩니다.
                         </p>
                         <div className="mt-6 flex gap-3">
                             <button

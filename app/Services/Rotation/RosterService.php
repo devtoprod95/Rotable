@@ -3,7 +3,9 @@
 namespace App\Services\Rotation;
 
 use App\Models\EventRoster;
+use App\Models\EventRound;
 use App\Models\Member;
+use App\Models\RotationTable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -303,7 +305,7 @@ class RosterService
      *
      * @return array{isSuccess:bool, msg?:string, checked_in?:bool, checked_in_at?:?string, ticket_no?:?int, assigned?:string}
      */
-    public function rosterToggleCheckIn(int $rosterId, ?int $manualTicket = null): array
+    public function rosterToggleCheckIn(int $rosterId, ?int $manualTicket = null, ?int $tableId = null): array
     {
         try {
             $roster = EventRoster::findOrFail($rosterId);
@@ -315,8 +317,9 @@ class RosterService
                     return helpersFailMessage('이미 입장등록한 번호표라 체크인을 취소할 수 없습니다.');
                 }
 
-                $roster->checked_in_at = null;
-                $roster->ticket_no     = null;
+                $roster->checked_in_at    = null;
+                $roster->ticket_no        = null;
+                $roster->rotation_table_id = null;  // 테이블 지정도 함께 회수
                 $roster->save();
 
                 $res                  = helpersSuccessMessage('미도착으로 되돌렸습니다. 번호표를 회수했어요.');
@@ -330,6 +333,35 @@ class RosterService
             // 미도착 → 참석
             $eventId = (int) $roster->event_id;
             $gender  = (string) $roster->gender;
+
+            // 테이블 지정(필수): 같은 행사의 테이블이어야 한다.
+            if ($tableId !== null) {
+                $validTable = RotationTable::where('event_id', $eventId)->where('id', $tableId)->exists();
+                if (! $validTable) {
+                    return helpersFailMessage('선택한 테이블이 이 행사에 없습니다.');
+                }
+
+                // 1:1 소개팅: 테이블당 같은 성별 1명 원칙 → 같은 성별이 이미 앉은 테이블은 거부.
+                $event = EventRound::find($eventId);
+                if ($event !== null && $event->isOneToOne()) {
+                    $sameGenderTaken = EventRoster::where('event_id', $eventId)
+                        ->where('gender', $gender)
+                        ->where('rotation_table_id', $tableId)
+                        ->where('id', '!=', $roster->id)
+                        ->whereNotNull('checked_in_at')
+                        ->exists();
+                    if ($sameGenderTaken) {
+                        return helpersFailMessage('1:1 소개팅은 테이블당 같은 성별 한 명만 앉을 수 있어요. 다른 테이블을 선택해 주세요.');
+                    }
+                }
+
+                $roster->rotation_table_id = $tableId;
+            }
+
+            // 체크인하려면 테이블이 반드시 지정되어 있어야 한다. (이번에 지정했거나, 이전에 지정된 값이 있어야 함)
+            if ($roster->rotation_table_id === null) {
+                return helpersFailMessage('체크인하려면 앉을 테이블을 지정해 주세요.');
+            }
 
             if ($manualTicket !== null) {
                 // 1순위: 호스트가 직접 입력한 번호
@@ -370,6 +402,7 @@ class RosterService
             $res['checked_in']    = true;
             $res['checked_in_at'] = $roster->checked_in_at?->format('Y-m-d H:i');
             $res['ticket_no']     = (int) $roster->ticket_no;
+            $res['rotation_table_id'] = $roster->rotation_table_id !== null ? (int) $roster->rotation_table_id : null;
             $res['assigned']      = $assigned;
 
             return $res;
@@ -470,6 +503,61 @@ class RosterService
     }
 
     /**
+     * 체크인 명단(roster) 기준 테이블별 성비.
+     *  - 체크인되어 테이블이 지정된 행만 집계한다. (입장등록 전에도 즉시 반영)
+     *  - 모든 테이블을 0부터 포함해 반환한다.
+     *
+     * @return array<int, array{table_no:int, male:int, female:int, total:int}>
+     */
+    public function tableGenderRatios(int $eventId): array
+    {
+        $tables = RotationTable::where('event_id', $eventId)
+            ->orderBy('table_no')
+            ->get(['id', 'table_no']);
+
+        // 체크인 + 테이블 지정된 roster 를 테이블별 성별로 집계.
+        $rosters = EventRoster::where('event_id', $eventId)
+            ->whereNotNull('checked_in_at')
+            ->whereNotNull('rotation_table_id')
+            ->get(['gender', 'rotation_table_id']);
+
+        $byTableId = [];
+        foreach ($rosters as $r) {
+            $tid = (int) $r->rotation_table_id;
+            if (! isset($byTableId[$tid])) { $byTableId[$tid] = ['M' => 0, 'F' => 0]; }
+            if ($r->gender === Member::GENDER_FEMALE) { $byTableId[$tid]['F']++; }
+            else { $byTableId[$tid]['M']++; }
+        }
+
+        return $tables->map(function (RotationTable $t) use ($byTableId) {
+            $c = $byTableId[$t->id] ?? ['M' => 0, 'F' => 0];
+            return [
+                'table_no' => (int) $t->table_no,
+                'male'     => $c['M'],
+                'female'   => $c['F'],
+                'total'    => $c['M'] + $c['F'],
+            ];
+        })->toArray();
+    }
+
+    /**
+     * 번호표(같은 행사·같은 성별)로 체크인 때 지정된 테이블 id 를 찾는다.
+     *  - 참가자 입장등록 시, 참가자가 고르지 않고 이 값으로 좌석을 자동 생성한다.
+     *
+     * @return int|null  지정된 테이블 id. 없으면 null.
+     */
+    public function tableForTicket(int $eventId, string $gender, int $ticket): ?int
+    {
+        $roster = EventRoster::where('event_id', $eventId)
+            ->where('gender', $gender)
+            ->where('ticket_no', $ticket)
+            ->whereNotNull('checked_in_at')
+            ->first(['rotation_table_id']);
+
+        return $roster?->rotation_table_id !== null ? (int) $roster->rotation_table_id : null;
+    }
+
+    /**
      * [개발용] 현재 체크인(참석)된 사람들 기준으로 입장등록(회원)을 더미 데이터로 생성한다.
      *
      * 실제 입장등록 흐름과 동일하게:
@@ -538,8 +626,16 @@ class RosterService
                         continue;
                     }
 
-                    // 배치할 테이블 선택
-                    $table = $this->pickTableForSeed($tables, $gender, $isOne, $occupied, $cursor);
+                    // 배치할 테이블 선택:
+                    //  1순위) 체크인 때 관리자가 지정한 테이블(roster.rotation_table_id) — 실제 입장등록과 동일.
+                    //  2순위) 과거 데이터 등으로 지정이 없으면 라운드로빈/1:1 규칙으로 폴백.
+                    $table = null;
+                    if ($roster->rotation_table_id !== null) {
+                        $table = $tables->firstWhere('id', (int) $roster->rotation_table_id);
+                    }
+                    if ($table === null) {
+                        $table = $this->pickTableForSeed($tables, $gender, $isOne, $occupied, $cursor);
+                    }
                     if ($table === null) {
                         // 1:1 인데 그 성별을 더 앉힐 자리가 없으면 건너뛴다.
                         $skipped++;

@@ -196,31 +196,6 @@ class MemberAuthController extends Controller
             'mbti'       => ['required', 'string', 'size:4'],
             'region'     => ['required', 'string', 'max:50'],
             'is_smoker'  => ['required', 'boolean'],
-            // 참가자가 직접 고르는 기준(홈) 테이블. 선택한 회차의 테이블이어야 한다.
-            'rotation_table_id' => [
-                'required',
-                'integer',
-                Rule::exists('rotation_tables', 'id')->where(
-                    fn ($query) => $query->where('event_id', $request->input('event_id'))
-                ),
-                // 1:1 소개팅은 테이블당 남/여 각 1명이 원칙. 같은 성별이 이미 앉은 테이블은 선택 불가.
-                function (string $attribute, mixed $value, \Closure $fail) use ($request) {
-                    $event = EventRound::find($request->input('event_id'));
-                    if ($event === null || ! $event->isOneToOne()) {
-                        return; // 1:1 이 아니면 제한 없음.
-                    }
-
-                    $gender = $request->input('gender');
-                    $exists = RotationSeat::query()
-                        ->where('rotation_table_id', $value)
-                        ->whereHas('member', fn ($q) => $q->where('gender', $gender))
-                        ->exists();
-
-                    if ($exists) {
-                        $fail('이미 같은 성별이 앉은 테이블입니다. 다른 테이블을 선택해주세요.');
-                    }
-                },
-            ],
             // 추가 프로필 (모든 유형 공통 필수) — 이상형/장점/취미/TMI
             'ideal_type' => ['required', 'string', 'max:100'],
             'merit'      => ['required', 'string', 'max:100'],
@@ -258,6 +233,19 @@ class MemberAuthController extends Controller
             'tmi.required'               => 'TMI를 입력해주세요.',
         ]);
 
+        // 기준(홈) 테이블은 참가자가 고르지 않고, 체크인 때 관리자가 지정한 값(roster)을 따른다.
+        // 번호표(같은 행사·같은 성별)로 지정된 테이블을 찾는다. 지정이 없으면 등록을 막는다.
+        $assignedTableId = app(RosterService::class)->tableForTicket(
+            (int) $validated['event_id'],
+            (string) $validated['gender'],
+            (int) $validated['name'],
+        );
+        if ($assignedTableId === null) {
+            return back()->withErrors([
+                'name' => '아직 자리(테이블)가 배정되지 않았어요. 호스트에게 테이블 안내를 받은 뒤 다시 시도해 주세요.',
+            ])->withInput();
+        }
+
         $member = Member::create([
             'event_id'   => $validated['event_id'],
             'phone'      => $validated['phone'],
@@ -284,13 +272,13 @@ class MemberAuthController extends Controller
             ),
         ]);
 
-        // 참가자가 고른 기준(홈) 좌석을 생성한다.
+        // 체크인 때 관리자가 지정한 테이블로 기준(홈) 좌석을 생성한다.
         // 새 좌석 모델은 current_round 공식으로 턴 자리를 계산하므로,
         // 로테이션이 이미 시작된(S/V) 뒤 중간 입장이어도 이 좌석이 현재 턴부터 자동 반영된다.
         RotationSeat::create([
             'event_id'          => $validated['event_id'],
             'member_id'         => $member->id,
-            'rotation_table_id' => $validated['rotation_table_id'],
+            'rotation_table_id' => $assignedTableId,
         ]);
 
         Auth::guard('web')->login($member);

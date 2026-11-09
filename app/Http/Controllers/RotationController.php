@@ -247,6 +247,9 @@ class RotationController extends Controller
         return view('admin.rotation.checkin', [
             'event'           => $event,
             'platformOptions' => Member::platformOptions(),
+            // 체크인 때 테이블 지정용 — 이 행사의 테이블 목록 (번호 오름차순)
+            'tables'          => \App\Models\RotationTable::where('event_id', $id)
+                ->orderBy('table_no')->get(['id', 'table_no']),
             // 더미 입장등록 시더 버튼은 최고관리자에게만 노출한다.
             'devMode'         => auth('admin')->user()?->hasRole(Role::SuperAdmin->value) ?? false,
         ]);
@@ -269,6 +272,7 @@ class RotationController extends Controller
                 'gender'        => $r->gender,
                 'platform'      => $r->platform,
                 'ticket_no'     => $r->ticket_no,
+                'rotation_table_id' => $r->rotation_table_id !== null ? (int) $r->rotation_table_id : null,
                 'checked_in'    => $r->checked_in_at !== null,
                 'checked_in_at' => $r->checked_in_at?->format('Y-m-d H:i'),
                 // 입장등록 여부: 이 번호표(같은 성별)로 가입한 회원이 있는지
@@ -280,8 +284,8 @@ class RotationController extends Controller
         return response()->json([
             'data'          => $rosters,
             'total'         => count($rosters),
-            // 테이블별 성비 요약(입장등록 좌석 기준) — 체크인 시 자리 안내용.
-            'table_ratios'  => $this->seatingService->tableGenderRatios($id),
+            // 테이블별 성비 요약 — 체크인 명단(roster) 기준이라 입장등록 전에도 즉시 반영된다.
+            'table_ratios'  => $this->rosterService->tableGenderRatios($id),
         ]);
     }
 
@@ -358,6 +362,7 @@ class RotationController extends Controller
     {
         $validator = Validator::make($this->request->all(), [
             'ticket_no' => 'nullable|integer|min:1|max:' . RosterService::TICKET_MAX,
+            'rotation_table_id' => 'nullable|integer',
         ], [
             'ticket_no.integer' => '번호표는 숫자로 입력해 주세요.',
             'ticket_no.min'     => '번호표는 1 이상이어야 합니다.',
@@ -367,9 +372,10 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
         }
 
-        $manual = $this->request->filled('ticket_no') ? (int) $this->request->input('ticket_no') : null;
+        $manual  = $this->request->filled('ticket_no') ? (int) $this->request->input('ticket_no') : null;
+        $tableId = $this->request->filled('rotation_table_id') ? (int) $this->request->input('rotation_table_id') : null;
 
-        $result = $this->rosterService->rosterToggleCheckIn($rosterId, $manual);
+        $result = $this->rosterService->rosterToggleCheckIn($rosterId, $manual, $tableId);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
     }

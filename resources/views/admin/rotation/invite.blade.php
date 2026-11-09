@@ -72,10 +72,10 @@
                         </div>
                     </div>
                     <div class="col-12 col-md-auto">
-                        <label class="form-label mb-1">참가비</label>
+                        <label class="form-label mb-1">혜택</label>
                         <div class="btn-group d-flex" role="group" id="inv-free">
-                            <button type="button" class="btn btn-outline-secondary" data-val="0">유료(기본)</button>
-                            <button type="button" class="btn btn-outline-green active" data-val="1">무료 초대</button>
+                            <button type="button" class="btn btn-outline-secondary" data-val="0">혜택 없음</button>
+                            <button type="button" class="btn btn-outline-green active" data-val="1">80% 페이백</button>
                         </div>
                     </div>
                 </div>
@@ -117,11 +117,11 @@
         //  톤: 운영자가 직접 보내는 담백한 권유체 + 핵심 혜택 나열 + 가벼운 마감 유도.
         // ─────────────────────────────────────────────────────────────
 
-        // 첫 인사 + 초대 한 줄. 무료면 "무료 초대로 모시고 싶어" 로 녹인다.
+        // 첫 인사 + 초대 한 줄. 혜택(ON)이면 "참가비 80% 페이백" 조건으로 모시고 싶다고 녹인다.
         function greetingLines(ctx) {
             var out = ['안녕하세요 😊 로테이블입니다.'];
             if (ctx.free) {
-                out.push('이번 오픈 기념 행사에 무료 초대로 모시고 싶어 연락드려요.');
+                out.push('이번 오픈 기념으로, 참가비의 80%를 페이백(환급)해 드리는 조건으로 모시고 싶어 연락드려요.');
             } else {
                 out.push("'" + (ctx.title || '{행사명}') + "' 행사에 초대드리고 싶어 연락드려요.");
             }
@@ -194,7 +194,7 @@
             var typeLabel = normType(ev.type) === 'wine' ? '와인파티' : '1:1 소개팅';
             $('#inv-summary').text(
                 typeLabel + ' · ' + GENDER_LABEL[state.gender]
-                + ' · ' + (state.free === '1' ? '무료' : '유료')
+                + ' · ' + (state.free === '1' ? '80% 페이백' : '혜택 없음')
             );
         }
 

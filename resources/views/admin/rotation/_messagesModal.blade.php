@@ -200,6 +200,13 @@
                 layout: "fitColumns",       // 가로를 꽉 채운다
                 height: "55vh",
                 resizableColumns: false,    // 컬럼 리사이즈 핸들 제거(엑셀 느낌 제거)
+                // 복사 기능: Ctrl+C 로 보이는 행 전체(모든 컬럼)를 복사한다. (Tabulator 공식 clipboard)
+                clipboard: "copy",
+                clipboardCopyRowRange: "visible",
+                clipboardCopyConfig: {
+                    columnHeaders: false,   // 헤더 제외
+                    formatCells: false,     // formatter(HTML) 말고 원본 값으로 복사
+                },
                 initialSort: [{column: "id", dir: "desc"}],
                 // 각 셀에 모바일 라벨(data-mlabel)을 달아둔다. (CSS 가 모바일에서만 ::before 로 표시)
                 rowFormatter: function(row){
@@ -210,8 +217,15 @@
                     });
                 },
                 columns: [
-                    { title: "No", field: "id", width: 70, hozAlign: "center" },
+                    { title: "No", field: "id", width: 70, hozAlign: "center",
+                        accessorClipboard: function(value){ return value; } },
                     { title: "보낸사람 → 받는사람", field: "sender_id", width: 220, headerSort: false,
+                        // 복사 시: "A호(남) → B호(여)" 텍스트
+                        accessorClipboard: function(value, data){
+                            var fromName = (data.sender && (data.sender.label || data.sender.name)) ? (data.sender.label || (data.sender.name + '호')) : '-';
+                            var toName   = (data.receiver && (data.receiver.label || data.receiver.name)) ? (data.receiver.label || (data.receiver.name + '호')) : '-';
+                            return fromName + ' → ' + toName;
+                        },
                         formatter: function(cell){
                             var d = cell.getRow().getData();
                             var from = nameWithGender(d.sender ? d.sender.name : null, d.sender ? d.sender.gender : null, d.sender ? d.sender.label : null);
@@ -224,12 +238,17 @@
                         }
                     },
                     { title: "내용", field: "body",
+                        accessorClipboard: function(value){ return value || ''; },
                         formatter: function(cell){
                             return '<div style="white-space:pre-wrap; word-break:break-word; line-height:1.5;">'
                                 + $('<div>').text(cell.getValue() || '').html() + '</div>';
                         }
                     },
                     { title: "읽음", field: "read_at", width: 170, hozAlign: "center", headerSort: false,
+                        // 복사 시: "읽음 (시각)" 또는 "안읽음"
+                        accessorClipboard: function(value){
+                            return value ? ('읽음 ' + new Date(value).toLocaleString('ko-KR')) : '안읽음';
+                        },
                         formatter: function(cell){
                             var v = cell.getValue();
                             if(v){
@@ -240,6 +259,14 @@
                         }
                     },
                     { title: "보낸 시각", field: "created_at", width: 170, hozAlign: "center",
+                        // 복사 시: yyyy/mm/dd HH:mm (24시간)
+                        accessorClipboard: function(value){
+                            if(!value){ return '-'; }
+                            var d = new Date(value);
+                            var p = function(n){ return (n < 10 ? '0' : '') + n; };
+                            return d.getFullYear() + '/' + p(d.getMonth()+1) + '/' + p(d.getDate())
+                                + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+                        },
                         formatter: function(cell){
                             if(!cell.getValue()){ return '-'; }
                             var s = new Date(cell.getValue()).toLocaleString('ko-KR');

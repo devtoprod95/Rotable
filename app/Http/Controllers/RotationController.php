@@ -751,6 +751,25 @@ class RotationController extends Controller
     }
 
     /**
+     * 초대 멘트 — 행사 유형(와인/1:1)·성별(남/여)·무료 여부 등에 따라 참가자에게 보낼
+     * 초대 메시지 문구를 조합해 보여주고 복사한다. (홍보용, 외부 DM/모집 플랫폼에 붙여넣기)
+     */
+    public function inviteIndex(): View
+    {
+        // 종료(X)가 아닌 행사만 셀렉트 대상으로 내려준다. (대기/진행/매칭중)
+        $events = EventRound::query()
+            ->where('status', '!=', EventRound::STATUS_CLOSED)
+            ->orderByDesc('event_time')
+            ->orderByDesc('id')
+            ->get(['id', 'title', 'type', 'status', 'event_time']);
+
+        return view('admin.rotation.invite', [
+            'events'      => $events,
+            'typeOptions' => EventRound::typeOptions(),
+        ]);
+    }
+
+    /**
      * 공개 페이지 모음(허브) — 외부 공유/현장 안내용으로 흩어져 있는 공개 페이지 링크를
      * 한 화면에 카드로 모아 보여준다. (공개 게임 · 안내 슬라이드 · 호스트 멘트 · 채팅방 공지 등)
      */

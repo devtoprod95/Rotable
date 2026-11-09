@@ -117,7 +117,7 @@ class RotationService
                     'type'       => $data->type,
                     'event_time' => $data->event_time,
                     'status'     => EventRound::STATUS_PENDING, // 생성 시 상태는 무조건 대기(P)
-                    'review_gate_enabled' => (bool) ($data->review_gate_enabled ?? false),
+                    'review_gate_enabled' => (bool) ($data->review_gate_enabled ?? true),
                     'created_by' => $data->created_by ?? null,
                 ]);
 

@@ -145,7 +145,7 @@
                                 <label class="form-label">리뷰 인증 게이트</label>
                                 <label class="form-check form-switch mt-1">
                                     <input class="form-check-input" type="checkbox" checked id="reviewGateToggle">
-                                    <span class="form-check-label" id="reviewGateLabel">꺼짐</span>
+                                    <span class="form-check-label" id="reviewGateLabel">켜짐 (결과 전 리뷰 인증 요구)</span>
                                 </label>
                                 <small class="form-hint text-muted mt-1 d-block">켜면 종료(X) 후 참가자가 매칭 결과를 보기 전 리뷰 이미지를 올려야 합니다.</small>
                             </div>

@@ -16,9 +16,9 @@ return new class extends Migration
     {
         Schema::table('event_rounds', function (Blueprint $table) {
             $table->boolean('review_gate_enabled')
-                ->default(false)
+                ->default(true)
                 ->after('voting_opened_at')
-                ->comment('리뷰 인증 게이트 사용 여부: true=결과 확인 전 리뷰 이미지 업로드 요구');
+                ->comment('리뷰 인증 게이트 사용 여부: true=결과 확인 전 리뷰 이미지 업로드 요구 (기본 켜짐)');
         });
     }
 

@@ -38,9 +38,10 @@ enum Menu: string
                     ],
                     [
                         'name'     => '홍보',
-                        'pattern'  => ['admin.rotation.detail*', 'admin.rotation.qr*'],
+                        'pattern'  => ['admin.rotation.detail*', 'admin.rotation.qr*', 'admin.rotation.invite*'],
                         'children' => [
                             ['name' => '상세페이지 제작', 'route' => 'admin.rotation.detail.index', 'pattern' => 'admin.rotation.detail*'],
+                            ['name' => '초대 멘트', 'route' => 'admin.rotation.invite', 'pattern' => 'admin.rotation.invite*'],
                             ['name' => 'QR코드 설정', 'route' => 'admin.rotation.qr.index', 'pattern' => 'admin.rotation.qr*'],
                         ],
                     ],

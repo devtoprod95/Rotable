@@ -87,6 +87,9 @@ Route::middleware('role')->group(function () {
                     ->whereNumber('id')->name('saves.delete');
             });
 
+            // 초대 멘트 — 유형(와인/1:1)·성별·무료 여부에 따라 초대 메시지 문구를 복사한다.
+            Route::get('/invite', [RotationController::class, 'inviteIndex'])->name('invite');
+
             // QR 코드 설정 — 연결 대상 URL 을 등록하면 공개 주소(/qr/{code})가 발급된다.
             Route::prefix('qr')->name('qr.')->group(function () {
                 Route::get('/', [RotationController::class, 'qrIndex'])->name('index');

@@ -176,9 +176,10 @@
             // 최고관리자만 참여자 비밀번호를 볼 수 있다.
             $isSuperAdmin = auth('admin')->user()?->hasRole(\App\Enums\Role::SuperAdmin->value) ?? false;
 
-            // 그날의 인기 TOP5 — 받은 투표수(received_votes_count) 기준 순위.
-            // 동점은 "공동 순위"로 묶고, 순위가 5 이내인 사람을 모두 노출한다.
-            // (예: 1위 2명 동점이면 둘 다 공동 1위, 그다음은 3위) → 공동 때문에 5명을 넘을 수 있음.
+            // 그날의 인기 TOP3 — 받은 투표수(received_votes_count) 기준 순위.
+            // 동점은 "공동 순위"로 묶고, 순위가 3 이내인 사람을 모두 노출한다.
+            // (예: 1위 3명 동점이면 셋 다 공동 1위, 그다음은 2위) → 공동 때문에 5명을 넘을 수 있음.
+            // 조밀 순위(dense ranking): 득표수가 바뀔 때마다 순위를 1씩만 올린다. (1-2-2-3)
             $topByGender = function (string $gender) use ($event) {
                 $sorted = $event->members
                     ->where('gender', $gender)
@@ -188,17 +189,15 @@
 
                 $out = [];
                 $rank = 0;          // 현재 표시 순위 (동점이면 같은 값 유지)
-                $seen = 0;          // 지금까지 처리한 인원 수
                 $prevVotes = null;  // 직전 득표수
                 foreach ($sorted as $m) {
                     $votes = (int) $m->received_votes_count;
-                    $seen++;
-                    // 득표수가 바뀌면 "지금까지 본 인원 수"가 곧 현재 순위(표준 경쟁 순위).
+                    // 득표수가 바뀌면 순위 +1 (동점이면 같은 순위 유지).
                     if ($votes !== $prevVotes) {
-                        $rank = $seen;
+                        $rank++;
                         $prevVotes = $votes;
                     }
-                    if ($rank > 5) { break; } // 5위까지만
+                    if ($rank > 3) { break; } // 3위까지만
                     $out[] = ['member' => $m, 'rank' => $rank, 'votes' => $votes];
                 }
                 return $out;
@@ -208,20 +207,20 @@
             $rankMedal = [1 => '🥇', 2 => '🥈', 3 => '🥉'];
         @endphp
 
-        {{-- 그날의 인기 TOP5 (받은 투표수 기준, 남/여 각각 · 동점은 공동 순위) --}}
+        {{-- 그날의 인기 TOP3 (받은 투표수 기준, 남/여 각각 · 동점은 공동 순위) --}}
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title mb-0"><i class="ti ti-trophy text-yellow me-1"></i> 그날의 인기 TOP5</h3>
+                    <h3 class="card-title mb-0"><i class="ti ti-trophy text-yellow me-1"></i> 그날의 인기 TOP3</h3>
                     <span class="text-muted ms-2 fs-5">— 받은 투표(지목) 수 기준 · 동점은 공동 순위</span>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        {{-- 남성 TOP5 --}}
+                        {{-- 남성 TOP3 --}}
                         <div class="col-12 col-md-6">
                             <div class="d-flex align-items-center mb-2">
                                 <span class="badge bg-blue-lt me-2">남성</span>
-                                <span class="text-muted">인기 TOP5</span>
+                                <span class="text-muted">인기 TOP3</span>
                             </div>
                             @forelse ($topMale as $row)
                                 <div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2">
@@ -238,11 +237,11 @@
                                 <div class="text-muted text-center py-3" style="font-size:0.9em;">아직 받은 투표가 없어요.</div>
                             @endforelse
                         </div>
-                        {{-- 여성 TOP5 --}}
+                        {{-- 여성 TOP3 --}}
                         <div class="col-12 col-md-6">
                             <div class="d-flex align-items-center mb-2">
                                 <span class="badge bg-pink-lt me-2">여성</span>
-                                <span class="text-muted">인기 TOP5</span>
+                                <span class="text-muted">인기 TOP3</span>
                             </div>
                             @forelse ($topFemale as $row)
                                 <div class="d-flex align-items-center justify-content-between border rounded p-2 mb-2">

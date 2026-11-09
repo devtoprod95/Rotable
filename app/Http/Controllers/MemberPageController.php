@@ -569,7 +569,7 @@ class MemberPageController extends Controller
         }
 
         // 내 '그날의 인기' 순위 — 종료(X) 후, 같은 성별 안에서 받은 투표수 기준 순위.
-        //  - 표준 경쟁 순위(동점은 공동 순위). 순위가 5 이하이고 내가 받은 표가 1개 이상일 때만 값을 준다.
+        //  - 조밀 순위(동점은 공동 순위). 순위가 3 이하이고 내가 받은 표가 1개 이상일 때만 값을 준다.
         //  - myPopularRank: 1~5 또는 null, tiedCount: 같은 순위(동점) 인원 수.
         $myPopularRank = null;
         $myPopularTied = 0;
@@ -588,17 +588,18 @@ class MemberPageController extends Controller
                 ->where('gender', $me->gender)
                 ->pluck('id');
 
-            // 나보다 받은 표가 "많은" 사람 수 → 내 순위 = 그 수 + 1 (표준 경쟁 순위).
-            $higher = 0;
-            $tied   = 0;
+            // 나보다 받은 표가 "많은" 사람들의 서로 다른 득표값 종류 수 → 내 순위 = 그 수 + 1 (조밀 순위).
+            //  - 예: 1위 3명(10표) 다음 내가 8표면, 나보다 높은 득표값은 {10} 1종류 → 나는 2위.
+            $higherVoteValues = [];
+            $tied = 0;
             foreach ($sameGenderIds as $mid) {
                 if ((int) $mid === (int) $me->id) { continue; }
                 $cnt = (int) ($receivedCounts[$mid] ?? 0);
-                if ($cnt > $myReceived) { $higher++; }
+                if ($cnt > $myReceived) { $higherVoteValues[$cnt] = true; }
                 elseif ($cnt === $myReceived) { $tied++; }
             }
-            $rank = $higher + 1;
-            if ($rank <= 5) {
+            $rank = count($higherVoteValues) + 1;
+            if ($rank <= 3) {
                 $myPopularRank = $rank;
                 $myPopularTied = $tied; // 나 외 동점자 수
             }

@@ -527,7 +527,7 @@ export default function Votes() {
                     </div>
                 )}
 
-                {/* 종료 후: 이번 '인기' 순위 (TOP5 안에 들었을 때만 · 같은 성별 기준) */}
+                {/* 종료 후: 이번 '인기' 순위 (TOP3 안에 들었을 때만 · 같은 성별 기준) */}
                 {isClosed && myPopularRank && (
                     <div className="mt-4 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 text-center shadow-sm">
                         <p className="text-3xl">

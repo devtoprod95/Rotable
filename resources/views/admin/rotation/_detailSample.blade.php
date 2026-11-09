@@ -276,7 +276,6 @@
         <div style="font-family:'Jua',sans-serif; font-size:40px; font-weight:400; color:#6d28d9; letter-spacing:0.5px; line-height:1.3;">명단이 적어 보여도 걱정 마세요!</div>
         <div style="font-size:30px; color:#5b21b6; margin-top:14px; line-height:1.7; word-break:keep-all;">
             지금 이 명단은 <b style="color:#6d28d9; background:linear-gradient(transparent 55%, #ddd6fe 55%); padding:0 4px;">전체의 일부</b>일 뿐이에요.<br>
-            <b style="color:#6d28d9;">여러 플랫폼</b>에서 <b style="background:linear-gradient(transparent 55%, #ddd6fe 55%); padding:0 4px;">동시에 모집</b>하고 있어,<br>
             실제 참여 인원은 <b style="color:#be185d; background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px; font-weight:900;">참여자 명단 보다 많아요.</b>
         </div>
         <div style="background:#ffffff; border:2px dashed #a78bfa; border-radius:14px; padding:18px 14px; margin-top:18px; font-size:27px; color:#5b21b6; line-height:1.7; word-break:keep-all;">

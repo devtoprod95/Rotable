@@ -627,9 +627,10 @@ class MemberPageController extends Controller
     }
 
     /**
-     * 투표 저장(수정). 투표중(V) 단계에서만 허용하며, 전달받은 대상 목록으로 전체 교체한다.
+     * 투표 저장(수정). 투표중(V) 단계에서만 허용하며, 전달받은 대상 목록으로 차집합 반영한다.
      * - 최대 3명까지만 허용.
      * - 같은 행사의 이성만 지목 가능.
+     * - 기존 투표는 유지하고 "빠진 것만 삭제 / 새것만 추가" 하여 생성 시각을 보존한다.
      */
     public function saveVotes(Request $request): RedirectResponse
     {
@@ -670,13 +671,29 @@ class MemberPageController extends Controller
             return back()->with('error', '선택할 수 없는 상대가 포함되어 있어요.');
         }
 
-        // 내 기존 투표를 전부 지우고 새로 저장한다. (전체 교체 방식)
+        // 내 투표를 "차집합(diff)"으로 반영한다. (전체 교체 X)
+        //  - 유지: 기존에도 있고 이번에도 있는 상대 → 그대로 둠(created_at 보존).
+        //  - 삭제: 기존엔 있었는데 이번에 빠진 상대만 삭제.
+        //  - 추가: 이번에 새로 들어온 상대만 insert.
+        // 이렇게 하면 바꾸지 않은 투표의 생성 시각이 저장 때마다 갱신되지 않는다.
         DB::transaction(function () use ($me, $validTargetIds) {
-            Vote::where('event_id', $me->event_id)
+            $existingIds = Vote::where('event_id', $me->event_id)
                 ->where('voter_id', $me->id)
-                ->delete();
+                ->pluck('target_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
 
-            foreach ($validTargetIds as $targetId) {
+            $toRemove = array_diff($existingIds, $validTargetIds);
+            $toAdd    = array_diff($validTargetIds, $existingIds);
+
+            if (! empty($toRemove)) {
+                Vote::where('event_id', $me->event_id)
+                    ->where('voter_id', $me->id)
+                    ->whereIn('target_id', $toRemove)
+                    ->delete();
+            }
+
+            foreach ($toAdd as $targetId) {
                 Vote::create([
                     'event_id'  => $me->event_id,
                     'voter_id'  => $me->id,

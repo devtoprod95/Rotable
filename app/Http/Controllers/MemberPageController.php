@@ -568,6 +568,42 @@ class MemberPageController extends Controller
             $coupleCount = intdiv($mutualRows, 2);
         }
 
+        // 내 '그날의 인기' 순위 — 종료(X) 후, 같은 성별 안에서 받은 투표수 기준 순위.
+        //  - 표준 경쟁 순위(동점은 공동 순위). 순위가 5 이하이고 내가 받은 표가 1개 이상일 때만 값을 준다.
+        //  - myPopularRank: 1~5 또는 null, tiedCount: 같은 순위(동점) 인원 수.
+        $myPopularRank = null;
+        $myPopularTied = 0;
+        $myReceived    = count($votedForMeIds);
+        if ($isClosed && $event !== null && $myReceived > 0) {
+            // 같은 성별 회원들의 "받은 표 수" 집계 (0표 포함 전원 중 me 기준 순위 계산엔 >0 만 의미).
+            $receivedCounts = DB::table('event_votes')
+                ->selectRaw('target_id, COUNT(*) as cnt')
+                ->where('event_id', $event->id)
+                ->groupBy('target_id')
+                ->pluck('cnt', 'target_id'); // [memberId => 받은표수]
+
+            // 같은 성별 회원 id 목록.
+            $sameGenderIds = Member::query()
+                ->where('event_id', $me->event_id)
+                ->where('gender', $me->gender)
+                ->pluck('id');
+
+            // 나보다 받은 표가 "많은" 사람 수 → 내 순위 = 그 수 + 1 (표준 경쟁 순위).
+            $higher = 0;
+            $tied   = 0;
+            foreach ($sameGenderIds as $mid) {
+                if ((int) $mid === (int) $me->id) { continue; }
+                $cnt = (int) ($receivedCounts[$mid] ?? 0);
+                if ($cnt > $myReceived) { $higher++; }
+                elseif ($cnt === $myReceived) { $tied++; }
+            }
+            $rank = $higher + 1;
+            if ($rank <= 5) {
+                $myPopularRank = $rank;
+                $myPopularTied = $tied; // 나 외 동점자 수
+            }
+        }
+
         return Inertia::render('Votes', [
             'eventTitle'    => $event?->title,
             'eventStatus'   => $status,
@@ -580,6 +616,8 @@ class MemberPageController extends Controller
             'myVotedIds'    => $myVotedIds,
             'receivedCount' => count($votedForMeIds),
             'coupleCount'   => $coupleCount,
+            'myPopularRank' => $myPopularRank,  // 1~5 또는 null (인기 순위)
+            'myPopularTied' => $myPopularTied,  // 같은 순위 동점자 수(나 제외)
             'partnerGender' => $oppositeGen,
             // 리뷰 인증 게이트: 행사별 on/off + 내가 이미 인증했는지 여부.
             // (종료(X) + gate ON + 미인증 이면 결과 대신 업로드 화면을 보여준다.)

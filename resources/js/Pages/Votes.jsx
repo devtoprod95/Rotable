@@ -318,6 +318,8 @@ export default function Votes() {
         partnerGender,
         reviewGateEnabled = false,
         reviewed = false,
+        myPopularRank = null,
+        myPopularTied = 0,
     } = usePage().props;
 
     const tone = partnerGender === 'F' ? 'female' : 'male';
@@ -522,6 +524,21 @@ export default function Votes() {
                         <p>⭐ 매칭이 안 되더라도 <b>나를 선택한 투표수</b>는 확인할 수 있어요.</p>
                         <p>⏰ 결과는 <b>다음 날 오전 9시 이후</b>에 공개돼요.</p>
                         <p className="text-amber-600">※ 처리 시점에 따라 공개까지 최대 1시간 정도 걸릴 수 있어요.</p>
+                    </div>
+                )}
+
+                {/* 종료 후: 이번 '인기' 순위 (TOP5 안에 들었을 때만 · 같은 성별 기준) */}
+                {isClosed && myPopularRank && (
+                    <div className="mt-4 overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 p-4 text-center shadow-sm">
+                        <p className="text-3xl">
+                            {myPopularRank === 1 ? '🥇' : myPopularRank === 2 ? '🥈' : myPopularRank === 3 ? '🥉' : '🏆'}
+                        </p>
+                        <p className="mt-1 text-base font-extrabold text-amber-700">
+                            이번 인기 순위 {myPopularRank}위예요!
+                        </p>
+                        <p className="mt-1 text-xs leading-relaxed text-amber-600/90">
+                            오늘 많은 분께 선택받았어요 ✨
+                        </p>
                     </div>
                 )}
 

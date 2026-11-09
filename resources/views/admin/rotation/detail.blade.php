@@ -997,7 +997,7 @@
                 '<div class="d-flex align-items-center justify-content-between mb-2">'
                 + '<span class="badge ' + toneClass + ' fs-3">' + label + ' <b class="roster-count">0</b>명</span>'
                 + '<div class="btn-group">'
-                +   '<button type="button" class="btn btn-sm btn-outline-secondary roster-add"><i class="ti ti-plus"></i> 추가</button>'
+                +   '<button type="button" class="btn btn-sm btn-outline-secondary roster-add"><i class="ti ti-plus"></i> 참여자 추가</button>'
                 +   '<button type="button" class="btn btn-sm btn-outline-pink roster-add-recruit"><i class="ti ti-heart"></i> 모집중 추가</button>'
                 + '</div>'
                 + '</div>'
@@ -1099,8 +1099,16 @@
         }
 
         // 행 추가/삭제 (이벤트 위임)
+        // 참여자 추가: "모집중" 자리가 있으면 그 자리들 위(앞)에 끼워 넣고, 없으면 맨 뒤에 추가.
         $('#rosterEditorBody').on('click', '.roster-add', function(){
-            $(this).closest('[data-gender]').find('.roster-rows').append(rosterRow({}));
+            var $rows = $(this).closest('[data-gender]').find('.roster-rows');
+            var $firstRecruit = $rows.find('> tr[data-recruit]').first();
+            var $newRow = rosterRow({});
+            if ($firstRecruit.length) {
+                $firstRecruit.before($newRow);   // 모집중 자리 위에 생성
+            } else {
+                $rows.append($newRow);           // 모집중 자리 없으면 맨 아래
+            }
             renumberRoster($(this).closest('.card'));
         });
         // "모집중" 자리 행 추가 (실제 참여자 대신 모집중 더미 자리를 수동으로 끼워 넣는다)

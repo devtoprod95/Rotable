@@ -410,39 +410,66 @@
             let isBaseView = !isClosed && (viewRound === null || viewRound <= 1);
 
             data.tables.forEach(function(t){
-                let chips = t.members.map(function(m){
-                    // 이름 옆에 출생연도/직업을 작은 글씨로 표기한다.
+                // 성별로 분리
+                var males   = t.members.filter(function(m){ return m.gender === 'M'; });
+                var females = t.members.filter(function(m){ return m.gender === 'F'; });
+                var maleN = males.length, femaleN = females.length;
+
+                // 칩 1개 HTML
+                function chip(m){
                     let info = [];
                     if(m.birth_year){ info.push(String(m.birth_year).slice(-2) + '년생'); }
                     if(m.job){ info.push(m.job); }
                     let infoText = info.length
-                        ? ` <span style="font-weight:400;opacity:0.7;font-size:0.85em;">${info.join(' · ')}</span>`
+                        ? ` <span style="font-weight:400;opacity:0.7;font-size:0.82em;">${info.join(' · ')}</span>`
                         : '';
-                    // 기준 뷰에서만 제거(x) 버튼 노출.
                     let removeBtn = isBaseView
                         ? `<a href="#" class="chip-remove d-inline-flex align-items-center justify-content-center text-danger"
-                                   data-seating-id="${m.seating_id}"
-                                   title="제거"
-                                   style="width:1.4rem;height:1.4rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.95rem;line-height:1;"></i></a>`
+                                   data-seating-id="${m.seating_id}" title="제거"
+                                   style="width:1.3rem;height:1.3rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.9rem;line-height:1;"></i></a>`
                         : '';
-                    return `<span class="badge ${genderBadgeClass(m.gender)} me-1 mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1">
-                                <span>${m.label || (m.name + "호")}${infoText}</span>
+                    return `<span class="badge ${genderBadgeClass(m.gender)} mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1" style="max-width:100%;">
+                                <span class="text-truncate">${m.label || (m.name + "호")}${infoText}</span>
                                 ${removeBtn}
                             </span>`;
-                }).join('');
+                }
+
+                // 한 컬럼(남 또는 여) HTML — 헤더(성별·인원) + 칩 세로 나열
+                function genderColumn(label, badgeCls, list){
+                    var chipsHtml = list.length
+                        ? list.map(chip).join('')
+                        : '<span class="text-muted" style="font-size:0.85em;">없음</span>';
+                    return `
+                        <div class="col-6">
+                            <div class="d-flex align-items-center justify-content-center gap-1 mb-2">
+                                <span class="badge ${badgeCls}">${label} ${list.length}</span>
+                            </div>
+                            <div class="d-flex flex-column align-items-stretch gap-0 seat-chips">${chipsHtml}</div>
+                        </div>`;
+                }
 
                 // 기준 뷰에서만 '회원 추가' 셀렉트 노출. 아니면 안내 문구.
                 let adder = isBaseView
-                    ? `<select class="form-select form-select-sm seat-add" data-table-id="${t.id}">${memberOptions(assignedIds)}</select>`
-                    : `<div class="text-muted small"><i class="ti ti-info-circle me-1"></i>좌석 편집은 1턴(기준) 화면에서만 가능합니다.</div>`;
+                    ? `<select class="form-select form-select-sm seat-add mt-2" data-table-id="${t.id}">${memberOptions(assignedIds)}</select>`
+                    : `<div class="text-muted small mt-2"><i class="ti ti-info-circle me-1"></i>좌석 편집은 1턴(기준) 화면에서만 가능합니다.</div>`;
+
+                // 성비 뱃지(헤더)
+                let ratioBadges = `<span class="badge bg-blue-lt ms-1">남 ${maleN}</span>`
+                                + `<span class="badge bg-pink-lt ms-1">여 ${femaleN}</span>`;
 
                 let card = `
                     <div class="col-md-4 col-sm-6">
-                        <div class="card">
-                            <div class="card-header py-2"><strong>${t.table_no}번 테이블</strong>
-                                <span class="text-muted ms-1">(${t.members.length}명)</span></div>
+                        <div class="card h-100">
+                            <div class="card-header py-2 d-flex align-items-center flex-wrap gap-1">
+                                <strong>${t.table_no}번 테이블</strong>
+                                <span class="text-muted ms-1">(${t.members.length}명)</span>
+                                <span class="ms-auto">${ratioBadges}</span>
+                            </div>
                             <div class="card-body py-2">
-                                <div class="mb-2 seat-chips">${chips || '<span class="text-muted">비어있음</span>'}</div>
+                                <div class="row g-2">
+                                    ${genderColumn('남', 'bg-blue-lt', males)}
+                                    ${genderColumn('여', 'bg-pink-lt', females)}
+                                </div>
                                 ${adder}
                             </div>
                         </div>

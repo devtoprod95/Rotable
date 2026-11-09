@@ -111,40 +111,38 @@
         </div>
     </div>
 
-    {{-- 검색 + 새로고침 --}}
+    {{-- 테이블별 성비 (입장등록 좌석 기준) + 새로고침 --}}
     <div class="col-12">
         <div class="card">
+            <div class="card-header py-2 d-flex align-items-center flex-wrap gap-2">
+                <h3 class="card-title mb-0"><i class="ti ti-layout-grid me-1"></i> 테이블별 성비</h3>
+                <span class="text-secondary small">입장등록한 참가자 기준 · 자리 안내에 참고하세요</span>
+            </div>
             <div class="card-body py-2">
-                <div class="d-flex align-items-center gap-2">
-                    <div class="flex-grow-1">
-                        <label for="checkinSearch" class="visually-hidden">참가자 검색 (닉네임 또는 번호표)</label>
-                        <div class="input-icon">
-                            <span class="input-icon-addon"><i class="ti ti-search"></i></span>
-                            <input type="search" id="checkinSearch" class="form-control form-control-lg"
-                                   autocomplete="off"
-                                   placeholder="닉네임 또는 번호표로 검색"
-                                   aria-describedby="checkinSearchHint">
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-outline-primary btn-lg flex-shrink-0" id="checkinRefreshBtn">
+                {{-- 새로고침 영역 (성비/명단 최신화) --}}
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <button type="button" class="btn btn-outline-primary flex-shrink-0" id="checkinRefreshBtn">
                         <i class="ti ti-refresh me-1"></i><span class="d-none d-sm-inline">새로고침</span>
                     </button>
                     @isset($devMode)
                         @if ($devMode)
-                            <button type="button" class="btn btn-outline-warning btn-lg flex-shrink-0" id="checkinDevSeedBtn"
+                            <button type="button" class="btn btn-outline-warning flex-shrink-0" id="checkinDevSeedBtn"
                                     title="참석(체크인)한 사람 기준으로 입장등록 더미 데이터를 생성합니다 (개발용)">
                                 <i class="ti ti-flask me-1"></i><span class="d-none d-sm-inline">더미 입장등록</span>
                             </button>
                         @endif
                     @endisset
+                    <span class="text-secondary small flex-shrink-0 ms-auto" id="lastUpdated" aria-live="polite"></span>
                 </div>
-                <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 mt-1">
-                    <div id="checkinSearchHint" class="form-hint mb-0">
-                        미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
-                    </div>
-                    <span class="text-secondary small flex-shrink-0" id="lastUpdated" aria-live="polite"></span>
+                <div id="checkinSearchHint" class="form-hint mb-2">
+                    미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
                 </div>
-            </div>
+
+                {{-- 성비 그리드 (입장등록 좌석 없으면 안내) --}}
+                <div class="row g-2" id="tableRatioBody"></div>
+                <div class="text-secondary small text-center py-2" id="tableRatioEmpty">
+                    입장등록한 참가자가 생기면 테이블별 성비가 여기에 표시됩니다.
+                </div>
             </div>
         </div>
     </div>
@@ -196,6 +194,7 @@
         var devSeedUrl = "{{ route('admin.rotation.event.rosters.devSeed', ['id' => $event->id]) }}";
 
         var rosters = [];
+        var tableRatios = [];  // 테이블별 성비 (load 때 갱신, 번호표 모달에서도 재사용)
 
         // 플랫폼 표시 라벨/색상 (문토/프립)
         var PLATFORM_LABEL = @json(collect($platformOptions)->pluck('label', 'id'));
@@ -228,18 +227,17 @@
             $('#statReg').text(regCnt);
         }
 
-        // 닉네임 또는 번호표(숫자)로 검색
-        function matches(r, kw){
-            if(!kw){ return true; }
-            if((r.name || '').toLowerCase().indexOf(kw) >= 0){ return true; }
-            return r.ticket_no != null && String(r.ticket_no) === kw;
-        }
-
-        // 번호표 있는 사람 먼저(번호 순), 미배정은 뒤에 닉네임 순
+        // 정렬: ① 미도착(아직 체크인 안 한 사람) 먼저 → ② 번호표 있는 사람 먼저(번호 순) → ③ 닉네임 순
         function byTicketThenName(a, b){
+            // ① 미도착 우선 (checked_in=false 가 위로)
+            var ar = a.checked_in ? 1 : 0;
+            var br = b.checked_in ? 1 : 0;
+            if(ar !== br){ return ar - br; }
+            // ② 번호표 순 (미배정은 뒤)
             var ta = a.ticket_no == null ? Infinity : a.ticket_no;
             var tb = b.ticket_no == null ? Infinity : b.ticket_no;
             if(ta !== tb){ return ta < tb ? -1 : 1; }
+            // ③ 닉네임 순
             return (a.name || '').localeCompare(b.name || '', 'ko');
         }
 
@@ -315,8 +313,7 @@
         }
 
         function render(){
-            var kw = ($('#checkinSearch').val() || '').trim().toLowerCase();
-            var rows = rosters.filter(function(r){ return matches(r, kw); });
+            var rows = rosters;
             renderStats();
 
             var males   = rows.filter(function(r){ return r.gender !== 'F'; }); // 성별은 M/F 필수, 그 외는 남으로 귀속
@@ -330,6 +327,69 @@
         // 처음 열 때와 [새로고침] 버튼에서 쓰고, 마지막 갱신 시각과 실패 여부를 화면에 표시한다.
         var loading = false;
         function pad(n){ return (n < 10 ? '0' : '') + n; }
+        // 테이블별 성비 요약 렌더. (입장등록 좌석 기준)
+        function renderTableRatios(ratios){
+            tableRatios = ratios || [];
+            var $body  = $('#tableRatioBody');
+            var $empty = $('#tableRatioEmpty');
+            // 입장등록된 좌석이 하나도 없으면(전부 0) 안내 문구만 표시.
+            var anyone = ratios.some(function(r){ return (r.total || 0) > 0; });
+            if(!ratios.length || !anyone){
+                $body.empty();
+                $empty.show();
+                return;
+            }
+            $empty.hide();
+            var cards = ratios.map(function(r){
+                var m = r.male || 0, f = r.female || 0, total = r.total || 0;
+                // 성비 상태로 헤더 색을 바꿔 한눈에: 비어있음(회색) / 균형(초록) / 불균형(주황)
+                var balanced = (m === f);
+                var headBg = total === 0 ? '#94a3b8' : (balanced ? '#16a34a' : '#f59e0b');
+                return ''
+                  // 모바일 3열 / 태블릿 4열 / 데스크톱 6열 → 12개 테이블도 깔끔하게 수용
+                  + '<div class="col-4 col-md-3 col-lg-2">'
+                  +   '<div style="border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(20,30,60,.12);border:1px solid #e5e7eb;">'
+                  +     '<div style="background:' + headBg + ';color:#fff;padding:4px 6px;text-align:center;font-weight:800;font-size:0.9rem;white-space:nowrap;">'
+                  +       r.table_no + '번'
+                  +     '</div>'
+                  +     '<div style="display:flex;">'
+                  +       '<div style="flex:1;background:#eff6ff;padding:6px 2px;text-align:center;border-right:1px solid #e5e7eb;">'
+                  +         '<div style="font-size:0.68rem;color:#2563eb;font-weight:700;">남</div>'
+                  +         '<div style="font-size:1.3rem;font-weight:800;color:#2563eb;line-height:1.1;">' + m + '</div>'
+                  +       '</div>'
+                  +       '<div style="flex:1;background:#fdf2f8;padding:6px 2px;text-align:center;">'
+                  +         '<div style="font-size:0.68rem;color:#db2777;font-weight:700;">여</div>'
+                  +         '<div style="font-size:1.3rem;font-weight:800;color:#db2777;line-height:1.1;">' + f + '</div>'
+                  +       '</div>'
+                  +     '</div>'
+                  +   '</div>'
+                  + '</div>';
+            }).join('');
+            $body.html(cards);
+        }
+
+        // 번호표 모달 등에 끼워 넣을 "테이블별 성비" 요약 HTML. (입장등록 좌석 없으면 빈 문자열)
+        function ratioModalHtml(){
+            var anyone = tableRatios.some(function(r){ return (r.total || 0) > 0; });
+            if(!anyone){ return ''; }
+            var cells = tableRatios.map(function(r){
+                var m = r.male || 0, f = r.female || 0, total = r.total || 0;
+                var balanced = (m === f);
+                var headBg = total === 0 ? '#94a3b8' : (balanced ? '#16a34a' : '#f59e0b');
+                return '<div style="border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(20,30,60,.12);min-width:92px;">'
+                     +   '<div style="background:' + headBg + ';color:#fff;font-weight:800;font-size:0.82rem;padding:3px 6px;">' + r.table_no + '번</div>'
+                     +   '<div style="display:flex;">'
+                     +     '<div style="flex:1;background:#eff6ff;padding:5px 2px;"><span style="color:#2563eb;font-weight:800;font-size:1.05rem;">' + m + '</span><div style="font-size:0.65rem;color:#2563eb;">남</div></div>'
+                     +     '<div style="flex:1;background:#fdf2f8;padding:5px 2px;"><span style="color:#db2777;font-weight:800;font-size:1.05rem;">' + f + '</span><div style="font-size:0.65rem;color:#db2777;">여</div></div>'
+                     +   '</div>'
+                     + '</div>';
+            }).join('');
+            return '<div style="margin-top:14px;">'
+                 +   '<div style="font-size:0.82rem;color:#64748b;margin-bottom:8px;">📊 현재 테이블별 성비 (자리 안내 참고)</div>'
+                 +   '<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;">' + cells + '</div>'
+                 + '</div>';
+        }
+
         function load(){
             if(loading){ return; }
             loading = true;
@@ -338,6 +398,7 @@
             $.get(listUrl, function(res){
                 rosters = (res && res.data) ? res.data : [];
                 render();
+                renderTableRatios((res && res.table_ratios) ? res.table_ratios : []);
                 var d = new Date();
                 $('#lastUpdated').removeClass('text-danger').addClass('text-secondary')
                     .text('마지막 갱신 ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()));
@@ -401,7 +462,7 @@
         function askTicket(opts){
             return Swal.fire({
                 title: opts.title,
-                html: opts.html || '',
+                html: (opts.html || '') + ratioModalHtml(),
                 input: 'number',
                 inputLabel: opts.label,
                 inputValue: opts.value || '',

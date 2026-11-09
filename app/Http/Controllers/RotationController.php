@@ -277,7 +277,12 @@ class RotationController extends Controller
             ];
         })->all();
 
-        return response()->json(['data' => $rosters, 'total' => count($rosters)]);
+        return response()->json([
+            'data'          => $rosters,
+            'total'         => count($rosters),
+            // 테이블별 성비 요약(입장등록 좌석 기준) — 체크인 시 자리 안내용.
+            'table_ratios'  => $this->seatingService->tableGenderRatios($id),
+        ]);
     }
 
     /**

@@ -149,6 +149,46 @@ class SeatingService
     }
 
     /**
+     * 테이블별 성비 요약 (기준/홈 좌석 기준).
+     *  - 입장등록으로 좌석(rotation_seats)이 생긴 회원만 집계한다.
+     *  - 체크인 화면에서 "어느 테이블에 남/여 몇 명" 을 빠르게 보고 자리 안내하는 용도.
+     *
+     * @return array<int, array{table_no:int, male:int, female:int, total:int}>
+     */
+    public function tableGenderRatios(int $eventId): array
+    {
+        $tables = RotationTable::where('event_id', $eventId)
+            ->orderBy('table_no')
+            ->get(['id', 'table_no']);
+
+        // 좌석(member 포함) 로드 → 홈 테이블(rotation_table_id) 기준으로 성별 집계.
+        $seats = RotationSeat::with('member:id,gender')
+            ->where('event_id', $eventId)
+            ->get(['id', 'member_id', 'rotation_table_id']);
+
+        // table_id => ['M'=>n, 'F'=>n]
+        $byTableId = [];
+        foreach ($seats as $seat) {
+            $g = $seat->member?->gender;
+            if ($g === null) { continue; }
+            $tid = (int) $seat->rotation_table_id;
+            if (! isset($byTableId[$tid])) { $byTableId[$tid] = ['M' => 0, 'F' => 0]; }
+            if ($g === Member::GENDER_MALE) { $byTableId[$tid]['M']++; }
+            elseif ($g === Member::GENDER_FEMALE) { $byTableId[$tid]['F']++; }
+        }
+
+        return $tables->map(function (RotationTable $t) use ($byTableId) {
+            $counts = $byTableId[$t->id] ?? ['M' => 0, 'F' => 0];
+            return [
+                'table_no' => (int) $t->table_no,
+                'male'     => $counts['M'],
+                'female'   => $counts['F'],
+                'total'    => $counts['M'] + $counts['F'],
+            ];
+        })->toArray();
+    }
+
+    /**
      * 기준(홈) 좌석 추가/이동. 회원당 1행이며, 이미 있으면 테이블만 옮긴다.
      * 여자는 이 테이블에 고정, 남자는 1턴 출발 테이블이 된다.
      *

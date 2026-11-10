@@ -42,6 +42,11 @@
     .ar-panel-body { overflow-y: auto; padding: 14px; flex: 1; }
     .ar-item { border: 1px solid #e9ecef; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
     .ar-item.ar-unread { border-color: #cfe0ff; background: #f3f8ff; }
+    .ar-reply {
+        border-left: 3px solid #d9a406; background: #fffaf0;
+        border-radius: 8px; padding: 8px 12px; margin-bottom: 8px;
+    }
+    .ar-reply-body { white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
     .ar-empty { text-align: center; color: #adb5bd; padding: 40px 0; font-size: 14px; }
     .ar-table-no {
         display: inline-flex; align-items: center; gap: 3px;
@@ -91,6 +96,7 @@
             index:   "{{ route('admin.requests.index') }}",
             read:    "{{ url('admin/requests') }}/__ID__/read",
             readAll: "{{ route('admin.requests.readAll') }}",
+            reply:   "{{ url('admin/requests') }}/__ID__/reply",
         };
         var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
@@ -145,14 +151,82 @@
                         </div>
                         ${ev ? '<div class="mt-1">' + ev + '</div>' : ''}
                         <div class="my-3 py-1" style="white-space:pre-wrap;word-break:break-word;line-height:1.6;">${esc(it.body)}</div>
+                        ${replyHtml(it)}
                         <div class="d-flex gap-1 mt-2">
                             ${it.read_at
                                 ? '<span class="badge bg-green-lt">확인됨</span>'
                                 : '<button type="button" class="btn btn-sm btn-outline-primary ar-read">확인</button>'}
+                            <button type="button" class="btn btn-sm btn-outline-warning ar-reply-btn">
+                                <i class="ti ti-message-reply me-1"></i>${it.reply_body ? '답장 수정' : '답장'}
+                            </button>
                         </div>
                     </div>`;
             }).join('');
             $list.html(html);
+        }
+
+        function replyHtml(it){
+            if(!it.reply_body){ return ''; }
+            var when = it.reply_edited_at ? (fmt(it.reply_edited_at) + ' (수정됨)') : fmt(it.replied_at);
+            var meta = [it.replied_by ? esc(it.replied_by) : '', when].filter(Boolean).join(' · ');
+            return `<div class="ar-reply">
+                        <div class="d-flex justify-content-between gap-2 mb-1">
+                            <small class="fw-bold" style="color:#b98a04;"><i class="ti ti-message-reply me-1"></i>관리자 답장</small>
+                            <small class="text-muted">${meta}</small>
+                        </div>
+                        <div class="ar-reply-body">${esc(it.reply_body)}</div>
+                    </div>`;
+        }
+
+        /**
+         * 답장 작성/수정 프롬프트 (요청 모달에서도 재사용).
+         * 성공 시 onDone(서버가 돌려준 갱신된 요청) 을 호출한다.
+         */
+        async function openReply(it, onDone){
+            if(!it || !it.id){ return; }
+            var who = it.member ? (it.member.label || (it.member.name + '호')) : '회원';
+            var result = await Swal.fire({
+                title: it.reply_body ? '답장 수정' : '답장 보내기',
+                html: '<div class="text-start small text-muted mb-1">' + esc(who) + '님의 요청</div>'
+                    + '<div class="text-start p-2 rounded bg-light" style="white-space:pre-wrap;word-break:break-word;max-height:30vh;overflow:auto;">' + esc(it.body) + '</div>',
+                input: 'textarea',
+                inputValue: it.reply_body || '',
+                inputPlaceholder: '답장 내용을 입력하세요.',
+                inputAttributes: { maxlength: 1000, autocomplete: 'off', rows: 4 },
+                showCancelButton: true,
+                confirmButtonText: '보내기',
+                cancelButtonText: '취소',
+                reverseButtons: true,
+                inputValidator: function(v){ return (v || '').trim() ? undefined : '답장 내용을 입력해주세요.'; },
+            });
+            if(!result.isConfirmed){ return; }
+
+            // complete 는 전역 $.ajaxSetup(로딩 모달 닫기)을 덮어쓰므로 쓰지 않는다.
+            $.ajax({
+                url: urls.reply.replace('__ID__', it.id), type: 'PATCH',
+                data: { reply_body: result.value.trim() },
+                success: function(res){
+                    var updated = res?.request;
+                    if(updated){ syncItem(updated); }
+                    if(typeof onDone === 'function'){ onDone(updated); }
+                },
+                error: function(xhr){
+                    alert(xhr?.responseJSON?.error?.message ?? xhr?.responseJSON?.message ?? '오류가 발생했습니다.');
+                }
+            });
+        }
+
+        // 서버에서 받은 갱신 요청을 위젯 목록/뱃지에 반영한다.
+        function syncItem(updated){
+            var idx = items.findIndex(function(x){ return x.id === updated.id; });
+            if(idx > -1){
+                if(!items[idx].read_at && updated.read_at){ serverUnread = Math.max(0, serverUnread - 1); }
+                items[idx] = updated;
+                renderBadge();
+                if(opened){ renderList(); }
+            } else {
+                load();
+            }
         }
 
         function setLive(state){
@@ -265,6 +339,11 @@
 
             // 목록 내 버튼 (위임)
             $list.on('click', '.ar-read', function(){ markRead(parseInt($(this).closest('.ar-item').data('id'), 10)); });
+            $list.on('click', '.ar-reply-btn', function(){
+                var id = parseInt($(this).closest('.ar-item').data('id'), 10);
+                var it = items.find(function(x){ return x.id === id; });
+                openReply(it, function(){ if(window.RequestsModal){ window.RequestsModal.reloadIfOpen(); } });
+            });
 
             load();
             initRealtime();
@@ -272,7 +351,8 @@
 
         // 외부(요청 모달 등)에서 읽음 처리 후 플로팅 위젯을 서버 기준으로 갱신.
         return {
-            reload: function(){ load(); }
+            reload: function(){ load(); },
+            openReply: openReply,
         };
     })();
 </script>

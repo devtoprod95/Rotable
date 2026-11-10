@@ -22,6 +22,10 @@ class AdminRequest extends Model
         'member_id',
         'table_no',
         'body',
+        'reply_body',
+        'replied_at',
+        'reply_edited_at',
+        'replied_admin_id',
         'read_at',
     ];
 
@@ -31,8 +35,28 @@ class AdminRequest extends Model
     protected function casts(): array
     {
         return [
-            'read_at' => 'datetime',
+            'read_at'    => 'datetime',
+            'replied_at' => 'datetime',
+            'reply_edited_at' => 'datetime',
         ];
+    }
+
+    /**
+     * 관리자 답장이 있는지 여부.
+     */
+    public function hasReply(): bool
+    {
+        return $this->reply_body !== null && $this->reply_body !== '';
+    }
+
+    /**
+     * 답장한 관리자.
+     *
+     * @return BelongsTo<Admin, AdminRequest>
+     */
+    public function repliedAdmin(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class, 'replied_admin_id');
     }
 
     /**

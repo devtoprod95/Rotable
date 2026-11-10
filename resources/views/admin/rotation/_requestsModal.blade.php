@@ -200,7 +200,7 @@
                 resizableColumns: false,
                 initialSort: [{column: "id", dir: "desc"}],
                 rowFormatter: function(row){
-                    var labels = { id: 'No', member: '회원', table_no: '테이블', body: '요청 내용', created_at: '요청 시각', read_at: '상태' };
+                    var labels = { id: 'No', member: '회원', table_no: '테이블', body: '요청 내용', reply_body: '답장', created_at: '요청 시각', read_at: '상태' };
                     row.getCells().forEach(function(cell){
                         var f = cell.getField();
                         if(f && labels[f]){ cell.getElement().setAttribute('data-mlabel', labels[f]); }
@@ -227,6 +227,30 @@
                                 + $('<div>').text(cell.getValue() || '').html() + '</div>';
                         },
                         variableHeight: true
+                    },
+                    { title: "답장", field: "reply_body", minWidth: 200, headerSort: false, variableHeight: true,
+                        formatter: function(cell){
+                            var data = cell.getRow().getData();
+                            var wrap = document.createElement('div');
+                            wrap.style.padding = '6px 0';
+                            if(data.reply_body){
+                                var when = data.reply_edited_at
+                                    ? new Date(data.reply_edited_at).toLocaleString('ko-KR') + ' (수정됨)'
+                                    : (data.replied_at ? new Date(data.replied_at).toLocaleString('ko-KR') : '');
+                                var meta = [data.replied_by || '', when].filter(Boolean).join(' · ');
+                                $(wrap).append(
+                                    $('<div>').css({ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }).text(data.reply_body),
+                                    $('<div>').addClass('text-muted').css('font-size', '0.8em').text(meta)
+                                );
+                            }
+                            var $btn = $('<button type="button">').addClass('btn btn-sm btn-outline-warning mt-1')
+                                .html('<i class="ti ti-message-reply me-1"></i>' + (data.reply_body ? '답장 수정' : '답장'))
+                                .on('click', function(){
+                                    if(window.AdminRequestsWidget){ window.AdminRequestsWidget.openReply(data, function(){ reload(); }); }
+                                });
+                            $(wrap).append($btn);
+                            return wrap;
+                        }
                     },
                     { title: "요청 시각", field: "created_at", width: 120, hozAlign: "center",
                         formatter: function(cell){

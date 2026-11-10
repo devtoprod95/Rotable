@@ -771,6 +771,10 @@ class MemberPageController extends Controller
                 'body'       => $req->body,
                 'is_read'    => $req->read_at !== null,
                 'created_at' => $req->created_at?->format('Y/n/j H:i'),
+                // 관리자 답장 (답장한 관리자 정보는 노출하지 않는다)
+                'reply_body' => $req->reply_body,
+                'replied_at' => $req->replied_at?->format('Y/n/j H:i'),
+                'reply_edited_at' => $req->reply_edited_at?->format('Y/n/j H:i'),
             ])
             ->values();
 

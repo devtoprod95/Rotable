@@ -31,7 +31,7 @@ class AdminRequestController extends Controller
         $searchText = $this->request->input('searchText', '');
 
         $query = AdminRequest::query()
-            ->with(['member:id,name,gender,platform', 'eventRound:id,title']);
+            ->with(['member:id,name,gender,platform', 'eventRound:id,title', 'repliedAdmin:id,name']);
 
         if ($eventId > 0) {
             $query->where('event_id', $eventId);
@@ -71,7 +71,7 @@ class AdminRequestController extends Controller
         $limit = (int) $this->request->input('limit', 30);
 
         $requests = AdminRequest::query()
-            ->with(['member:id,name,gender,platform', 'eventRound:id,title'])
+            ->with(['member:id,name,gender,platform', 'eventRound:id,title', 'repliedAdmin:id,name'])
             ->orderByDesc('id')
             ->limit($limit)
             ->get()
@@ -105,6 +105,50 @@ class AdminRequestController extends Controller
         }
 
         return apiRes(Response::HTTP_OK, helpersSuccessMessage());
+    }
+
+    /**
+     * 요청 1건에 관리자 답장을 등록/수정한다. (답장하면 확인 처리도 함께 한다)
+     */
+    public function reply(int $id): JsonResponse
+    {
+        $validated = $this->request->validate([
+            'reply_body' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $req = AdminRequest::find($id);
+        if ($req === null) {
+            return apiRes(Response::HTTP_NOT_FOUND, helpersFailMessage('요청을 찾을 수 없습니다.'));
+        }
+
+        $wasUnread = $req->read_at === null;
+
+        // 이미 답장이 있으면 "수정": 최초 답장 시각은 유지하고 수정 시각만 남긴다.
+        if ($req->hasReply()) {
+            if ($req->reply_body !== $validated['reply_body']) {
+                $req->reply_edited_at = now();
+            }
+        } else {
+            $req->replied_at = now();
+        }
+
+        $req->reply_body       = $validated['reply_body'];
+        $req->replied_admin_id = auth('admin')->id();
+        $req->read_at          ??= now();
+        $req->save();
+
+        // 회원 화면에 답장 실시간 반영 (+ 미확인이었다면 "확인됨"도 전파).
+        broadcast(new \App\Events\AdminRequestReplied($req));
+        if ($wasUnread) {
+            broadcast(new \App\Events\AdminRequestRead((int) $req->member_id, [(int) $req->id]));
+        }
+
+        $req->load(['member:id,name,gender,platform', 'eventRound:id,title', 'repliedAdmin:id,name']);
+
+        return apiRes(Response::HTTP_OK, [
+            ...helpersSuccessMessage('답장을 보냈습니다.'),
+            'request' => $this->transform($req),
+        ]);
     }
 
     /**
@@ -156,6 +200,10 @@ class AdminRequestController extends Controller
         return [
             'id'          => $req->id,
             'body'        => $req->body,
+            'reply_body'  => $req->reply_body,
+            'replied_at'  => $req->replied_at?->toIso8601String(),
+            'reply_edited_at' => $req->reply_edited_at?->toIso8601String(),
+            'replied_by'  => $req->repliedAdmin?->name,
             'read_at'     => $req->read_at?->toIso8601String(),
             'created_at'  => $req->created_at?->toIso8601String(),
             'event_id'    => $req->event_id,

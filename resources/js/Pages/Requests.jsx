@@ -29,6 +29,23 @@ function RequestItem({ request }) {
             <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">
                 {request.body}
             </p>
+
+            {/* 관리자 답장 */}
+            {request.reply_body && (
+                <div className="mt-3 rounded-xl border border-secondary-100 bg-white p-3">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-primary">💬 관리자 답장</span>
+                        {request.replied_at && (
+                            <span className="text-[11px] font-medium text-gray-400">
+                                {request.reply_edited_at ? `${request.reply_edited_at} (수정됨)` : request.replied_at}
+                            </span>
+                        )}
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">
+                        {request.reply_body}
+                    </p>
+                </div>
+            )}
         </div>
     );
 }
@@ -58,11 +75,23 @@ export default function Requests() {
                 ),
             );
         };
+        // 관리자가 답장하면 해당 요청에 답장을 실시간 반영.
+        const replyHandler = ({ id, reply_body: replyBody, replied_at: repliedAt, reply_edited_at: editedAt }) => {
+            setList((prev) =>
+                prev.map((req) =>
+                    req.id === id
+                        ? { ...req, is_read: true, reply_body: replyBody, replied_at: repliedAt, reply_edited_at: editedAt }
+                        : req,
+                ),
+            );
+        };
         channel.listen('.request.read', handler);
+        channel.listen('.request.replied', replyHandler);
         return () => {
             // 같은 chat.{id} 채널을 BottomNav 등이 공유하므로 채널 자체를 leave 하지 않고
             // 이 이벤트 리스너만 해제한다.
             channel.stopListening('.request.read', handler);
+            channel.stopListening('.request.replied', replyHandler);
         };
     }, [auth?.user?.id]);
 

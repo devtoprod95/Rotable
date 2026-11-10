@@ -277,7 +277,7 @@ class RotationService
     public function eventMessageList(int $eventId, int $page, int $size, array $sort, array $filters = []): LengthAwarePaginator
     {
         $query = \App\Models\Message::query()
-            ->with(['sender:id,name,gender,platform', 'receiver:id,name,gender,platform'])
+            ->with(['sender:id,name,gender,platform', 'receiver:id,name,gender,platform', 'senderAdmin:id,name'])
             ->where('event_id', $eventId);
 
         // 두 회원 "사이"의 대화(양방향)만 조회할 때. (convA ↔ convB)
@@ -324,6 +324,10 @@ class RotationService
         $labeler  = app(MemberLabelService::class);
         $labelMap = $labeler->labelMap($eventId);
         $pageData->getCollection()->each(function ($msg) use ($labeler, $labelMap): void {
+            // 관리자 발송 여부/보낸 관리자 이름 (실시간 이벤트 EventMessageSent 와 같은 키)
+            $msg->setAttribute('is_admin', $msg->isFromAdmin());
+            $msg->setAttribute('admin_name', $msg->senderAdmin?->name);
+
             foreach (['sender', 'receiver'] as $rel) {
                 $m = $msg->{$rel};
                 if ($m !== null) {
@@ -335,6 +339,75 @@ class RotationService
         return $pageData;
     }
 
+
+    /**
+     * 행사 참가자 중 관리자 메시지 수신 대상 목록 (관리자 표기 라벨 포함).
+     *
+     * @return list<array{id:int, gender:string, label:string}>
+     */
+    public function messageRecipientList(int $eventId): array
+    {
+        $labeler  = app(MemberLabelService::class);
+        $labelMap = $labeler->labelMap($eventId);
+
+        return Member::query()
+            ->where('event_id', $eventId)
+            ->get(['id', 'name', 'gender', 'platform'])
+            ->sortBy([['gender', 'asc'], fn (Member $a, Member $b) => (int) $a->name <=> (int) $b->name])
+            ->values()
+            ->map(fn (Member $m) => [
+                'id'     => $m->id,
+                'gender' => $m->gender,
+                'label'  => $labeler->label($labelMap, $m->gender, $m->name, $m->platform),
+            ])
+            ->all();
+    }
+
+    /**
+     * 관리자가 참가자에게 메시지를 보낸다. (sender_type=admin, 참가자에게는 익명으로 보인다.)
+     *
+     * @param int          $adminId   보내는 관리자 id
+     * @param string       $target    all(전체) | M(남자 전체) | F(여자 전체) | members(개별 선택)
+     * @param list<int>    $memberIds target 이 members 일 때 수신 회원 id
+     */
+    public function adminSendMessage(int $eventId, int $adminId, string $body, string $target, array $memberIds = []): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $query = Member::query()->where('event_id', $eventId);
+            match ($target) {
+                'M', 'F'  => $query->where('gender', $target),
+                'members' => $query->whereIn('id', $memberIds),
+                default   => null,
+            };
+            $receivers = $query->get(['id']);
+
+            if ($receivers->isEmpty()) {
+                throw new Exception('메시지를 받을 참가자가 없습니다.');
+            }
+
+            $messages = DB::transaction(fn () => $receivers->map(fn (Member $r) => \App\Models\Message::create([
+                'event_id'        => $eventId,
+                'sender_type'     => \App\Models\Message::SENDER_ADMIN,
+                'sender_id'       => null,
+                'sender_admin_id' => $adminId,
+                'receiver_id'     => $r->id,
+                'body'            => $body,
+            ])));
+
+            foreach ($messages as $message) {
+                broadcast(new \App\Events\MessageSent($message));
+                broadcast(new \App\Events\EventMessageSent($message));
+            }
+
+            $returnMsg = helpersSuccessMessage($messages->count() . '명에게 메시지를 보냈습니다.');
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
 
     public function tableList(RotationTableListRequestDto $dto): LengthAwarePaginator
     {

@@ -346,6 +346,7 @@ class MemberPageController extends Controller
         $sent = Message::query()
             ->with('receiver')
             ->where('sender_id', $me->id)
+            ->where('sender_type', Message::SENDER_MEMBER)
             ->orderByDesc('created_at')
             ->get()
             ->map(fn (Message $message) => [
@@ -463,7 +464,9 @@ class MemberPageController extends Controller
             ->update(['read_at' => now()]);
 
         // 발신자별로 묶어, 각 발신자의 개인 채널로 읽음 상태를 브로드캐스트.
+        // 관리자 발송 메시지(sender_type=admin)는 읽음을 전파할 회원 채널이 없으므로 제외.
         $unread
+            ->whereNotNull('sender_id')
             ->groupBy('sender_id')
             ->each(function ($messages, $senderId) {
                 broadcast(new MessageRead((int) $senderId, $messages->pluck('id')->map(fn ($id) => (int) $id)->all()));

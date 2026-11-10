@@ -53,7 +53,7 @@ class EventMessageSent implements ShouldBroadcastNow
      */
     public function broadcastWith(): array
     {
-        $this->message->loadMissing(['sender:id,name,gender,platform', 'receiver:id,name,gender,platform']);
+        $this->message->loadMissing(['sender:id,name,gender,platform', 'receiver:id,name,gender,platform', 'senderAdmin:id,name']);
 
         // 관리자 표기 라벨(`닉네임(플랫폼)_N호`)
         $labeler  = app(\App\Services\Rotation\MemberLabelService::class);
@@ -65,6 +65,8 @@ class EventMessageSent implements ShouldBroadcastNow
             'body'       => $this->message->body,
             'read_at'    => $this->message->read_at?->toIso8601String(),
             'created_at' => $this->message->created_at?->toIso8601String(),
+            'is_admin'   => $this->message->isFromAdmin(),
+            'admin_name' => $this->message->senderAdmin?->name,
             'sender'     => $this->message->sender ? [
                 'name'   => $this->message->sender->name,
                 'label'  => $label($this->message->sender),

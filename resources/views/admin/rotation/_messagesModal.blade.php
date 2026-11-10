@@ -14,6 +14,8 @@
     ];
     // {id} 자리에 __ID__ 를 넣어 JS에서 치환할 수 있는 URL 템플릿을 만든다.
     $messagesUrlTemplate = route('admin.rotation.event.messages.list', ['id' => '__ID__']);
+    $recipientsUrlTemplate = route('admin.rotation.event.messages.recipients', ['id' => '__ID__']);
+    $sendUrlTemplate = route('admin.rotation.event.messages.send', ['id' => '__ID__']);
 @endphp
 
 <style>
@@ -86,6 +88,31 @@
             </div>
 
             <div class="modal-body">
+                <div class="card card-body bg-light border-0 mb-3 p-3" id="mm-sendBox">
+                    <div class="fw-bold mb-2"><i class="ti ti-send me-1"></i>관리자 메시지 보내기 <small class="text-muted fw-normal">(참가자에게는 익명으로 표시됩니다)</small></div>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-4">
+                            <select class="form-select" id="mm-sendTarget">
+                                <option value="all">참가자 전체</option>
+                                <option value="M">남자 전체</option>
+                                <option value="F">여자 전체</option>
+                                <option value="members">개별 선택</option>
+                            </select>
+                            <div class="mt-2 d-none" id="mm-sendMembersWrap">
+                                <select id="mm-sendMembers" multiple></select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md">
+                            <textarea class="form-control" id="mm-sendBody" rows="3" maxlength="1000" autocomplete="off" placeholder="보낼 메시지 내용"></textarea>
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="button" class="btn btn-primary w-100" id="mm-sendBtn" onclick="MessagesModal.send()">
+                                <i class="ti ti-send me-1"></i> 보내기
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <form id="mm-searchForm" class="mb-2">
                     <div class="row g-2 align-items-end">
                         <div class="col-12 col-md-auto">
@@ -126,6 +153,8 @@
 <script>
     window.MessagesModal = (function(){
         var urlTemplate = @json($messagesUrlTemplate);
+        var recipientsTemplate = @json($recipientsUrlTemplate);
+        var sendTemplate = @json($sendUrlTemplate);
         var reverbCfg   = @json($reverbCfg);
 
         var table = null;
@@ -222,13 +251,15 @@
                     { title: "보낸사람 → 받는사람", field: "sender_id", width: 220, headerSort: false,
                         // 복사 시: "A호(남) → B호(여)" 텍스트
                         accessorClipboard: function(value, data){
-                            var fromName = (data.sender && (data.sender.label || data.sender.name)) ? (data.sender.label || (data.sender.name + '호')) : '-';
+                            var fromName = data.is_admin ? ('관리자' + (data.admin_name ? '(' + data.admin_name + ')' : '')) : ((data.sender && (data.sender.label || data.sender.name)) ? (data.sender.label || (data.sender.name + '호')) : '-');
                             var toName   = (data.receiver && (data.receiver.label || data.receiver.name)) ? (data.receiver.label || (data.receiver.name + '호')) : '-';
                             return fromName + ' → ' + toName;
                         },
                         formatter: function(cell){
                             var d = cell.getRow().getData();
-                            var from = nameWithGender(d.sender ? d.sender.name : null, d.sender ? d.sender.gender : null, d.sender ? d.sender.label : null);
+                            var from = d.is_admin
+                                ? '<span class="badge bg-purple-lt">관리자' + (d.admin_name ? ' (' + $('<i>').text(d.admin_name).html() + ')' : '') + '</span>'
+                                : nameWithGender(d.sender ? d.sender.name : null, d.sender ? d.sender.gender : null, d.sender ? d.sender.label : null);
                             var to   = nameWithGender(d.receiver ? d.receiver.name : null, d.receiver ? d.receiver.gender : null, d.receiver ? d.receiver.label : null);
                             return `<div class="d-flex align-items-center gap-2 flex-wrap">
                                         <span>${from}</span>
@@ -337,7 +368,70 @@
             currentChannel = null;
         }
 
+        var recipientChoices = null;
+
+        function ensureRecipientChoices(){
+            if(recipientChoices || typeof Choices === 'undefined'){ return recipientChoices; }
+            recipientChoices = new Choices(document.getElementById('mm-sendMembers'), {
+                removeItemButton: true,
+                searchEnabled: true,
+                searchFields: ['label'],
+                searchFloor: 1,
+                searchResultLimit: -1,
+                shouldSort: false,
+                itemSelectText: '',
+                placeholderValue: '받을 참가자 선택 (여러 명 가능)',
+                searchPlaceholderValue: '🔍 번호 / 닉네임 검색',
+                noResultsText: '검색 결과가 없습니다.',
+                noChoicesText: '선택할 참가자가 없습니다.',
+                fuseOptions: { threshold: 0.3, ignoreLocation: true },
+            });
+            return recipientChoices;
+        }
+
+        function loadRecipients(eventId){
+            var c = ensureRecipientChoices();
+            if(!c){ return; }
+            c.removeActiveItems();
+            c.clearChoices();
+            $.get(recipientsTemplate.replace('__ID__', eventId), function(res){
+                var items = (res.data || []).map(function(m){
+                    return { value: String(m.id), label: '[' + (m.gender === 'F' ? '여' : '남') + '] ' + m.label };
+                });
+                c.setChoices(items, 'value', 'label', true);
+            });
+        }
+
+        $(document).on('change', '#mm-sendTarget', function(){
+            $('#mm-sendMembersWrap').toggleClass('d-none', $(this).val() !== 'members');
+        });
+
         return {
+            send: function(){
+                if(!currentEventId){ return; }
+                var target = $('#mm-sendTarget').val();
+                var body = ($('#mm-sendBody').val() || '').trim();
+                var ids = recipientChoices ? recipientChoices.getValue(true) : [];
+                if(!body){ alert('메시지 내용을 입력해주세요.'); return; }
+                if(target === 'members' && ids.length < 1){ alert('받을 참가자를 선택해주세요.'); return; }
+                if(!confirm('메시지를 보내시겠습니까?')){ return; }
+                var $btn = $('#mm-sendBtn').prop('disabled', true);
+                $.ajax({
+                    url: sendTemplate.replace('__ID__', currentEventId),
+                    type: 'POST',
+                    data: { body: body, target: target, member_ids: ids },
+                    // complete 는 전역 $.ajaxSetup(로딩 모달 닫기)을 덮어쓰므로 쓰지 않는다.
+                    success: function(res){
+                        $btn.prop('disabled', false);
+                        $('#mm-sendBody').val('');
+                        alert(res?.msg ?? '전송했습니다.');
+                    },
+                    error: function(xhr){
+                        $btn.prop('disabled', false);
+                        alert(xhr?.responseJSON?.error?.message ?? xhr?.responseJSON?.msg ?? '오류가 발생했습니다.');
+                    }
+                });
+            },
             search: function(){
                 if(!table || !currentEventId){ return; }
                 table.setData(listUrl(currentEventId), filters());
@@ -351,6 +445,9 @@
                 currentConvB = opts.convB || null;
                 $('#mm-eventLabel').text(eventLabel || '');
                 $('#mm-searchForm')[0].reset();
+                $('#mm-sendTarget').val('all').trigger('change');
+                $('#mm-sendBody').val('');
+                loadRecipients(eventId);
                 // 특정 발신자 전용 조회면 제목에 표시.
                 $('#mm-modalTitleText').text((currentSenderId || (currentConvA && currentConvB)) ? '대화 메시지' : '메시지 조회');
                 setLive('대기');

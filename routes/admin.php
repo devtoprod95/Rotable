@@ -41,6 +41,8 @@ Route::middleware('role')->group(function () {
                 Route::post('/{id}/tables', [RotationController::class, 'eventTableAdd'])->whereNumber('id')->name('tables.add');
                 Route::delete('/{id}/tables', [RotationController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');
                 Route::get('/{id}/messages/list', [RotationController::class, 'eventMessageList'])->whereNumber('id')->name('messages.list');
+                Route::get('/{id}/messages/recipients', [RotationController::class, 'eventMessageRecipients'])->whereNumber('id')->name('messages.recipients');
+                Route::post('/{id}/messages/send', [RotationController::class, 'eventMessageSend'])->whereNumber('id')->name('messages.send');
                 // 체크인 명단 — 행사별 (닉네임·플랫폼·성별, 전화번호 없음)
                 Route::get('/{id}/checkin', [RotationController::class, 'checkinIndex'])->whereNumber('id')->name('checkin');
                 Route::get('/{id}/rosters', [RotationController::class, 'rosterList'])->whereNumber('id')->name('rosters.list');

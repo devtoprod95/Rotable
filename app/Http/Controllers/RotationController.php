@@ -458,6 +458,37 @@ class RotationController extends Controller
         ));
     }
 
+    /**
+     * 관리자 메시지 발송 대상(참가자) 목록.
+     */
+    public function eventMessageRecipients(int $id): JsonResponse
+    {
+        return response()->json(['data' => $this->rotationService->messageRecipientList($id)]);
+    }
+
+    /**
+     * 관리자가 참가자에게 메시지 발송. (참가자에게는 익명으로 표시)
+     */
+    public function eventMessageSend(int $id): JsonResponse
+    {
+        $validated = $this->request->validate([
+            'body'         => ['required', 'string', 'max:1000'],
+            'target'       => ['required', Rule::in(['all', 'M', 'F', 'members'])],
+            'member_ids'   => ['required_if:target,members', 'array'],
+            'member_ids.*' => ['integer'],
+        ]);
+
+        $result = $this->rotationService->adminSendMessage(
+            $id,
+            (int) auth('admin')->id(),
+            $validated['body'],
+            $validated['target'],
+            array_map('intval', $validated['member_ids'] ?? [])
+        );
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_INTERNAL_SERVER_ERROR), $result);
+    }
+
     /* ======================================================================
      | 매칭 — 상호 매칭 쌍 조회
      * ==================================================================== */

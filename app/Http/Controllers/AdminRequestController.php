@@ -72,13 +72,14 @@ class AdminRequestController extends Controller
 
         $requests = AdminRequest::query()
             ->with(['member:id,name,gender,platform', 'eventRound:id,title', 'repliedAdmin:id,name'])
+            ->whereNull('hidden_at')
             ->orderByDesc('id')
             ->limit($limit)
             ->get()
             ->map(fn (AdminRequest $req) => $this->transform($req))
             ->values();
 
-        $unread = AdminRequest::whereNull('read_at')->count();
+        $unread = AdminRequest::whereNull('read_at')->whereNull('hidden_at')->count();
 
         return response()->json([
             'requests'    => $requests,
@@ -108,6 +109,34 @@ class AdminRequestController extends Controller
     }
 
     /**
+     * 요청 1건을 위젯 목록에서 숨긴다.
+     * - 물리 삭제하지 않으며, 확인(read_at) 상태는 건드리지 않는다.
+     */
+    public function hide(int $id): JsonResponse
+    {
+        $req = AdminRequest::find($id);
+        if ($req === null) {
+            return apiRes(Response::HTTP_NOT_FOUND, helpersFailMessage('요청을 찾을 수 없습니다.'));
+        }
+
+        $req->hidden_at = now();
+        $req->save();
+
+        return apiRes(Response::HTTP_OK, helpersSuccessMessage('목록에서 숨겼습니다.'));
+    }
+
+    /**
+     * 위젯 목록의 모든 요청을 한 번에 숨긴다.
+     * - 물리 삭제하지 않으며, 확인(read_at) 상태는 건드리지 않는다.
+     */
+    public function hideAll(): JsonResponse
+    {
+        $count = AdminRequest::whereNull('hidden_at')->update(['hidden_at' => now()]);
+
+        return apiRes(Response::HTTP_OK, helpersSuccessMessage($count > 0 ? $count . '건을 목록에서 숨겼습니다.' : '숨길 요청이 없습니다.'));
+    }
+
+    /**
      * 요청 1건에 관리자 답장을 등록/수정한다. (답장하면 확인 처리도 함께 한다)
      */
     public function reply(int $id): JsonResponse
@@ -124,12 +153,15 @@ class AdminRequestController extends Controller
         $wasUnread = $req->read_at === null;
 
         // 이미 답장이 있으면 "수정": 최초 답장 시각은 유지하고 수정 시각만 남긴다.
+        // 새 답장이거나 내용이 바뀌면 회원 '요청' 탭에 다시 뱃지가 뜨도록 reply_read_at 을 비운다.
         if ($req->hasReply()) {
             if ($req->reply_body !== $validated['reply_body']) {
                 $req->reply_edited_at = now();
+                $req->reply_read_at   = null;
             }
         } else {
-            $req->replied_at = now();
+            $req->replied_at    = now();
+            $req->reply_read_at = null;
         }
 
         $req->reply_body       = $validated['reply_body'];

@@ -79,6 +79,9 @@
             <button type="button" class="btn btn-sm btn-outline-success" id="arReadAll" title="모두 확인">
                 모두 확인
             </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="arHideAll" title="목록에서 모두 숨김">
+                모두 숨김
+            </button>
             <button type="button" class="btn btn-sm btn-outline-secondary" id="arClose" title="닫기">
                 <i class="ti ti-x"></i>
             </button>
@@ -97,6 +100,8 @@
             read:    "{{ url('admin/requests') }}/__ID__/read",
             readAll: "{{ route('admin.requests.readAll') }}",
             reply:   "{{ url('admin/requests') }}/__ID__/reply",
+            hide:    "{{ url('admin/requests') }}/__ID__/hide",
+            hideAll: "{{ route('admin.requests.hideAll') }}",
         };
         var csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
@@ -158,6 +163,9 @@
                                 : '<button type="button" class="btn btn-sm btn-outline-primary ar-read">확인</button>'}
                             <button type="button" class="btn btn-sm btn-outline-warning ar-reply-btn">
                                 <i class="ti ti-message-reply me-1"></i>${it.reply_body ? '답장 수정' : '답장'}
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto ar-hide-btn" title="목록에서 숨김">
+                                <i class="ti ti-eye-off me-1"></i>숨김
                             </button>
                         </div>
                     </div>`;
@@ -273,6 +281,32 @@
             });
         }
 
+        async function hideItem(id){
+            if(!(await salert({html: '이 요청을 목록에서 숨기시겠습니까?<br><small class="text-muted">(요청 조회 화면에는 남아 있습니다)</small>'}))){ return; }
+            silentAjax({
+                url: urls.hide.replace('__ID__', id), type: 'PATCH',
+                success: function(){
+                    // 서버 기준으로 다시 받아 빈 자리를 채우고 뱃지도 맞춘다.
+                    load();
+                    if(window.RequestsModal){ window.RequestsModal.reloadIfOpen(); }
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            });
+        }
+
+        async function hideAll(){
+            if(!items.length){ return; }
+            if(!(await salert({html: '목록의 모든 요청을 숨기시겠습니까?<br><small class="text-muted">(요청 조회 화면에는 남아 있습니다)</small>'}))){ return; }
+            silentAjax({
+                url: urls.hideAll, type: 'PATCH',
+                success: function(){
+                    load();
+                    if(window.RequestsModal){ window.RequestsModal.reloadIfOpen(); }
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            });
+        }
+
         function markAllRead(){
             silentAjax({
                 url: urls.readAll, type: 'PATCH',
@@ -336,9 +370,20 @@
             $fab.on('click', function(){ opened ? closePanel() : openPanel(); });
             $('#arClose').on('click', closePanel);
             $('#arReadAll').on('click', markAllRead);
+            $('#arHideAll').on('click', hideAll);
+
+            // 패널 바깥을 누르면 닫는다.
+            // (플로팅 버튼, 답장/확인 팝업(SweetAlert) 은 바깥 클릭으로 치지 않는다)
+            $(document).on('mousedown touchstart', function(e){
+                if(!opened){ return; }
+                var $t = $(e.target);
+                if($t.closest('#arPanel, #arFab, .swal2-container').length){ return; }
+                closePanel();
+            });
 
             // 목록 내 버튼 (위임)
             $list.on('click', '.ar-read', function(){ markRead(parseInt($(this).closest('.ar-item').data('id'), 10)); });
+            $list.on('click', '.ar-hide-btn', function(){ hideItem(parseInt($(this).closest('.ar-item').data('id'), 10)); });
             $list.on('click', '.ar-reply-btn', function(){
                 var id = parseInt($(this).closest('.ar-item').data('id'), 10);
                 var it = items.find(function(x){ return x.id === id; });

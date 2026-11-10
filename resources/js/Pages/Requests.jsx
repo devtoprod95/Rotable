@@ -1,4 +1,4 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import echo from '@/echo';
@@ -32,9 +32,21 @@ function RequestItem({ request }) {
 
             {/* 관리자 답장 */}
             {request.reply_body && (
-                <div className="mt-3 rounded-xl border border-secondary-100 bg-white p-3">
+                <div
+                    className={
+                        'mt-3 rounded-xl border bg-white p-3 ' +
+                        (request.is_reply_new ? 'border-primary ring-2 ring-primary/20' : 'border-secondary-100')
+                    }
+                >
                     <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-primary">💬 관리자 답장</span>
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-primary">
+                            💬 관리자 답장
+                            {request.is_reply_new && (
+                                <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                                    NEW
+                                </span>
+                            )}
+                        </span>
                         {request.replied_at && (
                             <span className="text-[11px] font-medium text-gray-400">
                                 {request.reply_edited_at ? `${request.reply_edited_at} (수정됨)` : request.replied_at}
@@ -80,10 +92,12 @@ export default function Requests() {
             setList((prev) =>
                 prev.map((req) =>
                     req.id === id
-                        ? { ...req, is_read: true, reply_body: replyBody, replied_at: repliedAt, reply_edited_at: editedAt }
+                        ? { ...req, is_read: true, reply_body: replyBody, replied_at: repliedAt, reply_edited_at: editedAt, is_reply_new: true }
                         : req,
                 ),
             );
+            // 이 화면을 보고 있으므로 서버에서 다시 받아 "답장 확인" 처리한다. (하단 '요청' 탭 뱃지 해제)
+            router.reload({ only: ['requests', 'unreadReplyIds'] });
         };
         channel.listen('.request.read', handler);
         channel.listen('.request.replied', replyHandler);

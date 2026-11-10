@@ -19,6 +19,8 @@ Route::middleware('role')->group(function () {
             Route::get('/', [\App\Http\Controllers\AdminRequestController::class, 'index'])->name('index');
             Route::get('/list', [\App\Http\Controllers\AdminRequestController::class, 'listData'])->name('list');
             Route::patch('/{id}/read', [\App\Http\Controllers\AdminRequestController::class, 'markRead'])->whereNumber('id')->name('read');
+            Route::patch('/hide-all', [\App\Http\Controllers\AdminRequestController::class, 'hideAll'])->name('hideAll');
+            Route::patch('/{id}/hide', [\App\Http\Controllers\AdminRequestController::class, 'hide'])->whereNumber('id')->name('hide');
             Route::patch('/{id}/reply', [\App\Http\Controllers\AdminRequestController::class, 'reply'])->whereNumber('id')->name('reply');
             Route::patch('/read-all', [\App\Http\Controllers\AdminRequestController::class, 'markAllRead'])->name('readAll');
         });

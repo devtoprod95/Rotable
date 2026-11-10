@@ -25,8 +25,10 @@ class AdminRequest extends Model
         'reply_body',
         'replied_at',
         'reply_edited_at',
+        'reply_read_at',
         'replied_admin_id',
         'read_at',
+        'hidden_at',
     ];
 
     /**
@@ -38,6 +40,8 @@ class AdminRequest extends Model
             'read_at'    => 'datetime',
             'replied_at' => 'datetime',
             'reply_edited_at' => 'datetime',
+            'reply_read_at'   => 'datetime',
+            'hidden_at'       => 'datetime',
         ];
     }
 

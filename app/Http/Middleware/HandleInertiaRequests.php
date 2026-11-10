@@ -72,6 +72,16 @@ class HandleInertiaRequests extends Middleware
             'unreadCount' => fn () => $member
                 ? \App\Models\Message::where('receiver_id', $member->id)->whereNull('read_at')->count()
                 : 0,
+            // 하단 nav '요청' 탭 뱃지용 - 아직 확인하지 않은 관리자 답장이 달린 요청 id 목록.
+            'unreadReplyIds' => fn () => $member
+                ? \App\Models\AdminRequest::query()
+                    ->where('member_id', $member->id)
+                    ->whereNotNull('reply_body')
+                    ->whereNull('reply_read_at')
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all()
+                : [],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),

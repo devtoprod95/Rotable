@@ -765,7 +765,18 @@ class MemberPageController extends Controller
         $requests = \App\Models\AdminRequest::query()
             ->where('member_id', $me->id)
             ->orderByDesc('created_at')
-            ->get()
+            ->get();
+
+        // 이 화면에 들어오면 안 읽은 답장을 확인 처리한다. (하단 '요청' 탭 뱃지 해제)
+        // 이번에 처음 보는 답장은 is_reply_new 로 표시해 화면에서 강조한다.
+        $newReplyIds = $requests
+            ->filter(fn (\App\Models\AdminRequest $req) => $req->hasReply() && $req->reply_read_at === null)
+            ->pluck('id');
+        if ($newReplyIds->isNotEmpty()) {
+            \App\Models\AdminRequest::whereIn('id', $newReplyIds)->update(['reply_read_at' => now()]);
+        }
+
+        $requests = $requests
             ->map(fn (\App\Models\AdminRequest $req) => [
                 'id'         => $req->id,
                 'body'       => $req->body,
@@ -775,6 +786,7 @@ class MemberPageController extends Controller
                 'reply_body' => $req->reply_body,
                 'replied_at' => $req->replied_at?->format('Y/n/j H:i'),
                 'reply_edited_at' => $req->reply_edited_at?->format('Y/n/j H:i'),
+                'is_reply_new'    => $newReplyIds->contains($req->id),
             ])
             ->values();
 

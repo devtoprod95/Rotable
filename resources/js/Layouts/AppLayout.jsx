@@ -230,6 +230,46 @@ function BottomNav() {
         }
     });
 
+    // '요청' 탭 뱃지 - 아직 확인하지 않은 관리자 답장(요청 id 기준, 같은 답장 수정 시 중복 카운트 방지).
+    const sharedReplyIds = props.unreadReplyIds ?? [];
+    const sharedReplyKey = sharedReplyIds.join(",");
+    const [replyIds, setReplyIds] = useState(() => new Set(sharedReplyIds));
+    const onRequestsPage = url.startsWith("/requests");
+    const onRequestsPageRef = useRef(onRequestsPage);
+    onRequestsPageRef.current = onRequestsPage;
+
+    // 페이지 이동으로 shared prop 이 갱신되면 동기화. (요청 화면 진입 시 서버가 확인 처리 → 빈 목록)
+    useEffect(() => {
+        setReplyIds(new Set(sharedReplyIds));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sharedReplyKey]);
+
+    // 요청 화면에 있으면 뱃지는 0으로 유지.
+    useEffect(() => {
+        if (onRequestsPage) {
+            setReplyIds(new Set());
+        }
+    }, [onRequestsPage]);
+
+    // 관리자가 답장(또는 수정)하면, 요청 화면 밖일 때만 뱃지를 올린다.
+    useEffect(() => {
+        if (!memberId) {
+            return undefined;
+        }
+        const channel = echo.private(`chat.${memberId}`);
+        const handler = ({ id }) => {
+            if (onRequestsPageRef.current) {
+                return;
+            }
+            setReplyIds((prev) => new Set(prev).add(id));
+        };
+        channel.listen(".request.replied", handler);
+        return () => {
+            // chat.{id} 채널은 메시지 구독과 공유하므로 이 리스너만 해제한다.
+            channel.stopListening(".request.replied", handler);
+        };
+    }, [memberId]);
+
     return (
         <div className="fixed inset-x-0 bottom-0 z-30">
             <div className="mx-auto w-full max-w-[480px]">
@@ -237,7 +277,12 @@ function BottomNav() {
                     {navItems.map((item) => {
                         const active = url.startsWith(item.href);
                         const Icon = item.icon;
-                        const badge = item.href === "/chats" ? unreadCount : 0;
+                        const badge =
+                            item.href === "/chats"
+                                ? unreadCount
+                                : item.href === "/requests"
+                                  ? replyIds.size
+                                  : 0;
                         return (
                             <Link
                                 key={item.href}

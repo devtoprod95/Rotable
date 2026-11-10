@@ -250,6 +250,7 @@ function ReviewGate({ eventId }) {
 
                     <label className="mt-5 block cursor-pointer">
                         <input
+                            autoComplete="off"
                             type="file"
                             accept="image/*"
                             className="hidden"

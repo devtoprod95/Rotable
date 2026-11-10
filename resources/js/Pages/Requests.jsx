@@ -107,8 +107,9 @@ export default function Requests() {
                         </span>
                     </div>
                 ) : (
-                    <form onSubmit={submit} className="mt-4">
+                    <form onSubmit={submit} autoComplete="off" className="mt-4">
                         <textarea
+                            autoComplete="off"
                             value={data.body}
                             onChange={(e) => setData('body', e.target.value)}
                             rows={4}

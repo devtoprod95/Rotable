@@ -93,7 +93,7 @@ export default function Login() {
                         회차를 선택하고 핸드폰 번호와<br></br>비밀번호를 입력해주세요.
                     </p>
 
-                    <form onSubmit={submit} className="mt-7 flex flex-col gap-4">
+                    <form onSubmit={submit} autoComplete="off" className="mt-7 flex flex-col gap-4">
                         {!isProduction && (
                             <button
                                 type="button"

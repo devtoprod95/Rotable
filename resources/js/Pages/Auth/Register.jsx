@@ -214,7 +214,7 @@ export default function Register() {
                         회차를 선택하고 정보를 입력해 등록하세요.
                     </p>
 
-                    <form onSubmit={submit} className="mt-7 flex flex-col gap-4">
+                    <form onSubmit={submit} autoComplete="off" className="mt-7 flex flex-col gap-4">
                         <div ref={topRef} aria-hidden="true"></div>
                         {showAutofill && (
                             <button

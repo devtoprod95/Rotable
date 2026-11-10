@@ -144,6 +144,7 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
                 {!confirming ? (
                     /* 1단계: 작성 */
                     <form
+                        autoComplete="off"
                         onSubmit={(e) => {
                             e.preventDefault();
                             if (data.body.trim()) {
@@ -153,6 +154,7 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
                         className="mt-4 flex flex-col gap-3"
                     >
                         <textarea
+                            autoComplete="off"
                             value={data.body}
                             onChange={(e) => setData('body', e.target.value)}
                             rows={4}
@@ -182,7 +184,7 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
                     </form>
                 ) : (
                     /* 2단계: 전송 전 마지막 확인 */
-                    <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
+                    <form onSubmit={submit} autoComplete="off" className="mt-4 flex flex-col gap-3">
                         <div className="rounded-xl border border-secondary-100 bg-gray-50 p-3">
                             <p className="text-[11px] font-bold text-gray-400">보낼 메시지</p>
                             <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-relaxed text-gray-700">

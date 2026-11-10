@@ -103,7 +103,7 @@ export default function ContactForm() {
     }
 
     return (
-        <form onSubmit={submit} className="mt-6 flex flex-col gap-4 text-left">
+        <form onSubmit={submit} autoComplete="off" className="mt-6 flex flex-col gap-4 text-left">
             <TextField
                 label="이름 (선택)"
                 value={name}
@@ -122,6 +122,7 @@ export default function ContactForm() {
             <label className="flex flex-col gap-1.5">
                 <span className="text-sm font-semibold text-gray-700">문의 내용</span>
                 <textarea
+                    autoComplete="off"
                     value={message}
                     onChange={(e) => setMessage(e.target.value.slice(0, 1000))}
                     rows={4}

@@ -48,6 +48,7 @@ export default function TextField({
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
                 autoFocus={autoFocus}
+                autoComplete={type === 'password' ? 'new-password' : 'off'}
                 maxLength={maxLength}
                 inputMode={isNumber || digitsOnly ? 'numeric' : undefined}
                 min={isNumber ? 0 : undefined}

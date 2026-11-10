@@ -19,7 +19,9 @@ services:
       - rotable-network
 
   php:
-    build: ./docker
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.local
     container_name: rotable-php
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"
@@ -60,7 +62,9 @@ services:
   # 컨테이너 내부는 기본 포트 8080 사용, 호스트에는 9997 로 공개한다.
   # 기본 entrypoint(php-fpm 고정)를 덮어써서 reverb 를 직접 띄운다.
   reverb:
-    build: ./docker
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.local
     container_name: rotable-reverb
     restart: unless-stopped
     user: "${UID:-1000}:${GID:-1000}"

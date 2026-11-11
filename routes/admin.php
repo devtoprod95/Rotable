@@ -138,6 +138,9 @@ Route::middleware('role')->group(function () {
                 Route::post('/store', [RotationController::class, 'bepStore'])->name('store');
                 Route::delete('/delete', [RotationController::class, 'bepDelete'])->name('delete');
             });
+
+            // N빵(수익 정산) 계산기 — 총수입에서 각자 지출을 돌려받고 남은 순이익을 지분대로 나눈다. 계산은 클라이언트에서 수행.
+            Route::get('/split', [RotationController::class, 'splitIndex'])->name('split.index');
         });
 
         Route::prefix('role')->name('role.')->group(function () {

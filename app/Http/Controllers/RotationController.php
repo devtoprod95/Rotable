@@ -846,6 +846,15 @@ class RotationController extends Controller
     }
 
     /**
+     * N빵(수익 정산) 계산기 — 총수입에서 각자 먼저 낸 지출을 돌려주고, 남은 순이익을 지분 비율대로 나눈다.
+     * 계산은 클라이언트(JS)에서 수행하며, 입력값은 쿼리파라미터로 유지된다.
+     */
+    public function splitIndex(): View
+    {
+        return view('admin.rotation.split');
+    }
+
+    /**
      * 저장된 BEP 견적 목록. (최신순)
      */
     public function bepList(): JsonResponse

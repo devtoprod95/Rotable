@@ -58,11 +58,12 @@ enum Menu: string
                     ['name' => '공개 페이지', 'route' => 'admin.rotation.public-hub', 'pattern' => 'admin.rotation.public-hub*'],
                     [
                         'name'     => '분석·도구',
-                        'pattern'  => ['admin.rotation.history*', 'admin.rotation.bep*'],
+                        'pattern'  => ['admin.rotation.history*', 'admin.rotation.bep*', 'admin.rotation.split*'],
                         'children' => [
                             ['name' => '만남 이력 기본 조회', 'route' => 'admin.rotation.history.index', 'pattern' => 'admin.rotation.history.index*'],
                             ['name' => '만남 이력 상세 조회', 'route' => 'admin.rotation.history.detail', 'pattern' => 'admin.rotation.history.detail*'],
                             ['name' => '손익분기 계산기', 'route' => 'admin.rotation.bep.index', 'pattern' => 'admin.rotation.bep*'],
+                            ['name' => 'N빵 계산기', 'route' => 'admin.rotation.split.index', 'pattern' => 'admin.rotation.split*'],
                         ],
                     ],
                 ],

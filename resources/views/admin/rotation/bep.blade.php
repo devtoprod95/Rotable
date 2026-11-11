@@ -38,6 +38,9 @@
                         <button type="button" class="btn btn-primary btn-sm" id="bep-open-save">
                             <i class="ti ti-device-floppy me-1"></i> 저장
                         </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="bep-open-save-as">
+                            <i class="ti ti-copy me-1"></i> 다른 이름으로 저장
+                        </button>
                     </div>
                 </div>
 
@@ -266,11 +269,12 @@
     <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="ti ti-device-floppy me-1"></i> 견적 저장</h5>
+                <h5 class="modal-title"><i class="ti ti-device-floppy me-1"></i> <span id="bep-save-modal-title">견적 저장</span></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="bep-save-id">
+                <input type="hidden" id="bep-save-target-id">
                 <label class="form-label">저장 이름</label>
                 <input type="text" class="form-control" id="bep-save-name" placeholder="예) 11월 와인파티 견적" maxlength="255">
                 <div class="text-muted small mt-2">현재 입력한 모든 값(인원·비용·수입·목표이익·타입)이 함께 저장됩니다.</div>
@@ -295,11 +299,11 @@
                 <div class="table-responsive">
                     <table class="table table-sm table-vcenter">
                         <thead>
-                            <tr>
-                                <th>이름</th>
-                                <th class="w-1">타입</th>
-                                <th class="w-1">저장일</th>
-                                <th class="w-1 text-end">관리</th>
+                            <tr class="text-center">
+                                <th class="text-center">이름</th>
+                                <th class="w-1 text-center">타입</th>
+                                <th class="text-center" style="min-width:110px;">저장일</th>
+                                <th class="w-1 text-center">관리</th>
                             </tr>
                         </thead>
                         <tbody id="bep-load-list">
@@ -580,23 +584,36 @@ $(function () {
     });
 
     // ---- 저장 ----
-    $('#bep-open-save').on('click', function () {
-        $('#bep-save-id').val('');
-        $('#bep-save-name').val(loadedName || '');
+    function openSaveModal(asNew) {
+        // 새로 저장이면 대상 id 를 비우고, 이름은 기존 이름 기반으로 제안한다.
+        $('#bep-save-target-id').val(asNew ? '' : $('#bep-save-id').val());
+        $('#bep-save-name').val(asNew && loadedName ? loadedName + ' (복사)' : (loadedName || ''));
+        $('#bep-save-modal-title').text(asNew ? '다른 이름으로 저장' : '견적 저장');
         var m = getModal('bepSaveModal'); if (m) { m.show(); }
+    }
+
+    // 저장: 불러온 견적이면 해당 견적에 덮어쓰기(이름 변경 가능), 아니면 새 견적.
+    $('#bep-open-save').on('click', function () {
+        openSaveModal(!($('#bep-save-id').val() && loadedName));
     });
+    $('#bep-open-save-as').on('click', function () { openSaveModal(true); });
 
     $('#bep-save-confirm').on('click', function () {
         var name = ($('#bep-save-name').val() || '').trim();
         if (!name) { salert({ text: '저장 이름을 입력해주세요.', cancel: false }); return; }
+        doSave($('#bep-save-target-id').val(), name);
+    });
 
+    function doSave(id, name) {
         $.ajax({
             url: storeUrl,
             type: 'POST',
-            data: { id: $('#bep-save-id').val(), name: name, type: currentType, payload: collect() },
+            data: { id: id, name: name, type: currentType, payload: collect() },
             success: function (res) {
                 var m = getModal('bepSaveModal'); if (m) { m.hide(); }
                 loadedName = name;
+                var savedId = res && res.data && res.data.id;
+                if (savedId) { $('#bep-save-id').val(savedId); syncUrl(savedId); }
                 $('#bep-loaded-info').html('<i class="ti ti-bookmark me-1"></i> 현재 견적: <b>' + esc(name) + '</b>').show();
                 salert({ text: res && res.msg ? res.msg : '저장되었습니다.', cancel: false });
             },
@@ -604,7 +621,7 @@ $(function () {
                 salert({ text: (xhr && xhr.responseJSON && xhr.responseJSON.error && xhr.responseJSON.error.message) || '오류가 발생했습니다.', cancel: false });
             }
         });
-    });
+    }
 
     // ---- 불러오기 ----
     var loadedCache = {}; // id -> payload
@@ -630,12 +647,14 @@ $(function () {
                         : '<span class="badge bg-purple-lt">와인</span>';
                     html += '' +
                     '<tr data-id="' + r.id + '" data-name="' + esc(r.name) + '">' +
-                        '<td class="fw-bold">' + esc(r.name) + '</td>' +
-                        '<td>' + typeLabel + '</td>' +
-                        '<td class="text-muted small text-nowrap">' + esc(r.updated_at || '') + '</td>' +
-                        '<td class="text-end text-nowrap">' +
-                            '<button type="button" class="btn btn-sm btn-primary bep-load-apply">불러오기</button> ' +
-                            '<button type="button" class="btn btn-sm btn-ghost-danger bep-load-del" title="삭제"><i class="ti ti-trash"></i></button>' +
+                        '<td class="fw-bold text-center">' + esc(r.name) + '</td>' +
+                        '<td class="text-center">' + typeLabel + '</td>' +
+                        '<td class="text-nowrap text-center">' + esc(String(r.updated_at || '').split(' ')[0]) + '<br>' + esc(String(r.updated_at || '').split(' ')[1] || '') + '</td>' +
+                        '<td class="text-center">' +
+                            '<div class="d-grid gap-1" style="min-width:90px;">' +
+                                '<button type="button" class="btn btn-sm btn-primary bep-load-apply"><i class="ti ti-folder-open me-1"></i>불러오기</button>' +
+                                '<button type="button" class="btn btn-sm btn-outline-danger bep-load-del"><i class="ti ti-trash me-1"></i>삭제</button>' +
+                            '</div>' +
                         '</td>' +
                     '</tr>';
                 });
@@ -683,8 +702,47 @@ $(function () {
         });
     });
 
-    // 시작
-    loadPreset('wine');
+    // ---- 쿼리파라미터 동기화 (type, id) : 새로고침/뒤로가기에도 상태 유지 ----
+    function syncUrl(id) {
+        var params = new URLSearchParams(window.location.search);
+        params.set('type', currentType);
+        if (id) { params.set('id', id); } else { params.delete('id'); }
+        history.replaceState(null, '', window.location.pathname + '?' + params.toString());
+    }
+
+    $app.find('input[name="bep-type"]').on('change', function () {
+        if (this.checked) { $('#bep-save-id').val(''); syncUrl(null); }
+    });
+    $('#bep-reset').on('click', function () { $('#bep-save-id').val(''); syncUrl(null); });
+    $('#bep-load-list').on('click', '.bep-load-apply', function () {
+        syncUrl($(this).closest('tr').data('id'));
+    });
+
+    // 시작: 쿼리파라미터로 복원
+    var qs = new URLSearchParams(window.location.search);
+    var qType = qs.get('type') === 'one' ? 'one' : 'wine';
+    var qId = qs.get('id');
+    $('#bep-type-' + qType).prop('checked', true);
+    loadPreset(qType);
+
+    if (qId) {
+        $.ajax({
+            url: listUrl,
+            type: 'GET',
+            success: function (res) {
+                var found = ((res && res.data) || []).filter(function (r) { return String(r.id) === String(qId); })[0];
+                if (!found) { syncUrl(null); return; }
+                restore(found.payload);
+                loadedName = found.name;
+                $('#bep-save-id').val(found.id);
+                $('#bep-loaded-info').html('<i class="ti ti-bookmark me-1"></i> 현재 견적: <b>' + esc(found.name) + '</b>').show();
+                syncUrl(found.id);
+            },
+            error: function () { syncUrl(null); }
+        });
+    } else if (qs.has('type')) {
+        syncUrl(null);
+    }
 });
 </script>
 @endsection

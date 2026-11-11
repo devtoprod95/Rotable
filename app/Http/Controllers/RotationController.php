@@ -857,7 +857,7 @@ class RotationController extends Controller
                 'name'       => $estimate->name,
                 'type'       => $estimate->type,
                 'payload'    => $estimate->payload,
-                'updated_at' => $estimate->updated_at?->format('Y-m-d H:i'),
+                'updated_at' => $estimate->updated_at?->format('Y-m-d H:i:s'),
             ]);
 
         return apiRes(Response::HTTP_OK, ['data' => $estimates]);

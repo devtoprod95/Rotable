@@ -24,6 +24,7 @@
             'title' => $e->title,
             'type'  => $e->type, // wine | one
             'time'  => $time,    // 예: 11월 11일 화요일 오후 12시
+            'date'  => $e->event_time ? $e->event_time->format('n/j') . '(' . ($weekdaysKo[(int) $e->event_time->dayOfWeek] ?? '') . ')' : '', // 예: 11/15(일)
         ];
     })->values();
 @endphp
@@ -34,16 +35,12 @@
     - 종료가 아닌 행사를 셀렉트로 고르면, 유형/행사명/일시가 멘트에 자동 반영된다.
     - 성별(남/여) × 무료 여부로 멘트가 달라지고, 무료면 제목에 바로 명시된다.
     - 신청은 별도 링크 없이 "프로필을 눌러 신청"하도록 안내한다.
+    - 플랫폼(문토/네이버)에 따라 문구가 달라진다. 네이버는 블로거 게시글에 남기는 짧은 댓글(오픈채팅 문의 유도).
     - 문구는 화면에서 자유롭게 고친 뒤 [복사] 한다. (저장되지 않음)
 --}}
 <div class="row row-cards mt-2">
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center flex-wrap gap-2">
-                <h3 class="card-title mb-0"><i class="ti ti-send text-pink me-1"></i> 초대 멘트</h3>
-                <span class="text-muted fs-5">— 행사·성별·무료 여부에 맞춰 설레는 초대 메시지를 만들어 복사하세요.</span>
-            </div>
-
             <div class="card-body">
                 @if ($events->isEmpty())
                     <div class="text-center text-muted py-5">
@@ -51,6 +48,11 @@
                         먼저 <b>행사 목록</b>에서 행사를 생성해 주세요.
                     </div>
                 @else
+                <div class="btn-group w-100 mb-3" role="group" id="inv-platform" aria-label="플랫폼 선택">
+                    <button type="button" class="btn btn-lg btn-primary active" data-val="munto"><i class="ti ti-message-circle me-1"></i>문토 멘트</button>
+                    <button type="button" class="btn btn-lg btn-outline-primary" data-val="naver"><i class="ti ti-brand-blogger me-1"></i>네이버 블로그 댓글</button>
+                </div>
+
                 <div class="row g-3 mb-3">
                     <div class="col-12 col-md-5">
                         <label class="form-label mb-1">행사 선택</label>
@@ -62,7 +64,7 @@
                                 </option>
                             @endforeach
                         </select>
-                        <small class="form-hint text-muted">종료되지 않은 행사만 표시됩니다. 유형·일시는 자동 반영돼요.</small>
+                        <small class="form-hint text-muted">유형·일시는 자동 반영되고, 아래 내용은 자유롭게 수정할 수 있어요.</small>
                     </div>
                     <div class="col-12 col-md-auto">
                         <label class="form-label mb-1">성별</label>
@@ -77,14 +79,6 @@
                             <button type="button" class="btn btn-outline-secondary" data-val="0">혜택 없음</button>
                             <button type="button" class="btn btn-outline-green active" data-val="1">80% 페이백</button>
                         </div>
-                    </div>
-                </div>
-
-                <div class="alert alert-info py-2 mb-3">
-                    <div class="text-secondary" style="font-size:0.92em;">
-                        <i class="ti ti-info-circle me-1"></i>
-                        행사명·일시는 선택한 행사에서 자동으로 채워집니다.
-                        내용은 자유롭게 수정할 수 있으며 저장되지는 않습니다.
                     </div>
                 </div>
 
@@ -160,7 +154,54 @@
             ];
         }
 
+        // ─────────────────────────────────────────────────────────────
+        // 네이버: 블로거 게시글에 남기는 "댓글"용 멘트.
+        //  긴 모집글이 아니라 짧고 광고 티가 덜 나게: 인사 → 한 줄 소개 → 핵심 정보(일시/장소/혜택) → 오픈채팅 문의.
+        // ─────────────────────────────────────────────────────────────
+        var OPEN_CHAT_URL = 'https://open.kakao.com/o/gdLw3DWi';
+
+        function buildNaver(ctx) {
+            var type    = normType(ctx.type);
+            var isF     = ctx.gender === 'F';
+            var recruit = isF ? '여성' : '남성';
+            var benefit = ctx.free ? '선착순 무료 참여' : '';   // 네이버는 페이백이 아니라 무료 혜택
+            var when    = ctx.time || '{일시}';
+
+            // 행사 유형 명시 + 유형별 한 줄 설명
+            var typeName = (type === 'wine') ? '와인파티' : '1:1 로테이션 소개팅';
+            var typeDesc = (type === 'wine')
+                ? '와인과 핑거푸드를 즐기며 테이블을 옮겨 다니고, 여러 분과 자연스럽게 대화하는 자리예요.'
+                : '여러 분과 한 분씩 마주 앉아 1:1로 대화하고, 서로 마음에 든 경우에만 연락처가 공개돼요.';
+            // 연애로 이어질 기대감을 주는 한 줄 (모집 성별 기준으로 상대를 표현)
+            var partner = isF ? '남자친구' : '여자친구';
+            var others  = isF ? '직장인 남성분들' : '여성분들';
+            var hope = '진지하게 연애 상대를 찾는 ' + others + '이 함께해요. '
+                     + '대화 몇 번이면 ' + partner + '로 이어질 인연, 이번에 꼭 만나보세요 😊';
+
+            var lines = [
+                '안녕하세요 :) 로테이블입니다. 좋은 글 잘 보고 갑니다!',
+                '',
+                '저희는 선릉역에서 ' + typeName + (type === 'wine' ? '를' : '을') + ' 운영하고 있는데, '
+                    + (benefit
+                        ? '이번 모임에 ' + recruit + '분을 선착순 무료로 초대하고 있어 조심스럽게 소개드려요 💌'
+                        : '이번 모임에 함께하실 ' + recruit + '분을 찾고 있어 조심스럽게 소개드려요 💌'),
+                typeDesc,
+                '',
+                '📅 ' + when,
+                '📍 선릉역 도보 3분 이내 (정확한 장소는 확정 후 안내)',
+                '👥 ' + recruit + ' 참가자 모집' + (benefit ? ' · ' + benefit + ' ✨' : ''),
+                '',
+                hope,
+                '오픈채팅방에 들어오시면 참여하실 ' + (isF ? '남성분들' : '여성분들') + '의 상세 프로필과 로테이블 진행 방식을 볼 수 있는 링크를 안내해 드려요.',
+                '위 일정 말고도 다른 시간대와 다양한 행사들도 계속 안내되고 있으니, 부담 없이 들어와서 구경해 보세요 👀',
+                '궁금하신 점도 오픈채팅으로 편하게 물어봐 주세요!',
+                OPEN_CHAT_URL
+            ];
+            return lines.join("\n");
+        }
+
         function build(ctx) {
+            if (ctx.platform === 'naver') { return buildNaver(ctx); }
             var type = normType(ctx.type);
             var lines = [];
             lines = lines.concat(greetingLines(ctx));
@@ -174,18 +215,24 @@
         }
 
         var GENDER_LABEL = { M: '남성', F: '여성' };
-        var state = { gender: 'F', free: '1' };
+        var state = { platform: 'munto', gender: 'F', free: '1' };
 
         function currentEvent() {
             var id = String($('#inv-event').val());
             return EVENTS.find(function (e) { return String(e.id) === id; }) || EVENTS[0];
         }
 
+        // 혜택 버튼/요약 라벨: 문토는 80% 페이백, 네이버는 무료 참여
+        function benefitLabel() { return state.platform === 'naver' ? '무료 참여' : '80% 페이백'; }
+
         function render() {
+            $('#inv-free button[data-val="1"]').text(benefitLabel());
             var ev = currentEvent();
             var ctx = {
                 title: ev.title,
                 time: ev.time,
+                date: ev.date,
+                platform: state.platform,
                 type: ev.type,
                 gender: state.gender,
                 free: state.free === '1'
@@ -193,8 +240,8 @@
             $('#inv-text').val(build(ctx));
             var typeLabel = normType(ev.type) === 'wine' ? '와인파티' : '1:1 소개팅';
             $('#inv-summary').text(
-                typeLabel + ' · ' + GENDER_LABEL[state.gender]
-                + ' · ' + (state.free === '1' ? '80% 페이백' : '혜택 없음')
+                (state.platform === 'naver' ? '네이버' : '문토') + ' · ' + typeLabel + ' · ' + GENDER_LABEL[state.gender]
+                + ' · ' + (state.free === '1' ? benefitLabel() : '혜택 없음')
             );
         }
 
@@ -206,6 +253,12 @@
                 render();
             });
         }
+        bindGroup('#inv-platform', 'platform');
+        // 선택된 플랫폼은 꽉 찬 색, 아닌 쪽은 테두리만
+        $('#inv-platform').on('click', 'button', function () {
+            $('#inv-platform button').removeClass('btn-primary').addClass('btn-outline-primary');
+            $(this).removeClass('btn-outline-primary').addClass('btn-primary');
+        });
         bindGroup('#inv-gender', 'gender');
         bindGroup('#inv-free', 'free');
         $('#inv-event').on('change', render);

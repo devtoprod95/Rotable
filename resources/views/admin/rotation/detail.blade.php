@@ -220,9 +220,26 @@
                     <span class="text-secondary fs-4 fw-normal">— 행사별 남/녀 명단</span>
                 </h3>
                 <div class="alert alert-info mb-3">
-                    <div class="text-secondary">
-                        표에 <b>키 · 직업 · 나이</b>만 입력하면 됩니다. <b>번호(N호)와 상단 인원수(남/여)</b>는 자동으로 매겨져요.
-                        부족한 쪽은 <b>모집중 추가</b> 버튼으로 "모집중" 자리를 직접 끼워 넣으세요.
+                    {{-- Tabler .alert 는 가로(flex) 배치라, 안내 문구를 한 블록으로 묶어 세로로 쌓는다. --}}
+                    <div class="w-100">
+                        <div class="text-secondary">
+                            표에 <b>키 · 직업 · 나이</b>만 입력하면 됩니다. <b>번호(N호)와 상단 인원수(남/여)</b>는 자동으로 매겨져요.
+                            부족한 쪽은 <b>모집중 추가</b> 버튼으로 "모집중" 자리를 직접 끼워 넣으세요.
+                        </div>
+                        <div class="mt-2 pt-2 border-top">
+                            <div class="fw-bold text-pink">
+                                <i class="ti ti-sort-ascending me-1"></i>
+                                [적용]을 누르면 행사별 남/여 명단이 자동 정렬돼요: ① 나이 어린 순 → ② 나이가 같으면 키 큰 순
+                            </div>
+                            <div class="text-secondary small mt-1">
+                                모집중 자리는 맨 아래 · "20대 후반", "97년생" 같은 표기도 인식 · 나이/키가 비어 있으면 뒤로
+                            </div>
+                            <div class="fw-bold text-pink mt-2">
+                                <i class="ti ti-chart-bar me-1"></i>
+                                [적용] 시 행사 카드 아래에 남/여 나이·키 분포도도 자동으로 그려져요.
+                                <span class="text-secondary fw-normal small d-block mt-1">나이: 명단에 적힌 표기 그대로("30대", "30대 후반", "29세", "97년생"…) · 키: 5cm 단위(큰 키가 위)</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -838,7 +855,10 @@
                 // 카드 구조: [data-roster-card] > div(테두리) > [행사명div, 헤더div, 명단flex div]
                 // 명단 flex div = 테두리 div 의 마지막 자식. 그 안에 남(좌)/여(우) 두 컬럼.
                 var $inner = $card.children('div').first();
-                var $cols  = $inner.children('div').last().children('div');
+                // 명단 컨테이너: data-roster-cols 우선, 없으면(예전 마크업) 분포도 블록을 뺀 마지막 div
+                var $wrap  = $inner.children('[data-roster-cols]').first();
+                if ($wrap.length === 0) { $wrap = $inner.children('div').not('[data-roster-dist]').last(); }
+                var $cols  = $wrap.children('div');
                 function readCol($col){
                     var people = [];
                     $col.children('div').each(function(){
@@ -918,6 +938,95 @@
                 return out;
             }
 
+            // 명단에 "적힌 그대로"의 나이 구간을 돌려준다. (임의로 초·중·후반을 만들지 않는다)
+            //  - "30대"          → 30대        / "30대 초반·30초" → 30대 초반 (중반·후반 동일)
+            //  - "29", "29세"    → 29세        / "97년생", "1997년생" → 97년생
+            //  반환: { key: 정렬값(어린 순), label } | null(빈 값·해석 불가)
+            function ageBucket(raw){
+                var v = String(raw || '').replace(/\s+/g, '');
+                if (!v) { return null; }
+
+                var dec = v.match(/(\d)0대(초반|중반|후반|초|중|후)?/) || v.match(/(\d)0(초반|중반|후반|초|중|후)/);
+                if (dec) {
+                    var base = +dec[1] * 10;
+                    if (!dec[2]) { return { key: base, label: base + '대' }; }   // 그냥 "30대"
+                    var idx = /초/.test(dec[2]) ? 0 : (/중/.test(dec[2]) ? 1 : 2);
+                    return { key: base + 2 + idx * 3, label: base + '대 ' + ['초반', '중반', '후반'][idx] };
+                }
+
+                var yr = v.match(/(\d{4}|\d{2})년생?/);
+                if (yr) {
+                    var short = yr[1].slice(-2);
+                    return { key: ageSortValue(v), label: short + '년생' };
+                }
+
+                var age = ageSortValue(v);
+                if (!isFinite(age)) { return null; }
+                return { key: age, label: age + '세' };
+            }
+
+            // 키 구간: 5cm 단위 ("175~179cm"). 빈 값·해석 불가는 null
+            function heightBucket(raw){
+                var h = heightSortValue(raw);
+                if (!isFinite(h) || h < 100 || h > 230) { return null; }
+                var lo = Math.floor(h / 5) * 5;
+                return { key: -lo, label: lo + '~' + (lo + 4) + 'cm' };   // key 음수 → 큰 키가 위로
+            }
+
+            // 남/여 분포도 공통 렌더러: 남(왼쪽·파랑) / 여(오른쪽·분홍) 막대.
+            //  - bucketFn(person) → { key(작을수록 위), label } | null. 같은 label 끼리 합친다.
+            //  - 모집중 자리·해석 불가 값은 제외. 집계할 값이 없으면 블록을 그리지 않는다.
+            //  - 재파싱 때 명단으로 읽히지 않도록 data-roster-dist 로 표시한다.
+            function distributionHtml(title, males, females, bucketFn){
+                var buckets = {};
+                function add(list, key){
+                    (list || []).forEach(function(p){
+                        if (!p || p.recruit) { return; }
+                        var b = bucketFn(p);
+                        if (!b) { return; }
+                        if (!buckets[b.label]) { buckets[b.label] = { label: b.label, key: b.key, m: 0, f: 0 }; }
+                        buckets[b.label][key]++;
+                    });
+                }
+                add(males, 'm');
+                add(females, 'f');
+                var ids = Object.keys(buckets).sort(function(a, b){
+                    return (buckets[a].key - buckets[b].key) || a.localeCompare(b, 'ko');
+                });
+                if (!ids.length) { return ''; }
+
+                var max = 1;
+                ids.forEach(function(id){ max = Math.max(max, buckets[id].m, buckets[id].f); });
+
+                function bar(n, color, side){
+                    if (!n) { return ''; }
+                    var radius = side === 'left' ? '9px 0 0 9px' : '0 9px 9px 0';
+                    return '<div style="height:20px; width:' + Math.round(n / max * 100) + '%; background:' + color + '; border-radius:' + radius + ';"></div>';
+                }
+
+                var out = '';
+                out += '<div data-roster-dist="1" style="padding:10px 10px 12px; border-top:1px solid #e5e7eb; background:#ffffff;">';
+                out +=   '<div style="text-align:center; font-weight:900; font-size:' + cellDateSize + '; margin-bottom:8px;">';
+                out +=     esc(title) + ' <span style="color:#3b82f6;">■ 남</span> <span style="color:#ec4899;">■ 여</span>';
+                out +=   '</div>';
+                ids.forEach(function(id){
+                    var b = buckets[id];
+                    out += '<div style="display:flex; align-items:center; gap:6px; margin:5px 0;">';
+                    out +=   '<div style="flex:1; display:flex; justify-content:flex-end; align-items:center; gap:6px;">';
+                    out +=     '<span style="font-weight:900; font-size:' + cellDateSize + '; color:' + (b.m ? '#1d4ed8' : '#cbd5e1') + ';">' + b.m + '</span>';
+                    out +=     bar(b.m, '#3b82f6', 'left');
+                    out +=   '</div>';
+                    out +=   '<div style="flex:0 0 auto; min-width:140px; text-align:center; font-weight:900; font-size:' + cellDateSize + '; color:#374151; white-space:nowrap;">' + esc(b.label) + '</div>';
+                    out +=   '<div style="flex:1; display:flex; align-items:center; gap:6px;">';
+                    out +=     bar(b.f, '#ec4899', 'right');
+                    out +=     '<span style="font-weight:900; font-size:' + cellDateSize + '; color:' + (b.f ? '#be185d' : '#cbd5e1') + ';">' + b.f + '</span>';
+                    out +=   '</div>';
+                    out += '</div>';
+                });
+                out += '</div>';
+                return out;
+            }
+
             // config 를 속성(홑따옴표로 감쌈)에 안전하게 싣기 위해 작은따옴표를 엔티티로 치환.
             var configAttr = JSON.stringify(c).replace(/'/g, '&#39;');
             var html = '<div style="display:flex; flex-wrap:wrap;" data-roster-grid="1" data-roster-config=\'' + configAttr + '\'>';
@@ -948,7 +1057,7 @@
                 html +=       '<div style="width:50%; padding:4px; background:#ec4899; color:#ffffff;">여 ' + femaleHeadCount + '</div>';
                 html +=     '</div>';
                 // 남/여 명단
-                html +=     '<div style="display:flex;">';
+                html +=     '<div style="display:flex;" data-roster-cols="1">';
                 html +=       '<div style="width:50%; box-sizing:border-box; border-right:1px solid #c7d7ee; background:#eff6ff;">';
                 html +=         columnCells(males, maleTotal, '#d7e3ef');
                 html +=       '</div>';
@@ -956,6 +1065,9 @@
                 html +=         columnCells(females, femaleTotal, '#f6d9e6');
                 html +=       '</div>';
                 html +=     '</div>';
+                // 남/여 나이·키 분포도 (명단 값으로 자동 집계)
+                html +=     distributionHtml('📊 나이 분포', males, females, function(p){ return ageBucket(p.age); });
+                html +=     distributionHtml('📏 키 분포', males, females, function(p){ return heightBucket(p.height); });
                 html +=   '</div>';
                 html += '</div>';
             });
@@ -1129,6 +1241,70 @@
                     onEnd: function(evt){ renumberRoster($(evt.to).closest('.card')); }
                 });
             });
+        }
+
+        // ─── [적용] 시 명단 자동 정렬: ① 나이 오름차순 → ② 키 내림차순 (모집중 자리는 맨 아래) ───
+        // 나이 표기를 비교용 숫자(나이)로 바꾼다. 해석 불가/빈 값은 Infinity(맨 뒤).
+        //  - "29", "29세", "만 29"          → 29
+        //  - "97년생", "1997", "97"(2자리 90~99 / 00~현재) → 출생연도 기준 나이
+        //  - "20대 초반/중반/후반", "20대"   → 22 / 25 / 28 / 25
+        //  - "20후", "30초" 같은 줄임말도 인식
+        function ageSortValue(raw){
+            var v = String(raw || '').replace(/\s+/g, '');
+            if (!v) { return Infinity; }
+            var nowY = new Date().getFullYear();
+
+            var dec = v.match(/(\d)0대?(초반|중반|후반|초|중|후)?/);
+            if (dec && /대|초|중|후/.test(v)) {
+                var base = +dec[1] * 10;
+                var part = dec[2] || '';
+                var off  = /초/.test(part) ? 2 : (/후/.test(part) ? 8 : 5);
+                return base + off;
+            }
+
+            var yr = v.match(/(\d{4}|\d{2})년생?/) || v.match(/^(\d{4})$/);
+            if (yr) {
+                var y = +yr[1];
+                if (yr[1].length === 2) { y += (y > nowY % 100 ? 1900 : 2000); }
+                return nowY - y;
+            }
+
+            var n = v.match(/\d+/);
+            if (n) {
+                var num = +n[0];
+                // 2자리지만 나이 범위를 벗어나면(예: 95) 출생연도로 본다.
+                if (num >= 60 && num <= 99) { return nowY - (1900 + num); }
+                return num;
+            }
+            return Infinity;
+        }
+        // 키 → 숫자(cm). 빈 값/해석 불가는 -Infinity (내림차순에서 맨 뒤)
+        function heightSortValue(raw){
+            var m = String(raw || '').match(/\d+(\.\d+)?/);
+            return m ? parseFloat(m[0]) : -Infinity;
+        }
+        // 편집기의 행사 카드별 남/여 표를 정렬한다. (같은 값이면 기존 순서 유지)
+        function sortRosterEditor(){
+            $('#rosterEditorBody [data-gender]').each(function(){
+                var $tbody = $(this).find('.roster-rows');
+                var rows = $tbody.children('tr').get().map(function(tr, i){
+                    var $tr = $(tr);
+                    var recruit = !!$tr.attr('data-recruit');
+                    return {
+                        el: tr, i: i, recruit: recruit,
+                        age: recruit ? Infinity : ageSortValue($tr.find('.roster-age').val()),
+                        h:   recruit ? -Infinity : heightSortValue($tr.find('.roster-height').val())
+                    };
+                });
+                rows.sort(function(a, b){
+                    if (a.recruit !== b.recruit) { return a.recruit ? 1 : -1; }
+                    if (a.age !== b.age) { return a.age < b.age ? -1 : 1; }
+                    if (a.h !== b.h) { return a.h > b.h ? -1 : 1; }
+                    return a.i - b.i;
+                });
+                rows.forEach(function(r){ $tbody.append(r.el); });
+            });
+            renumberRoster();
         }
 
         // 위/아래 버튼으로 한 칸씩 이동
@@ -1735,13 +1911,14 @@
             // 1) 명단 반영(행사 제목/개수 확정) → 2) 그 결과에 행사별 설정 반영 → 3) 업데이트 시각.
             var model   = collectSettingsForm();
             model.records = collectRecordsEditor();
+            sortRosterEditor();  // 명단 자동 정렬 (나이 어린 순 → 키 큰 순)
             var withR   = applyRosterToHtml(html);
             var withRS  = applySettingsToHtml(withR, model);
             setHtml(applyUpdatedAtToSample(withRS));
 
             var m = getSettingsModal();
             if (m) { m.hide(); }
-            await salert({text: '설정과 명단을 반영했어요. 내용을 확인한 뒤 [저장]을 눌러 주세요.', cancel: false});
+            await salert({text: '설정과 명단을 반영했어요. 명단은 나이 어린 순 → 키 큰 순으로 자동 정렬됐어요. 내용을 확인한 뒤 [저장]을 눌러 주세요.', cancel: false});
         });
 
         // 샘플 HTML 에 "현재 에디터의 설정값"을 이식해서 돌려준다. (참여자 명단과 동일 원리)

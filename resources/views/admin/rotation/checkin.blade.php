@@ -289,12 +289,13 @@
                     ? `<span class="badge bg-azure-lt"><i class="ti ti-armchair me-1"></i>${tableNoById(r.rotation_table_id)}번 테이블</span>`
                     : `<span class="badge bg-red-lt"><i class="ti ti-alert-triangle me-1"></i>테이블 미지정</span>`;
             }
-            // 입장등록을 마친 사람은 번호 변경·삭제 버튼을 아예 보이지 않게 한다.
+            // 입장등록을 마친 사람은 번호 변경 버튼을 보이지 않게 한다. (삭제는 아래에서 체크인 여부로 판단)
             var ticketBtn = (inState && !r.registered)
                 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-checkin-ticket"`
                   + ` data-id="${r.id}" aria-label="${esc(nickname)} 번호표 변경">`
-                  + `<i class="ti ti-edit me-1"></i>번호 변경</button>` : '';
-            var delBtn = r.registered ? ''
+                  + `<i class="ti ti-edit me-1"></i>번호·테이블 변경</button>` : '';
+            // 체크인 이후(참석·입장등록)는 삭제 불가 → 미도착일 때만 삭제 버튼 노출
+            var delBtn = inState ? ''
                 : `<button type="button" class="btn btn-sm btn-outline-danger btn-checkin-del"`
                   + ` data-id="${r.id}" data-name="${esc(nickname)}"`
                   + ` aria-label="${esc(nickname)} 명단에서 삭제">`
@@ -531,12 +532,46 @@
                  + '</div>';
         }
 
+        // 체크인 모달에서 미리 선택해 둘 테이블 (관리자가 바꿀 수 있음)
+        //  - 1:1 : 같은 성별이 아직 없는 테이블 중 번호가 가장 작은 곳 (차례대로 채움)
+        //  - 와인 : 같은 성별 인원이 가장 적은 테이블 (동률이면 전체 인원 적은 곳 → 번호 작은 곳) → 성비가 고르게 맞춰짐
+        function defaultTableId(gender){
+            if(!TABLES.length){ return ''; }
+            var ratioByNo = {};
+            tableRatios.forEach(function(r){ ratioByNo[r.table_no] = r; });
+            var isF = (gender === 'F');
+            var list = TABLES.map(function(t){
+                var r = ratioByNo[t.table_no] || {};
+                return { id: t.id, no: +t.table_no, same: (isF ? r.female : r.male) || 0, total: r.total || 0 };
+            });
+            if(IS_ONE_TO_ONE){
+                list = list.filter(function(x){ return x.same === 0; });
+                list.sort(function(a, b){ return a.no - b.no; });
+            } else {
+                list.sort(function(a, b){ return (a.same - b.same) || (a.total - b.total) || (a.no - b.no); });
+            }
+            return list.length ? list[0].id : '';
+        }
+
+        // 체크인 모달 상단에 보여줄 성별 뱃지
+        function genderBadgeHtml(gender){
+            if(!gender){ return ''; }
+            var isF = (gender === 'F');
+            return '<div style="margin-bottom:6px;">'
+                 +   '<span style="display:inline-block;background:' + (isF ? '#fce7f3' : '#dbeafe') + ';color:' + (isF ? '#be185d' : '#1d4ed8') + ';'
+                 +     'font-weight:800;font-size:1rem;padding:5px 14px;border-radius:999px;">'
+                 +     (isF ? '👩 여성' : '👨 남성')
+                 +   '</span>'
+                 + '</div>';
+        }
+
         // 번호표 입력창(숫자) + 테이블 선택. 빈 값 허용 여부와 안내 문구는 호출하는 쪽에서 정한다.
         //  결과값(isConfirmed 시 .value): { ticket: string, tableId: string }
         function askTicket(opts){
             return Swal.fire({
                 title: opts.title,
-                html: (opts.html || '')
+                html: genderBadgeHtml(opts.gender)
+                    + (opts.html || '')
                     + '<div style="margin-top:8px;text-align:left;">'
                     +   '<label style="font-size:0.85rem;color:#475569;font-weight:700;display:block;margin-bottom:4px;">'
                     +     '번호표' + (opts.hint ? ' <span style="font-weight:400;color:#64748b;">· ' + opts.hint + '</span>' : '')
@@ -675,7 +710,7 @@
                 allowEmpty: true,
                 requireTable: true,
                 gender: r.gender,
-                tableId: r.rotation_table_id || ''
+                tableId: r.rotation_table_id || defaultTableId(r.gender)
             });
             if(!ans.isConfirmed || !ans.value){ return; }
             var manual = (ans.value.ticket == null ? '' : String(ans.value.ticket)).trim();
@@ -688,22 +723,35 @@
             var r = findRoster(id);
             if(!r || !r.ticket_no || r.registered){ return; }
             var ans = await askTicket({
-                title: esc(r.name || '닉네임 없음') + ' 번호 변경',
+                title: esc(r.name || '닉네임 없음') + ' 번호 · 테이블 변경',
                 hint: genderText(r.gender) + ' · 현재 ' + r.ticket_no + '번',
                 value: r.ticket_no,
+                gender: r.gender,
+                tableId: r.rotation_table_id || '',
                 confirmText: '변경',
                 allowEmpty: false
             });
             if(!ans.isConfirmed || !ans.value){ return; }
             var next = parseInt(String(ans.value.ticket || '').trim(), 10);
-            if(!next || next === r.ticket_no){ return; }
+            if(!next){ return; }
+            var nextTable = ans.value.tableId || '';
+            // 번호·테이블 둘 다 그대로면 알려만 준다. (예전엔 아무 반응 없이 닫혀 '작동 안 함'처럼 보였음)
+            if(next === +r.ticket_no && String(nextTable) === String(r.rotation_table_id || '')){
+                Swal.fire({ icon: 'info', text: '변경된 내용이 없어요.', timer: 1800, showConfirmButton: false });
+                return;
+            }
+
+            var payload = { ticket_no: next };
+            if(nextTable){ payload.rotation_table_id = nextTable; }
 
             $.ajax({
-                url: ticketTpl.replace('__RID__', id), type: 'PATCH', data: { ticket_no: next },
+                url: ticketTpl.replace('__RID__', id), type: 'PATCH', data: payload,
                 success: function(res){
                     r.ticket_no = (res && res.ticket_no) ? res.ticket_no : next;
+                    if(res && res.rotation_table_id !== undefined){ r.rotation_table_id = res.rotation_table_id; }
                     render();
-                    Swal.fire({ icon: 'success', text: res?.msg || '번호표를 변경했습니다.', timer: 2500, showConfirmButton: false });
+                    load();  // 테이블별 성비 갱신
+                    Swal.fire({ icon: 'success', text: res?.msg || '변경했습니다.', timer: 2500, showConfirmButton: false });
                 },
                 error: function(xhr){ showError(xhr, '번호표를 변경하지 못했습니다.'); }
             });

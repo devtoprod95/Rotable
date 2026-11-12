@@ -382,11 +382,13 @@ class RotationController extends Controller
 
     /**
      * 번호표 변경 (관리자). 이미 입장등록한 회원의 번호표도 함께 바뀐다.
+     * rotation_table_id 를 보내면 앉을 테이블도 함께 바꾼다.
      */
     public function rosterSetTicket(int $id, int $rosterId): JsonResponse
     {
         $validator = Validator::make($this->request->all(), [
             'ticket_no' => 'required|integer|min:1|max:' . RosterService::TICKET_MAX,
+            'rotation_table_id' => 'nullable|integer',
         ], [
             'ticket_no.required' => '번호표를 입력해 주세요.',
             'ticket_no.integer'  => '번호표는 숫자로 입력해 주세요.',
@@ -397,7 +399,9 @@ class RotationController extends Controller
             return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
         }
 
-        $result = $this->rosterService->rosterSetTicket($rosterId, (int) $this->request->input('ticket_no'));
+        $tableId = $this->request->filled('rotation_table_id') ? (int) $this->request->input('rotation_table_id') : null;
+
+        $result = $this->rosterService->rosterSetTicket($rosterId, (int) $this->request->input('ticket_no'), $tableId);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
     }

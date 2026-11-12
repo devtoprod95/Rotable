@@ -249,7 +249,8 @@ class RosterService
     /**
      * 명단 삭제.
      *
-     * - 이미 그 번호표로 입장등록한 회원이 있으면 삭제할 수 없다. (번호표-회원 연결 보호)
+     * - 체크인(참석)된 사람은 삭제할 수 없다. 먼저 체크인을 취소(미도착)해야 한다.
+     *   (입장등록한 회원은 체크인 취소도 막혀 있으므로 자연히 삭제도 불가)
      *
      * @param array<int, int|string> $ids
      */
@@ -264,9 +265,8 @@ class RosterService
             $blocked   = [];
             $deletable = [];
             foreach ($rosters as $roster) {
-                $registered = $roster->ticket_no !== null
-                    && $this->memberByTicket((int) $roster->event_id, (string) $roster->gender, (int) $roster->ticket_no) !== null;
-                if ($registered) {
+                // 체크인 이후(참석·입장등록)는 삭제 불가
+                if ($roster->checked_in_at !== null) {
                     $blocked[] = $roster->name ?: ($roster->ticket_no . '번');
                 } else {
                     $deletable[] = $roster->id;
@@ -280,7 +280,7 @@ class RosterService
             if (! empty($blocked)) {
                 $names = implode(', ', array_slice($blocked, 0, 5));
                 $more  = count($blocked) > 5 ? ' 외 ' . (count($blocked) - 5) . '명' : '';
-                $msg   = "이미 입장등록한 참가자({$names}{$more})는 삭제할 수 없습니다.";
+                $msg   = "체크인한 참가자({$names}{$more})는 삭제할 수 없습니다. 먼저 체크인을 취소해 주세요.";
                 if (! empty($deletable)) {
                     $msg .= ' 나머지 ' . count($deletable) . '건만 삭제했습니다.';
                 }
@@ -336,23 +336,9 @@ class RosterService
 
             // 테이블 지정(필수): 같은 행사의 테이블이어야 한다.
             if ($tableId !== null) {
-                $validTable = RotationTable::where('event_id', $eventId)->where('id', $tableId)->exists();
-                if (! $validTable) {
-                    return helpersFailMessage('선택한 테이블이 이 행사에 없습니다.');
-                }
-
-                // 1:1 소개팅: 테이블당 같은 성별 1명 원칙 → 같은 성별이 이미 앉은 테이블은 거부.
-                $event = EventRound::find($eventId);
-                if ($event !== null && $event->isOneToOne()) {
-                    $sameGenderTaken = EventRoster::where('event_id', $eventId)
-                        ->where('gender', $gender)
-                        ->where('rotation_table_id', $tableId)
-                        ->where('id', '!=', $roster->id)
-                        ->whereNotNull('checked_in_at')
-                        ->exists();
-                    if ($sameGenderTaken) {
-                        return helpersFailMessage('1:1 소개팅은 테이블당 같은 성별 한 명만 앉을 수 있어요. 다른 테이블을 선택해 주세요.');
-                    }
+                $tableError = $this->tableAssignError($roster, $tableId);
+                if ($tableError !== null) {
+                    return helpersFailMessage($tableError);
                 }
 
                 $roster->rotation_table_id = $tableId;
@@ -414,21 +400,53 @@ class RosterService
     }
 
     /**
+     * 이 명단 행을 해당 테이블에 앉힐 수 없는 이유를 돌려준다. (가능하면 null)
+     *
+     *  - 같은 행사의 테이블이어야 한다.
+     *  - 1:1 소개팅은 테이블당 같은 성별 1명 원칙 → 같은 성별이 이미 앉은 테이블은 거부.
+     */
+    private function tableAssignError(EventRoster $roster, int $tableId): ?string
+    {
+        $eventId = (int) $roster->event_id;
+
+        $validTable = RotationTable::where('event_id', $eventId)->where('id', $tableId)->exists();
+        if (! $validTable) {
+            return '선택한 테이블이 이 행사에 없습니다.';
+        }
+
+        $event = EventRound::find($eventId);
+        if ($event !== null && $event->isOneToOne()) {
+            $sameGenderTaken = EventRoster::where('event_id', $eventId)
+                ->where('gender', (string) $roster->gender)
+                ->where('rotation_table_id', $tableId)
+                ->where('id', '!=', $roster->id)
+                ->whereNotNull('checked_in_at')
+                ->exists();
+            if ($sameGenderTaken) {
+                return '1:1 소개팅은 테이블당 같은 성별 한 명만 앉을 수 있어요. 다른 테이블을 선택해 주세요.';
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * 관리자가 번호표를 변경한다. (체크인되어 번호표가 있는 행만)
      *
      * - 이미 그 번호표로 입장등록한 회원이 있으면 회원의 번호표(members.name)도 함께 바꿔 연결을 유지한다.
      * - 바꾸려는 번호를 다른 사람이 쓰고 있으면 거부한다. (먼저 그 사람의 번호를 바꿔야 한다.)
+     * - $tableId 를 주면 앉을 테이블도 함께 바꾼다. (체크인과 같은 검증)
      *
-     * @return array{isSuccess:bool, msg?:string, ticket_no?:int}
+     * @return array{isSuccess:bool, msg?:string, ticket_no?:int, rotation_table_id?:?int}
      */
-    public function rosterSetTicket(int $rosterId, int $newTicket): array
+    public function rosterSetTicket(int $rosterId, int $newTicket, ?int $tableId = null): array
     {
         try {
             if ($newTicket < 1 || $newTicket > self::TICKET_MAX) {
                 return helpersFailMessage('번호표는 1~' . self::TICKET_MAX . ' 사이 숫자로 입력해 주세요.');
             }
 
-            return DB::transaction(function () use ($rosterId, $newTicket): array {
+            return DB::transaction(function () use ($rosterId, $newTicket, $tableId): array {
                 $roster = EventRoster::lockForUpdate()->findOrFail($rosterId);
 
                 if ($roster->checked_in_at === null || $roster->ticket_no === null) {
@@ -439,9 +457,33 @@ class RosterService
                 $gender  = (string) $roster->gender;
                 $old     = (int) $roster->ticket_no;
 
+                $oldTableId   = $roster->rotation_table_id !== null ? (int) $roster->rotation_table_id : null;
+                $tableChanged = $tableId !== null && $tableId !== $oldTableId;
+
+                if ($tableChanged) {
+                    $tableError = $this->tableAssignError($roster, $tableId);
+                    if ($tableError !== null) {
+                        return helpersFailMessage($tableError);
+                    }
+                }
+
                 if ($old === $newTicket) {
-                    $res              = helpersSuccessMessage('번호표가 그대로입니다.');
-                    $res['ticket_no'] = $old;
+                    if (! $tableChanged) {
+                        $res                      = helpersSuccessMessage('변경된 내용이 없습니다.');
+                        $res['ticket_no']         = $old;
+                        $res['rotation_table_id'] = $oldTableId;
+
+                        return $res;
+                    }
+
+                    // 번호는 그대로, 테이블만 변경
+                    $roster->rotation_table_id = $tableId;
+                    $roster->save();
+
+                    $newTableNo               = RotationTable::whereKey($tableId)->value('table_no');
+                    $res                      = helpersSuccessMessage("앉을 테이블을 {$newTableNo}번으로 바꿨습니다.");
+                    $res['ticket_no']         = $old;
+                    $res['rotation_table_id'] = $tableId;
 
                     return $res;
                 }
@@ -453,6 +495,9 @@ class RosterService
                 $member = $this->memberByTicket($eventId, $gender, $old);
 
                 $roster->ticket_no = $newTicket;
+                if ($tableChanged) {
+                    $roster->rotation_table_id = $tableId;
+                }
                 $roster->save();
 
                 if ($member !== null) {
@@ -460,8 +505,11 @@ class RosterService
                     $member->save();
                 }
 
-                $res              = helpersSuccessMessage("번호표를 {$old}번 → {$newTicket}번으로 바꿨습니다." . ($member ? ' (입장등록한 회원 번호도 함께 변경)' : ''));
-                $res['ticket_no'] = $newTicket;
+                $res              = helpersSuccessMessage("번호표를 {$old}번 → {$newTicket}번으로 바꿨습니다."
+                    . ($tableChanged ? ' (테이블도 변경)' : '')
+                    . ($member ? ' (입장등록한 회원 번호도 함께 변경)' : ''));
+                $res['ticket_no']         = $newTicket;
+                $res['rotation_table_id'] = $roster->rotation_table_id !== null ? (int) $roster->rotation_table_id : null;
 
                 return $res;
             });

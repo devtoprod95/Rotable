@@ -10,10 +10,13 @@
 @endsection
 
 @section('content')
-{{-- 이미지 다운로드용 modern-screenshot (html-to-image 계열, SVG foreignObject 렌더).
-     html2canvas 와 달리 브라우저가 그리는 그대로(여백·패딩·height:auto 포함) 캡처하므로
-     미리보기/에디터와 결과물의 여백 차이가 생기지 않는다. UMD 전역: modernScreenshot --}}
-<script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js"></script>
+<style>
+    /* 참여자 명단 드래그 정렬 */
+    .roster-handle{ cursor:grab; color:#94a3b8; touch-action:none; }
+    .roster-handle:active{ cursor:grabbing; }
+    .roster-ghost{ opacity:.45; background:#fce7f3 !important; }
+    .roster-chosen{ box-shadow:0 2px 10px rgba(236,72,153,.25); }
+</style>
 {{-- 상세페이지용 웹폰트: @import 보다 빠르게 로드되도록 link 로 선로드 (캡처 시 폰트 적용 보장) --}}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -773,8 +776,8 @@
                 //  → data-* 속성 전체를 허용하고, 설정 캐리어 div 는 '비어 있어도' 보존하도록 명시한다.
                 extended_valid_elements: '*[*]',
                 valid_children: '+body[style],+div[div|span|b|i|img|style]',
-                // 빈 블록으로 취급돼 삭제되지 않도록, 캐리어/스페이서 류를 non-empty 로 등록.
-                non_empty_elements: 'div[data-detail-settings],div[data-roster-grid],div[data-setting-block]',
+                // ※ non_empty_elements 는 TinyMCE 6 에서 제거된 옵션이라(설정해도 무시되고 콘솔 경고만 뜸) 지웠다.
+                //   빈 캐리어 div 보존은 위 extended_valid_elements / verify_html:false 로 처리된다.
                 keep_styles: true,
                 verify_html: false,
                 content_style: "@import url('https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap'); body{font-family:'Gothic A1','Pretendard','Apple SD Gothic Neo',sans-serif; font-weight:700; font-size:14px;}",
@@ -1005,7 +1008,7 @@
             var $table = $(
                 '<table class="table table-sm table-vcenter mb-0">'
                 + '<thead><tr>'
-                + '<th style="width:40px;">#</th><th>키(cm)</th><th>직업</th><th>나이</th><th style="width:44px;"></th>'
+                + '<th style="width:64px;">#</th><th>키(cm)</th><th>직업</th><th>나이</th><th style="width:1%;"></th>'
                 + '</tr></thead><tbody class="roster-rows"></tbody></table>'
             );
             var $tbody = $table.find('.roster-rows');
@@ -1014,25 +1017,36 @@
             return $col;
         }
 
+        // 행 앞쪽: 드래그 핸들 + 번호(N호)
+        var ROSTER_NO_CELL = '<td class="text-nowrap">'
+            + '<i class="ti ti-grip-vertical roster-handle me-1" title="드래그해서 순서 변경" aria-hidden="true"></i>'
+            + '<span class="roster-no text-secondary"></span></td>';
+        // 행 뒤쪽: 위/아래 이동 + 삭제
+        var ROSTER_ACTION_CELL = '<td class="text-nowrap"><div class="btn-group">'
+            + '<button type="button" class="btn btn-sm btn-icon btn-ghost-secondary roster-up" title="위로" aria-label="위로 이동"><i class="ti ti-chevron-up"></i></button>'
+            + '<button type="button" class="btn btn-sm btn-icon btn-ghost-secondary roster-down" title="아래로" aria-label="아래로 이동"><i class="ti ti-chevron-down"></i></button>'
+            + '<button type="button" class="btn btn-sm btn-icon btn-ghost-danger roster-del" title="삭제" aria-label="삭제"><i class="ti ti-trash"></i></button>'
+            + '</div></td>';
+
         function rosterRow(p){
             p = p || {};
             // "모집중" 자리 행: 입력칸 대신 '모집중' 표시만 둔다. (data-recruit 로 구분)
             if (p.recruit) {
                 return $(
                     '<tr data-recruit="1" class="bg-pink-lt">'
-                    + '<td class="roster-no text-secondary"></td>'
+                    + ROSTER_NO_CELL
                     + '<td colspan="3" class="fw-bold text-pink"><i class="ti ti-heart-filled me-1"></i>모집중 자리 💗</td>'
-                    + '<td><button type="button" class="btn btn-sm btn-ghost-danger roster-del"><i class="ti ti-trash"></i></button></td>'
+                    + ROSTER_ACTION_CELL
                     + '</tr>'
                 );
             }
             return $(
                 '<tr>'
-                + '<td class="roster-no text-secondary"></td>'
+                + ROSTER_NO_CELL
                 + '<td><input type="text" class="form-control form-control-sm roster-height" value="' + $('<i>').text(p.height || '').html() + '"></td>'
                 + '<td><input type="text" class="form-control form-control-sm roster-job" value="' + $('<i>').text(p.job || '').html() + '"></td>'
                 + '<td><input type="text" class="form-control form-control-sm roster-age" value="' + $('<i>').text(p.age || '').html() + '"></td>'
-                + '<td><button type="button" class="btn btn-sm btn-ghost-danger roster-del"><i class="ti ti-trash"></i></button></td>'
+                + ROSTER_ACTION_CELL
                 + '</tr>'
             );
         }
@@ -1043,7 +1057,11 @@
             ($scope || $('#rosterEditorBody')).find('[data-gender]').each(function(){
                 var $col = $(this);
                 var $rows = $col.find('.roster-rows > tr');
-                $rows.each(function(i){ $(this).find('.roster-no').text((i + 1) + '호'); });
+                $rows.each(function(i){
+                    $(this).find('.roster-no').text((i + 1) + '호');
+                    $(this).find('.roster-up').prop('disabled', i === 0);
+                    $(this).find('.roster-down').prop('disabled', i === $rows.length - 1);
+                });
                 var realCount = $rows.filter(function(){ return !$(this).attr('data-recruit'); }).length;
                 $col.find('.roster-count').text(realCount);
             });
@@ -1094,9 +1112,35 @@
                 $('#rosterEditorEmpty').hide();
                 rosterBaseConfig = data.config || {};
                 renderRosterEditor(data);
+                initRosterSortable();
                 renumberRoster();
             }
         }
+
+        // 각 성별 표(tbody)에 드래그 정렬을 건다. 같은 표 안에서만 이동(남↔여 섞이지 않음).
+        function initRosterSortable(){
+            if (typeof Sortable === 'undefined') { return; } // CDN 실패 시 위/아래 버튼만 사용
+            $('#rosterEditorBody .roster-rows').each(function(){
+                Sortable.create(this, {
+                    handle: '.roster-handle',
+                    animation: 150,
+                    ghostClass: 'roster-ghost',
+                    chosenClass: 'roster-chosen',
+                    onEnd: function(evt){ renumberRoster($(evt.to).closest('.card')); }
+                });
+            });
+        }
+
+        // 위/아래 버튼으로 한 칸씩 이동
+        $('#rosterEditorBody').on('click', '.roster-up, .roster-down', function(){
+            var $tr = $(this).closest('tr');
+            if ($(this).hasClass('roster-up')) {
+                $tr.prev('tr').before($tr);
+            } else {
+                $tr.next('tr').after($tr);
+            }
+            renumberRoster($tr.closest('.card'));
+        });
 
         // 행 추가/삭제 (이벤트 위임)
         // 참여자 추가: "모집중" 자리가 있으면 그 자리들 위(앞)에 끼워 넣고, 없으면 맨 뒤에 추가.

@@ -101,6 +101,12 @@
                     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
                     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+                    {{-- 상세페이지 이미지 캡처 (SVG foreignObject 렌더, UMD 전역: modernScreenshot) --}}
+                    <script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js"></script>
+                    {{-- 드래그 앤 드롭 정렬 (터치 지원, UMD 전역: Sortable) --}}
+                    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+                    {{-- QR 이미지 생성 (전역: QRCode) --}}
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
                     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
                     <script src="{{ asset('js/common.js') }}?v={{ filemtime(public_path('js/common.js')) }}"></script>

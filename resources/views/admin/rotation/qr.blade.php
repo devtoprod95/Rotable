@@ -3,8 +3,6 @@
 @section('title', 'QR코드 설정')
 
 @section('content')
-{{-- QR 이미지 생성용 라이브러리 (상세페이지 html2canvas 와 동일하게 cdnjs 사용) --}}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
 <style>
     /* QR 목록: 모바일에서는 가로 스크롤 대신 '카드형'으로 세로 재배치 */

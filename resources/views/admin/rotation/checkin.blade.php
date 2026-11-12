@@ -13,6 +13,14 @@
     .checkin-stat{ margin:0; }
 
     /* 현황 통계: 모바일은 4등분 그리드로 꽉 차게, md↑ 에선 콤팩트하게 우측 정렬 */
+    /* 참여자 행: 1줄(번호·닉네임 + 상태) / 2줄(테이블·플랫폼·등록 뱃지) / 3줄(시각) / 4줄(액션 버튼) */
+    .checkin-row{ display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .5rem; }
+    .checkin-row .ck-main{ flex:1 1 0; min-width:0; display:flex; align-items:center; flex-wrap:wrap; gap:.25rem .4rem; }
+    .checkin-row .ck-name{ font-weight:700; font-size:1.05rem; overflow-wrap:anywhere; }
+    .checkin-row .ck-status{ flex:0 0 auto; }
+    .checkin-row .ck-meta{ flex:1 0 100%; display:flex; flex-wrap:wrap; align-items:center; gap:.3rem; }
+    .checkin-row .ck-times{ flex:1 0 100%; display:flex; flex-wrap:wrap; gap:0 .75rem; }
+    .checkin-row .ck-actions{ flex:1 0 100%; display:flex; gap:.5rem; }
     @media (min-width: 768px){
         .w-md-auto{ width:auto !important; }
         .flex-md-grow-0{ flex-grow:0 !important; }
@@ -22,10 +30,8 @@
     @media (max-width: 767.98px){
         /* 모바일: 숫자 적당히, 카드 패딩 축소 */
         .checkin-stat .card-body{ padding:.4rem .25rem !important; }
-        /* 리스트 행: 긴 닉네임이어도 오른쪽 액션과 겹치지 않게 줄바꿈 허용 */
-        .checkin-row{ flex-wrap:wrap; }
-        .checkin-row > div:first-child{ flex:1 1 60%; min-width:0; }
-        .checkin-row > div:last-child{ flex:1 1 auto; align-items:flex-start !important; }
+        .checkin-row{ padding-left:.75rem; padding-right:.75rem; }
+        .checkin-row .ck-actions .btn{ flex:1 1 0; min-height:40px; }
         .checkin-row .fs-3{ font-size:1.05rem !important; }
     }
 </style>
@@ -120,23 +126,23 @@
             </div>
             <div class="card-body py-2">
                 {{-- 새로고침 영역 (성비/명단 최신화) --}}
-                <div class="d-flex align-items-center gap-2 mb-2">
-                    <button type="button" class="btn btn-outline-primary flex-shrink-0" id="checkinRefreshBtn">
-                        <i class="ti ti-refresh me-1"></i><span class="d-none d-sm-inline">새로고침</span>
+                <div class="d-flex flex-column align-items-stretch gap-2 mb-2">
+                    <button type="button" class="btn btn-outline-primary text-start" id="checkinRefreshBtn">
+                        <i class="ti ti-refresh me-1"></i><span>새로고침</span>
                     </button>
                     @isset($devMode)
                         @if ($devMode)
-                            <button type="button" class="btn btn-outline-warning flex-shrink-0" id="checkinDevSeedBtn"
+                            <button type="button" class="btn btn-outline-warning text-start" id="checkinDevSeedBtn"
                                     title="참석(체크인)한 사람 기준으로 입장등록 더미 데이터를 생성합니다 (개발용)">
-                                <i class="ti ti-flask me-1"></i><span class="d-none d-sm-inline">더미 입장등록</span>
+                                <i class="ti ti-flask me-1"></i><span>더미 입장등록</span>
                             </button>
-                            <button type="button" class="btn btn-outline-azure flex-shrink-0" id="checkinSyncTablesBtn"
+                            <button type="button" class="btn btn-outline-azure text-start" id="checkinSyncTablesBtn"
                                     title="이미 입장등록된 좌석(테이블)을 체크인 명단에 역동기화합니다 (기존 데이터 보정용)">
-                                <i class="ti ti-refresh-dot me-1"></i><span class="d-none d-sm-inline">기존 테이블 동기화</span>
+                                <i class="ti ti-refresh-dot me-1"></i><span>기존 테이블 동기화</span>
                             </button>
                         @endif
                     @endisset
-                    <span class="text-secondary small flex-shrink-0 ms-auto" id="lastUpdated" aria-live="polite"></span>
+                    <span class="text-secondary small" id="lastUpdated" aria-live="polite"></span>
                 </div>
                 <div id="checkinSearchHint" class="form-hint mb-2">
                     미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
@@ -275,13 +281,13 @@
                 ? `<span class="badge ${PLATFORM_BADGE[r.platform] || 'bg-secondary-lt'}">${esc(pfLabel)}</span>` : '';
             var toneCls = r.gender === 'F' ? 'bg-pink' : 'bg-blue';
             var ticket = r.ticket_no
-                ? `<span class="badge ${toneCls} text-white fs-3 me-2">${genderText(r.gender)} ${r.ticket_no}번</span>` : '';
+                ? `<span class="badge ${toneCls} text-white fs-3">${genderText(r.gender)} ${r.ticket_no}번</span>` : '';
             // 체크인된 사람의 지정 테이블 (미지정이면 경고 뱃지 → 참가자 입장등록이 막히므로 눈에 띄게)
             var tableBadge = '';
             if(inState){
                 tableBadge = r.rotation_table_id
-                    ? `<span class="badge bg-azure-lt fs-3 me-2"><i class="ti ti-armchair me-1"></i>${tableNoById(r.rotation_table_id)}번 테이블</span>`
-                    : `<span class="badge bg-red-lt fs-3 me-2"><i class="ti ti-alert-triangle me-1"></i>테이블 미지정</span>`;
+                    ? `<span class="badge bg-azure-lt"><i class="ti ti-armchair me-1"></i>${tableNoById(r.rotation_table_id)}번 테이블</span>`
+                    : `<span class="badge bg-red-lt"><i class="ti ti-alert-triangle me-1"></i>테이블 미지정</span>`;
             }
             // 입장등록을 마친 사람은 번호 변경·삭제 버튼을 아예 보이지 않게 한다.
             var ticketBtn = (inState && !r.registered)
@@ -294,22 +300,18 @@
                   + ` aria-label="${esc(nickname)} 명단에서 삭제">`
                   + `<i class="ti ti-trash me-1"></i>삭제</button>`;
 
-            return `<div class="list-group-item checkin-row ${stateCls} d-flex align-items-center justify-content-between gap-2"`
+            var times = (when || regWhen) ? `<div class="ck-times">${when}${regWhen}</div>` : '';
+            var actions = (ticketBtn || delBtn) ? `<div class="ck-actions">${ticketBtn}${delBtn}</div>` : '';
+
+            return `<div class="list-group-item checkin-row ${stateCls}"`
                 +      ` role="button" tabindex="0" data-id="${r.id}"`
                 +      ` aria-pressed="${inState ? 'true' : 'false'}"`
                 +      ` aria-label="${esc(nickname)} ${esc(pfLabel)} ${inState ? '참석됨, 탭하면 취소' : '미도착, 탭하면 체크인'}">`
-                +   `<div>`
-                +     `<div class="fw-bold fs-3">${ticket}${name}</div>`
-                +     `<div class="mt-1">${tableBadge}${pf}</div>`
-                +     when
-                +     regWhen
-                +   `</div>`
-                +   `<div class="text-end d-flex flex-column align-items-end gap-2">`
-                +     `${badge}`
-                +     regBadge
-                +     ticketBtn
-                +     delBtn
-                +   `</div>`
+                +   `<div class="ck-main">${ticket}<span class="ck-name">${name}</span></div>`
+                +   `<div class="ck-status">${badge}</div>`
+                +   `<div class="ck-meta">${tableBadge}${pf}${regBadge}</div>`
+                +   times
+                +   actions
                 + `</div>`;
         }
 
@@ -421,7 +423,7 @@
                     .text('갱신 실패 — 새로고침을 눌러 주세요');
             }).always(function(){
                 loading = false;
-                $btn.prop('disabled', false).html('<i class="ti ti-refresh me-1"></i><span class="d-none d-sm-inline">새로고침</span>');
+                $btn.prop('disabled', false).html('<i class="ti ti-refresh me-1"></i><span>새로고침</span>');
             });
         }
 
@@ -461,7 +463,7 @@
                 },
                 error: function(xhr){ showError(xhr, '더미 입장등록 생성에 실패했습니다.'); }
             }).always(function(){
-                $btn.prop('disabled', false).html('<i class="ti ti-flask me-1"></i><span class="d-none d-sm-inline">더미 입장등록</span>');
+                $btn.prop('disabled', false).html('<i class="ti ti-flask me-1"></i><span>더미 입장등록</span>');
             });
         });
 
@@ -493,7 +495,7 @@
                 },
                 error: function(xhr){ showError(xhr, '테이블 동기화에 실패했습니다.'); }
             }).always(function(){
-                $btn.prop('disabled', false).html('<i class="ti ti-refresh-dot me-1"></i><span class="d-none d-sm-inline">기존 테이블 동기화</span>');
+                $btn.prop('disabled', false).html('<i class="ti ti-refresh-dot me-1"></i><span>기존 테이블 동기화</span>');
             });
         });
 

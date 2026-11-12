@@ -846,14 +846,18 @@ class RotationController extends Controller
 
     /**
      * 채팅방 공지 문구 — 선택한 행사의 시작 시간/타입에 맞춰 안내 문구를 자동 생성한다.
+     * 같은 화면의 '당일 안내 멘트' 탭에서는 행사 당일 리마인드 멘트(설레는 톤)를 만든다.
      * 행사 미지정 시 지금 운영할 행사(사이드바 "체크인"과 같은 기준)를 사용한다.
+     * 종료(X)된 행사는 목록에서 뺀다. (선택값이 목록에 없으면 목록의 첫 행사로 대체)
      */
     public function guideNotice(EventNoticeService $noticeService): View
     {
-        $events  = $this->eventContextService->selectableEvents();
+        $events  = $this->eventContextService->selectableEvents()
+            ->where('status', '!=', EventRound::STATUS_CLOSED)
+            ->values();
         $eventId = (int) ($this->request->input('eventId')
             ?: ($this->eventContextService->currentEventId() ?? 0));
-        $event   = $eventId > 0 ? EventRound::find($eventId) : null;
+        $event   = $events->firstWhere('id', $eventId) ?? $events->first();
         $place   = (string) $this->request->input('place', '');
 
         return view('admin.rotation.guideNotice', [
@@ -862,6 +866,8 @@ class RotationController extends Controller
             'place'        => $place !== '' ? $place : EventNoticeService::DEFAULT_PLACE,
             'notice'       => $event ? $noticeService->build($event, $place) : '',
             'typeOptions'  => EventRound::typeOptions(),
+            // 탭: notice(공지 안내) | reminder(당일 안내 멘트). 행사/장소를 바꿔 새로고침돼도 보던 탭을 유지한다.
+            'tab'          => $this->request->input('tab') === 'reminder' ? 'reminder' : 'notice',
         ]);
     }
 

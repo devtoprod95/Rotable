@@ -125,24 +125,35 @@
                 <span class="text-secondary small">입장등록한 참가자 기준 · 자리 안내에 참고하세요</span>
             </div>
             <div class="card-body py-2">
-                {{-- 새로고침 영역 (성비/명단 최신화) --}}
-                <div class="d-flex flex-column align-items-stretch gap-2 mb-2">
-                    <button type="button" class="btn btn-outline-primary text-start" id="checkinRefreshBtn">
+                {{-- 새로고침 영역 (성비/명단 최신화) — 모바일: 한 줄에 하나씩 / PC(md↑): 가로 나열 --}}
+                <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center flex-md-wrap gap-2 mb-2">
+                    <button type="button" class="btn btn-outline-primary" id="checkinRefreshBtn">
                         <i class="ti ti-refresh me-1"></i><span>새로고침</span>
                     </button>
+                    {{-- 더미 데이터 도구: 최고관리자 + 운영(production) 환경이 아닐 때만 --}}
+                    @if (! empty($dummyMode))
+                        <button type="button" class="btn btn-outline-warning" id="checkinDevRosterBtn"
+                                title="체크인 명단에 더미 신청자를 추가합니다 (개발용)">
+                            <i class="ti ti-user-plus me-1"></i><span>더미 명단 추가</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" id="checkinDevCheckInBtn"
+                                title="미도착인 사람 전원을 번호표·테이블 자동으로 체크인합니다 (개발용)">
+                            <i class="ti ti-checks me-1"></i><span>더미 체크인</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" id="checkinDevSeedBtn"
+                                title="참석(체크인)한 사람 기준으로 입장등록 더미 데이터를 생성합니다 (개발용)">
+                            <i class="ti ti-flask me-1"></i><span>더미 입장등록</span>
+                        </button>
+                    @endif
                     @isset($devMode)
                         @if ($devMode)
-                            <button type="button" class="btn btn-outline-warning text-start" id="checkinDevSeedBtn"
-                                    title="참석(체크인)한 사람 기준으로 입장등록 더미 데이터를 생성합니다 (개발용)">
-                                <i class="ti ti-flask me-1"></i><span>더미 입장등록</span>
-                            </button>
-                            <button type="button" class="btn btn-outline-azure text-start" id="checkinSyncTablesBtn"
+                            <button type="button" class="btn btn-outline-azure" id="checkinSyncTablesBtn"
                                     title="이미 입장등록된 좌석(테이블)을 체크인 명단에 역동기화합니다 (기존 데이터 보정용)">
                                 <i class="ti ti-refresh-dot me-1"></i><span>기존 테이블 동기화</span>
                             </button>
                         @endif
                     @endisset
-                    <span class="text-secondary small" id="lastUpdated" aria-live="polite"></span>
+                    <span class="text-secondary small ms-md-auto" id="lastUpdated" aria-live="polite"></span>
                 </div>
                 <div id="checkinSearchHint" class="form-hint mb-2">
                     미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
@@ -202,6 +213,8 @@
         var addUrl    = "{{ route('admin.rotation.event.rosters.add', ['id' => $event->id]) }}";
         var ticketTpl = "{{ route('admin.rotation.event.rosters.ticket', ['id' => $event->id, 'rosterId' => '__RID__']) }}";
         var devSeedUrl = "{{ route('admin.rotation.event.rosters.devSeed', ['id' => $event->id]) }}";
+        var devRosterUrl = "{{ route('admin.rotation.event.rosters.devSeedRosters', ['id' => $event->id]) }}";
+        var devCheckInUrl = "{{ route('admin.rotation.event.rosters.devCheckIn', ['id' => $event->id]) }}";
         var syncTablesUrl = "{{ route('admin.rotation.event.rosters.syncTables', ['id' => $event->id]) }}";
 
         var rosters = [];
@@ -465,6 +478,92 @@
                 error: function(xhr){ showError(xhr, '더미 입장등록 생성에 실패했습니다.'); }
             }).always(function(){
                 $btn.prop('disabled', false).html('<i class="ti ti-flask me-1"></i><span>더미 입장등록</span>');
+            });
+        });
+
+        // [개발용] 더미 명단 추가: 남/여 인원을 입력받아 체크인 명단에 더미 신청자를 만든다.
+        //  기본값은 테이블 수 기준 (1:1 = 테이블당 1명, 와인 = 테이블당 3명)
+        $('#checkinDevRosterBtn').on('click', async function(){
+            var per = IS_ONE_TO_ONE ? 1 : 3;
+            var def = Math.max(1, TABLES.length * per);
+            var numInput = function(id, label, color){
+                return '<div style="flex:1;text-align:left;">'
+                     +   '<label for="' + id + '" style="font-size:0.85rem;font-weight:700;color:' + color + ';display:block;margin-bottom:4px;">' + label + '</label>'
+                     +   '<input id="' + id + '" type="number" class="swal2-input" value="' + def + '" min="0" max="100" inputmode="numeric" style="width:100%;margin:0;box-sizing:border-box;">'
+                     + '</div>';
+            };
+            var ans = await Swal.fire({
+                title: '더미 명단 추가',
+                html: '<div style="display:flex;gap:10px;">' + numInput('swal-dev-m', '👨 남성', '#1d4ed8') + numInput('swal-dev-f', '👩 여성', '#be185d') + '</div>'
+                    + '<div class="text-secondary small mt-2">닉네임은 더미남N / 더미여N 으로 만들어져요. (개발용)</div>',
+                showCancelButton: true, reverseButtons: true, focusConfirm: false,
+                confirmButtonText: '추가', cancelButtonText: '취소',
+                confirmButtonColor: '#3085d6', cancelButtonColor: '#d33',
+                preConfirm: function(){
+                    var m = parseInt(document.getElementById('swal-dev-m').value || '0', 10);
+                    var f = parseInt(document.getElementById('swal-dev-f').value || '0', 10);
+                    if(isNaN(m) || isNaN(f) || m < 0 || f < 0 || m > 100 || f > 100){
+                        Swal.showValidationMessage('0~100 사이 숫자로 입력해 주세요.');
+                        return false;
+                    }
+                    if(m + f === 0){
+                        Swal.showValidationMessage('1명 이상 입력해 주세요.');
+                        return false;
+                    }
+                    return { male: m, female: f };
+                }
+            });
+            if(!ans.isConfirmed || !ans.value){ return; }
+
+            var $btn = $(this);
+            var original = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            $.ajax({
+                url: devRosterUrl, type: 'POST', data: ans.value,
+                success: function(res){
+                    Swal.fire({ icon: 'success', text: res?.msg || '추가했습니다.', timer: 2000, showConfirmButton: false });
+                    load();
+                },
+                error: function(xhr){ showError(xhr, '더미 명단 추가에 실패했습니다.'); }
+            }).always(function(){
+                $btn.prop('disabled', false).html(original);
+            });
+        });
+
+        // [개발용] 더미 체크인: 미도착 전원을 번호표·테이블 자동으로 체크인한다.
+        $('#checkinDevCheckInBtn').on('click', async function(){
+            var outCnt = rosters.filter(function(r){ return !r.checked_in; }).length;
+            if(outCnt === 0){
+                await salert({ text: '미도착인 사람이 없습니다.', cancel: false });
+                return;
+            }
+            if(!TABLES.length){
+                await salert({ text: '테이블이 없습니다. 행사 상세에서 테이블을 먼저 추가해 주세요.', cancel: false });
+                return;
+            }
+            var ok = await Swal.fire({
+                icon: 'question',
+                title: '더미 체크인',
+                html: '미도착 <b>' + outCnt + '명</b>을 번호표·테이블 자동으로 체크인할까요?'
+                    + '<div class="text-secondary small mt-1">' + (IS_ONE_TO_ONE ? '1:1: 1번 테이블부터 차례대로' : '와인파티: 성비가 고르게') + ' 배치돼요. (개발용)</div>',
+                showCancelButton: true, reverseButtons: true,
+                confirmButtonText: '체크인', cancelButtonText: '취소',
+                confirmButtonColor: '#3085d6', cancelButtonColor: '#d33'
+            });
+            if(!ok.isConfirmed){ return; }
+
+            var $btn = $(this);
+            var original = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
+            $.ajax({
+                url: devCheckInUrl, type: 'POST',
+                success: function(res){
+                    Swal.fire({ icon: 'success', text: res?.msg || '체크인했습니다.', confirmButtonText: '확인', confirmButtonColor: '#3085d6' });
+                    load();
+                },
+                error: function(xhr){ showError(xhr, '더미 체크인에 실패했습니다.'); }
+            }).always(function(){
+                $btn.prop('disabled', false).html(original);
             });
         });
 

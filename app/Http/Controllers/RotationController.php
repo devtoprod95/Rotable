@@ -250,8 +250,10 @@ class RotationController extends Controller
             // 체크인 때 테이블 지정용 — 이 행사의 테이블 목록 (번호 오름차순)
             'tables'          => \App\Models\RotationTable::where('event_id', $id)
                 ->orderBy('table_no')->get(['id', 'table_no']),
-            // 더미 입장등록 시더 버튼은 최고관리자에게만 노출한다.
-            'devMode'         => auth('admin')->user()?->hasRole(Role::SuperAdmin->value) ?? false,
+            // 최고관리자 전용 도구(기존 테이블 동기화 등) 노출 여부
+            'devMode'         => $this->isSuperAdmin(),
+            // 더미 데이터 버튼(명단 추가/체크인/입장등록)은 최고관리자 + 운영(production)이 아닐 때만 노출
+            'dummyMode'       => $this->canUseDummyTools(),
         ]);
     }
 
@@ -414,13 +416,73 @@ class RotationController extends Controller
      */
     public function rosterDevSeed(int $id): JsonResponse
     {
-        if (! (auth('admin')->user()?->hasRole(Role::SuperAdmin->value) ?? false)) {
-            return apiRes(Response::HTTP_FORBIDDEN, helpersFailMessage('최고관리자만 사용할 수 있습니다.'));
+        if (! $this->canUseDummyTools()) {
+            return apiRes(Response::HTTP_FORBIDDEN, helpersFailMessage('운영 환경이 아닌 곳에서 최고관리자만 사용할 수 있습니다.'));
         }
 
         $result = $this->rosterService->devSeedRegistrations($id);
 
         return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
+    }
+
+    /**
+     * [개발용] 체크인 명단에 더미 신청자를 추가한다. (최고관리자 · 운영 환경 제외)
+     */
+    public function rosterDevSeedRosters(int $id): JsonResponse
+    {
+        if (! $this->canUseDummyTools()) {
+            return apiRes(Response::HTTP_FORBIDDEN, helpersFailMessage('운영 환경이 아닌 곳에서 최고관리자만 사용할 수 있습니다.'));
+        }
+
+        $max       = RosterService::DEV_ROSTER_MAX;
+        $validator = Validator::make($this->request->all(), [
+            'male'   => 'required|integer|min:0|max:' . $max,
+            'female' => 'required|integer|min:0|max:' . $max,
+        ], [
+            'male.*'   => "남성 인원은 0~{$max} 사이 숫자로 입력해 주세요.",
+            'female.*' => "여성 인원은 0~{$max} 사이 숫자로 입력해 주세요.",
+        ]);
+        if ($validator->fails()) {
+            return apiRes(Response::HTTP_BAD_REQUEST, helpersFailMessage($validator->errors()->first()));
+        }
+
+        $result = $this->rosterService->devSeedRosters(
+            $id,
+            (int) $this->request->input('male'),
+            (int) $this->request->input('female'),
+        );
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
+    }
+
+    /**
+     * [개발용] 미도착 명단 전체를 체크인한다. (번호표·테이블 자동, 최고관리자 · 운영 환경 제외)
+     */
+    public function rosterDevCheckIn(int $id): JsonResponse
+    {
+        if (! $this->canUseDummyTools()) {
+            return apiRes(Response::HTTP_FORBIDDEN, helpersFailMessage('운영 환경이 아닌 곳에서 최고관리자만 사용할 수 있습니다.'));
+        }
+
+        $result = $this->rosterService->devCheckInAll($id);
+
+        return apiRes(($result['isSuccess'] === true ? Response::HTTP_OK : Response::HTTP_UNPROCESSABLE_ENTITY), $result);
+    }
+
+    /**
+     * 현재 로그인한 관리자가 최고관리자인지.
+     */
+    private function isSuperAdmin(): bool
+    {
+        return auth('admin')->user()?->hasRole(Role::SuperAdmin->value) ?? false;
+    }
+
+    /**
+     * 더미 데이터 도구 사용 가능 여부: 최고관리자 && 운영(production) 환경이 아님.
+     */
+    private function canUseDummyTools(): bool
+    {
+        return $this->isSuperAdmin() && ! app()->isProduction();
     }
 
     /**

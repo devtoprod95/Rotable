@@ -788,6 +788,159 @@ class RosterService
         }
     }
 
+    /** [개발용] 더미 명단 한 번에 추가할 수 있는 성별당 최대 인원 */
+    public const DEV_ROSTER_MAX = 100;
+
+    /**
+     * [개발용] 체크인 명단에 더미 신청자를 추가한다. (닉네임: 더미남N / 더미여N, 플랫폼 무작위)
+     *
+     * 닉네임 번호는 이 행사에 이미 있는 더미 닉네임 뒤에서 이어 붙인다.
+     *
+     * @return array{isSuccess:bool, msg?:string, created?:int}
+     */
+    public function devSeedRosters(int $eventId, int $maleCount, int $femaleCount): array
+    {
+        try {
+            $maleCount   = max(0, min(self::DEV_ROSTER_MAX, $maleCount));
+            $femaleCount = max(0, min(self::DEV_ROSTER_MAX, $femaleCount));
+            if ($maleCount + $femaleCount === 0) {
+                return helpersFailMessage('추가할 인원을 1명 이상 입력해 주세요.');
+            }
+
+            $platforms = [Member::PLATFORM_MUNTO, Member::PLATFORM_FRIP];
+
+            return DB::transaction(function () use ($eventId, $maleCount, $femaleCount, $platforms): array {
+                $created = 0;
+                foreach ([Member::GENDER_MALE => $maleCount, Member::GENDER_FEMALE => $femaleCount] as $gender => $count) {
+                    $prefix = $gender === Member::GENDER_FEMALE ? '더미여' : '더미남';
+                    $start  = EventRoster::where('event_id', $eventId)
+                        ->where('name', 'like', $prefix . '%')
+                        ->count();
+
+                    for ($i = 1; $i <= $count; $i++) {
+                        EventRoster::create([
+                            'event_id' => $eventId,
+                            'name'     => $prefix . ($start + $i),
+                            'gender'   => $gender,
+                            'platform' => $platforms[array_rand($platforms)],
+                        ]);
+                        $created++;
+                    }
+                }
+
+                $res            = helpersSuccessMessage("더미 명단 {$created}명을 추가했습니다.");
+                $res['created'] = $created;
+
+                return $res;
+            });
+        } catch (\Throwable $th) {
+            return helpersFailMessage($th->getMessage());
+        }
+    }
+
+    /**
+     * [개발용] 아직 미도착인 명단을 전부 체크인한다. (번호표 자동 배정 + 테이블 자동 지정)
+     *
+     * 테이블 지정 규칙은 체크인 모달의 기본 선택과 같다.
+     *  - 1:1(one): 그 성별이 아직 없는 테이블 중 번호가 가장 작은 곳. 자리가 없으면 건너뛴다.
+     *  - 그 외(와인파티): 그 성별 인원이 가장 적은 테이블 (동률이면 전체 인원 적은 곳 → 번호 작은 곳).
+     *
+     * @return array{isSuccess:bool, msg?:string, checked?:int, skipped?:int}
+     */
+    public function devCheckInAll(int $eventId): array
+    {
+        try {
+            $event = EventRound::find($eventId);
+            if ($event === null) {
+                return helpersFailMessage('행사를 찾을 수 없습니다.');
+            }
+
+            $tables = RotationTable::where('event_id', $eventId)->orderBy('table_no')->get(['id', 'table_no']);
+            if ($tables->isEmpty()) {
+                return helpersFailMessage('테이블이 없어 체크인할 수 없습니다. 먼저 테이블을 생성해 주세요.');
+            }
+
+            $isOne = $event->isOneToOne();
+
+            return DB::transaction(function () use ($eventId, $tables, $isOne): array {
+                // 현재 테이블별 성별 인원 [table_id => ['M'=>n,'F'=>n]]
+                $counts = [];
+                foreach ($tables as $t) {
+                    $counts[$t->id] = [Member::GENDER_MALE => 0, Member::GENDER_FEMALE => 0];
+                }
+                EventRoster::where('event_id', $eventId)
+                    ->whereNotNull('checked_in_at')
+                    ->whereNotNull('rotation_table_id')
+                    ->get(['gender', 'rotation_table_id'])
+                    ->each(function (EventRoster $r) use (&$counts): void {
+                        $g = $r->gender === Member::GENDER_FEMALE ? Member::GENDER_FEMALE : Member::GENDER_MALE;
+                        if (isset($counts[$r->rotation_table_id])) {
+                            $counts[$r->rotation_table_id][$g]++;
+                        }
+                    });
+
+                $pending = EventRoster::where('event_id', $eventId)
+                    ->whereNull('checked_in_at')
+                    ->orderBy('gender')
+                    ->orderBy('id')
+                    ->get();
+
+                $checked = 0;
+                $skipped = 0;
+
+                foreach ($pending as $roster) {
+                    $gender = $roster->gender === Member::GENDER_FEMALE ? Member::GENDER_FEMALE : Member::GENDER_MALE;
+                    $other  = $gender === Member::GENDER_FEMALE ? Member::GENDER_MALE : Member::GENDER_FEMALE;
+
+                    $tableId = null;
+                    if ($isOne) {
+                        foreach ($tables as $t) {
+                            if ($counts[$t->id][$gender] === 0) {
+                                $tableId = $t->id;
+                                break;
+                            }
+                        }
+                    } else {
+                        $best = null;
+                        foreach ($tables as $t) {
+                            $key = [$counts[$t->id][$gender], $counts[$t->id][$gender] + $counts[$t->id][$other], (int) $t->table_no];
+                            if ($best === null || $key < $best[0]) {
+                                $best = [$key, $t->id];
+                            }
+                        }
+                        $tableId = $best[1];
+                    }
+
+                    if ($tableId === null) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    if ($roster->ticket_no === null) {
+                        $roster->ticket_no = $this->nextTicketNo($eventId, $gender);
+                    }
+                    $roster->rotation_table_id = $tableId;
+                    $roster->checked_in_at     = now();
+                    $roster->save();
+
+                    $counts[$tableId][$gender]++;
+                    $checked++;
+                }
+
+                $msg = "더미 체크인 {$checked}명 완료" . ($skipped > 0 ? " (남은 자리가 없어 {$skipped}명 건너뜀)" : '');
+                $res            = helpersSuccessMessage($msg);
+                $res['checked'] = $checked;
+                $res['skipped'] = $skipped;
+
+                return $res;
+            });
+        } catch (UniqueConstraintViolationException) {
+            return helpersFailMessage('번호표가 겹쳤습니다. 다시 시도해 주세요.');
+        } catch (\Throwable $th) {
+            return helpersFailMessage($th->getMessage());
+        }
+    }
+
     /**
      * [개발용] 더미 좌석 배치용 테이블을 고른다.
      *

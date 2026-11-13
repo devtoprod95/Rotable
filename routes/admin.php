@@ -3,7 +3,17 @@
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\RotationController;
+use App\Http\Controllers\Rotation\CalculatorController;
+use App\Http\Controllers\Rotation\DetailPageController;
+use App\Http\Controllers\Rotation\EventController;
+use App\Http\Controllers\Rotation\EventMessageController;
+use App\Http\Controllers\Rotation\GuideController;
+use App\Http\Controllers\Rotation\MatchController;
+use App\Http\Controllers\Rotation\MeetingHistoryController;
+use App\Http\Controllers\Rotation\PromotionController;
+use App\Http\Controllers\Rotation\QrController;
+use App\Http\Controllers\Rotation\RosterController;
+use App\Http\Controllers\Rotation\SeatingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\K6Controller;
 
@@ -30,120 +40,122 @@ Route::middleware('role')->group(function () {
         // 로테이션 소개팅 관리 (행사 목록 / 당일 운영[체크인·로테이션 진행] / 홍보 / 안내 / 분석·도구)
         Route::prefix('rotation')->name('rotation.')->group(function () {
             // 사이드바 "체크인" 진입점 — 지금 운영할 행사의 체크인 화면으로 이동한다.
-            Route::get('/checkin', [RotationController::class, 'checkinCurrent'])->name('checkin.current');
+            Route::get('/checkin', [RosterController::class, 'checkinCurrent'])->name('checkin.current');
 
             Route::prefix('event')->name('event.')->group(function () {
-                Route::get('/', [RotationController::class, 'eventIndex'])->name('index');
-                Route::get('/list', [RotationController::class, 'eventList'])->name('list');
-                Route::get('/create', [RotationController::class, 'eventCreate'])->name('create');
-                Route::post('/store', [RotationController::class, 'eventStore'])->name('store');
-                Route::delete('/delete', [RotationController::class, 'eventDelete'])->name('delete');
-                Route::get('/{id}', [RotationController::class, 'eventDetail'])->whereNumber('id')->name('detail');
-                Route::put('/{id}', [RotationController::class, 'eventUpdate'])->whereNumber('id')->name('update');
-                Route::get('/{id}/tables', [RotationController::class, 'eventTableList'])->whereNumber('id')->name('tables');
-                Route::post('/{id}/tables', [RotationController::class, 'eventTableAdd'])->whereNumber('id')->name('tables.add');
-                Route::delete('/{id}/tables', [RotationController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');
-                Route::get('/{id}/messages/list', [RotationController::class, 'eventMessageList'])->whereNumber('id')->name('messages.list');
-                Route::get('/{id}/messages/recipients', [RotationController::class, 'eventMessageRecipients'])->whereNumber('id')->name('messages.recipients');
-                Route::post('/{id}/messages/send', [RotationController::class, 'eventMessageSend'])->whereNumber('id')->name('messages.send');
+                Route::get('/', [EventController::class, 'eventIndex'])->name('index');
+                Route::get('/list', [EventController::class, 'eventList'])->name('list');
+                Route::get('/create', [EventController::class, 'eventCreate'])->name('create');
+                Route::post('/store', [EventController::class, 'eventStore'])->name('store');
+                Route::delete('/delete', [EventController::class, 'eventDelete'])->name('delete');
+                Route::get('/{id}', [EventController::class, 'eventDetail'])->whereNumber('id')->name('detail');
+                Route::put('/{id}', [EventController::class, 'eventUpdate'])->whereNumber('id')->name('update');
+                Route::get('/{id}/tables', [EventController::class, 'eventTableList'])->whereNumber('id')->name('tables');
+                Route::post('/{id}/tables', [EventController::class, 'eventTableAdd'])->whereNumber('id')->name('tables.add');
+                Route::delete('/{id}/tables', [EventController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');
+                Route::get('/{id}/messages/list', [EventMessageController::class, 'eventMessageList'])->whereNumber('id')->name('messages.list');
+                Route::get('/{id}/messages/recipients', [EventMessageController::class, 'eventMessageRecipients'])->whereNumber('id')->name('messages.recipients');
+                Route::post('/{id}/messages/send', [EventMessageController::class, 'eventMessageSend'])->whereNumber('id')->name('messages.send');
                 // 체크인 명단 — 행사별 (닉네임·플랫폼·성별, 전화번호 없음)
-                Route::get('/{id}/checkin', [RotationController::class, 'checkinIndex'])->whereNumber('id')->name('checkin');
-                Route::get('/{id}/rosters', [RotationController::class, 'rosterList'])->whereNumber('id')->name('rosters.list');
-                Route::post('/{id}/rosters', [RotationController::class, 'rosterAdd'])->whereNumber('id')->name('rosters.add');
-                Route::put('/{id}/rosters/{rosterId}', [RotationController::class, 'rosterUpdate'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.update');
-                Route::delete('/{id}/rosters', [RotationController::class, 'rosterDelete'])->whereNumber('id')->name('rosters.delete');
-                Route::patch('/{id}/rosters/{rosterId}/check-in', [RotationController::class, 'rosterToggleCheckIn'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.checkIn');
-                Route::patch('/{id}/rosters/{rosterId}/ticket', [RotationController::class, 'rosterSetTicket'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.ticket');
+                Route::get('/{id}/checkin', [RosterController::class, 'checkinIndex'])->whereNumber('id')->name('checkin');
+                Route::get('/{id}/rosters', [RosterController::class, 'rosterList'])->whereNumber('id')->name('rosters.list');
+                Route::post('/{id}/rosters', [RosterController::class, 'rosterAdd'])->whereNumber('id')->name('rosters.add');
+                Route::put('/{id}/rosters/{rosterId}', [RosterController::class, 'rosterUpdate'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.update');
+                Route::delete('/{id}/rosters', [RosterController::class, 'rosterDelete'])->whereNumber('id')->name('rosters.delete');
+                Route::patch('/{id}/rosters/{rosterId}/check-in', [RosterController::class, 'rosterToggleCheckIn'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.checkIn');
+                Route::patch('/{id}/rosters/{rosterId}/ticket', [RosterController::class, 'rosterSetTicket'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.ticket');
                 // [개발용] 체크인된 사람 기준 입장등록 더미 생성 (최고관리자 전용)
-                Route::post('/{id}/rosters/dev-seed', [RotationController::class, 'rosterDevSeed'])->whereNumber('id')->middleware('superAdmin')->name('rosters.devSeed');
+                Route::post('/{id}/rosters/dev-seed', [RosterController::class, 'rosterDevSeed'])->whereNumber('id')->middleware('superAdmin')->name('rosters.devSeed');
                 // [개발용] 더미 체크인 명단 추가 / 미도착 전체 더미 체크인 (최고관리자 전용 · 운영 환경에선 컨트롤러가 거부)
-                Route::post('/{id}/rosters/dev-seed-rosters', [RotationController::class, 'rosterDevSeedRosters'])->whereNumber('id')->middleware('superAdmin')->name('rosters.devSeedRosters');
-                Route::post('/{id}/rosters/dev-check-in', [RotationController::class, 'rosterDevCheckIn'])->whereNumber('id')->middleware('superAdmin')->name('rosters.devCheckIn');
+                Route::post('/{id}/rosters/dev-seed-rosters', [RosterController::class, 'rosterDevSeedRosters'])->whereNumber('id')->middleware('superAdmin')->name('rosters.devSeedRosters');
+                Route::post('/{id}/rosters/dev-check-in', [RosterController::class, 'rosterDevCheckIn'])->whereNumber('id')->middleware('superAdmin')->name('rosters.devCheckIn');
                 // [운영/마이그레이션용] 기존 좌석(rotation_seats) 테이블을 체크인 명단(event_rosters)에 역동기화 (최고관리자 전용)
-                Route::post('/{id}/rosters/sync-tables', [RotationController::class, 'rosterSyncTables'])->whereNumber('id')->middleware('superAdmin')->name('rosters.syncTables');
-                Route::get('/{id}/matches/list', [RotationController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
-                Route::get('/{id}/members/{memberId}/voters/list', [RotationController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
-                Route::get('/{id}/members/{memberId}/voted/list', [RotationController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');
+                Route::post('/{id}/rosters/sync-tables', [RosterController::class, 'rosterSyncTables'])->whereNumber('id')->middleware('superAdmin')->name('rosters.syncTables');
+                Route::get('/{id}/matches/list', [MatchController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
+                Route::get('/{id}/members/{memberId}/voters/list', [MatchController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
+                Route::get('/{id}/members/{memberId}/voted/list', [MatchController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');
             });
 
             Route::prefix('seating')->name('seating.')->group(function () {
-                Route::get('/', [RotationController::class, 'seatingIndex'])->name('index');
-                Route::get('/data', [RotationController::class, 'seatingData'])->name('data');
-                Route::get('/board', [RotationController::class, 'seatingBoard'])->name('board');
-                Route::get('/members', [RotationController::class, 'seatingMembers'])->name('members');
-                Route::post('/store', [RotationController::class, 'seatingStore'])->name('store');
-                Route::post('/rotate', [RotationController::class, 'seatingRotate'])->name('rotate');
-                Route::post('/rotate-back', [RotationController::class, 'seatingRotateBack'])->name('rotateBack');
-                Route::post('/finish', [RotationController::class, 'seatingFinish'])->name('finish');
-                Route::post('/close-voting', [RotationController::class, 'seatingCloseVoting'])->name('closeVoting');
+                Route::get('/', [SeatingController::class, 'seatingIndex'])->name('index');
+                Route::get('/data', [SeatingController::class, 'seatingData'])->name('data');
+                Route::get('/board', [SeatingController::class, 'seatingBoard'])->name('board');
+                Route::get('/members', [SeatingController::class, 'seatingMembers'])->name('members');
+                Route::post('/store', [SeatingController::class, 'seatingStore'])->name('store');
+                Route::post('/rotate', [SeatingController::class, 'seatingRotate'])->name('rotate');
+                // 로테이션 횟수(총 턴 수) 지정 — 테이블 수와 별개로 k턴에서 종료
+                Route::post('/rotation-limit', [SeatingController::class, 'seatingRotationLimit'])->name('rotationLimit');
+                Route::post('/rotate-back', [SeatingController::class, 'seatingRotateBack'])->name('rotateBack');
+                Route::post('/finish', [SeatingController::class, 'seatingFinish'])->name('finish');
+                Route::post('/close-voting', [SeatingController::class, 'seatingCloseVoting'])->name('closeVoting');
                 // 매칭 시작 취소 — 매칭중(V)→진행(S), 투표 데이터 삭제 (와인파티)
-                Route::post('/cancel-voting', [RotationController::class, 'seatingCancelVoting'])->name('cancelVoting');
+                Route::post('/cancel-voting', [SeatingController::class, 'seatingCancelVoting'])->name('cancelVoting');
                 // 종료(X) 되돌리기 — 실수 종료 복구 (와인파티→V, 1:1→S)
-                Route::post('/reopen', [RotationController::class, 'seatingReopen'])->name('reopen');
-                Route::delete('/delete', [RotationController::class, 'seatingDelete'])->name('delete');
+                Route::post('/reopen', [SeatingController::class, 'seatingReopen'])->name('reopen');
+                Route::delete('/delete', [SeatingController::class, 'seatingDelete'])->name('delete');
             });
 
             // 상세페이지 디자이너 — HTML 에디터로 꾸미고 이미지(PNG)로 다운로드
             Route::prefix('detail')->name('detail.')->group(function () {
-                Route::get('/', [RotationController::class, 'detailIndex'])->name('index');
+                Route::get('/', [DetailPageController::class, 'detailIndex'])->name('index');
                 // 저장 목록(유형별 다중 스냅샷) — 목록/추가/불러오기/업데이트/삭제
-                Route::get('/saves', [RotationController::class, 'detailSaveList'])->name('saves.list');
-                Route::post('/saves', [RotationController::class, 'detailSaveStore'])->name('saves.store');
-                Route::get('/saves/{id}', [RotationController::class, 'detailSaveShow'])
+                Route::get('/saves', [DetailPageController::class, 'detailSaveList'])->name('saves.list');
+                Route::post('/saves', [DetailPageController::class, 'detailSaveStore'])->name('saves.store');
+                Route::get('/saves/{id}', [DetailPageController::class, 'detailSaveShow'])
                     ->whereNumber('id')->name('saves.show');
-                Route::post('/saves/{id}', [RotationController::class, 'detailSaveUpdate'])
+                Route::post('/saves/{id}', [DetailPageController::class, 'detailSaveUpdate'])
                     ->whereNumber('id')->name('saves.update');
-                Route::delete('/saves/{id}', [RotationController::class, 'detailSaveDelete'])
+                Route::delete('/saves/{id}', [DetailPageController::class, 'detailSaveDelete'])
                     ->whereNumber('id')->name('saves.delete');
             });
 
             // 초대 멘트 — 유형(와인/1:1)·성별·무료 여부에 따라 초대 메시지 문구를 복사한다.
-            Route::get('/invite', [RotationController::class, 'inviteIndex'])->name('invite');
+            Route::get('/invite', [PromotionController::class, 'inviteIndex'])->name('invite');
 
             // QR 코드 설정 — 연결 대상 URL 을 등록하면 공개 주소(/qr/{code})가 발급된다.
             Route::prefix('qr')->name('qr.')->group(function () {
-                Route::get('/', [RotationController::class, 'qrIndex'])->name('index');
-                Route::post('/store', [RotationController::class, 'qrStore'])->name('store');
-                Route::delete('/delete', [RotationController::class, 'qrDelete'])->name('delete');
+                Route::get('/', [QrController::class, 'qrIndex'])->name('index');
+                Route::post('/store', [QrController::class, 'qrStore'])->name('store');
+                Route::delete('/delete', [QrController::class, 'qrDelete'])->name('delete');
             });
 
             // 참가자 안내 슬라이드 — 행사장에서 PPT 처럼 띄워 서비스 이용안내/룰/대화 주제를 안내한다.
             Route::prefix('guide')->name('guide.')->group(function () {
-                Route::get('/{type?}', [RotationController::class, 'guideIndex'])
+                Route::get('/{type?}', [GuideController::class, 'guideIndex'])
                     ->where('type', 'wine|solo')
                     ->name('index');
                 // 채팅방 공지 문구 — 행사 시간/타입에 맞춰 자동 생성, 복사해서 채팅방에 붙여넣기
-                Route::get('/notice', [RotationController::class, 'guideNotice'])->name('notice');
+                Route::get('/notice', [GuideController::class, 'guideNotice'])->name('notice');
                 // 호스트 발표 멘트 편집 — 유형별 대본을 섹션 단위로 편집/저장(DB)
-                Route::get('/script', [RotationController::class, 'scriptIndex'])->name('script');
-                Route::post('/script', [RotationController::class, 'scriptSave'])->name('script.save');
+                Route::get('/script', [GuideController::class, 'scriptIndex'])->name('script');
+                Route::post('/script', [GuideController::class, 'scriptSave'])->name('script.save');
                 // 예외 상황 대처 설명서 (별도 페이지)
-                Route::get('/exception', [RotationController::class, 'guideException'])->name('exception');
+                Route::get('/exception', [GuideController::class, 'guideException'])->name('exception');
             });
 
             // 공개 페이지 모음 — 공개 게임/안내 슬라이드/호스트 멘트 등 외부 공유용 링크를 한 곳에 모아 보여준다.
-            Route::get('/public-hub', [RotationController::class, 'publicHub'])->name('public-hub');
+            Route::get('/public-hub', [GuideController::class, 'publicHub'])->name('public-hub');
 
             // 만남 이력 조회 — 전화번호(정확 일치) 기준. 만남 = 같은 행사 공동 참여.
             Route::prefix('history')->name('history.')->group(function () {
                 // 만남 이력 기본 조회 (번호 1개 → 함께 참여한 상대)
-                Route::get('/', [RotationController::class, 'historyIndex'])->name('index');
-                Route::get('/search', [RotationController::class, 'historySearch'])->name('search');
+                Route::get('/', [MeetingHistoryController::class, 'historyIndex'])->name('index');
+                Route::get('/search', [MeetingHistoryController::class, 'historySearch'])->name('search');
                 // 만남 이력 상세 조회 (번호 2개 → 두 사람의 만남 이력)
-                Route::get('/detail', [RotationController::class, 'historyDetailIndex'])->name('detail');
-                Route::get('/detail/data', [RotationController::class, 'historyDetailData'])->name('detail.data');
+                Route::get('/detail', [MeetingHistoryController::class, 'historyDetailIndex'])->name('detail');
+                Route::get('/detail/data', [MeetingHistoryController::class, 'historyDetailData'])->name('detail.data');
             });
 
             // 손익분기점 계산기 — 객단가/비용 항목(기타 추가금 포함)으로 1인당 흑자전환 참가비를 계산한다. 입력값은 저장/불러오기 가능.
             Route::prefix('bep')->name('bep.')->group(function () {
-                Route::get('/', [RotationController::class, 'bepIndex'])->name('index');
-                Route::get('/list', [RotationController::class, 'bepList'])->name('list');
-                Route::post('/store', [RotationController::class, 'bepStore'])->name('store');
-                Route::delete('/delete', [RotationController::class, 'bepDelete'])->name('delete');
+                Route::get('/', [CalculatorController::class, 'bepIndex'])->name('index');
+                Route::get('/list', [CalculatorController::class, 'bepList'])->name('list');
+                Route::post('/store', [CalculatorController::class, 'bepStore'])->name('store');
+                Route::delete('/delete', [CalculatorController::class, 'bepDelete'])->name('delete');
             });
 
             // N빵(수익 정산) 계산기 — 총수입에서 각자 지출을 돌려받고 남은 순이익을 지분대로 나눈다. 계산은 클라이언트에서 수행.
-            Route::get('/split', [RotationController::class, 'splitIndex'])->name('split.index');
+            Route::get('/split', [CalculatorController::class, 'splitIndex'])->name('split.index');
         });
 
         Route::prefix('role')->name('role.')->group(function () {

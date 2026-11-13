@@ -73,7 +73,7 @@ P(대기) ──[로테이션 진행]──▶ S(진행) ──[투표 시작]�
 ┌─────────────────────────────────────────────────────────────┐
 │  Laravel 13 (PHP 8.3)                                        │
 │  ├─ Routes      : routes/web.php (회원) · routes/admin.php    │
-│  ├─ Controllers : RotationController, MemberPageController …  │
+│  ├─ Controllers : Rotation/* (관리자 기능별), MemberPageController│
 │  ├─ Services    : RotationService (도메인 로직 집중)          │
 │  ├─ Models      : Eloquent (event_/rotation_ prefix)         │
 │  └─ Events      : 메시지/요청 실시간 브로드캐스트             │
@@ -104,7 +104,7 @@ P(대기) ──[로테이션 진행]──▶ S(진행) ──[투표 시작]�
 
 - 관리자 화면은 **Blade**로 서버 렌더링하고, 목록/표는 **Tabulator**(ajax)로 조회합니다.
 - 참가자 화면은 **Inertia + React**로 구성되어 SPA처럼 동작합니다.
-- 도메인 로직은 컨트롤러가 아닌 **`RotationService`에 집중**되어 있습니다. 컨트롤러는 검증/응답 변환만 담당합니다.
+- 도메인 로직은 컨트롤러가 아닌 **서비스(`app/Services/Rotation/*`)에 집중**되어 있습니다. 컨트롤러는 기능별로 나뉘어(`Controllers/Rotation/*`) 검증(FormRequest)·응답 변환(`respond()`)만 담당합니다.
 - 공통 응답은 `apiRes()` / `helpersSuccessMessage()` / `helpersFailMessage()` 헬퍼로 표준화합니다.
 
 ---
@@ -150,7 +150,8 @@ P(대기) ──[로테이션 진행]──▶ S(진행) ──[투표 시작]�
 - **이동 규칙**:
   - 1턴: 기준 자리 그대로.
   - 2턴부터: 매 진행마다 **남자만 다음 테이블(`table_no` 오름차순, 마지막 → 첫 번째 순환)로 +1 이동**하고 여자는 제자리.
-  - 테이블이 N개면 **N턴이 마지막 턴**(남자가 제자리로 복귀하는 시점)입니다.
+  - 기본은 테이블이 N개면 **N턴이 마지막 턴**(남자가 제자리로 복귀하는 시점)입니다.
+  - **로테이션 횟수**(`event_rounds.rotation_limit`)를 지정하면 테이블 수와 상관없이 그 턴에서 끝납니다. (예: 15:15 → 10턴만 / 5턴만) 상한은 테이블 수이고, 로테이션 시작 전(0턴)에만 바꿀 수 있습니다. 로테이션 진행 화면에서 설정합니다(`EventRound::maxRound()`).
 - 첫 로테이션 진행 시 행사 상태가 `P` → `S`(진행)로 바뀝니다. 1:1(`one`) 타입은 별도의 투표 시작 단계 없이 진행(`S`)부터 매칭 선택이 열리며, 이때 `voting_opened_at`이 기록됩니다.
 - 진행 상황은 `RotationUpdated` 이벤트로 브로드캐스트되어 참가자 홈 화면의 "내 테이블/이번 턴 상대"가 실시간으로 갱신됩니다.
 
@@ -226,7 +227,10 @@ P(대기) ──[로테이션 진행]──▶ S(진행) ──[투표 시작]�
 ```
 .
 ├── app/
-│   ├── Http/Controllers/   # RotationController(행사/좌석/매칭), MemberPageController(참가자) …
+│   ├── Http/Controllers/   # MemberPageController(참가자) …
+│   │   └── Rotation/       # 관리자 기능별 컨트롤러: Event·Roster(체크인)·Seating(로테이션 진행)·Match·EventMessage
+│   │                       #   ·DetailPage·Qr·Promotion(초대 멘트)·Guide(안내)·MeetingHistory·Calculator (공통: RotationBaseController)
+│   ├── Http/Requests/Admin/Rotation/  # 요청 검증(FormRequest, 공통: ApiFormRequest → 실패 시 apiRes 400)
 │   ├── Services/           # RotationService (핵심 도메인 로직)
 │   ├── Models/             # EventRound, Member, Rotation*, Vote, Message …
 │   └── Events/             # 메시지/요청 실시간 이벤트

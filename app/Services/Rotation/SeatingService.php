@@ -56,7 +56,7 @@ class SeatingService
         }
 
         // 테이블 목록 (오름차순). 남자 이동 공식의 기준.
-        $tables   = RotationTable::where('event_id', $eventId)
+        $tables     = RotationTable::where('event_id', $eventId)
             ->orderBy('table_no')
             ->get();
         $tableCount = $tables->count();
@@ -69,7 +69,7 @@ class SeatingService
 
         // 각 기준 좌석을, 보고 있는 턴(roundNo)의 실제 테이블 번호로 매핑해 테이블별로 묶는다.
         // roundNo <= 0 (기준자리 편집 뷰)이면 홈 테이블 그대로 보여준다.
-        $viewRound = $roundNo <= 0 ? 1 : $roundNo; // 1턴 = 기준자리 그대로
+        $viewRound         = $roundNo <= 0 ? 1 : $roundNo; // 1턴 = 기준자리 그대로
         $seatingsByTableNo = $seats->groupBy(function (RotationSeat $seat) use ($viewRound, $tableNos) {
             /** @var object $seat */
             $homeNo = (int) ($seat->member && $seat->table ? $seat->table->table_no : 0);
@@ -109,17 +109,19 @@ class SeatingService
         return [
             'tables' => $tableData,
             'meta'   => [
-                'event_status'  => $eventStatus,
-                'table_count'   => $tableCount,
-                'current_round' => $currentRound,
-                'view_round'    => $roundNo,
-                // 테이블 N개면 N턴에서 남자가 제자리 복귀 → 마지막 턴.
-                'is_last'       => $tableCount > 0 && $currentRound >= $tableCount,
-                'is_voting'     => $eventStatus === EventRound::STATUS_VOTING,
-                'is_closed'     => $eventStatus === EventRound::STATUS_CLOSED,
+                'event_status'   => $eventStatus,
+                'table_count'    => $tableCount,
+                'current_round'  => $currentRound,
+                'view_round'     => $roundNo,
+                // 마지막 턴 = 로테이션 횟수(지정 시) 또는 테이블 수.
+                'max_round'      => $event?->maxRound($tableCount) ?? 0,
+                'rotation_limit' => $event?->rotation_limit,
+                'is_last'        => $event !== null && $event->isLastRound($tableCount, $currentRound),
+                'is_voting'      => $eventStatus === EventRound::STATUS_VOTING,
+                'is_closed'      => $eventStatus === EventRound::STATUS_CLOSED,
                 // 1:1 로테이션 여부. 1:1은 매칭 선택을 '홈'에서 받으므로
                 // 마지막 턴에서 '매칭 시작(V)' 없이 바로 '매칭 종료(X)'한다.
-                'is_one_to_one' => $event !== null && $event->isOneToOne(),
+                'is_one_to_one'  => $event !== null && $event->isOneToOne(),
             ],
         ];
     }
@@ -254,7 +256,7 @@ class SeatingService
      *
      * 규칙(계산은 EventRound::seatedTableNoFor):
      * - 1턴은 기준자리 그대로. 2턴부터 남자만 +1 이동(마지막→첫번째 순환), 여자 고정.
-     * - 테이블이 N개면 N턴이 마지막(남자가 제자리 복귀).
+     * - 마지막 턴은 EventRound::maxRound(): 로테이션 횟수를 지정했으면 그 턴, 아니면 테이블 수(N턴).
      *
      * 최초 진행(current_round 0→1) 시 행사 상태를 '진행(S)'으로 전환한다.
      *
@@ -276,7 +278,7 @@ class SeatingService
                 throw new Exception('배정된 좌석이 없습니다. 먼저 회원을 테이블에 배정해주세요.');
             }
 
-            $nextRoundNo = DB::transaction(function () use ($eventId, $tableCount) {
+            [$nextRoundNo, $maxRound] = DB::transaction(function () use ($eventId, $tableCount) {
                 /** @var EventRound $event */
                 $event = EventRound::lockForUpdate()->find($eventId);
                 if ($event === null) {
@@ -284,10 +286,11 @@ class SeatingService
                 }
 
                 $next = (int) $event->current_round + 1;
+                $max  = $event->maxRound($tableCount);
 
-                // 마지막 턴(N)을 넘겨서 진행하지 않도록 상한을 둔다.
-                if ($next > $tableCount) {
-                    throw new Exception('이미 마지막 턴입니다. 더 이상 진행할 수 없습니다.');
+                // 마지막 턴(로테이션 횟수 또는 테이블 수)을 넘겨서 진행하지 않도록 상한을 둔다.
+                if ($next > $max) {
+                    throw new Exception("이미 마지막 턴({$max}턴)입니다. 더 이상 진행할 수 없습니다.");
                 }
 
                 $event->current_round = $next;
@@ -301,17 +304,16 @@ class SeatingService
 
                 $event->save();
 
-                return $next;
+                return [$next, $max];
             });
 
-            // 테이블이 N개면 N턴이 마지막(남자가 제자리 복귀).
-            $isLast = $nextRoundNo >= $tableCount;
+            $isLast = $nextRoundNo >= $maxRound;
 
-            $returnMsg = helpersSuccessMessage("{$nextRoundNo}턴으로 로테이션을 진행했습니다.");
+            $returnMsg         = helpersSuccessMessage("{$nextRoundNo}턴으로 로테이션을 진행했습니다. (총 {$maxRound}턴)");
             $returnMsg['data'] = [
                 'round_no'  => $nextRoundNo,
                 'is_last'   => $isLast,
-                'max_round' => $tableCount,
+                'max_round' => $maxRound,
                 'status'    => EventRound::STATUS_STARTED,
             ];
 
@@ -343,7 +345,8 @@ class SeatingService
         try {
             $tableCount = RotationTable::where('event_id', $eventId)->count();
 
-            $result = DB::transaction(function () use ($eventId) {
+            $maxRound = 0;
+            $result   = DB::transaction(function () use ($eventId, $tableCount, &$maxRound) {
                 /** @var EventRound $event */
                 $event = EventRound::lockForUpdate()->find($eventId);
                 if ($event === null) {
@@ -359,8 +362,9 @@ class SeatingService
                     throw new Exception('되돌릴 턴이 없습니다. (아직 로테이션 시작 전)');
                 }
 
-                $prev = $current - 1;
+                $prev                 = $current - 1;
                 $event->current_round = $prev;
+                $maxRound             = $event->maxRound($tableCount);
 
                 // 1 → 0 이면 로테이션 시작 전으로 되돌아가므로 상태를 대기(P)로.
                 // 1:1 은 진행 시 기록한 voting_opened_at 도 되돌린다.
@@ -376,7 +380,7 @@ class SeatingService
                 return $prev;
             });
 
-            $isLast = $tableCount > 0 && $result >= $tableCount;
+            $isLast = $maxRound > 0 && $result >= $maxRound;
 
             $returnMsg = helpersSuccessMessage(
                 $result === 0
@@ -386,11 +390,73 @@ class SeatingService
             $returnMsg['data'] = [
                 'round_no'  => $result,
                 'is_last'   => $isLast,
-                'max_round' => $tableCount,
+                'max_round' => $maxRound,
                 // 1→0 되돌림이면 대기(P), 그 외엔 진행(S) 유지.
                 'status'    => $result === 0 ? EventRound::STATUS_PENDING : EventRound::STATUS_STARTED,
             ];
 
+            broadcast(new \App\Events\RotationUpdated($eventId));
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 로테이션 횟수(총 턴 수) 지정. 테이블 수와 상관없이 k턴에서 종료하도록 한다.
+     *
+     *  - null(빈 값): 테이블 수만큼 진행 (기본)
+     *  - 1 ≤ k ≤ 테이블 수. (테이블 수를 넘기면 같은 상대를 다시 만남)
+     *  - 로테이션 시작 전(0턴·대기)에만 바꿀 수 있다. 진행 중 변경은 참가자 안내·턴 계산이 흔들리므로 막는다.
+     *    (시작 후 바꾸려면 '로테이션 되돌리기'로 0턴까지 되돌린 뒤 변경)
+     *
+     * @return array{isSuccess:bool, message?:string, data?:array{rotation_limit:?int, max_round:int, is_last:bool}}
+     */
+    public function setRotationLimit(int $eventId, ?int $limit): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $tableCount = RotationTable::where('event_id', $eventId)->count();
+            if ($tableCount === 0) {
+                throw new Exception('생성된 테이블이 없습니다. 먼저 테이블을 생성해주세요.');
+            }
+
+            $event = DB::transaction(function () use ($eventId, $limit, $tableCount) {
+                /** @var EventRound|null $event */
+                $event = EventRound::lockForUpdate()->find($eventId);
+                if ($event === null) {
+                    throw new Exception('행사를 찾을 수 없습니다.');
+                }
+                if ((int) $event->current_round > 0 || $event->status !== EventRound::STATUS_PENDING) {
+                    throw new Exception('로테이션 횟수는 로테이션 시작 전(0턴)에만 바꿀 수 있습니다.');
+                }
+                if ($limit !== null && ($limit < 1 || $limit > $tableCount)) {
+                    throw new Exception("로테이션 횟수는 1~{$tableCount}턴(테이블 수) 사이로 입력해 주세요.");
+                }
+
+                // 테이블 수와 같으면 '지정 안 함'과 동일하므로 null 로 저장해 테이블 추가/삭제에도 자동으로 따라가게 한다.
+                $event->rotation_limit = ($limit === null || $limit === $tableCount) ? null : $limit;
+                $event->save();
+
+                return $event;
+            });
+
+            $max = $event->maxRound($tableCount);
+
+            $returnMsg = helpersSuccessMessage(
+                $event->rotation_limit === null
+                    ? "로테이션 횟수를 테이블 수만큼({$max}턴)으로 설정했습니다."
+                    : "로테이션 횟수를 {$max}턴으로 설정했습니다.",
+            );
+            $returnMsg['data'] = [
+                'rotation_limit' => $event->rotation_limit,
+                'max_round'      => $max,
+                'is_last'        => $event->isLastRound($tableCount),
+            ];
+
+            // 참가자 홈의 '마지막 로테이션' 표기가 바뀔 수 있으므로 갱신.
             broadcast(new \App\Events\RotationUpdated($eventId));
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
@@ -422,7 +488,7 @@ class SeatingService
             // 참가자 화면을 실시간으로 갱신하여 '매칭하기' 탭을 바로 노출. 와인파티·1:1 공통.
             broadcast(new \App\Events\EventVotingOpened($event->id));
 
-            $returnMsg = helpersSuccessMessage('매칭을 시작했습니다.');
+            $returnMsg         = helpersSuccessMessage('매칭을 시작했습니다.');
             $returnMsg['data'] = ['status' => EventRound::STATUS_VOTING];
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
@@ -468,7 +534,7 @@ class SeatingService
             // 참가자 화면 복구: '매칭하기' 탭을 닫고 홈(로테이션 진행 화면)으로 되돌린다.
             broadcast(new \App\Events\RotationUpdated($eventId));
 
-            $returnMsg = helpersSuccessMessage('매칭 시작을 취소하고 진행 상태로 되돌렸습니다. (기존 투표는 유지)');
+            $returnMsg         = helpersSuccessMessage('매칭 시작을 취소하고 진행 상태로 되돌렸습니다. (기존 투표는 유지)');
             $returnMsg['data'] = ['status' => EventRound::STATUS_STARTED];
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
@@ -502,7 +568,7 @@ class SeatingService
             // 운영진 텔레그램 요약 리포트는 비동기(Job)로 전송한다. (마감 응답을 지연시키지 않음)
             SendCloseVotingReportJob::dispatch($event->id, $trigger);
 
-            $returnMsg = helpersSuccessMessage('매칭을 마감했습니다.');
+            $returnMsg         = helpersSuccessMessage('매칭을 마감했습니다.');
             $returnMsg['data'] = ['status' => EventRound::STATUS_CLOSED];
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
@@ -569,8 +635,8 @@ class SeatingService
                 broadcast(new \App\Events\RotationUpdated($eventId));
             }
 
-            $label     = EventRound::statusOptions()[$result] ?? $result;
-            $returnMsg = helpersSuccessMessage("종료를 되돌렸습니다. (현재 상태: {$label})");
+            $label             = EventRound::statusOptions()[$result] ?? $result;
+            $returnMsg         = helpersSuccessMessage("종료를 되돌렸습니다. (현재 상태: {$label})");
             $returnMsg['data'] = ['status' => $result];
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
@@ -645,7 +711,7 @@ class SeatingService
 
         // 노쇼: 체크인 명단(event_rosters)에 있었으나 당일 참석(체크인)하지 않은 신청자 수.
         // checked_in_at 이 null 이면 미참석(노쇼)으로 본다. 성별이 F 가 아니면 남(M)으로 귀속한다.
-        $noShowBase = $event->rosters()->whereNull('checked_in_at');
+        $noShowBase   = $event->rosters()->whereNull('checked_in_at');
         $noShowTotal  = (clone $noShowBase)->count();
         $noShowFemale = (clone $noShowBase)->where('gender', Member::GENDER_FEMALE)->count();
         $noShowMale   = $noShowTotal - $noShowFemale;

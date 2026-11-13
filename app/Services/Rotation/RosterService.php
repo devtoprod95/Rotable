@@ -317,8 +317,8 @@ class RosterService
                     return helpersFailMessage('이미 입장등록한 번호표라 체크인을 취소할 수 없습니다.');
                 }
 
-                $roster->checked_in_at    = null;
-                $roster->ticket_no        = null;
+                $roster->checked_in_at     = null;
+                $roster->ticket_no         = null;
                 $roster->rotation_table_id = null;  // 테이블 지정도 함께 회수
                 $roster->save();
 
@@ -383,13 +383,13 @@ class RosterService
                 $roster->save();
             }
 
-            $kindLabel            = ['manual' => '직접 입력', 'auto' => '자동 배정', 'existing' => '기존 번호 유지'][$assigned];
-            $res                  = helpersSuccessMessage("참석 처리했습니다. 번호표 {$roster->ticket_no}번 ({$kindLabel})");
-            $res['checked_in']    = true;
-            $res['checked_in_at'] = $roster->checked_in_at?->format('Y-m-d H:i');
-            $res['ticket_no']     = (int) $roster->ticket_no;
+            $kindLabel                = ['manual' => '직접 입력', 'auto' => '자동 배정', 'existing' => '기존 번호 유지'][$assigned];
+            $res                      = helpersSuccessMessage("참석 처리했습니다. 번호표 {$roster->ticket_no}번 ({$kindLabel})");
+            $res['checked_in']        = true;
+            $res['checked_in_at']     = $roster->checked_in_at?->format('Y-m-d H:i');
+            $res['ticket_no']         = (int) $roster->ticket_no;
             $res['rotation_table_id'] = $roster->rotation_table_id !== null ? (int) $roster->rotation_table_id : null;
-            $res['assigned']      = $assigned;
+            $res['assigned']          = $assigned;
 
             return $res;
         } catch (UniqueConstraintViolationException) {
@@ -505,7 +505,7 @@ class RosterService
                     $member->save();
                 }
 
-                $res              = helpersSuccessMessage("번호표를 {$old}번 → {$newTicket}번으로 바꿨습니다."
+                $res                      = helpersSuccessMessage("번호표를 {$old}번 → {$newTicket}번으로 바꿨습니다."
                     . ($tableChanged ? ' (테이블도 변경)' : '')
                     . ($member ? ' (입장등록한 회원 번호도 함께 변경)' : ''));
                 $res['ticket_no']         = $newTicket;
@@ -927,7 +927,7 @@ class RosterService
                     $checked++;
                 }
 
-                $msg = "더미 체크인 {$checked}명 완료" . ($skipped > 0 ? " (남은 자리가 없어 {$skipped}명 건너뜀)" : '');
+                $msg            = "더미 체크인 {$checked}명 완료" . ($skipped > 0 ? " (남은 자리가 없어 {$skipped}명 건너뜀)" : '');
                 $res            = helpersSuccessMessage($msg);
                 $res['checked'] = $checked;
                 $res['skipped'] = $skipped;

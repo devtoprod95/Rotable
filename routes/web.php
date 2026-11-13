@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\MemberAuthController;
 use App\Http\Controllers\MemberPageController;
+use App\Http\Controllers\Rotation\GuideController;
 use App\Http\Middleware\RedirectIfRegistered;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\QrRedirectController;
@@ -23,12 +24,12 @@ Route::get('/qr/{code}', [QrRedirectController::class, 'redirect'])
 // 참가자 안내 슬라이드 공개 페이지 (비인증) — /public/guide 또는 /public/guide/{type}(wine|solo)
 // 공개 미니게임 — 로그인/테이블 없이 "지금 이 페이지에 접속한 사람들"끼리 즐기는 버전.
 Route::prefix('public')->name('public.')->group(function () {
-    Route::get('/guide/{type?}', [\App\Http\Controllers\RotationController::class, 'guidePublic'])
+    Route::get('/guide/{type?}', [GuideController::class, 'guidePublic'])
         ->where('type', 'wine|solo')
         ->name('guide');
 
     // 호스트 발표 멘트(대본) — 안내 슬라이드를 보며 읽는 진행 멘트. 핸드폰으로 보기 좋은 단일 페이지.
-    Route::get('/script/{type?}', [\App\Http\Controllers\RotationController::class, 'scriptPublic'])
+    Route::get('/script/{type?}', [GuideController::class, 'scriptPublic'])
         ->where('type', 'wine|solo')
         ->name('script');
 

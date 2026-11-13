@@ -1,6 +1,6 @@
 {{--
     호스트 발표 멘트(대본) 공개 페이지 — 핸드폰으로 보며 읽는 진행 멘트.
-    컨트롤러(RotationController@scriptPublic)에서 $type, $script 를 받는다.
+    컨트롤러(Rotation\GuideController@scriptPublic)에서 $type, $script 를 받는다.
     - $type   : 'wine' | 'solo'
     - $script : ['title' => string, 'sections' => [['no','heading','lines'=>[]], ...]]
 --}}

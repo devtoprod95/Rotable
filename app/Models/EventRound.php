@@ -53,7 +53,7 @@ class EventRound extends Model
     protected $table = 'event_rounds';
 
     /** @var list<string> */
-    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'current_round', 'created_by'];
+    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'current_round', 'rotation_limit', 'created_by'];
 
     /**
      * @return array<string, string>
@@ -61,10 +61,11 @@ class EventRound extends Model
     protected function casts(): array
     {
         return [
-            'event_time'       => 'datetime',
-            'voting_opened_at' => 'datetime',
+            'event_time'          => 'datetime',
+            'voting_opened_at'    => 'datetime',
             'review_gate_enabled' => 'boolean',
-            'current_round'    => 'integer',
+            'current_round'       => 'integer',
+            'rotation_limit'      => 'integer',
         ];
     }
 
@@ -225,7 +226,8 @@ class EventRound extends Model
      | 규칙(README):
      |  - 1턴은 기준자리 그대로.
      |  - 2턴부터 남자만 table_no 오름차순 다음 테이블로 +1 이동(마지막→첫번째 순환), 여자는 고정.
-     |  - 테이블이 N개면 N턴이 마지막(남자가 제자리 복귀).
+     |  - 마지막 턴 = maxRound(): 로테이션 횟수(rotation_limit)를 지정했으면 그 턴, 아니면 테이블 수(N턴).
+     |    (테이블 수를 넘기면 같은 상대를 다시 만나므로 상한은 테이블 수)
      | 여기서 current_round=0 은 "로테이션 시작 전"을 뜻한다. (관리자가 진행하면 1부터 시작)
      * ==================================================================== */
 
@@ -262,12 +264,36 @@ class EventRound extends Model
     }
 
     /**
-     * 현재 턴이 마지막 턴인지 여부. (테이블 N개면 N턴에서 남자가 제자리 복귀)
+     * 이 행사의 마지막 턴 번호(= 총 로테이션 횟수).
+     *
+     *  - 로테이션 횟수(rotation_limit)를 지정했으면 그 값, 아니면 테이블 수.
+     *  - 테이블 수를 넘길 수 없다. (N턴을 넘기면 남자가 이미 만난 테이블로 다시 돌아감)
+     *  - 테이블이 없으면 0.
+     *
+     * @param  int|null  $tableCount  이미 구한 테이블 수 (없으면 조회)
      */
-    public function isLastRound(): bool
+    public function maxRound(?int $tableCount = null): int
     {
-        $tableCount = $this->rotationTables()->count();
+        $tableCount ??= $this->rotationTables()->count();
+        if ($tableCount <= 0) {
+            return 0;
+        }
 
-        return $tableCount > 0 && $this->current_round >= $tableCount;
+        $limit = (int) ($this->rotation_limit ?? 0);
+
+        return $limit > 0 ? min($limit, $tableCount) : $tableCount;
+    }
+
+    /**
+     * 주어진 턴(기본: 현재 턴)이 마지막 턴인지 여부.
+     *
+     * @param  int|null  $tableCount  이미 구한 테이블 수 (없으면 조회)
+     * @param  int|null  $round       판정할 턴 (없으면 current_round)
+     */
+    public function isLastRound(?int $tableCount = null, ?int $round = null): bool
+    {
+        $max = $this->maxRound($tableCount);
+
+        return $max > 0 && ($round ?? (int) $this->current_round) >= $max;
     }
 }

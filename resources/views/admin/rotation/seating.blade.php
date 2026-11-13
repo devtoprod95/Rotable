@@ -19,6 +19,16 @@
     .seat-chips .chip-remove { transition: background-color .12s ease; cursor: pointer; }
     .seat-chips .chip-remove:hover { background-color: rgba(214, 57, 57, 0.15); }
 
+    /* 진행 컨트롤 패널(턴 / 로테이션 횟수 / 진행) — 같은 높이의 카드형 칸 */
+    .seating-panel { border: 1px solid var(--tblr-border-color, #e6e7e9); border-radius: 10px; padding: .85rem 1rem; background: var(--tblr-bg-surface-secondary, #f8fafc); }
+    .seating-panel__label { font-weight: 700; font-size: .85rem; color: var(--tblr-secondary, #667382); margin-bottom: .5rem; }
+    /* 보조 액션이 하나도 안 보이면 여백도 없앤다 */
+    .seating-sub-actions:not(:has(.btn:not(.d-none))) { display: none !important; }
+    @media (max-width: 767.98px){
+        /* 모바일: 보조 액션은 꽉 찬 폭으로 누르기 쉽게 */
+        .seating-sub-actions .btn { flex: 1 1 100%; }
+    }
+
     /* 상단 결과조회 버튼: 데스크톱은 한 줄, 모바일은 2열 그리드로 가지런히 */
     .seating-result-grid { display: flex; gap: .5rem; flex-wrap: wrap; }
     @media (max-width: 767.98px){
@@ -68,52 +78,80 @@
                     @endforeach
                 </select>
 
-                <div class="row g-3 align-items-start">
-                    <div class="col-md-4">
-                        <label class="form-label">턴</label>
-                        <div class="input-group">
-                            <button class="btn btn-outline-secondary" type="button" id="roundPrev" title="이전 턴">
-                                <i class="ti ti-chevron-left"></i>
-                            </button>
-                            <input type="number" min="0" class="form-control text-center" id="roundInput" value="{{ $roundNo }}" readonly>
-                            <button class="btn btn-outline-secondary" type="button" id="roundNext" title="다음 턴">
-                                <i class="ti ti-chevron-right"></i>
-                            </button>
-                        </div>
-                        <small class="form-hint text-muted" id="roundHint">턴을 이동하며 배치를 볼 수 있습니다.</small>
-                    </div>
-                    <div class="col-md-8">
-                        <label class="form-label d-none d-md-block" id="actionLabel">&nbsp;</label>
-                        <div class="d-flex align-items-center" style="min-height: 38px;">
-                            <button type="button" class="btn btn-primary w-100 d-none" id="rotateBtn">
-                                <i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행
-                            </button>
-                            <button type="button" class="btn btn-success w-100 d-none" id="finishBtn">
-                                <i class="ti ti-checkbox me-1"></i>매칭 시작
-                            </button>
-                            <button type="button" class="btn btn-danger w-100 d-none" id="closeVotingBtn">
-                                <i class="ti ti-flag-check me-1"></i>매칭 종료
-                            </button>
-                            <span class="btn btn-outline-secondary w-100 d-none disabled" id="closedBtn">
-                                <i class="ti ti-lock me-1"></i>종료된 행사
-                            </span>
-                            <div class="d-none align-items-center justify-content-center text-danger fw-bold text-center w-100" id="pastNotice">
-                                최신 턴에서만 로테이션을 진행할 수 있습니다.
+                {{-- 진행 컨트롤 — PC(lg↑): [턴 | 로테이션 횟수 | 진행 액션] 3칸 / 태블릿: 2칸 + 액션 한 줄 / 모바일: 세로 --}}
+                <div class="row g-3 align-items-stretch">
+                    {{-- ① 턴 이동 --}}
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="seating-panel h-100">
+                            <div class="seating-panel__label">턴</div>
+                            <div class="input-group">
+                                <button class="btn btn-outline-secondary" type="button" id="roundPrev" title="이전 턴" aria-label="이전 턴">
+                                    <i class="ti ti-chevron-left"></i>
+                                </button>
+                                <input type="number" min="0" class="form-control text-center fw-bold fs-3" id="roundInput" value="{{ $roundNo }}" readonly aria-label="보고 있는 턴">
+                                <button class="btn btn-outline-secondary" type="button" id="roundNext" title="다음 턴" aria-label="다음 턴">
+                                    <i class="ti ti-chevron-right"></i>
+                                </button>
                             </div>
+                            <small class="form-hint text-muted mt-2 d-block" id="roundHint">턴을 이동하며 배치를 볼 수 있습니다.</small>
                         </div>
-                        {{-- 로테이션 되돌리기 (실수로 한 번 더 진행했을 때). 진행 중(S)·1턴 이상에서만 노출 --}}
-                        <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 d-none" id="rotateBackBtn">
-                            <i class="ti ti-arrow-back-up me-1"></i>로테이션 되돌리기 (이전 턴)
-                        </button>
-                        {{-- 종료 되돌리기 (실수로 매칭을 종료했을 때). 종료(X) 상태에서만 노출 --}}
-                        <button type="button" class="btn btn-outline-dark btn-sm w-100 mt-2 d-none" id="reopenBtn">
-                            <i class="ti ti-lock-open me-1"></i>종료 되돌리기 (이전 상태로)
-                        </button>
-                        {{-- 매칭 시작 취소 (실수로 매칭을 시작했을 때). 매칭중(V)·와인파티에서만 노출. 기존 투표는 유지 --}}
-                        <button type="button" class="btn btn-outline-secondary btn-sm w-100 mt-2 d-none" id="cancelVotingBtn">
-                            <i class="ti ti-arrow-back-up me-1"></i>매칭 시작 취소 (진행으로)
-                        </button>
-                        <small class="form-hint text-muted mt-2 d-block" id="actionHint"></small>
+                    </div>
+
+                    {{-- ② 로테이션 횟수(총 턴 수): 테이블 수와 별개로 지정. 비우면 테이블 수만큼 (0턴에서만 수정) --}}
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="seating-panel h-100 d-none" id="rotationLimitBox">
+                            <div class="seating-panel__label d-flex align-items-center justify-content-between">
+                                <label class="mb-0" for="rotationLimitInput">로테이션 횟수</label>
+                                <span class="badge bg-azure-lt" id="rotationProgressBadge"></span>
+                            </div>
+                            <div class="input-group">
+                                <input type="number" min="1" class="form-control text-center" id="rotationLimitInput"
+                                       inputmode="numeric" placeholder="테이블 수">
+                                <span class="input-group-text">턴</span>
+                                <button type="button" class="btn btn-outline-primary" id="rotationLimitSave">저장</button>
+                            </div>
+                            <small class="form-hint text-muted mt-2 d-block" id="rotationLimitHint"></small>
+                        </div>
+                    </div>
+
+                    {{-- ③ 진행 액션: 주 버튼 크게 + 되돌리기류는 작은 버튼으로 한 줄 --}}
+                    <div class="col-12 col-lg-5">
+                        <div class="seating-panel h-100 d-flex flex-column">
+                            <div class="seating-panel__label" id="actionLabel">진행</div>
+                            <div class="d-flex align-items-center" style="min-height: 44px;">
+                                <button type="button" class="btn btn-primary btn-lg w-100 d-none" id="rotateBtn">
+                                    <i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행
+                                </button>
+                                <button type="button" class="btn btn-success btn-lg w-100 d-none" id="finishBtn">
+                                    <i class="ti ti-checkbox me-1"></i>매칭 시작
+                                </button>
+                                <button type="button" class="btn btn-danger btn-lg w-100 d-none" id="closeVotingBtn">
+                                    <i class="ti ti-flag-check me-1"></i>매칭 종료
+                                </button>
+                                <span class="btn btn-outline-secondary btn-lg w-100 d-none disabled" id="closedBtn">
+                                    <i class="ti ti-lock me-1"></i>종료된 행사
+                                </span>
+                                <div class="d-none align-items-center justify-content-center text-danger fw-bold text-center w-100" id="pastNotice">
+                                    최신 턴에서만 로테이션을 진행할 수 있습니다.
+                                </div>
+                            </div>
+                            {{-- 보조 액션(되돌리기류) — 노출되는 것만 가로로 나란히 --}}
+                            <div class="d-flex flex-wrap gap-2 mt-2 seating-sub-actions">
+                                {{-- 로테이션 되돌리기 (실수로 한 번 더 진행했을 때). 진행 중(S)·1턴 이상에서만 노출 --}}
+                                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="rotateBackBtn">
+                                    <i class="ti ti-arrow-back-up me-1"></i>로테이션 되돌리기 (이전 턴)
+                                </button>
+                                {{-- 종료 되돌리기 (실수로 매칭을 종료했을 때). 종료(X) 상태에서만 노출 --}}
+                                <button type="button" class="btn btn-outline-dark btn-sm d-none" id="reopenBtn">
+                                    <i class="ti ti-lock-open me-1"></i>종료 되돌리기 (이전 상태로)
+                                </button>
+                                {{-- 매칭 시작 취소 (실수로 매칭을 시작했을 때). 매칭중(V)·와인파티에서만 노출. 기존 투표는 유지 --}}
+                                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="cancelVotingBtn">
+                                    <i class="ti ti-arrow-back-up me-1"></i>매칭 시작 취소 (진행으로)
+                                </button>
+                            </div>
+                            <small class="form-hint text-muted mt-2 d-block" id="actionHint"></small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -132,6 +170,7 @@
         const deleteUrl  = "{{ route('admin.rotation.seating.delete') }}";
         const rotateUrl  = "{{ route('admin.rotation.seating.rotate') }}";
         const rotateBackUrl = "{{ route('admin.rotation.seating.rotateBack') }}";
+        const rotationLimitUrl = "{{ route('admin.rotation.seating.rotationLimit') }}";
         const finishUrl  = "{{ route('admin.rotation.seating.finish') }}";
         const closeVotingUrl = "{{ route('admin.rotation.seating.closeVoting') }}";
         const cancelVotingUrl = "{{ route('admin.rotation.seating.cancelVoting') }}";
@@ -326,6 +365,8 @@
                 $roundHint.html('조회 전용 화면입니다. 자리를 옮기려면 <b>1턴(기준)</b>으로 이동하세요.');
             }
 
+            renderRotationLimit(meta);
+
             // 생성된 테이블이 없으면 액션 버튼을 노출하지 않는다.
             if(!meta.table_count){
                 $hint.text('');
@@ -364,10 +405,10 @@
                 if(meta.is_one_to_one){
                     // 1:1: 매칭 선택을 홈에서 받으므로 '매칭 시작(V)' 없이 바로 '매칭 종료(X)'.
                     $closeVoting.removeClass('d-none');
-                    $hint.text('마지막 턴입니다. 매칭을 종료하면 결과가 공개됩니다.');
+                    $hint.text('마지막 턴(' + (meta.max_round || '') + '턴)입니다. 매칭을 종료하면 결과가 공개됩니다.');
                 } else {
                     $finish.removeClass('d-none');
-                    $hint.text('마지막 턴입니다. 매칭을 시작할 수 있습니다.');
+                    $hint.text('마지막 턴(' + (meta.max_round || '') + '턴)입니다. 매칭을 시작할 수 있습니다.');
                 }
             } else {
                 $rotate.removeClass('d-none');
@@ -387,6 +428,55 @@
                 $rotateBack.removeClass('d-none');
             }
         }
+
+        // 로테이션 횟수 박스: 현재 진행(N/총 M턴) + 입력값. 로테이션 시작 전(0턴·대기)에만 수정 가능.
+        function renderRotationLimit(meta){
+            var $box = $('#rotationLimitBox');
+            var tables = meta.table_count || 0;
+            if(!tables){ $box.addClass('d-none'); return; }
+            $box.removeClass('d-none');
+
+            var max = meta.max_round || tables;
+            var cur = meta.current_round || 0;
+            var locked = cur > 0 || meta.event_status !== 'P';
+
+            $('#rotationProgressBadge').text(cur + ' / ' + max + '턴');
+            var $in = $('#rotationLimitInput');
+            // 입력 중에는 덮어쓰지 않는다. (주기적 갱신 시 값이 튀지 않게)
+            if(!$in.is(':focus')){ $in.val(meta.rotation_limit ? meta.rotation_limit : ''); }
+            $in.attr({ min: 1, max: tables, placeholder: tables + ' (테이블 수)' }).prop('disabled', locked);
+            $('#rotationLimitSave').toggleClass('d-none', locked);
+
+            $('#rotationLimitHint').html(locked
+                ? '<i class="ti ti-lock me-1"></i>로테이션이 시작되어 횟수가 <b>' + max + '턴</b>으로 고정됐어요. 바꾸려면 0턴까지 되돌린 뒤 수정하세요.'
+                : (meta.rotation_limit
+                    ? '<b>' + max + '턴</b>에서 종료돼요. (테이블 ' + tables + '개 중 남자가 ' + max + '개 테이블만 돌아요) · 비우고 저장하면 테이블 수만큼'
+                    : '비워두면 테이블 수만큼(<b>' + tables + '턴</b>) 진행해요. 1~' + tables + '턴 사이로 줄일 수 있어요.'));
+        }
+
+        // 로테이션 횟수 저장
+        $('#rotationLimitSave').on('click', function(){
+            var raw = String($('#rotationLimitInput').val() || '').trim();
+            if(raw !== '' && !/^\d+$/.test(raw)){
+                alert('로테이션 횟수는 숫자로 입력해 주세요.');
+                return;
+            }
+            var $btn = $(this).prop('disabled', true);
+            // ※ complete 옵션을 쓰면 전역 $.ajaxSetup 의 complete(로딩창 닫기)를 덮어써 무한 로딩이 된다 → .always() 사용
+            $.ajax({
+                url: rotationLimitUrl,
+                type: 'POST',
+                data: { event_id: $('#eventSelect').val(), rotation_limit: raw },
+                success: function(res){
+                    $('#rotationLimitInput').blur();
+                    $.when(loadData()).always(function(){ alert(res?.msg); });
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            }).always(function(){ $btn.prop('disabled', false); });
+        });
+        $('#rotationLimitInput').on('keydown', function(e){
+            if(e.key === 'Enter'){ e.preventDefault(); $('#rotationLimitSave').trigger('click'); }
+        });
 
         function renderBoard(data){
             // 이전 Choices 인스턴스를 먼저 정리(원본 select 복원)한 뒤 보드를 비운다.

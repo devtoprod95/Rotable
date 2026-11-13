@@ -75,6 +75,8 @@ class MemberPageController extends Controller
             ->map(fn ($n) => (int) $n)
             ->all();
         $tableCount = count($tableNos);
+        // 마지막 턴 = 로테이션 횟수(지정 시) 또는 테이블 수.
+        $maxRound   = $event?->maxRound($tableCount) ?? $tableCount;
 
         // 현재 턴(0이면 아직 로테이션 시작 전 → 노출할 턴 없음).
         $currentRound = (int) ($event?->current_round ?? 0);
@@ -120,8 +122,8 @@ class MemberPageController extends Controller
         // 1턴부터 현재 턴까지 각 턴을 공식으로 계산해 최신 턴이 위로 오도록 내림차순 구성.
         $rotations = collect(range($currentRound, 1))
             ->filter(fn ($t) => $t >= 1) // currentRound=0 이면 빈 목록
-            ->map(function (int $round) use ($seats, $homeTableNoByMember, $currentTableNoByMember, $myId, $oppositeGen, $tableNos, $tableCount, $eventStatus) {
-                $myHome = $homeTableNoByMember[$myId] ?? null;
+            ->map(function (int $round) use ($seats, $homeTableNoByMember, $currentTableNoByMember, $myId, $oppositeGen, $tableNos, $maxRound, $eventStatus) {
+                $myHome    = $homeTableNoByMember[$myId] ?? null;
                 $myTableNo = $myHome === null
                     ? null
                     : EventRound::seatedTableNoFor(
@@ -162,7 +164,7 @@ class MemberPageController extends Controller
                     'table_no' => $myTableNo,
                     'status'   => $eventStatus,
                     'partners' => $partners,
-                    'is_last'  => $tableCount > 0 && $round >= $tableCount,
+                    'is_last'  => $maxRound > 0 && $round >= $maxRound,
                 ];
             })
             ->values();
@@ -203,22 +205,22 @@ class MemberPageController extends Controller
     private function transformMember(Member $member, ?int $currentTableNo = null): array
     {
         return [
-            'id'         => $member->id,
-            'name'       => $member->name,
-            'gender'     => $member->gender,
-            'birth_year' => $member->birth_year,
-            'job'        => $member->job,
-            'height'     => $member->height,
-            'mbti'       => $member->mbti,
-            'region'     => $member->region,
-            'is_smoker'  => $member->is_smoker,
+            'id'               => $member->id,
+            'name'             => $member->name,
+            'gender'           => $member->gender,
+            'birth_year'       => $member->birth_year,
+            'job'              => $member->job,
+            'height'           => $member->height,
+            'mbti'             => $member->mbti,
+            'region'           => $member->region,
+            'is_smoker'        => $member->is_smoker,
             // 현재 턴 기준 상대가 앉아 있는 테이블 번호 (로테이션 시작 전/미배정이면 null)
             'current_table_no' => $currentTableNo,
             // 추가 프로필 (모든 유형 공통) — 상대 카드 상세 모달용
-            'ideal_type' => $member->ideal_type,
-            'merit'      => $member->merit,
-            'hobby'      => $member->hobby,
-            'tmi'        => $member->tmi,
+            'ideal_type'       => $member->ideal_type,
+            'merit'            => $member->merit,
+            'hobby'            => $member->hobby,
+            'tmi'              => $member->tmi,
         ];
     }
 
@@ -310,7 +312,7 @@ class MemberPageController extends Controller
             'partners'       => $partners,
             'partnerGender'  => $oppositeGen,
             'canSendMessage' => $canSendMessage,
-            'sendLimit'     => [
+            'sendLimit'      => [
                 'max'       => $max,
                 'used'      => $used,
                 'remaining' => max(0, $max - $used),
@@ -543,14 +545,14 @@ class MemberPageController extends Controller
             // 매칭 여부는 종료(X) 후에만 공개한다. 매칭중(V)에는 쌍방이어도 노출하지 않는다.
             $isMatch     = $isClosed && $iVotedThem && $theyVotedMe;
 
-            $data['voted']       = $iVotedThem;
+            $data['voted']        = $iVotedThem;
             $data['voted_for_me'] = $isClosed && $theyVotedMe; // 종료 후에만 "나를 선택함" 공개
-            $data['is_match']    = $isMatch;
+            $data['is_match']     = $isMatch;
 
             // 연락처 공개 규칙 (종료 후):
             //  - 와인파티: "상호 매칭"된 상대에게만 공개.
             //  - 1:1: 상호 매칭 + "나를 선택해준 상대"의 번호까지 공개.
-            $revealPhone = $isClosed && ($isMatch || ($isOneToOne && $theyVotedMe));
+            $revealPhone   = $isClosed && ($isMatch || ($isOneToOne && $theyVotedMe));
             $data['phone'] = $revealPhone ? $c->phone : null;
 
             return $data;
@@ -560,7 +562,7 @@ class MemberPageController extends Controller
         $coupleCount = 0;
         if ($isClosed && $event !== null) {
             // 서로 지목한 쌍(A→B, B→A)을 self-join 으로 센 뒤 2로 나눠 쌍 수를 구한다.
-            $mutualRows = DB::table('event_votes as v1')
+            $mutualRows  = DB::table('event_votes as v1')
                 ->join('event_votes as v2', function ($join) {
                     $join->on('v1.event_id', '=', 'v2.event_id')
                         ->on('v1.voter_id', '=', 'v2.target_id')
@@ -594,7 +596,7 @@ class MemberPageController extends Controller
             // 나보다 받은 표가 "많은" 사람들의 서로 다른 득표값 종류 수 → 내 순위 = 그 수 + 1 (조밀 순위).
             //  - 예: 1위 3명(10표) 다음 내가 8표면, 나보다 높은 득표값은 {10} 1종류 → 나는 2위.
             $higherVoteValues = [];
-            $tied = 0;
+            $tied             = 0;
             foreach ($sameGenderIds as $mid) {
                 if ((int) $mid === (int) $me->id) { continue; }
                 $cnt = (int) ($receivedCounts[$mid] ?? 0);
@@ -609,20 +611,20 @@ class MemberPageController extends Controller
         }
 
         return Inertia::render('Votes', [
-            'eventTitle'    => $event?->title,
-            'eventStatus'   => $status,
-            'isOneToOne'    => $isOneToOne,
-            'canVote'       => $canVote,
-            'isClosed'      => $isClosed,
-            'votingEnded'   => $isVotingEnded,
-            'maxVotes'      => Vote::MAX_VOTES_PER_MEMBER,
-            'candidates'    => $candidateList,
-            'myVotedIds'    => $myVotedIds,
-            'receivedCount' => count($votedForMeIds),
-            'coupleCount'   => $coupleCount,
-            'myPopularRank' => $myPopularRank,  // 1~5 또는 null (인기 순위)
-            'myPopularTied' => $myPopularTied,  // 같은 순위 동점자 수(나 제외)
-            'partnerGender' => $oppositeGen,
+            'eventTitle'        => $event?->title,
+            'eventStatus'       => $status,
+            'isOneToOne'        => $isOneToOne,
+            'canVote'           => $canVote,
+            'isClosed'          => $isClosed,
+            'votingEnded'       => $isVotingEnded,
+            'maxVotes'          => Vote::MAX_VOTES_PER_MEMBER,
+            'candidates'        => $candidateList,
+            'myVotedIds'        => $myVotedIds,
+            'receivedCount'     => count($votedForMeIds),
+            'coupleCount'       => $coupleCount,
+            'myPopularRank'     => $myPopularRank,  // 1~5 또는 null (인기 순위)
+            'myPopularTied'     => $myPopularTied,  // 같은 순위 동점자 수(나 제외)
+            'partnerGender'     => $oppositeGen,
             // 리뷰 인증 게이트: 행사별 on/off + 내가 이미 인증했는지 여부.
             // (종료(X) + gate ON + 미인증 이면 결과 대신 업로드 화면을 보여준다.)
             'reviewGateEnabled' => (bool) ($event?->review_gate_enabled ?? false),
@@ -778,20 +780,20 @@ class MemberPageController extends Controller
 
         $requests = $requests
             ->map(fn (\App\Models\AdminRequest $req) => [
-                'id'         => $req->id,
-                'body'       => $req->body,
-                'is_read'    => $req->read_at !== null,
-                'created_at' => $req->created_at?->format('Y/n/j H:i'),
+                'id'              => $req->id,
+                'body'            => $req->body,
+                'is_read'         => $req->read_at !== null,
+                'created_at'      => $req->created_at?->format('Y/n/j H:i'),
                 // 관리자 답장 (답장한 관리자 정보는 노출하지 않는다)
-                'reply_body' => $req->reply_body,
-                'replied_at' => $req->replied_at?->format('Y/n/j H:i'),
+                'reply_body'      => $req->reply_body,
+                'replied_at'      => $req->replied_at?->format('Y/n/j H:i'),
                 'reply_edited_at' => $req->reply_edited_at?->format('Y/n/j H:i'),
                 'is_reply_new'    => $newReplyIds->contains($req->id),
             ])
             ->values();
 
         return Inertia::render('Requests', [
-            'requests'   => $requests,
+            'requests'    => $requests,
             'eventClosed' => $isClosed,
         ]);
     }

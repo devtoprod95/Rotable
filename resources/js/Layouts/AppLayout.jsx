@@ -186,6 +186,7 @@ const GAME_NAV_ITEM = { href: "/games", label: "게임", icon: GameIcon };
 // 메시지함/요청하기는 노출하지 않고, 매칭 탭은 "매칭 결과"로만 둔다.
 const ONE_TO_ONE_NAV_ITEMS = [
     { href: "/home", label: "홈", icon: HeartIcon },
+    { href: "/questions", label: "질문카드", icon: QuestionIcon },
     { href: "/votes", label: "매칭 결과", icon: VoteIcon },
 ];
 
@@ -414,6 +415,26 @@ function VoteIcon({ active }) {
                 stroke="none"
             />
             <path d="M8 9V6a4 4 0 0 1 8 0v3" />
+        </svg>
+    );
+}
+
+function QuestionIcon({ active }) {
+    return (
+        <svg
+            width={active ? 24 : 23}
+            height={active ? 24 : 23}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={active ? 2.4 : 1.9}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            {/* 카드 + 물음표 */}
+            <rect x="4" y="3" width="16" height="18" rx="3" />
+            <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5" />
+            <path d="M12 16.5h.01" />
         </svg>
     );
 }

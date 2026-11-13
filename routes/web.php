@@ -86,6 +86,8 @@ Route::middleware('auth:web')->group(function () {
         ->middleware('throttle:10,1')
         ->name('votes.review');
     Route::get('/requests', [MemberPageController::class, 'requests'])->name('requests');
+    // 질문카드 — 1:1 소개팅 전용 (와인파티는 홈으로 돌려보낸다)
+    Route::get('/questions', [MemberPageController::class, 'questions'])->name('questions');
     Route::get('/games', [MemberPageController::class, 'games'])->name('games');
     Route::get('/games/{slug}', [MemberPageController::class, 'gameShow'])
         ->where('slug', '[a-z0-9-]+')

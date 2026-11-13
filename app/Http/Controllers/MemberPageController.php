@@ -799,6 +799,24 @@ class MemberPageController extends Controller
     }
 
     /**
+     * 질문카드 화면 (1:1 소개팅 전용).
+     *
+     * 1:1 타입이 아니면 홈으로 돌려보낸다. 질문 목록은 프론트에 정의되어 있다.
+     */
+    public function questions(): InertiaResponse|RedirectResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me    = Auth::guard('web')->user();
+        $event = EventRound::find($me->event_id);
+
+        if ($event === null || ! $event->isOneToOne()) {
+            return redirect()->route('home');
+        }
+
+        return Inertia::render('Questions', []);
+    }
+
+    /**
      * 게임 목록(선택) 화면.
      *
      * 와인파티(wine)이면서 진행중(S)·매칭중(V) 일 때만 접근 가능하다.

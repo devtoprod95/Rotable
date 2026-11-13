@@ -174,8 +174,10 @@
     };
 
     // 명단 테이블 치수 — 2열일 때는 카드 폭이 절반이라 글씨/간격을 줄여 레이아웃이 깨지지 않게 한다.
-    $cellTitleSize   = $columns === 1 ? '29px' : '22px'; // 행사명
-    $cellDateSize    = $columns === 1 ? '21px' : '16px'; // 날짜
+    $cellTitleSize   = $columns === 1 ? '29px' : '22px'; // (구) 행사명 — 설정 호환용으로만 유지
+    $cellDateSize    = $columns === 1 ? '21px' : '16px'; // 날짜 (분포도 제목 등)
+    $evTitleSize     = $columns === 1 ? '54px' : '38px'; // 명단 카드 행사명 (상단 제목 톤)
+    $evDateSize      = $columns === 1 ? '30px' : '24px'; // 명단 카드 날짜
     $cellHeadSize    = $columns === 1 ? '21px' : '17px'; // 남/여 헤더
     $cellNoSize      = $columns === 1 ? '23px' : '18px'; // N호
     $cellInfoSize    = $columns === 1 ? '26px' : '20px'; // 키·직업·나이 (정보가 더 잘 보이도록 상향)
@@ -301,34 +303,34 @@
                  data-roster-card="{{ $loop->index }}"
                  data-event-title="{{ $event['title'] }}"
                  data-event-date="{{ $event['date'] }}">
-                <div style="border:2px solid #cbd5e1; border-radius:10px; overflow:hidden; height:100%;">
-                    {{-- 행사명 + 날짜 --}}
-                    <div style="background:#eef2f7; padding:7px 6px; border-bottom:2px solid #cbd5e1; text-align:center;">
-                        <div style="font-size:{{ $cellTitleSize }}; font-weight:900; color:#000000; word-break:keep-all;">{{ $event['title'] }}</div>
-                        <div style="font-size:{{ $cellDateSize }}; color:#374151; font-weight:800; margin-top:1px;">{{ $event['date'] }}</div>
+                <div style="border:2px solid #f2d4dc; border-radius:12px; overflow:hidden; height:100%;">
+                    {{-- 행사명 + 날짜 — "와인 & 블러쉬" 팔레트 (detail.blade.php buildRosterGrid 와 동일 마크업) --}}
+                    <div style="background:linear-gradient(135deg,#7a1f3d,#b4385e); padding:20px 10px 18px; text-align:center;">
+                        <div style="font-family:'Jua',sans-serif; font-size:{{ $evTitleSize }}; font-weight:400; color:#ffffff; word-break:keep-all; line-height:1.25; letter-spacing:0.5px;">{{ $event['title'] }}</div>
+                        <div style="display:inline-block; margin-top:10px; padding:5px 18px; border-radius:999px; background:#fff4ef; color:#7a1f3d; font-size:{{ $evDateSize }}; font-weight:900; word-break:keep-all;">🗓 {{ $event['date'] }}</div>
                     </div>
 
                     {{-- 남(좌) / 여(우) 헤더 --}}
-                    <div style="display:flex; font-size:{{ $cellHeadSize }}; font-weight:900; text-align:center; border-bottom:2px solid #cbd5e1;">
-                        <div style="width:50%; padding:4px; background:#3b82f6; color:#ffffff;">남 {{ count($maleSample) }}</div>
-                        <div style="width:50%; padding:4px; background:#ec4899; color:#ffffff;">여 {{ count($femaleSample) }}</div>
+                    <div style="display:flex; font-size:{{ $cellHeadSize }}; font-weight:900; text-align:center;">
+                        <div style="width:50%; padding:11px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 {{ count($maleSample) }}</div>
+                        <div style="width:50%; padding:11px 4px; background:#e8708a; color:#ffffff;">👩 여 {{ count($femaleSample) }}</div>
                     </div>
 
                     {{-- 남/여 행 맞춤 --}}
                     <div style="display:flex;">
                         {{-- 좌: 남자 --}}
-                        <div style="width:50%; box-sizing:border-box; border-right:2px solid #c7d7ee; background:#eff6ff;">
+                        <div style="width:50%; box-sizing:border-box; border-right:2px solid #d8e2ef; background:#f1f5fb;">
                             @foreach ($maleSample as $m)
-                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:2px solid #c7d7ee; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:2px solid #d8e2ef; text-align:center; display:flex; flex-direction:column; justify-content:center;">
                                     <div style="font-weight:900; font-size:{{ $cellNoSize }}; color:#000000;">{{ $m['no'] }}호</div>
                                     <div style="color:#000000; font-weight:800; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $m['height'] }}cm · {{ $m['job'] }} · {{ $m['age'] }}</div>
                                 </div>
                             @endforeach
                         </div>
                         {{-- 우: 여자 --}}
-                        <div style="width:50%; box-sizing:border-box; background:#fdf2f8;">
+                        <div style="width:50%; box-sizing:border-box; background:#fff3f5;">
                             @foreach ($femaleSample as $f)
-                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:2px solid #f6c3da; text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                                <div style="height:{{ $cellHeight }}; padding:{{ $cellPadding }}; border-bottom:2px solid #f6d5dc; text-align:center; display:flex; flex-direction:column; justify-content:center;">
                                     <div style="font-weight:900; font-size:{{ $cellNoSize }}; color:#000000;">{{ $f['no'] }}호</div>
                                     <div style="color:#000000; font-weight:800; font-size:{{ $cellInfoSize }}; margin-top:4px; word-break:keep-all;">{{ $f['height'] }}cm · {{ $f['job'] }} · {{ $f['age'] }}</div>
                                 </div>
@@ -652,13 +654,19 @@
         {{-- 여성 자격요건 (외적 요소 위주) --}}
         <div style="background:#fce7f3; border-top:2px solid #f9a8d4; padding:22px 14px; text-align:center; font-size:30px; color:#9d174d; line-height:2.0;">
             <div style="font-weight:900; font-size:33px; margin-bottom:12px;">💄 여성 참가 자격요건</div>
-            {{-- 여성 키: 입력된 행사만 한 줄씩 노출 (전부 비면 아무 줄도 없음). --}}
-            <div data-setting-block="femaleHeight">
-                @foreach ($eventSettings as $i => $es)
-                    @if ($es['femaleHeight'] !== '')
-                        <div>- {{ $multiEvent ? $eventLabel($i) . ' · ' : '' }}신장 <b>{{ $es['femaleHeight'] }} 이상</b></div>
-                    @endif
-                @endforeach
+            {{-- 여성 키: 입력된 행사만 한 줄씩 노출. 전부 비면 블록을 숨긴다.
+                 (빈 div 는 에디터가 빈 줄로 채워 한 줄 띄어진 것처럼 보이므로, 숨김 + 보이지 않는 문자로 자리만 유지) --}}
+            @php $hasFemaleHeight = collect($eventSettings)->contains(fn ($es) => $es['femaleHeight'] !== ''); @endphp
+            <div data-setting-block="femaleHeight" @if (! $hasFemaleHeight) style="display:none;" @endif>
+                @if ($hasFemaleHeight)
+                    @foreach ($eventSettings as $i => $es)
+                        @if ($es['femaleHeight'] !== '')
+                            <div>- {{ $multiEvent ? $eventLabel($i) . ' · ' : '' }}신장 <b>{{ $es['femaleHeight'] }} 이상</b></div>
+                        @endif
+                    @endforeach
+                @else
+                    &#8203;
+                @endif
             </div>
             <div>- 밝고 호감 가는 <b>단정한 외모</b>와 분위기를 지니신 분</div>
             <div>- 자기관리가 잘 되어 있고 <b>스타일 감각</b>이 있으신 분</div>

@@ -11,6 +11,12 @@
 
 @section('content')
 <style>
+    /* 페이지 설정 · 명단 모달: 행사 카드 헤더(행사명·날짜)를 눈에 띄게 */
+    .roster-ev-card { border: 2px solid #f9a8d4; }
+    .roster-ev-head { background: #fdf2f8; border-bottom: 2px solid #f9a8d4; padding: .85rem 1rem; }
+    .roster-ev-head .form-control-lg { background: #ffffff; border-color: #f9a8d4; color: #111827; }
+    .roster-ev-head .form-control-lg:focus { border-color: #ec4899; box-shadow: 0 0 0 .2rem rgba(236, 72, 153, .2); }
+
     /* 참여자 명단 드래그 정렬 */
     .roster-handle{ cursor:grab; color:#94a3b8; touch-action:none; }
     .roster-handle:active{ cursor:grabbing; }
@@ -903,6 +909,10 @@
             var balance       = c.balance === true; // 성비 자동 맞춤 제거됨: 기본 OFF
             var recruitLabel  = (c.recruitLabel && String(c.recruitLabel).trim()) || '모집중';
 
+            // 행사명·날짜 크기: 상단 제목(64px / 부제 34px) 톤에 맞추되, 2열은 카드 폭이 절반이라 줄인다.
+            var isTwoCol    = String(c.columns) === '2' || cardWidth === '50%';
+            var evTitleSize = isTwoCol ? '38px' : '54px';
+            var evDateSize  = isTwoCol ? '24px' : '30px';
             function esc(s){
                 return String(s == null ? '' : s)
                     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -1045,24 +1055,26 @@
                       + ' data-roster-card="' + idx + '"'
                       + ' data-event-title="' + esc(card.title) + '"'
                       + ' data-event-date="' + esc(card.date) + '">';
-                html +=   '<div style="border:1px solid #e5e7eb; border-radius:10px; overflow:hidden; height:100%;">';
-                // 행사명 + 날짜
-                html +=     '<div style="background:#eef2f7; padding:7px 6px; border-bottom:1px solid #e5e7eb; text-align:center;">';
-                html +=       '<div style="font-size:' + cellTitleSize + '; font-weight:900; word-break:keep-all;">' + esc(card.title) + '</div>';
-                html +=       '<div style="font-size:' + cellDateSize + '; color:#374151; font-weight:800; margin-top:1px;">' + esc(card.date) + '</div>';
+                html +=   '<div style="border:2px solid #f2d4dc; border-radius:12px; overflow:hidden; height:100%;">';
+                // 행사명 + 날짜 — "와인 & 블러쉬" 팔레트: 와인색 띠 + Jua 흰 행사명(상단 제목 크기 톤) + 블러쉬 알약 날짜.
+                //  (남 더스티 네이비·여 로즈와 명도 차이가 커서 영역이 분명히 나뉜다)
+                html +=     '<div style="background:linear-gradient(135deg,#7a1f3d,#b4385e); padding:20px 10px 18px; text-align:center;">';
+                html +=       '<div style="font-family:\'Jua\',sans-serif; font-size:' + evTitleSize + '; font-weight:400; color:#ffffff; word-break:keep-all; line-height:1.25; letter-spacing:0.5px;">' + esc(card.title) + '</div>';
+                html +=       '<div style="display:inline-block; margin-top:10px; padding:5px 18px; border-radius:999px; background:#fff4ef; color:#7a1f3d; font-size:' + evDateSize + '; font-weight:900; word-break:keep-all;">🗓 ' + esc(card.date) + '</div>';
                 html +=     '</div>';
                 // 남/여 헤더 (실제 참여자 수만 표시 — 모집중 더미는 제외)
-                html +=     '<div style="display:flex; font-size:' + cellHeadSize + '; font-weight:900; text-align:center; border-bottom:1px solid #eee;">';
-                html +=       '<div style="width:50%; padding:4px; background:#3b82f6; color:#ffffff;">남 ' + maleHeadCount + '</div>';
-                html +=       '<div style="width:50%; padding:4px; background:#ec4899; color:#ffffff;">여 ' + femaleHeadCount + '</div>';
+                // (남/여 띠는 세로로 넉넉하게, 가운데 흰 구분선)
+                html +=     '<div style="display:flex; font-size:' + cellHeadSize + '; font-weight:900; text-align:center;">';
+                html +=       '<div style="width:50%; padding:11px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 ' + maleHeadCount + '</div>';
+                html +=       '<div style="width:50%; padding:11px 4px; background:#e8708a; color:#ffffff;">👩 여 ' + femaleHeadCount + '</div>';
                 html +=     '</div>';
                 // 남/여 명단
                 html +=     '<div style="display:flex;" data-roster-cols="1">';
-                html +=       '<div style="width:50%; box-sizing:border-box; border-right:1px solid #c7d7ee; background:#eff6ff;">';
-                html +=         columnCells(males, maleTotal, '#d7e3ef');
+                html +=       '<div style="width:50%; box-sizing:border-box; border-right:1px solid #d8e2ef; background:#f1f5fb;">';
+                html +=         columnCells(males, maleTotal, '#d8e2ef');
                 html +=       '</div>';
-                html +=       '<div style="width:50%; box-sizing:border-box; background:#fdf2f8;">';
-                html +=         columnCells(females, femaleTotal, '#f6d9e6');
+                html +=       '<div style="width:50%; box-sizing:border-box; background:#fff3f5;">';
+                html +=         columnCells(females, femaleTotal, '#f6d5dc');
                 html +=       '</div>';
                 html +=     '</div>';
                 // 남/여 나이·키 분포도 (명단 값으로 자동 집계)
@@ -1081,15 +1093,23 @@
             var $body = $('#rosterEditorBody').empty();
 
             data.cards.forEach(function(card, ci){
-                var $card = $('<div class="card mb-3"></div>');
-                var $head = $('<div class="card-header d-flex flex-wrap gap-2 align-items-end"></div>');
+                var $card = $('<div class="card mb-3 roster-ev-card"></div>');
+                // 행사 카드 헤더: 분홍 띠 + 순번 뱃지 + 큰 입력칸 (행사명 · 날짜가 한눈에 보이도록)
+                var $head = $('<div class="card-header roster-ev-head"></div>');
                 $head.append(
-                    '<div><label class="form-label mb-1 small">행사명</label>'
-                    + '<input type="text" class="form-control form-control-sm roster-ev-title" style="min-width:200px;" value="' + $('<i>').text(card.title).html() + '"></div>'
-                );
-                $head.append(
-                    '<div><label class="form-label mb-1 small">날짜</label>'
-                    + '<input type="text" class="form-control form-control-sm roster-ev-date" style="min-width:200px;" value="' + $('<i>').text(card.date).html() + '"></div>'
+                    '<div class="row g-2 align-items-end w-100 m-0">'
+                    +   '<div class="col-12 d-flex align-items-center gap-2 mb-1 px-0">'
+                    +     '<span class="badge bg-pink text-white fs-4">' + (ci + 1) + '번째 행사</span>'
+                    +   '</div>'
+                    +   '<div class="col-12 col-md-7 ps-0">'
+                    +     '<label class="form-label mb-1 fw-bold"><i class="ti ti-calendar-event text-pink me-1"></i>행사명</label>'
+                    +     '<input type="text" class="form-control form-control-lg fw-bold roster-ev-title" placeholder="행사명" value="' + $('<i>').text(card.title).html() + '">'
+                    +   '</div>'
+                    +   '<div class="col-12 col-md-5 pe-0">'
+                    +     '<label class="form-label mb-1 fw-bold"><i class="ti ti-clock text-pink me-1"></i>날짜</label>'
+                    +     '<input type="text" class="form-control form-control-lg fw-bold roster-ev-date" placeholder="날짜 · 시간" value="' + $('<i>').text(card.date).html() + '">'
+                    +   '</div>'
+                    + '</div>'
                 );
                 $card.append($head);
 
@@ -1680,6 +1700,17 @@
             };
             var label = function(i){ return multi ? (esc(settingEventLabel(titles[i], i)) + ' · ') : ''; };
 
+            // 키 블록 채우기. 입력이 하나도 없으면 블록을 숨긴다.
+            //  빈 div 를 그대로 두면 에디터(TinyMCE)가 <br>/&nbsp; 를 채워 넣어 "한 줄 띄어진 것"처럼 보이고,
+            //  아예 지우면 다음 [적용] 때 다시 그릴 자리가 사라지므로, 숨김 + 보이지 않는 문자로 자리만 유지한다.
+            function setHeightBlock($block, html){
+                if (html === '') {
+                    $block.html('&#8203;').css('display', 'none');
+                } else {
+                    $block.html(html).css('display', '');
+                }
+            }
+
             // 2) 나이 블록 — 행사마다 한 줄.
             var $ageBlock = $root.find('[data-setting-block="age"]').first();
             if ($ageBlock.length) {
@@ -1698,7 +1729,7 @@
                     if (h === '') { return ''; }
                     return '<div>- ' + label(i) + '신장 <b>' + esc(h) + ' 이상</b></div>';
                 }).join('');
-                $maleBlock.html(maleHtml);
+                setHeightBlock($maleBlock, maleHtml);
             }
 
             // 4) 여성 키 블록 — 입력된 행사만 한 줄. (전부 비면 빈 블록)
@@ -1709,7 +1740,7 @@
                     if (h === '') { return ''; }
                     return '<div>- ' + label(i) + '신장 <b>' + esc(h) + ' 이상</b></div>';
                 }).join('');
-                $femaleBlock.html(femaleHtml);
+                setHeightBlock($femaleBlock, femaleHtml);
             }
 
             // 5) 이전 로테이블 기록 블록 — records 배열로 행을 다시 그린다. (페이지 전역)
@@ -1743,10 +1774,11 @@
             s = s || {};
             var titleText = $('<i>').text(title || ((i + 1) + '번째 행사')).html();
             return ''
-              + '<div class="card mb-3" data-setting-card="' + i + '">'
-              +   '<div class="card-header py-2">'
-              +     '<i class="ti ti-calendar-event text-pink me-1"></i>'
-              +     '<b class="roster-ev-title-echo">' + titleText + '</b>'
+              + '<div class="card mb-3 roster-ev-card" data-setting-card="' + i + '">'
+              +   '<div class="card-header roster-ev-head d-flex align-items-center flex-wrap gap-2">'
+              +     '<span class="badge bg-pink text-white fs-4">' + (i + 1) + '번째 행사</span>'
+              +     '<i class="ti ti-calendar-event text-pink fs-2"></i>'
+              +     '<b class="roster-ev-title-echo fs-2">' + titleText + '</b>'
               +   '</div>'
               +   '<div class="card-body">'
               +     '<div class="row g-3">'

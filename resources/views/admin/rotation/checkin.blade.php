@@ -117,11 +117,11 @@
                 <div class="row g-2 align-items-end mt-1">
                     <div class="col-4 col-md-2">
                         <label for="addHeight" class="form-label mb-1 required">키 <span class="text-secondary small">(cm)</span></label>
-                        <input type="number" id="addHeight" class="form-control" placeholder="175" min="100" max="230" inputmode="numeric" autocomplete="off">
+                        <input type="text" id="addHeight" class="form-control" placeholder="175" maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                     </div>
                     <div class="col-4 col-md-2">
                         <label for="addBirthYear" class="form-label mb-1 required">년생</label>
-                        <input type="number" id="addBirthYear" class="form-control" placeholder="97" min="0" max="2100" inputmode="numeric" autocomplete="off">
+                        <input type="text" id="addBirthYear" class="form-control" placeholder="97" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                     </div>
                     <div class="col-4 col-md-3">
                         <label for="addJob" class="form-label mb-1 required">직업</label>
@@ -975,6 +975,12 @@
             });
         });
 
+        // 키·년생은 텍스트 입력칸(한글 입력기 전환 문제 방지)이므로 숫자 외 문자는 바로 걸러낸다.
+        $(document).on('input', '#addHeight, #addBirthYear, #swal-p-height, #swal-p-birth', function(){
+            var cleaned = this.value.replace(/\D/g, '');
+            if(cleaned !== this.value){ this.value = cleaned; }
+        });
+
         // 닉네임·프로필 입력창에서 Enter 로 바로 추가
         $('#addName, #addHeight, #addBirthYear, #addJob').on('keydown', function(e){
             if(e.key === 'Enter'){ e.preventDefault(); $('#checkinAddBtn').trigger('click'); }
@@ -994,8 +1000,8 @@
             };
             var res = await Swal.fire({
                 title: (r.name ? esc(r.name) : '닉네임 없음') + ' 프로필',
-                html: field('swal-p-height', '키 (cm) *', 'number', r.height || '', '175', 'min="100" max="230" inputmode="numeric"')
-                    + field('swal-p-birth', '년생 (2자리 가능) *', 'number', r.birth_year ? String(r.birth_year).slice(-2) : '', '97', 'min="0" max="2100" inputmode="numeric"')
+                html: field('swal-p-height', '키 (cm) *', 'text', r.height || '', '175', 'maxlength="3" inputmode="numeric" pattern="[0-9]*"')
+                    + field('swal-p-birth', '년생 (2자리 가능) *', 'text', r.birth_year ? String(r.birth_year).slice(-2) : '', '97', 'maxlength="4" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-job', '직업 *', 'text', r.job || '', '예: 개발자', 'maxlength="50"'),
                 focusConfirm: false,
                 showCancelButton: true,

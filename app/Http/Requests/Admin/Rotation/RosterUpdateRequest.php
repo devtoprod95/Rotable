@@ -11,6 +11,22 @@ use Illuminate\Validation\Rule;
 class RosterUpdateRequest extends ApiFormRequest
 {
     /**
+     * 년생·키는 "00", "05" 처럼 앞에 0이 붙은 문자열로 올 수 있다.
+     * (integer 규칙은 선행 0 문자열을 거부하므로) 검증 전에 숫자로 바꿔 둔다.
+     */
+    protected function prepareForValidation(): void
+    {
+        $numbers = [];
+        foreach (['height', 'birth_year'] as $key) {
+            $value = $this->input($key);
+            if (is_string($value) && preg_match('/^\s*\d+\s*$/', $value) === 1) {
+                $numbers[$key] = (int) $value;
+            }
+        }
+        $this->merge($numbers);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function rules(): array

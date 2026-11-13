@@ -901,7 +901,7 @@
             var cardWidth     = c.cardWidth     || '100%';
             var cellTitleSize = c.cellTitleSize || '29px';
             var cellDateSize  = c.cellDateSize  || '21px';
-            var cellHeadSize  = c.cellHeadSize  || '21px';
+            var cellHeadSize  = c.cellHeadSize  || '30px';
             var cellNoSize    = c.cellNoSize    || '23px';
             var cellInfoSize  = c.cellInfoSize  || '26px';
             var cellHeight    = c.cellHeight    || '108px';
@@ -1065,8 +1065,8 @@
                 // 남/여 헤더 (실제 참여자 수만 표시 — 모집중 더미는 제외)
                 // (남/여 띠는 세로로 넉넉하게, 가운데 흰 구분선)
                 html +=     '<div style="display:flex; font-size:' + cellHeadSize + '; font-weight:900; text-align:center;">';
-                html +=       '<div style="width:50%; padding:11px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 ' + maleHeadCount + '</div>';
-                html +=       '<div style="width:50%; padding:11px 4px; background:#e8708a; color:#ffffff;">👩 여 ' + femaleHeadCount + '</div>';
+                html +=       '<div style="width:50%; padding:22px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 ' + maleHeadCount + '</div>';
+                html +=       '<div style="width:50%; padding:22px 4px; background:#e8708a; color:#ffffff;">👩 여 ' + femaleHeadCount + '</div>';
                 html +=     '</div>';
                 // 남/여 명단
                 html +=     '<div style="display:flex;" data-roster-cols="1">';
@@ -1121,6 +1121,57 @@
 
                 $card.data('card-index', ci);
                 $body.append($card);
+            });
+
+            initRosterDatePickers();
+        }
+
+        // 행사 날짜 입력칸에 달력(flatpickr) 적용. 표기 형식: "2026.11.07(토) 19:30"
+        function initRosterDatePickers(){
+            if(typeof flatpickr === 'undefined'){ return; }
+            var WEEK = ['일','월','화','수','목','금','토'];
+            var pad  = function(n){ return String(n).padStart(2, '0'); };
+
+            $('#rosterEditorBody .roster-ev-date').each(function(){
+                if(this._flatpickr){ return; }
+                flatpickr(this, {
+                    enableTime: true,
+                    time_24hr:  true,
+                    allowInput: true,
+                    locale:     'ko',
+                    dateFormat: 'Y.m.d(D) H:i',
+                    formatDate: function(d){
+                        return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate())
+                             + '(' + WEEK[d.getDay()] + ') ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+                    },
+                    parseDate: function(str){
+                        var m = /(\d{4})\D+(\d{1,2})\D+(\d{1,2})(?:\D+?(\d{1,2}):(\d{2}))?/.exec(str || '');
+                        return m ? new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) : undefined;
+                    },
+                    onReady: function(selectedDates, dateStr, instance){
+                        var container = instance && instance.calendarContainer;
+                        if(!container || container.querySelector('.fp-custom-controls')){ return; }
+
+                        var btnGroup = document.createElement('div');
+                        btnGroup.className = 'd-flex gap-2 mt-2 p-2 fp-custom-controls';
+
+                        var todayBtn = document.createElement('button');
+                        todayBtn.type = 'button';
+                        todayBtn.className = 'btn btn-sm btn-outline-primary w-100';
+                        todayBtn.innerText = '오늘';
+                        todayBtn.onclick = function(){ instance.setDate(new Date(), true); };
+
+                        var confirmBtn = document.createElement('button');
+                        confirmBtn.type = 'button';
+                        confirmBtn.className = 'btn btn-sm btn-primary w-100';
+                        confirmBtn.innerText = '확인';
+                        confirmBtn.onclick = function(){ instance.close(); };
+
+                        btnGroup.appendChild(todayBtn);
+                        btnGroup.appendChild(confirmBtn);
+                        container.appendChild(btnGroup);
+                    }
+                });
             });
         }
 
@@ -1894,11 +1945,34 @@
               + '</div>';
         }
 
+        // 기록 날짜 입력칸(.r-date)에 달력(flatpickr) 적용. 표기 형식: "2026.11.07" (날짜만)
+        //  - 이미 적용된 칸은 건너뛰므로 행 렌더/추가 후 매번 호출해도 안전하다.
+        function initRecordDatePickers(){
+            if(typeof flatpickr === 'undefined'){ return; }
+            var pad = function(n){ return String(n).padStart(2, '0'); };
+            $('#recordsEditorBody .r-date').each(function(){
+                if(this._flatpickr){ return; }
+                flatpickr(this, {
+                    allowInput: true,
+                    locale:     'ko',
+                    dateFormat: 'Y.m.d',
+                    formatDate: function(d){
+                        return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate());
+                    },
+                    parseDate: function(str){
+                        var m = /(\d{4})\D+(\d{1,2})\D+(\d{1,2})/.exec(str || '');
+                        return m ? new Date(+m[1], +m[2] - 1, +m[3]) : undefined;
+                    }
+                });
+            });
+        }
+
         // 기록 배열 → #recordsEditorBody 에 행들을 렌더.
         function renderRecordsEditor(records){
             var list = normalizeRecords(records);
             var $body = $('#recordsEditorBody').empty();
             list.forEach(function(r){ $body.append(recordEditorRow(r)); });
+            initRecordDatePickers();
         }
 
         // #recordsEditorBody 의 입력들을 모아 records 배열로 반환.
@@ -1919,6 +1993,7 @@
         // 기록 추가/삭제 (이벤트 위임)
         $('.btn-record-add').on('click', function(){
             $('#recordsEditorBody').append(recordEditorRow({}));
+            initRecordDatePickers();
         });
         $('#recordsEditorBody').on('click', '.btn-record-del', function(){
             $(this).closest('[data-record-edit]').remove();

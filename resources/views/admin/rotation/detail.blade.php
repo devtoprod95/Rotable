@@ -1100,6 +1100,7 @@
                     '<div class="row g-2 align-items-end w-100 m-0">'
                     +   '<div class="col-12 d-flex align-items-center gap-2 mb-1 px-0">'
                     +     '<span class="badge bg-pink text-white fs-4">' + (ci + 1) + '번째 행사</span>'
+                    +     '<button type="button" class="btn btn-sm btn-outline-pink ms-auto roster-import"><i class="ti ti-download me-1"></i>체크인 명단 불러오기</button>'
                     +   '</div>'
                     +   '<div class="col-12 col-md-7 ps-0">'
                     +     '<label class="form-label mb-1 fw-bold"><i class="ti ti-calendar-event text-pink me-1"></i>행사명</label>'
@@ -1377,6 +1378,105 @@
             });
             renumberRoster();
         }
+
+        // 출생연도 → 명단 나이 표기. 한국식 나이(올해 - 출생연도 + 1) 기준으로 대(代)를 계산한다.
+        //  - decade: "30대" / half: "30대 초반·중반·후반"(끝자리 0~3 초반, 4~6 중반, 7~9 후반) / year: "97년생"
+        function rosterAgeText(birthYear, type, fallback){
+            var by = parseInt(birthYear, 10);
+            if (isNaN(by)) { return fallback || ''; }
+            if (type === 'year') { return String(by).slice(-2) + '년생'; }
+            var age    = new Date().getFullYear() - by + 1;
+            var decade = Math.floor(age / 10) * 10;
+            if (type === 'half') {
+                var d = age % 10;
+                return decade + '대 ' + (d <= 3 ? '초반' : (d <= 6 ? '중반' : '후반'));
+            }
+            return decade + '대';
+        }
+
+        // 체크인 명단 불러오기 — 선택한 행사의 체크인 명단(키·년생·직업)으로 이 행사 카드의 남/여 표를 채운다.
+        //  - 행사명·날짜도 함께 채운다. 모집중 자리(수동)는 그대로 둔다.
+        var ROSTER_SOURCE_EVENTS_URL = "{{ route('admin.rotation.detail.rosterSource.events') }}";
+        var ROSTER_SOURCE_PEOPLE_TPL = "{{ route('admin.rotation.detail.rosterSource.people', ['id' => '__ID__']) }}";
+
+        $('#rosterEditorBody').on('click', '.roster-import', async function(){
+            var $card = $(this).closest('.roster-ev-card');
+            var events;
+            try {
+                events = (await $.getJSON(ROSTER_SOURCE_EVENTS_URL)).items || [];
+            } catch (e) {
+                await salert({text: '행사 목록을 불러오지 못했습니다.', cancel: false});
+                return;
+            }
+            if (!events.length) {
+                await salert({text: '불러올 행사가 없습니다.', cancel: false});
+                return;
+            }
+            var esc2 = function(s){ return $('<i>').text(s == null ? '' : s).html(); };
+            var opts = events.map(function(ev){
+                return '<option value="' + ev.id + '">' + esc2(ev.title) + ' · ' + esc2(ev.date)
+                     + ' (명단 ' + ev.total + '명 / 프로필 ' + ev.filled + '명)</option>';
+            }).join('');
+            var pick = await Swal.fire({
+                title: '체크인 명단 불러오기',
+                html: '<div style="text-align:left;font-size:.85rem;color:#475569;margin-bottom:6px;">'
+                    + '선택한 행사의 체크인 명단으로 이 카드의 남/여 명단을 <b>덮어씁니다.</b><br>(나이 → 키 순 정렬 · 모집중 자리 성별당 2개 추가)</div>'
+                    + '<select id="swal-roster-event" class="swal2-select" style="width:100%;margin:0;">' + opts + '</select>'
+                    + '<div style="text-align:left;font-size:.85rem;color:#475569;font-weight:700;margin:12px 0 4px;">나이 표기</div>'
+                    + '<select id="swal-roster-age" class="swal2-select" style="width:100%;margin:0;">'
+                    +   '<option value="decade" selected>30대 (기본)</option>'
+                    +   '<option value="half">30대 초반 / 중반 / 후반</option>'
+                    +   '<option value="year">97년생</option>'
+                    + '</select>',
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonText: '불러오기',
+                cancelButtonText: '취소',
+                preConfirm: function(){
+                    return {
+                        eventId: document.getElementById('swal-roster-event').value,
+                        ageType: document.getElementById('swal-roster-age').value
+                    };
+                }
+            });
+            if (!pick.isConfirmed) { return; }
+
+            var data;
+            try {
+                data = await $.getJSON(ROSTER_SOURCE_PEOPLE_TPL.replace('__ID__', pick.value.eventId));
+            } catch (e) {
+                await salert({text: '명단을 불러오지 못했습니다.', cancel: false});
+                return;
+            }
+
+            $card.find('.roster-ev-title').val(data.title || '');
+            var dateEl = $card.find('.roster-ev-date').get(0);
+            if (dateEl && dateEl._flatpickr && data.date) {
+                dateEl._flatpickr.setDate(data.date, false);
+            } else {
+                $card.find('.roster-ev-date').val(data.date || '');
+            }
+
+            // 남/여 각각: 나이 어린 순 → 키 큰 순으로 정렬해 채우고, 끝에 여유 "모집중" 자리를 2개씩 둔다.
+            var RECRUIT_SPARE = 2;
+            [['male', data.males], ['female', data.females]].forEach(function(pair){
+                var $rows = $card.find('[data-gender="' + pair[0] + '"] .roster-rows');
+                $rows.empty();
+                var people = (pair[1] || []).map(function(p, i){
+                    var row = Object.assign({}, p, { age: rosterAgeText(p.birth_year, pick.value.ageType, p.age) });
+                    return { row: row, i: i, age: ageSortValue(p.age || row.age), h: heightSortValue(p.height) };
+                });
+                people.sort(function(a, b){
+                    if (a.age !== b.age) { return a.age < b.age ? -1 : 1; }
+                    if (a.h !== b.h) { return a.h > b.h ? -1 : 1; }
+                    return a.i - b.i;
+                });
+                people.forEach(function(x){ $rows.append(rosterRow(x.row)); });
+                for (var k = 0; k < RECRUIT_SPARE; k++) { $rows.append(rosterRow({ recruit: true })); }
+            });
+            renumberRoster($card);
+            await salert({text: '체크인 명단을 불러왔어요. 나이 → 키 순으로 정렬했고, 모집중 자리를 성별마다 2개씩 넣었어요.', cancel: false});
+        });
 
         // 위/아래 버튼으로 한 칸씩 이동
         $('#rosterEditorBody').on('click', '.roster-up, .roster-down', function(){

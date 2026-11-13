@@ -4,6 +4,8 @@ namespace App\Services\Rotation;
 
 use App\Models\EventPageDetail;
 use App\Models\EventPageDetailSave;
+use App\Models\EventRoster;
+use App\Models\EventRound;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\View;
 
@@ -21,6 +23,79 @@ class DetailPageService
     public function __construct()
     {
         $this->returnMsg = helpersDefaultMessage();
+    }
+
+    /**
+     * 체크인 명단 불러오기용 행사 목록 (최근 행사일 순).
+     *
+     * @return list<array{id:int, title:string, date:string, total:int, filled:int}>
+     */
+    public function rosterSourceEvents(int $limit = 30): array
+    {
+        $events = EventRound::query()
+            ->withCount([
+                'rosters as roster_total',
+                'rosters as roster_filled' => fn ($q) => $q->where(function ($w) {
+                    $w->whereNotNull('height')->orWhereNotNull('birth_year')->orWhereNotNull('job');
+                }),
+            ])
+            ->orderByDesc('event_time')
+            ->limit($limit)
+            ->get();
+
+        return $events->map(fn (EventRound $e): array => [
+            'id'     => $e->id,
+            'title'  => (string) $e->title,
+            'date'   => $this->formatEventDate($e),
+            'total'  => (int) $e->roster_total,
+            'filled' => (int) $e->roster_filled,
+        ])->values()->all();
+    }
+
+    /**
+     * 한 행사의 체크인 명단을 상세페이지 명단 행({height, job, age})으로 변환한다.
+     * 남/여 각각 번호표 → 입력 순서로 정렬해 돌려준다. (최종 정렬은 [적용] 시 나이→키로 다시 수행)
+     *
+     * @return array{title:string, date:string, males:list<array{height:string,job:string,age:string,birth_year:int|null}>, females:list<array{height:string,job:string,age:string,birth_year:int|null}>}|null
+     */
+    public function rosterSourcePeople(int $eventId): ?array
+    {
+        $event = EventRound::find($eventId);
+        if ($event === null) {
+            return null;
+        }
+
+        $rosters = EventRoster::where('event_id', $eventId)
+            ->orderByRaw('ticket_no is null')
+            ->orderBy('ticket_no')
+            ->orderBy('id')
+            ->get();
+
+        $toRow = fn (EventRoster $r): array => [
+            'height' => $r->height !== null ? (string) $r->height : '',
+            'job'    => (string) ($r->job ?? ''),
+            // 나이 표기는 화면에서 선택(00년생 / 30대 / 30대 초·중·후반)하므로 출생연도 원본도 함께 내려준다.
+            'age'        => $r->birth_year !== null ? sprintf('%02d년생', $r->birth_year % 100) : '',
+            'birth_year' => $r->birth_year,
+        ];
+
+        return [
+            'title'   => (string) $event->title,
+            'date'    => $this->formatEventDate($event),
+            'males'   => $rosters->where('gender', 'M')->map($toRow)->values()->all(),
+            'females' => $rosters->where('gender', 'F')->map($toRow)->values()->all(),
+        ];
+    }
+
+    /** 명단 카드 날짜 표기: "2026.11.07(토) 19:30" */
+    private function formatEventDate(EventRound $event): string
+    {
+        if ($event->event_time === null) {
+            return '';
+        }
+        $weekdays = ['일', '월', '화', '수', '목', '금', '토'];
+
+        return $event->event_time->format('Y.m.d') . '(' . $weekdays[$event->event_time->dayOfWeek] . ') ' . $event->event_time->format('H:i');
     }
 
     /** 유형 값 정규화 ('wine' | 'solo') */

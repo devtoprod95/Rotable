@@ -98,6 +98,10 @@ Route::middleware('role')->group(function () {
             // 상세페이지 디자이너 — HTML 에디터로 꾸미고 이미지(PNG)로 다운로드
             Route::prefix('detail')->name('detail.')->group(function () {
                 Route::get('/', [DetailPageController::class, 'detailIndex'])->name('index');
+                // 명단 자동 채움 — 체크인 명단(키·년생·직업)을 행사 단위로 불러온다
+                Route::get('/roster-source', [DetailPageController::class, 'rosterSourceEvents'])->name('rosterSource.events');
+                Route::get('/roster-source/{id}', [DetailPageController::class, 'rosterSourcePeople'])
+                    ->whereNumber('id')->name('rosterSource.people');
                 // 저장 목록(유형별 다중 스냅샷) — 목록/추가/불러오기/업데이트/삭제
                 Route::get('/saves', [DetailPageController::class, 'detailSaveList'])->name('saves.list');
                 Route::post('/saves', [DetailPageController::class, 'detailSaveStore'])->name('saves.store');

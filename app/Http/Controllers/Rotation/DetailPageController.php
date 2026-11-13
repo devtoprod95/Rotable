@@ -51,6 +51,27 @@ class DetailPageController extends RotationBaseController
     }
 
     /**
+     * 명단 자동 채움용 — 체크인 명단을 불러올 수 있는 행사 목록 (최근순).
+     */
+    public function rosterSourceEvents(): JsonResponse
+    {
+        return response()->json(['items' => $this->detailPageService->rosterSourceEvents()]);
+    }
+
+    /**
+     * 명단 자동 채움용 — 한 행사의 체크인 명단을 상세페이지 명단 행으로 변환해 돌려준다.
+     */
+    public function rosterSourcePeople(int $id): JsonResponse
+    {
+        $data = $this->detailPageService->rosterSourcePeople($id);
+        if ($data === null) {
+            return response()->json(['message' => '행사를 찾을 수 없습니다.'], Response::HTTP_NOT_FOUND);
+        }
+
+        return response()->json($data);
+    }
+
+    /**
      * 저장 목록 조회 — 특정 유형의 저장본 목록(최신순, html 제외).
      */
     public function detailSaveList(): JsonResponse

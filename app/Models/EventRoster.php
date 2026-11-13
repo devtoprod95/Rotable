@@ -18,6 +18,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $name       닉네임(플랫폼 신청 닉네임)
  * @property string|null $gender     M|F
  * @property string      $platform   munto|frip
+ * @property int|null    $height     키(cm) — 상세페이지 명단 자동 채움용
+ * @property int|null    $birth_year 출생연도(4자리) — 상세페이지 명단 자동 채움용
+ * @property string|null $job        직업 — 상세페이지 명단 자동 채움용
  * @property int|null    $ticket_no  번호표 숫자(같은 행사·같은 성별 안에서 유일). null=미배정
  * @property int|null    $rotation_table_id 체크인 때 지정한 기준(홈) 테이블 (rotation_tables.id)
  * @property \Illuminate\Support\Carbon|null $checked_in_at
@@ -31,6 +34,9 @@ class EventRoster extends Model
         'event_id',
         'name',
         'gender',
+        'height',
+        'birth_year',
+        'job',
         'platform',
         'ticket_no',
         'rotation_table_id',
@@ -45,6 +51,8 @@ class EventRoster extends Model
         return [
             'checked_in_at' => 'datetime',
             'ticket_no'     => 'integer',
+            'height'        => 'integer',
+            'birth_year'    => 'integer',
             'rotation_table_id' => 'integer',
         ];
     }

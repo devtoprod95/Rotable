@@ -86,6 +86,9 @@ class RosterController extends RotationBaseController
                 'name'              => $r->name,
                 'gender'            => $r->gender,
                 'platform'          => $r->platform,
+                'height'            => $r->height,
+                'birth_year'        => $r->birth_year,
+                'job'               => $r->job,
                 'ticket_no'         => $r->ticket_no,
                 'rotation_table_id' => $r->rotation_table_id !== null ? (int) $r->rotation_table_id : null,
                 'checked_in'        => $r->checked_in_at !== null,
@@ -114,6 +117,7 @@ class RosterController extends RotationBaseController
             (string) $request->validated('name'),
             $request->validated('platform'),
             $request->validated('gender'),
+            $request->safe()->only(['height', 'birth_year', 'job']),
         );
 
         return $this->respond($result, Response::HTTP_INTERNAL_SERVER_ERROR);

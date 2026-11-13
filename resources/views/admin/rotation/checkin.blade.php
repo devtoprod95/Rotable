@@ -113,6 +113,24 @@
                         </button>
                     </div>
                 </div>
+                {{-- 상세페이지 명단 자동 채움용 프로필 (필수 입력) --}}
+                <div class="row g-2 align-items-end mt-1">
+                    <div class="col-4 col-md-2">
+                        <label for="addHeight" class="form-label mb-1 required">키 <span class="text-secondary small">(cm)</span></label>
+                        <input type="number" id="addHeight" class="form-control" placeholder="175" min="100" max="230" inputmode="numeric" autocomplete="off">
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <label for="addBirthYear" class="form-label mb-1 required">년생</label>
+                        <input type="number" id="addBirthYear" class="form-control" placeholder="97" min="0" max="2100" inputmode="numeric" autocomplete="off">
+                    </div>
+                    <div class="col-4 col-md-3">
+                        <label for="addJob" class="form-label mb-1 required">직업</label>
+                        <input type="text" id="addJob" class="form-control" placeholder="예: 개발자" maxlength="50" autocomplete="off">
+                    </div>
+                    <div class="col-12 col-md-5 text-secondary small">
+                        <i class="ti ti-info-circle me-1"></i>필수 입력 · 상세페이지 참여자 명단을 자동으로 채울 때 사용돼요. (년생은 2자리로 입력 가능)
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -211,6 +229,7 @@
         var checkInTpl = "{{ route('admin.rotation.event.rosters.checkIn', ['id' => $event->id, 'rosterId' => '__RID__']) }}";
         var deleteUrl = "{{ route('admin.rotation.event.rosters.delete', ['id' => $event->id]) }}";
         var addUrl    = "{{ route('admin.rotation.event.rosters.add', ['id' => $event->id]) }}";
+        var updateTpl = "{{ route('admin.rotation.event.rosters.update', ['id' => $event->id, 'rosterId' => '__RID__']) }}";
         var ticketTpl = "{{ route('admin.rotation.event.rosters.ticket', ['id' => $event->id, 'rosterId' => '__RID__']) }}";
         var devSeedUrl = "{{ route('admin.rotation.event.rosters.devSeed', ['id' => $event->id]) }}";
         var devRosterUrl = "{{ route('admin.rotation.event.rosters.devSeedRosters', ['id' => $event->id]) }}";
@@ -315,7 +334,18 @@
                   + `<i class="ti ti-trash me-1"></i>삭제</button>`;
 
             var times = (when || regWhen) ? `<div class="ck-times">${when}${regWhen}</div>` : '';
-            var actions = (ticketBtn || delBtn) ? `<div class="ck-actions">${ticketBtn}${delBtn}</div>` : '';
+            // 상세페이지 명단용 프로필 (키·년생·직업) 요약 + 입력/수정 버튼
+            var profParts = [];
+            if(r.height){ profParts.push(r.height + 'cm'); }
+            if(r.birth_year){ profParts.push(String(r.birth_year).slice(-2) + '년생'); }
+            if(r.job){ profParts.push(esc(r.job)); }
+            var profile = profParts.length
+                ? `<span class="badge bg-green-lt"><i class="ti ti-id me-1"></i>${profParts.join(' · ')}</span>`
+                : `<span class="badge bg-secondary-lt">프로필 미입력</span>`;
+            var profBtn = `<button type="button" class="btn btn-sm btn-outline-secondary btn-checkin-profile"`
+                  + ` data-id="${r.id}" aria-label="${esc(nickname)} 프로필 입력·수정">`
+                  + `<i class="ti ti-id me-1"></i>프로필</button>`;
+            var actions = `<div class="ck-actions">${profBtn}${ticketBtn}${delBtn}</div>`;
 
             return `<div class="list-group-item checkin-row ${stateCls}"`
                 +      ` role="button" tabindex="0" data-id="${r.id}"`
@@ -323,7 +353,7 @@
                 +      ` aria-label="${esc(nickname)} ${esc(pfLabel)} ${inState ? '참석됨, 탭하면 취소' : '미도착, 탭하면 체크인'}">`
                 +   `<div class="ck-main">${ticket}<span class="ck-name">${name}</span></div>`
                 +   `<div class="ck-status">${badge}</div>`
-                +   `<div class="ck-meta">${tableBadge}${pf}${regBadge}</div>`
+                +   `<div class="ck-meta">${tableBadge}${pf}${regBadge}${profile}</div>`
                 +   times
                 +   actions
                 + `</div>`;
@@ -922,13 +952,21 @@
             var name     = ($('#addName').val() || '').trim();
             var platform = $('input[name="addPlatform"]:checked').val();
             var gender   = $('input[name="addGender"]:checked').val() || 'M';
+            var height    = ($('#addHeight').val() || '').trim();
+            var birthYear = ($('#addBirthYear').val() || '').trim();
+            var job       = ($('#addJob').val() || '').trim();
             if(!name){ await salert({text: '닉네임을 입력해주세요.', cancel: false}); return; }
+            if(!height){ await salert({text: '키를 입력해주세요.', cancel: false}); $('#addHeight').focus(); return; }
+            if(!birthYear){ await salert({text: '년생을 입력해주세요. (예: 97)', cancel: false}); $('#addBirthYear').focus(); return; }
+            if(!job){ await salert({text: '직업을 입력해주세요.', cancel: false}); $('#addJob').focus(); return; }
             $.ajax({
-                url: addUrl, type: 'POST', data: { name: name, platform: platform, gender: gender },
+                url: addUrl, type: 'POST',
+                data: { name: name, platform: platform, gender: gender, height: height, birth_year: birthYear, job: job },
                 success: function(res){
                     alert(res?.msg);
                     if(res?.status === 200){
-                        // 연속 입력 편의: 닉네임만 비우고 플랫폼/성별 선택은 유지한다.
+                        // 연속 입력 편의: 닉네임·프로필만 비우고 플랫폼/성별 선택은 유지한다.
+                        $('#addHeight, #addBirthYear, #addJob').val('');
                         $('#addName').val('').focus();
                         load();
                     }
@@ -937,9 +975,60 @@
             });
         });
 
-        // 닉네임 입력창에서 Enter 로 바로 추가
-        $('#addName').on('keydown', function(e){
+        // 닉네임·프로필 입력창에서 Enter 로 바로 추가
+        $('#addName, #addHeight, #addBirthYear, #addJob').on('keydown', function(e){
             if(e.key === 'Enter'){ e.preventDefault(); $('#checkinAddBtn').trigger('click'); }
+        });
+
+        // 프로필(키·년생·직업) 입력/수정
+        $(document).on('click', '.btn-checkin-profile', async function(e){
+            e.stopPropagation(); // 행 참석 토글로 번지지 않게
+            var id = $(this).data('id');
+            var r  = rosters.find(function(x){ return x.id === id; });
+            if(!r){ return; }
+            var field = function(fid, label, type, val, ph, extra){
+                return '<div style="margin-top:8px;text-align:left;">'
+                    + '<label for="' + fid + '" style="font-size:0.85rem;color:#475569;font-weight:700;display:block;margin-bottom:4px;">' + label + '</label>'
+                    + '<input id="' + fid + '" type="' + type + '" class="swal2-input" value="' + esc(val) + '" placeholder="' + ph + '" ' + (extra || '')
+                    + ' style="width:100%;margin:0;box-sizing:border-box;"></div>';
+            };
+            var res = await Swal.fire({
+                title: (r.name ? esc(r.name) : '닉네임 없음') + ' 프로필',
+                html: field('swal-p-height', '키 (cm) *', 'number', r.height || '', '175', 'min="100" max="230" inputmode="numeric"')
+                    + field('swal-p-birth', '년생 (2자리 가능) *', 'number', r.birth_year ? String(r.birth_year).slice(-2) : '', '97', 'min="0" max="2100" inputmode="numeric"')
+                    + field('swal-p-job', '직업 *', 'text', r.job || '', '예: 개발자', 'maxlength="50"'),
+                focusConfirm: false,
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonText: '저장',
+                cancelButtonText: '취소',
+                preConfirm: function(){
+                    var v = {
+                        height:     (document.getElementById('swal-p-height').value || '').trim(),
+                        birth_year: (document.getElementById('swal-p-birth').value || '').trim(),
+                        job:        (document.getElementById('swal-p-job').value || '').trim()
+                    };
+                    if(!v.height || !v.birth_year || !v.job){
+                        Swal.showValidationMessage('키, 년생, 직업을 모두 입력해 주세요.');
+                        return false;
+                    }
+                    return v;
+                }
+            });
+            if(!res.isConfirmed){ return; }
+            $.ajax({
+                url: updateTpl.replace('__RID__', id), type: 'PUT', data: res.value,
+                success: function(out){
+                    if(out?.status !== 200){ alert(out?.msg ?? '저장하지 못했습니다.'); }
+                    load();
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            });
+        });
+        $(document).on('keydown', '.btn-checkin-profile', function(e){
+            if(e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32){
+                e.stopPropagation();
+            }
         });
 
         load();

@@ -186,22 +186,66 @@ class RosterService
      *
      * - 전화번호가 없으므로 중복 판정은 하지 않는다. (동명이인·동일 닉네임 허용)
      *
+     * @param array{height?:mixed, birth_year?:mixed, job?:mixed} $profile 상세페이지 명단용 프로필(선택)
      * @return array{isSuccess:bool, msg?:string}
      */
-    public function rosterAdd(int $eventId, string $name, ?string $platform, ?string $gender): array
+    public function rosterAdd(int $eventId, string $name, ?string $platform, ?string $gender, array $profile = []): array
     {
         try {
             EventRoster::create([
-                'event_id' => $eventId,
-                'name'     => trim($name),
-                'gender'   => $this->normalizeGender($gender),
-                'platform' => $this->normalizePlatform($platform),
+                'event_id'   => $eventId,
+                'name'       => trim($name),
+                'gender'     => $this->normalizeGender($gender),
+                'platform'   => $this->normalizePlatform($platform),
+                'height'     => $this->normalizeHeight($profile['height'] ?? null),
+                'birth_year' => $this->normalizeBirthYear($profile['birth_year'] ?? null),
+                'job'        => $this->normalizeJob($profile['job'] ?? null),
             ]);
 
             return helpersSuccessMessage('명단에 추가했습니다.');
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }
+    }
+
+    /**
+     * 키(cm) 정규화. 비었거나 숫자가 아니면 null.
+     */
+    private function normalizeHeight(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
+            return null;
+        }
+
+        return (int) $value;
+    }
+
+    /**
+     * 출생연도 정규화. 2자리("97", "05")는 4자리로 환산한다.
+     * (현재 연도의 뒤 2자리보다 크면 1900년대, 같거나 작으면 2000년대)
+     */
+    private function normalizeBirthYear(mixed $value): ?int
+    {
+        if ($value === null || $value === '' || ! is_numeric($value)) {
+            return null;
+        }
+
+        $year = (int) $value;
+        if ($year < 100) {
+            $year += $year > ((int) now()->format('y')) ? 1900 : 2000;
+        }
+
+        return $year;
+    }
+
+    /**
+     * 직업 정규화. 비었으면 null.
+     */
+    private function normalizeJob(mixed $value): ?string
+    {
+        $job = trim((string) ($value ?? ''));
+
+        return $job !== '' ? $job : null;
     }
 
     /**
@@ -228,6 +272,16 @@ class RosterService
             }
             if (array_key_exists('platform', $data) && $data['platform'] !== null) {
                 $roster->platform = $this->normalizePlatform($data['platform']);
+            }
+            // 프로필(키·출생연도·직업): 키가 넘어오면 빈 값은 "지움"으로 처리한다.
+            if (array_key_exists('height', $data)) {
+                $roster->height = $this->normalizeHeight($data['height']);
+            }
+            if (array_key_exists('birth_year', $data)) {
+                $roster->birth_year = $this->normalizeBirthYear($data['birth_year']);
+            }
+            if (array_key_exists('job', $data)) {
+                $roster->job = $this->normalizeJob($data['job']);
             }
             $roster->save();
 
@@ -823,6 +877,7 @@ class RosterService
                             'name'     => $prefix . ($start + $i),
                             'gender'   => $gender,
                             'platform' => $platforms[array_rand($platforms)],
+                            ...$this->dummyProfile($gender),
                         ]);
                         $created++;
                     }
@@ -836,6 +891,24 @@ class RosterService
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }
+    }
+
+    /**
+     * [개발용] 더미 명단용 프로필(키·출생연도·직업) — 성별에 맞는 현실적인 범위에서 무작위로 만든다.
+     *
+     * @return array{height:int, birth_year:int, job:string}
+     */
+    private function dummyProfile(string $gender): array
+    {
+        $jobs = ['개발자', '디자이너', '간호사', '교사', '마케터', '회계사', '공무원', '의사', '연구원', '프리랜서', '대기업 사무직', '금융권', 'PD', '약사', '변호사'];
+        $year = (int) now()->year;
+
+        return [
+            'height'     => $gender === Member::GENDER_FEMALE ? random_int(155, 172) : random_int(170, 188),
+            // 만 24~39세 범위(출생연도)
+            'birth_year' => $year - random_int(24, 39),
+            'job'        => $jobs[array_rand($jobs)],
+        ];
     }
 
     /**

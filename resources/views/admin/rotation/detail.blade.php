@@ -1401,7 +1401,10 @@
             var curData = parseRoster($cur.find('[data-roster-grid]').first());
             var curCards = (curData && curData.cards && curData.cards.length) ? curData.cards : null;
             var curCard  = curCards ? curCards[0] : null;
-            var hasCurrent = curCard && ((curCard.males && curCard.males.length) || (curCard.females && curCard.females.length));
+            // 어느 카드든 인원이 한 명이라도 있으면 "현재 명단 있음"
+            var hasCurrent = !!curCards && curCards.some(function(c){
+                return (c.males && c.males.length) || (c.females && c.females.length);
+            });
             if (!hasCurrent) { return sampleHtml; } // 현재 명단 없으면 샘플 그대로
 
             // 2) 샘플 HTML 파싱
@@ -1412,15 +1415,15 @@
             var sampleData = parseRoster($grid);
             if (!sampleData || !sampleData.cards.length) { return sampleHtml; }
 
-            // 3) 샘플의 각 카드에 현재 값을 채운다.
-            //    - 명단(males/females): 첫 현재 카드 기준 (기존 동작 유지)
-            //    - 행사명/날짜(title/date): 같은 인덱스의 현재 카드 값 우선, 없으면 첫 카드 값으로 유지
+            // 3) 샘플의 각 카드에 "같은 위치(인덱스)의 현재 카드" 값을 통째로 채운다. (명단·행사명·날짜)
+            //    - 현재 카드가 그 위치에 없을 때만(예: 1열 → 2열) 첫 카드 값으로 채워 빈 카드가 생기지 않게 한다.
+            //    ※ 예전엔 명단을 항상 첫 카드로 덮어써서, 2열 샘플을 불러오면 두 행사 명단이 같아지는 문제가 있었다.
             sampleData.cards.forEach(function(card, i){
-                var src = curCards[i] || curCard; // 같은 위치 현재 카드 없으면 첫 카드로 폴백
-                card.males   = curCard.males.slice();
-                card.females = curCard.females.slice();
-                card.title   = (src && src.title != null) ? src.title : card.title;
-                card.date    = (src && src.date  != null) ? src.date  : card.date;
+                var src = curCards[i] || curCard;
+                card.males   = (src.males   || []).slice();
+                card.females = (src.females || []).slice();
+                card.title   = src.title != null ? src.title : card.title;
+                card.date    = src.date  != null ? src.date  : card.date;
             });
 
             // 4) 새 그리드로 다시 그려 샘플 HTML 의 명단 영역만 치환
@@ -1667,6 +1670,15 @@
             return titles;
         }
 
+        // $root 안 명단 그리드에서 행사 날짜 배열을 뽑는다. (일정 요약 블록용)
+        function eventDatesFromDom($root){
+            var dates = [];
+            $root.find('[data-roster-grid]').first().find('[data-roster-card]').each(function(){
+                dates.push($(this).attr('data-event-date') || '');
+            });
+            return dates;
+        }
+
         // 분리된 DOM($root) 에 "행사 배열 설정"을 반영한다.
         //  - 캐리어 data-detail-settings 갱신 (= {events:[...]})
         //  - 참여 조건 나이 블록 / 남·여 키 블록을 행사 수에 맞춰 다시 그린다.
@@ -1741,6 +1753,24 @@
                     return '<div>- ' + label(i) + '신장 <b>' + esc(h) + ' 이상</b></div>';
                 }).join('');
                 setHeightBlock($femaleBlock, femaleHtml);
+            }
+
+            // 4-1) 이번 모집 일정 요약 — 명단 카드(행사명·날짜) + 행사별 나이로 행사마다 한 칸. (_detailSample 과 동일 마크업)
+            var $scheduleBlock = $root.find('[data-setting-block="schedule"]').first();
+            if ($scheduleBlock.length) {
+                var dates = eventDatesFromDom($root);
+                var scheduleHtml = model.events.map(function(s, i){
+                    var last = i === model.events.length - 1;
+                    return '<div style="background:#ffffff; border:1px solid #f2d4dc; border-radius:12px; padding:16px 14px; text-align:center;' + (last ? '' : ' margin-bottom:12px;') + '">'
+                        +   '<div style="font-size:32px; font-weight:900; color:#7a1f3d; word-break:keep-all;">🗓 ' + esc(dates[i] || '') + '</div>'
+                        +   '<div style="font-size:28px; font-weight:800; color:#374151; margin-top:6px; word-break:keep-all;">' + esc(settingEventLabel(titles[i], i)) + '</div>'
+                        +   '<div style="font-size:27px; font-weight:800; margin-top:6px; word-break:keep-all;">'
+                        +     '<span style="color:#4a6fa5;">남 ' + esc(s.maleAgeText || '') + '</span> · '
+                        +     '<span style="color:#e8708a;">여 ' + esc(s.femaleAgeText || '') + '</span>'
+                        +   '</div>'
+                        + '</div>';
+                }).join('');
+                $scheduleBlock.html(scheduleHtml);
             }
 
             // 5) 이전 로테이블 기록 블록 — records 배열로 행을 다시 그린다. (페이지 전역)

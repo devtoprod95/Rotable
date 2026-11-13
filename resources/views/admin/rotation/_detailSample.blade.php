@@ -242,6 +242,28 @@
         <div style="font-size:34px; color:#9ca3af; margin-top:10px;">{{ $typeConfig['subtitle'] }}</div>
     </div>
 
+    {{-- 이번 모집 일정 요약 (최상단) — "언제 · 몇 년생"을 가장 먼저 보여준다.
+         [적용] 시 JS 가 명단 카드(행사명·날짜) + 페이지 설정(나이)으로 data-setting-block="schedule" 안을 다시 그린다. --}}
+    <div style="margin-bottom:36px; border:2px solid #f2d4dc; border-radius:16px; overflow:hidden;">
+        <div style="background:linear-gradient(135deg,#7a1f3d,#b4385e); padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+            📅 이번 모집 일정
+        </div>
+        <div style="background:#fff7f8; padding:18px 14px;">
+            <div data-setting-block="schedule">
+                @foreach ($sampleEvents as $i => $event)
+                    <div style="background:#ffffff; border:1px solid #f2d4dc; border-radius:12px; padding:16px 14px; text-align:center;{{ $loop->last ? '' : ' margin-bottom:12px;' }}">
+                        <div style="font-size:32px; font-weight:900; color:#7a1f3d; word-break:keep-all;">🗓 {{ $event['date'] }}</div>
+                        <div style="font-size:28px; font-weight:800; color:#374151; margin-top:6px; word-break:keep-all;">{{ $event['title'] }}</div>
+                        <div style="font-size:27px; font-weight:800; margin-top:6px; word-break:keep-all;"><span style="color:#4a6fa5;">남 {{ $eventSettings[$i]['maleAgeText'] }}</span> · <span style="color:#e8708a;">여 {{ $eventSettings[$i]['femaleAgeText'] }}</span></div>
+                    </div>
+                @endforeach
+            </div>
+            <div style="font-size:25px; color:#9f1239; margin-top:14px; text-align:center; line-height:1.6; word-break:keep-all;">
+                ※ 성비에 맞춰 순차적으로 확정돼요.
+            </div>
+        </div>
+    </div>
+
     {{-- 오픈 기념 할인 배너 (최상단 강조) --}}
     <div style="background:#fff7ed; border:3px solid #fb923c; border-radius:16px; padding:24px 16px; margin-bottom:16px; text-align:center;">
         <div style="display:inline-block; background:#ea580c; color:#ffffff; border-radius:999px; padding:5px 20px; font-size:28px; font-weight:900; margin-bottom:14px;">🎉 OPEN EVENT</div>
@@ -675,6 +697,19 @@
         </div>
     </div>
 
+    {{-- 준비물 --}}
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#6366f1; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+            🎒 준비물
+        </div>
+        <div style="background:#eef2ff; padding:24px 16px; font-size:31px; color:#312e81; line-height:2.0; text-align:center; word-break:keep-all;">
+            <div>🙋‍♂️ <b>남성</b> — 신분증 + 재직 확인 서류 (명함 · 사원증 · 재직증명서 중 1)</div>
+            <div>🙋‍♀️ <b>여성</b> — 신분증</div>
+            <div>📱 <b>넉넉히 충전된 휴대폰</b> — 모든 진행이 스마트폰으로 이뤄져요</div>
+            <div style="font-size:27px; color:#4f46e5; margin-top:10px; line-height:1.6;">※ 남성분은 직업 확인이 되지 않으면 현장에 오셔도 참여가 어려워요.</div>
+        </div>
+    </div>
+
     {{-- 로테이블 이용안내 --}}
     <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
         <div style="background:#10b981; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
@@ -710,6 +745,21 @@
         </div>
     </div>
     @endif
+
+    {{-- 참여 전 확인 사항 (운영 정책) — 실제 정책에 맞게 문구를 확인/수정해서 사용하세요. (별도 확정 안내는 보내지 않음) --}}
+    <div style="margin-top:48px; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;">
+        <div style="background:#475569; padding:16px 12px; font-size:39px; font-family:'Jua',sans-serif; font-weight:400; letter-spacing:0.5px; color:#ffffff; text-align:center;">
+            📢 참여 전 꼭 확인해 주세요
+        </div>
+        <div style="background:#f8fafc; padding:24px 18px; font-size:29px; color:#334155; line-height:1.9; text-align:left; word-break:keep-all;">
+            <div>✔️ 정확한 장소와 시간은 <b>참가자 채팅방 공지 또는 문자로</b>로 안내드려요.</div>
+            <div>✔️ <b>최소 인원이 모이지 않아 취소</b>되는 경우 참가비는 <b>전액 환불</b>돼요.</div>
+            <div>✔️ 시작 시간 <b>10분 이상 지각</b> 시 입장이 제한될 수 있어요. 늦으시면 미리 연락 주세요.</div>
+            <div>✔️ 원활한 진행을 위해 <b>중간 퇴장은 어려워요.</b></div>
+            <div>✔️ 직업·신분을 속이거나 <b>비매너 행동</b> 시 환불 없이 입장 제한 또는 퇴장될 수 있어요.</div>
+            <div>✔️ 개인정보는 <b>매칭 결과 외에는 절대 공개하지 않아요.</b></div>
+        </div>
+    </div>
 
     {{-- 자주 묻는 질문 --}}
     @if ($type === 'solo')

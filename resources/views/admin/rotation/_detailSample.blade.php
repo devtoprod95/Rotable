@@ -752,7 +752,7 @@
             📢 참여 전 꼭 확인해 주세요
         </div>
         <div style="background:#f8fafc; padding:24px 18px; font-size:29px; color:#334155; line-height:1.9; text-align:left; word-break:keep-all;">
-            <div>✔️ 정확한 장소와 시간은 <b>참가자 채팅방 공지 또는 문자로</b>로 안내드려요.</div>
+            <div>✔️ 정확한 장소와 시간은 <b>참가자 채팅방 공지 또는 문자</b>로 안내드려요.</div>
             <div>✔️ <b>최소 인원이 모이지 않아 취소</b>되는 경우 참가비는 <b>전액 환불</b>돼요.</div>
             <div>✔️ 시작 시간 <b>10분 이상 지각</b> 시 입장이 제한될 수 있어요. 늦으시면 미리 연락 주세요.</div>
             <div>✔️ 원활한 진행을 위해 <b>중간 퇴장은 어려워요.</b></div>

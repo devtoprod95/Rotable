@@ -75,66 +75,6 @@
         </div>
     </div>
 
-    {{-- 명단 추가 (한 명씩 입력) --}}
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <h3 class="card-title mb-0"><i class="ti ti-user-plus me-1"></i> 체크인 명단 추가</h3>
-                <span class="badge bg-azure-lt"><i class="ti ti-info-circle me-1"></i> 전화번호 없이 닉네임·플랫폼·성별만 관리해요</span>
-            </div>
-            <div class="card-body">
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-3">
-                        <label for="addName" class="form-label mb-1">닉네임</label>
-                        <input type="text" id="addName" class="form-control" placeholder="플랫폼에 등록된 닉네임" maxlength="50" autocomplete="off">
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label mb-1 d-block">플랫폼</label>
-                        <div class="btn-group w-100" role="group" aria-label="플랫폼 선택">
-                            @foreach ($platformOptions as $opt)
-                                <input type="radio" class="btn-check" name="addPlatform" id="addPlatform{{ ucfirst($opt['id']) }}"
-                                       value="{{ $opt['id'] }}" autocomplete="off" {{ $loop->first ? 'checked' : '' }}>
-                                <label class="btn btn-outline-orange" for="addPlatform{{ ucfirst($opt['id']) }}">{{ $opt['label'] }}</label>
-                            @endforeach
-                        </div>
-                    </div>
-                    <div class="col-6 col-md-3">
-                        <label class="form-label mb-1 d-block">성별</label>
-                        <div class="btn-group w-100" role="group" aria-label="성별 선택">
-                            <input type="radio" class="btn-check" name="addGender" id="addGenderM" value="M" autocomplete="off" checked>
-                            <label class="btn btn-outline-blue" for="addGenderM">남</label>
-                            <input type="radio" class="btn-check" name="addGender" id="addGenderF" value="F" autocomplete="off">
-                            <label class="btn btn-outline-pink" for="addGenderF">여</label>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <button type="button" class="btn btn-primary w-100" id="checkinAddBtn">
-                            <i class="ti ti-plus me-1"></i> 추가
-                        </button>
-                    </div>
-                </div>
-                {{-- 상세페이지 명단 자동 채움용 프로필 (필수 입력) --}}
-                <div class="row g-2 align-items-end mt-1">
-                    <div class="col-4 col-md-2">
-                        <label for="addHeight" class="form-label mb-1 required">키 <span class="text-secondary small">(cm)</span></label>
-                        <input type="text" id="addHeight" class="form-control" placeholder="175" maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
-                    </div>
-                    <div class="col-4 col-md-2">
-                        <label for="addBirthYear" class="form-label mb-1 required">년생</label>
-                        <input type="text" id="addBirthYear" class="form-control" placeholder="97" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
-                    </div>
-                    <div class="col-4 col-md-3">
-                        <label for="addJob" class="form-label mb-1 required">직업</label>
-                        <input type="text" id="addJob" class="form-control" placeholder="예: 개발자" maxlength="50" autocomplete="off">
-                    </div>
-                    <div class="col-12 col-md-5 text-secondary small">
-                        <i class="ti ti-info-circle me-1"></i>필수 입력 · 상세페이지 참여자 명단을 자동으로 채울 때 사용돼요. (년생은 2자리로 입력 가능)
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     {{-- 테이블별 성비 (입장등록 좌석 기준) + 새로고침 --}}
     <div class="col-12">
         <div class="card">
@@ -181,6 +121,69 @@
                 <div class="row g-2" id="tableRatioBody"></div>
                 <div class="text-secondary small text-center py-2" id="tableRatioEmpty">
                     이 회차에 생성된 테이블이 없어요. 행사 상세에서 테이블을 먼저 추가해 주세요.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- 명단 추가 (한 명씩 입력) --}}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h3 class="card-title mb-0"><i class="ti ti-user-plus me-1"></i> 체크인 명단 추가</h3>
+                <span class="badge bg-azure-lt"><i class="ti ti-info-circle me-1"></i> 전화번호 없이 닉네임·플랫폼·성별만 관리해요</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label for="addName" class="form-label mb-1">닉네임</label>
+                        <input type="text" id="addName" class="form-control" placeholder="플랫폼에 등록된 닉네임" maxlength="50" autocomplete="off">
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-label mb-1 d-block">플랫폼</label>
+                        <div class="btn-group w-100" role="group" aria-label="플랫폼 선택">
+                            @foreach ($platformOptions as $opt)
+                                <input type="radio" class="btn-check" name="addPlatform" id="addPlatform{{ ucfirst($opt['id']) }}"
+                                       value="{{ $opt['id'] }}" autocomplete="off" {{ $loop->first ? 'checked' : '' }}>
+                                <label class="btn btn-outline-orange" for="addPlatform{{ ucfirst($opt['id']) }}">{{ $opt['label'] }}</label>
+                            @endforeach
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-label mb-1 d-block">성별</label>
+                        <div class="btn-group w-100" role="group" aria-label="성별 선택">
+                            <input type="radio" class="btn-check" name="addGender" id="addGenderM" value="M" autocomplete="off" checked>
+                            <label class="btn btn-outline-blue" for="addGenderM">남</label>
+                            <input type="radio" class="btn-check" name="addGender" id="addGenderF" value="F" autocomplete="off">
+                            <label class="btn btn-outline-pink" for="addGenderF">여</label>
+                        </div>
+                    </div>
+                </div>
+                {{-- 상세페이지 명단 자동 채움용 프로필 (필수 입력) --}}
+                <div class="row g-2 align-items-end mt-1">
+                    <div class="col-4 col-md-2">
+                        <label for="addHeight" class="form-label mb-1 required">키 <span class="text-secondary small">(cm)</span></label>
+                        <input type="text" id="addHeight" class="form-control" placeholder="175" maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <label for="addBirthYear" class="form-label mb-1 required">년생</label>
+                        <input type="text" id="addBirthYear" class="form-control" placeholder="97" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    </div>
+                    <div class="col-4 col-md-3">
+                        <label for="addJob" class="form-label mb-1 required">직업</label>
+                        <input type="text" id="addJob" class="form-control" placeholder="예: 개발자" maxlength="50" autocomplete="off">
+                    </div>
+                    <div class="col-12 col-md-5 text-secondary small">
+                        <i class="ti ti-info-circle me-1"></i>필수 입력 · 상세페이지 참여자 명단을 자동으로 채울 때 사용돼요. (년생은 2자리로 입력 가능)
+                    </div>
+                </div>
+                {{-- 추가 버튼은 모든 입력(닉네임·플랫폼·성별·키·년생·직업) 아래에 둔다 --}}
+                <div class="row g-2 mt-2">
+                    <div class="col-12">
+                        <button type="button" class="btn btn-primary w-100" id="checkinAddBtn">
+                            <i class="ti ti-plus me-1"></i> 추가
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -345,7 +348,13 @@
             var profBtn = `<button type="button" class="btn btn-sm btn-outline-secondary btn-checkin-profile"`
                   + ` data-id="${r.id}" aria-label="${esc(nickname)} 프로필 입력·수정">`
                   + `<i class="ti ti-id me-1"></i>프로필</button>`;
-            var actions = `<div class="ck-actions">${profBtn}${ticketBtn}${delBtn}</div>`;
+            // 모바일 전용: 행 전체 탭 대신 눈에 보이는 체크인/취소 버튼 (데스크톱은 행 클릭 그대로)
+            var toggleBtn = inState
+                ? `<button type="button" class="btn btn-sm btn-outline-warning btn-checkin-toggle d-md-none" data-id="${r.id}"`
+                  + ` aria-label="${esc(nickname)} 체크인 취소"><i class="ti ti-x me-1"></i>체크인 취소</button>`
+                : `<button type="button" class="btn btn-sm btn-success btn-checkin-toggle d-md-none" data-id="${r.id}"`
+                  + ` aria-label="${esc(nickname)} 체크인"><i class="ti ti-check me-1"></i>체크인</button>`;
+            var actions = `<div class="ck-actions">${toggleBtn}${profBtn}${ticketBtn}${delBtn}</div>`;
 
             return `<div class="list-group-item checkin-row ${stateCls}"`
                 +      ` role="button" tabindex="0" data-id="${r.id}"`
@@ -526,7 +535,7 @@
                 title: '더미 명단 추가',
                 html: '<div style="display:flex;gap:10px;">' + numInput('swal-dev-m', '👨 남성', '#1d4ed8') + numInput('swal-dev-f', '👩 여성', '#be185d') + '</div>'
                     + '<div class="text-secondary small mt-2">닉네임은 더미남N / 더미여N 으로 만들어져요. (개발용)</div>',
-                showCancelButton: true, reverseButtons: true, focusConfirm: false,
+                showCancelButton: true, reverseButtons: true, focusConfirm: true,
                 confirmButtonText: '추가', cancelButtonText: '취소',
                 confirmButtonColor: '#3085d6', cancelButtonColor: '#d33',
                 preConfirm: function(){
@@ -711,17 +720,13 @@
                     + '</div>'
                     + tableSelectHtml(opts.tableId, opts.gender)
                     + ratioModalHtml(),
-                focusConfirm: false,
+                focusConfirm: true,
                 showCancelButton: true,
                 reverseButtons: true,
                 confirmButtonText: opts.confirmText,
                 cancelButtonText: '취소',
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
-                didOpen: function(){
-                    var el = document.getElementById('swal-ticket');
-                    if(el){ el.focus(); }
-                },
                 preConfirm: function(){
                     var ticket = (document.getElementById('swal-ticket')?.value || '').trim();
                     var tableEl = document.getElementById('swal-table-select');
@@ -986,6 +991,17 @@
             if(e.key === 'Enter'){ e.preventDefault(); $('#checkinAddBtn').trigger('click'); }
         });
 
+        // 모바일 체크인/취소 버튼 — 행 클릭과 같은 동작. 행 토글로 중복 번지지 않게 전파를 막는다.
+        $(document).on('click', '.btn-checkin-toggle', function(e){
+            e.stopPropagation();
+            toggle($(this).data('id'));
+        });
+        $(document).on('keydown', '.btn-checkin-toggle', function(e){
+            if(e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32){
+                e.stopPropagation();
+            }
+        });
+
         // 프로필(키·년생·직업) 입력/수정
         $(document).on('click', '.btn-checkin-profile', async function(e){
             e.stopPropagation(); // 행 참석 토글로 번지지 않게
@@ -1003,7 +1019,7 @@
                 html: field('swal-p-height', '키 (cm) *', 'text', r.height || '', '175', 'maxlength="3" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-birth', '년생 (2자리 가능) *', 'text', r.birth_year ? String(r.birth_year).slice(-2) : '', '97', 'maxlength="4" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-job', '직업 *', 'text', r.job || '', '예: 개발자', 'maxlength="50"'),
-                focusConfirm: false,
+                focusConfirm: true,
                 showCancelButton: true,
                 reverseButtons: true,
                 confirmButtonText: '저장',

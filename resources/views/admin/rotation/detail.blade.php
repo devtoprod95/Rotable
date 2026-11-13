@@ -173,9 +173,24 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-dark" data-bs-dismiss="modal">닫기</button>
-                <button type="button" class="btn btn-dark btn-detail-download">
-                    <i class="ti ti-download me-1"></i> 이미지 다운로드
-                </button>
+                {{-- 상단 "다운로드" 메뉴와 동일한 3가지 타입 (전체 / 참가자 명단만 / 피드 이미지) --}}
+                <div class="dropdown dropup">
+                    <button type="button" class="btn btn-dark dropdown-toggle"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="ti ti-download me-1"></i> 이미지 다운로드
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end">
+                        <button type="button" class="dropdown-item btn-detail-download">
+                            <i class="ti ti-download me-2 fs-2"></i> 이미지 다운로드 <span class="text-secondary small ms-1">(전체·최대 5장)</span>
+                        </button>
+                        <button type="button" class="dropdown-item btn-detail-download-page" data-page-only="참가자명단">
+                            <i class="ti ti-user-heart me-2 fs-2"></i> 참가자 명단만 <span class="text-secondary small ms-1">(2번 장)</span>
+                        </button>
+                        <button type="button" class="dropdown-item btn-open-feed btn-open-feed-from-preview">
+                            <i class="ti ti-photo-down me-2 fs-2"></i> 피드 이미지 다운
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -2880,6 +2895,12 @@
 
         // '피드 이미지 다운' 버튼 → 모달 먼저 열고, 완전히 보인 뒤 현재 명단으로 미리보기 렌더.
         // (모달이 숨겨진 상태에서 렌더하면 scrollHeight 가 0 이라 미리보기 높이가 0 이 된다.)
+        // 미리보기 모달에서 피드 이미지를 열 때는 미리보기를 먼저 닫아 모달이 겹치지 않게 한다.
+        $('.btn-open-feed-from-preview').on('click', function(){
+            var pv = document.getElementById('detailPreviewModal');
+            var inst = pv && window.bootstrap && bootstrap.Modal.getInstance(pv);
+            if (inst) { inst.hide(); }
+        });
         $('.btn-open-feed').on('click', function(){
             var m = getFeedModal();
             var el = document.getElementById('detailFeedModal');

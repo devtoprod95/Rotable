@@ -178,7 +178,7 @@
     $cellDateSize    = $columns === 1 ? '21px' : '16px'; // 날짜 (분포도 제목 등)
     $evTitleSize     = $columns === 1 ? '54px' : '38px'; // 명단 카드 행사명 (상단 제목 톤)
     $evDateSize      = $columns === 1 ? '30px' : '24px'; // 명단 카드 날짜
-    $cellHeadSize    = $columns === 1 ? '30px' : '24px'; // 남/여 헤더
+    $cellHeadSize    = $columns === 1 ? '42px' : '30px'; // 남/여 헤더 — 행사 제목(54/38px)보다 작게
     $cellNoSize      = $columns === 1 ? '23px' : '18px'; // N호
     $cellInfoSize    = $columns === 1 ? '26px' : '20px'; // 키·직업·나이 (정보가 더 잘 보이도록 상향)
     $cellHeight      = $columns === 1 ? '108px' : '92px'; // 셀 높이 (더 잘 보이도록 상향)
@@ -334,8 +334,8 @@
 
                     {{-- 남(좌) / 여(우) 헤더 --}}
                     <div style="display:flex; font-size:{{ $cellHeadSize }}; font-weight:900; text-align:center;">
-                        <div style="width:50%; padding:22px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 {{ count($maleSample) }}</div>
-                        <div style="width:50%; padding:22px 4px; background:#e8708a; color:#ffffff;">👩 여 {{ count($femaleSample) }}</div>
+                        <div style="width:50%; padding:14px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 {{ count($maleSample) }}</div>
+                        <div style="width:50%; padding:14px 4px; background:#e8708a; color:#ffffff;">👩 여 {{ count($femaleSample) }}</div>
                     </div>
 
                     {{-- 남/여 행 맞춤 --}}

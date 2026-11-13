@@ -912,6 +912,7 @@
             // 행사명·날짜 크기: 상단 제목(64px / 부제 34px) 톤에 맞추되, 2열은 카드 폭이 절반이라 줄인다.
             var isTwoCol    = String(c.columns) === '2' || cardWidth === '50%';
             var evTitleSize = isTwoCol ? '38px' : '54px';
+            var headSize    = isTwoCol ? '30px' : '42px'; // 남/여 헤더 — 행사 제목보다 살짝 작게 (저장된 config 값은 무시 → [적용] 시 즉시 반영)
             var evDateSize  = isTwoCol ? '24px' : '30px';
             function esc(s){
                 return String(s == null ? '' : s)
@@ -1064,9 +1065,9 @@
                 html +=     '</div>';
                 // 남/여 헤더 (실제 참여자 수만 표시 — 모집중 더미는 제외)
                 // (남/여 띠는 세로로 넉넉하게, 가운데 흰 구분선)
-                html +=     '<div style="display:flex; font-size:' + cellHeadSize + '; font-weight:900; text-align:center;">';
-                html +=       '<div style="width:50%; padding:22px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 ' + maleHeadCount + '</div>';
-                html +=       '<div style="width:50%; padding:22px 4px; background:#e8708a; color:#ffffff;">👩 여 ' + femaleHeadCount + '</div>';
+                html +=     '<div style="display:flex; font-size:' + headSize + '; font-weight:900; text-align:center;">';
+                html +=       '<div style="width:50%; padding:14px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 ' + maleHeadCount + '</div>';
+                html +=       '<div style="width:50%; padding:14px 4px; background:#e8708a; color:#ffffff;">👩 여 ' + femaleHeadCount + '</div>';
                 html +=     '</div>';
                 // 남/여 명단
                 html +=     '<div style="display:flex;" data-roster-cols="1">';

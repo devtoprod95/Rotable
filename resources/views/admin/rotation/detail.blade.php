@@ -999,22 +999,25 @@
             // "모집중" 자리 칸.
             // - manual=true: 관리자가 수동으로 끼워 넣은 모집중 자리 (data-recruit="manual" → 재파싱 때 복원)
             // - manual=false: 성비 자동 맞춤으로 채운 자리 (data-recruit="1" → 재파싱 때 제외)
-            function recruitCell(i, borderColor, manual){
+            function recruitCell(i, borderColor, manual, isMale){
                 var flag = manual ? 'manual' : '1';
+                // 모집중 하트도 남(파랑 💙) / 여(분홍 💗)로 구분한다.
+                var heart = isMale ? '💙' : '💗';
+                var heartColor = isMale ? '#60a5fa' : '#f472b6';
                 return ''
                   + '<div data-recruit="' + flag + '" style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:2px dashed ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center; background:repeating-linear-gradient(45deg,#ffffff,#ffffff 8px,#fafafa 8px,#fafafa 16px);">'
                   +   '<div style="font-weight:900; font-size:' + cellNoSize + '; color:#9ca3af;">' + (i + 1) + '호</div>'
-                  +   '<div style="color:#f472b6; font-weight:900; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(recruitLabel) + ' 💗</div>'
+                  +   '<div style="color:' + heartColor + '; font-weight:900; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(recruitLabel) + ' ' + heart + '</div>'
                   + '</div>';
             }
             // 한 컬럼 렌더: 명단 순서대로 실제 인원/수동 모집중 자리를 그리고,
             // (balance 시) 부족한 만큼 뒤에 자동 모집중 자리로 채운다.
-            function columnCells(people, total, borderColor){
+            function columnCells(people, total, borderColor, isMale){
                 var out = '';
                 people.forEach(function(p, i){
-                    out += p && p.recruit ? recruitCell(i, borderColor, true) : personCell(p, i, borderColor);
+                    out += p && p.recruit ? recruitCell(i, borderColor, true, isMale) : personCell(p, i, borderColor);
                 });
-                for (var i = people.length; i < total; i++) { out += recruitCell(i, borderColor, false); }
+                for (var i = people.length; i < total; i++) { out += recruitCell(i, borderColor, false, isMale); }
                 return out;
             }
 
@@ -1135,16 +1138,16 @@
                 // 남/여 헤더 (실제 참여자 수만 표시 — 모집중 더미는 제외)
                 // (남/여 띠는 세로로 넉넉하게, 가운데 흰 구분선)
                 html +=     '<div style="display:flex; font-size:' + headSize + '; font-weight:900; text-align:center;">';
-                html +=       '<div style="width:50%; padding:14px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 ' + maleHeadCount + '</div>';
-                html +=       '<div style="width:50%; padding:14px 4px; background:#e8708a; color:#ffffff;">👩 여 ' + femaleHeadCount + '</div>';
+                html +=       '<div style="width:50%; padding:14px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">💙 남 ' + maleHeadCount + '</div>';
+                html +=       '<div style="width:50%; padding:14px 4px; background:#e8708a; color:#ffffff;">💗 여 ' + femaleHeadCount + '</div>';
                 html +=     '</div>';
                 // 남/여 명단
                 html +=     '<div style="display:flex;" data-roster-cols="1">';
                 html +=       '<div style="width:50%; box-sizing:border-box; border-right:1px solid #d8e2ef; background:#f1f5fb;">';
-                html +=         columnCells(males, maleTotal, '#d8e2ef');
+                html +=         columnCells(males, maleTotal, '#d8e2ef', true);
                 html +=       '</div>';
                 html +=       '<div style="width:50%; box-sizing:border-box; background:#fff3f5;">';
-                html +=         columnCells(females, femaleTotal, '#f6d5dc');
+                html +=         columnCells(females, femaleTotal, '#f6d5dc', false);
                 html +=       '</div>';
                 html +=     '</div>';
                 // 남/여 나이·키 분포도 (명단 값으로 자동 집계)

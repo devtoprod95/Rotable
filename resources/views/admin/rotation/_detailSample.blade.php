@@ -338,8 +338,8 @@
 
                     {{-- 남(좌) / 여(우) 헤더 --}}
                     <div style="display:flex; font-size:{{ $cellHeadSize }}; font-weight:900; text-align:center;">
-                        <div style="width:50%; padding:14px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">👨 남 {{ count($maleSample) }}</div>
-                        <div style="width:50%; padding:14px 4px; background:#e8708a; color:#ffffff;">👩 여 {{ count($femaleSample) }}</div>
+                        <div style="width:50%; padding:14px 4px; background:#4a6fa5; color:#ffffff; border-right:2px solid #ffffff;">💙 남 {{ count($maleSample) }}</div>
+                        <div style="width:50%; padding:14px 4px; background:#e8708a; color:#ffffff;">💗 여 {{ count($femaleSample) }}</div>
                     </div>
 
                     {{-- 남/여 행 맞춤 --}}

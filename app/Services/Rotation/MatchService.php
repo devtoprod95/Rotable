@@ -21,14 +21,14 @@ class MatchService
     /**
      * 특정 행사의 투표 목록. (쌍방 여부와 무관하게 "누가 누구를 선택했는지" 모두 표기)
      * 같은 "선택한 사람(voter)" 기준으로 한 줄에 묶어, 그 사람이 고른 상대들을 함께 반환한다.
-     * 상대도 나를 선택한(상호 매칭) 상대는 target.is_mutual=true 로 표시하며,
-     * 투표 시각(voted_at)은 그 voter 의 투표 중 가장 최신 1개만 노출한다.
+     * 상대도 나를 선택한(상호 매칭) 상대는 target.is_mutual=true 로 표시한다.
+     * 투표 시각(target.voted_at)은 선택한 상대별 투표 생성 시각(event_votes.created_at)이다.
+     * 선택한 사람(행)과 각 사람의 선택 상대는 모두 번호표 오름차순(같은 번호면 남 → 여)으로 정렬한다.
      *
      * @return array<int, array{
      *     voter: array{id:int, name:?string, gender:?string, phone:?string, birth_year:?int, job:?string, height:?int, region:?string, is_smoker:?bool, mbti:?string},
-     *     targets: array<int, array{id:int, name:?string, gender:?string, phone:?string, birth_year:?int, job:?string, height:?int, region:?string, is_smoker:?bool, mbti:?string, is_mutual:bool}>,
-     *     has_mutual: bool,
-     *     voted_at: ?string
+     *     targets: array<int, array{id:int, name:?string, gender:?string, phone:?string, birth_year:?int, job:?string, height:?int, region:?string, is_smoker:?bool, mbti:?string, is_mutual:bool, voted_at:?string}>,
+     *     has_mutual: bool
      * }>
      */
     public function matchList(int $eventId): array
@@ -46,41 +46,52 @@ class MatchService
                     'voter'      => $this->personPayload($vote->voter, $voterId, null, $labelMap),
                     'targets'    => [],
                     'has_mutual' => false,
-                    'voted_at'   => null,
                 ];
             }
 
             $isMutual = isset($votedMap[$vote->target_id][$vote->voter_id]);
 
-            $grouped[$voterId]['targets'][] = $this->personPayload($vote->target, (int) $vote->target_id, $isMutual, $labelMap);
+            $target = $this->personPayload($vote->target, (int) $vote->target_id, $isMutual, $labelMap);
+            // 선택한 상대별 투표 시각 (투표 생성 시각)
+            $target['voted_at'] = $vote->created_at?->toIso8601String();
+            $grouped[$voterId]['targets'][] = $target;
 
             if ($isMutual) {
                 $grouped[$voterId]['has_mutual'] = true;
             }
-
-            // 가장 최신 투표 시각 1개만 유지한다.
-            $this->keepLatestVotedAt($grouped[$voterId], $vote);
         }
 
         $rows = array_values($grouped);
 
-        // 각 사람의 선택 상대 목록도 매칭(상호)된 상대가 먼저 보이도록 정렬한다.
+        // 선택한 상대 목록: 번호표 오름차순.
         foreach ($rows as &$row) {
-            usort($row['targets'], function ($a, $b) {
-                return ($b['is_mutual'] ? 1 : 0) <=> ($a['is_mutual'] ? 1 : 0);
-            });
+            usort($row['targets'], fn ($a, $b) => $this->compareByTicket($a, $b));
         }
         unset($row);
 
-        // 상호 매칭이 있는 사람을 먼저, 그다음 최신 투표순으로 정렬한다. (페이지네이션 없이 전부 반환)
-        usort($rows, function ($a, $b) {
-            if ($a['has_mutual'] !== $b['has_mutual']) {
-                return $b['has_mutual'] <=> $a['has_mutual']; // 상호 매칭 있는 사람 먼저
-            }
-            return ($b['voted_at'] ?? '') <=> ($a['voted_at'] ?? ''); // 최신순
-        });
+        // 선택한 사람: 번호표 오름차순. (페이지네이션 없이 전부 반환)
+        usort($rows, fn ($a, $b) => $this->compareByTicket($a['voter'], $b['voter']));
 
         return $rows;
+    }
+
+    /**
+     * 번호표(members.name) 오름차순 비교. 숫자 번호표는 숫자로 비교하고(2 < 10),
+     * 같은 번호면 남 → 여, 번호표가 숫자가 아니면 맨 뒤로 보낸다.
+     *
+     * @param array{name:?string, gender:?string} $a
+     * @param array{name:?string, gender:?string} $b
+     */
+    private function compareByTicket(array $a, array $b): int
+    {
+        $key = fn (array $p): array => [
+            ctype_digit((string) ($p['name'] ?? '')) ? 0 : 1,
+            ctype_digit((string) ($p['name'] ?? '')) ? (int) $p['name'] : 0,
+            ($p['gender'] ?? null) === Member::GENDER_MALE ? 0 : 1,
+            (string) ($p['name'] ?? ''),
+        ];
+
+        return $key($a) <=> $key($b);
     }
 
     /**

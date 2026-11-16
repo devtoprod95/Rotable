@@ -616,6 +616,34 @@
             });
         }
 
+        /**
+         * root 안의 모든 이미지가 로드(디코드)될 때까지 기다린다. (실패/지연 이미지는 timeout 후 넘어간다)
+         * 이미지가 아직 로드 전이면 height:auto 이미지의 높이가 0 으로 측정돼, 캡처 높이가 짧아 아래가 잘린다.
+         *
+         * @param {HTMLElement} root
+         * @param {number} [timeoutMs=10000]
+         */
+        async function waitForImages(root, timeoutMs){
+            var limit = timeoutMs || 10000;
+            var imgs = Array.prototype.slice.call(root.querySelectorAll('img'));
+            await Promise.all(imgs.map(function(img){
+                return new Promise(function(resolve){
+                    var done = false;
+                    var finish = function(){ if (!done) { done = true; resolve(); } };
+                    setTimeout(finish, limit);
+                    if (img.complete && img.naturalWidth) {
+                        // 로드는 끝났어도 디코드 전일 수 있어 한 번 더 기다린다.
+                        (img.decode ? img.decode().catch(function(){}) : Promise.resolve()).then(finish);
+                        return;
+                    }
+                    img.addEventListener('load', function(){
+                        (img.decode ? img.decode().catch(function(){}) : Promise.resolve()).then(finish);
+                    }, { once: true });
+                    img.addEventListener('error', finish, { once: true });
+                });
+            }));
+        }
+
         function triggerDownload(blob, filename){
             var url = URL.createObjectURL(blob);
             var link = document.createElement('a');
@@ -2519,6 +2547,9 @@
                     try { await document.fonts.ready; } catch (fe) { /* 무시 */ }
                 }
 
+                // 이미지 로드 전에 높이를 재면(특히 1장 메인 이미지) 높이가 0 으로 잡혀 아래가 잘린다.
+                await waitForImages(holder);
+
                 // 폰트 @import 등 <style> 은 모든 페이지에 공통으로 넣어야 폰트가 유지된다.
                 var styleHtml = Array.prototype.map.call(
                     holder.querySelectorAll('style'),
@@ -2590,6 +2621,11 @@
                     spacer.style.cssText = 'width:100%; height:12px; background:#ffffff;';
                     pageHolder.appendChild(spacer);
                     document.body.appendChild(pageHolder);
+
+                    // 복제본의 이미지가 모두 로드되고 높이가 확정된 뒤에 캡처 높이를 잰다.
+                    //  - 로드 전 측정 시 height:auto 이미지(1장 메인 이미지)가 0 높이로 잡혀 하단이 잘렸다.
+                    await waitForImages(pageHolder);
+                    fixImageHeights(pageHolder);
 
                     // (DOM 삽입 후) 장 상·하단 빈 공간 축소 — 구분마다 여백이 커 보이는 문제 해소.
                     //  - "보이는" 첫 블록의 위 마진 / 마지막 블록의 아래 마진을 0 으로.

@@ -21,11 +21,11 @@
                 <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
                     <span class="text-muted me-1">행사 타입</span>
                     <div class="btn-group" role="group" aria-label="행사 타입 선택">
-                        <input type="radio" class="btn-check" name="bep-type" id="bep-type-wine" value="wine" autocomplete="off" checked>
-                        <label class="btn btn-outline-primary" for="bep-type-wine"><i class="ti ti-glass-full me-1"></i> 와인파티</label>
-
-                        <input type="radio" class="btn-check" name="bep-type" id="bep-type-one" value="one" autocomplete="off">
+                        <input type="radio" class="btn-check" name="bep-type" id="bep-type-one" value="one" autocomplete="off" checked>
                         <label class="btn btn-outline-primary" for="bep-type-one"><i class="ti ti-users me-1"></i> 1:1 소개팅</label>
+
+                        <input type="radio" class="btn-check" name="bep-type" id="bep-type-wine" value="wine" autocomplete="off">
+                        <label class="btn btn-outline-primary" for="bep-type-wine"><i class="ti ti-glass-full me-1"></i> 와인파티</label>
                     </div>
 
                     <div class="ms-auto d-flex flex-wrap gap-2">
@@ -349,7 +349,7 @@ $(function () {
     var storeUrl  = $app.data('store-url');
     var deleteUrl = $app.data('delete-url');
 
-    var currentType = 'wine';
+    var currentType = 'one';
     var loadedName  = null; // 현재 불러온 견적 이름 (표시용)
 
     function won(n) { return (Math.round(n || 0)).toLocaleString('ko-KR') + ' 원'; }
@@ -720,7 +720,7 @@ $(function () {
 
     // 시작: 쿼리파라미터로 복원
     var qs = new URLSearchParams(window.location.search);
-    var qType = qs.get('type') === 'one' ? 'one' : 'wine';
+    var qType = qs.get('type') === 'wine' ? 'wine' : 'one';
     var qId = qs.get('id');
     $('#bep-type-' + qType).prop('checked', true);
     loadPreset(qType);

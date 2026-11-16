@@ -59,13 +59,13 @@
                 <div class="d-flex gap-2 flex-wrap align-items-center">
                     {{-- 유형 선택 (와인파티 / 1:1 소개팅) --}}
                     <div class="btn-group" role="group" aria-label="샘플 유형">
-                        <input type="radio" class="btn-check" name="sampleType" id="sampleTypeWine" value="wine" autocomplete="off" checked>
-                        <label class="btn btn-outline-pink" for="sampleTypeWine">
-                            <i class="ti ti-glass-full me-1"></i> 와인파티
-                        </label>
-                        <input type="radio" class="btn-check" name="sampleType" id="sampleTypeSolo" value="solo" autocomplete="off">
+                        <input type="radio" class="btn-check" name="sampleType" id="sampleTypeSolo" value="solo" autocomplete="off" checked>
                         <label class="btn btn-outline-pink" for="sampleTypeSolo">
                             <i class="ti ti-users me-1"></i> 1:1 소개팅
+                        </label>
+                        <input type="radio" class="btn-check" name="sampleType" id="sampleTypeWine" value="wine" autocomplete="off">
+                        <label class="btn btn-outline-pink" for="sampleTypeWine">
+                            <i class="ti ti-glass-full me-1"></i> 와인파티
                         </label>
                     </div>
 
@@ -144,7 +144,7 @@
                     (<b>저장 ▾ → 저장 목록 불러오기</b> 로 이전 저장본을 불러오거나, <b>다른 이름으로 저장</b>으로 새 버전을 남길 수 있어요.)
                 </small>
                 <label class="form-label">상세페이지 작성 (HTML)</label>
-                <textarea id="detailHtmlEditor">{!! $savedWine !!}</textarea>
+                <textarea id="detailHtmlEditor">{!! $savedSolo !!}</textarea>
             </div>
         </div>
     </div>
@@ -409,8 +409,8 @@
             solo: { id: {!! json_encode($currentIdSolo) !!}, title: {!! json_encode($currentTitleSolo) !!} }
         };
 
-        // 현재 에디터에 올라와 있는 유형 (초기값: 와인)
-        var activeType = 'wine';
+        // 현재 에디터에 올라와 있는 유형 (초기값: 1:1 소개팅)
+        var activeType = 'solo';
 
         // TinyMCE 초기화(또는 폴백) 완료 플래그 — 주소 복원은 이 이후에만 실행한다.
         var detailEditorReady = false;

@@ -25,6 +25,10 @@
         .eventform-list-btn{ width:100%; }
     }
 
+    /* 참여자 성별 탭: 터치하기 편한 높이, 데스크톱에선 폭 제한 */
+    .member-gender-tabs .btn{ min-height:44px; font-weight:700; font-size:1rem; }
+    @media (min-width: 768px){ .member-gender-tabs{ max-width:420px; } }
+
     /* 참여자 표: 모바일에서는 가로 스크롤 대신 '카드형'으로 세로 재배치한다.
        각 td 의 data-label 을 왼쪽 항목명으로 보여줘, 좁은 화면에서도 스크롤 없이 읽힌다. */
     @media (max-width: 767.98px){
@@ -269,7 +273,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <h3 class="card-title mb-0">참여자</h3>
+                    <h3 class="card-title mb-0">참여자 <span class="text-secondary fs-5 fw-normal">· 번호표 순</span></h3>
                     <div class="d-flex gap-2 flex-wrap">
                         <span class="badge bg-secondary-lt">총 {{ $event->members->count() }}명</span>
                         <span class="badge bg-blue-lt">남 {{ $maleCount }}명</span>
@@ -282,6 +286,15 @@
                     @if ($event->members->isEmpty())
                         <div class="text-center text-muted py-4">참여자가 없습니다.</div>
                     @else
+                        {{-- 성별 보기 탭: 모바일은 카드 폭 전체를 3등분, 데스크톱은 적당한 폭으로 크게 --}}
+                        <div class="btn-group w-100 mt-2 mb-3 member-gender-tabs" role="group" aria-label="성별 보기">
+                            <input type="radio" class="btn-check" name="memberGenderFilter" id="mgAll" value="" autocomplete="off" checked>
+                            <label class="btn btn-outline-secondary" for="mgAll"><i class="ti ti-users me-1"></i>전체 {{ $event->members->count() }}</label>
+                            <input type="radio" class="btn-check" name="memberGenderFilter" id="mgM" value="M" autocomplete="off">
+                            <label class="btn btn-outline-blue" for="mgM">남 {{ $maleCount }}</label>
+                            <input type="radio" class="btn-check" name="memberGenderFilter" id="mgF" value="F" autocomplete="off">
+                            <label class="btn btn-outline-pink" for="mgF">여 {{ $femaleCount }}</label>
+                        </div>
                         <div class="table-responsive">
                             <table class="table table-vcenter card-table members-table">
                                 <thead>
@@ -298,8 +311,8 @@
                                 </thead>
                                 <tbody>
                                     @foreach ($event->members as $i => $member)
-                                        <tr>
-                                            <td data-label="No" class="d-none d-md-table-cell">{{ $i + 1 }}</td>
+                                        <tr data-member-row data-gender="{{ $member->gender }}">
+                                            <td data-label="No" class="d-none d-md-table-cell member-no">{{ $i + 1 }}</td>
                                             <td class="m-headcell">
                                                 @php
                                                     $memberData = $member->toArray();
@@ -560,6 +573,17 @@
         // ===== 상세: 입장등록 QR 모달 =====
         $('#goRegisterQrBtn').on('click', function(){
             RegisterQrModal.open({{ $event->id }}, @json($event->label));
+        });
+
+        // ===== 상세: 참여자 성별 보기 (전체/남/여) — 표시 중인 행만 No 를 다시 매긴다. =====
+        $('input[name="memberGenderFilter"]').on('change', function(){
+            var g = $('input[name="memberGenderFilter"]:checked').val();
+            var n = 0;
+            $('.members-table tr[data-member-row]').each(function(){
+                var show = !g || $(this).data('gender') === g;
+                $(this).toggle(show);
+                if(show){ $(this).find('.member-no').text(++n); }
+            });
         });
 
         // ===== 상세: 매칭 조회 모달 =====

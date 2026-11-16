@@ -224,11 +224,19 @@ class RotationService
                     'castVotes as cast_votes_count' => fn ($vq) => $vq->where('event_id', $eventId),
                     // 보낸 요청수도 해당 행사 범위로 제한.
                     'adminRequests as admin_requests_count' => fn ($rq) => $rq->where('event_id', $eventId),
-                ])
-                ->orderBy('name'),
+                ]),
         ])->find($eventId);
 
         if ($event !== null) {
+            // 번호표(members.name, 숫자 문자열) 오름차순. 문자열 정렬("10" < "2")을 피하려고 숫자로 비교하며,
+            // 같은 번호는 남자 → 여자 순, 번호표가 숫자가 아니면 맨 뒤에 둔다. (DB 드라이버 무관하게 PHP 에서 정렬)
+            $event->setRelation('members', $event->members->sortBy(fn (Member $m): array => [
+                ctype_digit((string) $m->name) ? 0 : 1,
+                ctype_digit((string) $m->name) ? (int) $m->name : 0,
+                $m->gender === Member::GENDER_MALE ? 0 : 1,
+                (string) $m->name,
+            ])->values());
+
             // 참여자 전화번호 기준 "행사 유형별 누적 방문 횟수"를 각 회원에 주입한다.
             // (예: visit_counts = ['wine' => 3, 'one' => 2])
             $countsByPhone = app(VisitStatService::class)

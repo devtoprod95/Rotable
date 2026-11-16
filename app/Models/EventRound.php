@@ -30,8 +30,8 @@ class EventRound extends Model
     public static function typeOptions(): array
     {
         return [
-            self::TYPE_WINE => '와인파티',
             self::TYPE_ONE  => '1:1 소개팅',
+            self::TYPE_WINE => '와인파티',
         ];
     }
 

@@ -516,13 +516,19 @@ class MemberPageController extends Controller
             ? Member::GENDER_FEMALE
             : Member::GENDER_MALE;
 
-        // 투표 대상(같은 행사의 이성) 목록.
+        // 투표 대상(같은 행사의 이성) 목록. 번호표(name) 오름차순 — 문자열 정렬("10" < "2")을 피하려고 숫자로 비교하고,
+        // 번호표가 숫자가 아니면 맨 뒤로 보낸다. (DB 드라이버와 무관하게 PHP 에서 정렬)
         $candidates = Member::query()
             ->where('event_id', $me->event_id)
             ->where('gender', $oppositeGen)
             ->where('id', '!=', $me->id)
-            ->orderBy('name')
-            ->get();
+            ->get()
+            ->sortBy(fn (Member $m): array => [
+                ctype_digit((string) $m->name) ? 0 : 1,
+                ctype_digit((string) $m->name) ? (int) $m->name : 0,
+                (string) $m->name,
+            ])
+            ->values();
 
         // 내가 지목한 상대 id 집합.
         $myVotedIds = Vote::query()

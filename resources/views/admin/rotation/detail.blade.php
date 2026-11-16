@@ -158,7 +158,7 @@
 </button>
 
 {{-- 미리보기 모달 --}}
-<div class="modal modal-blur fade" id="detailPreviewModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="detailPreviewModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -209,7 +209,7 @@
      [적용] 시 data-setting 마커 지점의 값과 명단 그리드를 한 번에 갈아끼운다.
      (요소/data 속성 기준이라 주석이 지워져도 안전하게 동작한다.)
      ※ 페이지 설정과 참여자 명단 편집을 한 모달로 통합했다. --}}
-<div class="modal modal-blur fade" id="detailSettingsModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="detailSettingsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -294,7 +294,7 @@
 
 {{-- 저장 목록(이름 붙여 저장) 모달 --}}
 {{-- 현재 선택한 유형(wine/solo)의 "이름 붙여 저장한" 상세페이지 목록을 보여주고, 불러오기/삭제한다. --}}
-<div class="modal modal-blur fade" id="detailSavesModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="detailSavesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -333,7 +333,7 @@
 
 {{-- 피드 이미지 다운로드 모달 --}}
 {{-- rotable_banner.png + 선택한 행사의 "현재 DB 참여자 명단"을 합쳐 하나의 이미지로 다운로드한다. --}}
-<div class="modal modal-blur fade" id="detailFeedModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="detailFeedModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -762,6 +762,8 @@
             $('#detailPreview').html(html
                 ? withSpacer
                 : '<div style="padding:40px; text-align:center; color:#9ca3af;">내용이 비어 있습니다.<br>1열/2열 샘플을 눌러보세요.</div>');
+            // 큰 이미지 디코딩이 화면 그리기를 막지 않도록 비동기 디코드로 지정한다.
+            $('#detailPreview img').attr('decoding', 'async');
             // 내용 반영 후 실제 1080px 렌더 높이에 맞춰 축소 비율을 다시 계산한다.
             fitPreviewScale();
         }
@@ -862,10 +864,15 @@
         }
 
         // 미리보기 버튼(상단/플로팅 공통) → 모달 열기
+        // 모달을 먼저 띄우고(즉시 반응), 무거운 미리보기 렌더는 다음 프레임으로 미룬다.
+        // (모달 배경 blur 는 큰 에디터 위에서 프레임마다 다시 그려져 버벅였으므로 제거)
+        function afterPaint(fn){
+            requestAnimationFrame(function(){ setTimeout(fn, 0); });
+        }
         $('.btn-open-preview').on('click', function(){
-            renderPreview();
             var m = getModal();
             if (m) { m.show(); }
+            afterPaint(renderPreview);
         });
 
         /* =====================================================================
@@ -2078,6 +2085,13 @@
         // '페이지 설정 · 명단 편집' 열기 — 현재 에디터의 설정/명단을 읽어 폼·표에 채운다.
         // 캐리어가 없어도(최초 접근·예전 저장본 등) 화면에 보이는 값(참여조건/자격요건)에서 복원해 채운다.
         $('.btn-open-settings').on('click', function(){
+            // 모달을 먼저 띄우고, HTML 분석·폼/명단 표 생성은 다음 프레임에 처리해 클릭 반응을 즉시 만든다.
+            var sm = getSettingsModal();
+            if (sm) { sm.show(); }
+            afterPaint(populateSettingsModal);
+        });
+
+        function populateSettingsModal(){
             var html = getHtml();
             if (!html || !html.trim()) {
                 // 아예 내용이 없을 때만 안내.
@@ -2092,9 +2106,7 @@
             }
             // 명단 편집 섹션도 같은 모달 안에서 함께 채운다.
             populateRosterEditor();
-            var m = getSettingsModal();
-            if (m) { m.show(); }
-        });
+        }
 
         // [적용] → 페이지 설정 + 참여자 명단을 한 번의 HTML 갱신으로 반영한다.
         $('.btn-settings-apply').on('click', async function(){

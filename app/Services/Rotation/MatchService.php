@@ -259,7 +259,7 @@ class MatchService
      * 특정 행사에서 "특정 회원을 선택(지목)한 사람들" 목록.
      * - target(선택받은 회원)을 나를 지목한 voter 들을 상세 정보와 함께 반환한다.
      * - 상대도 선택받은 회원을 지목했는지(상호 매칭)는 is_mutual 로 표시한다.
-     * - 각 voter 정보: 이름/직업/전화번호/나이(출생연도)/키.
+     * - 각 voter 정보: 이름/직업/전화번호/나이(출생연도)/키. 번호표 오름차순으로 정렬한다.
      *
      * @return array<int, array{
      *     id:int, name:?string, gender:?string, job:?string, phone:?string,
@@ -307,6 +307,9 @@ class MatchService
             ];
         })->all();
 
+        // 번호표 오름차순.
+        usort($rows, fn ($a, $b) => $this->compareByTicket($a, $b));
+
         return $rows;
     }
 
@@ -314,7 +317,7 @@ class MatchService
      * 특정 행사에서 "특정 회원이 선택(투표)한 상대들" 목록.
      * - 그 회원(memberId)이 voter 로서 지목한 target 들을 상세 정보와 함께 반환한다.
      * - 상대도 그 회원을 지목했는지(상호 매칭)는 is_mutual 로 표시한다.
-     * - 매칭된 상대가 먼저 보이도록 정렬한다.
+     * - 번호표 오름차순으로 정렬한다.
      *
      * @return array<int, array{
      *     id:int, name:?string, gender:?string, job:?string, phone:?string,
@@ -362,8 +365,8 @@ class MatchService
             ];
         })->all();
 
-        // 매칭된 상대 먼저.
-        usort($rows, fn ($a, $b) => ($b['is_mutual'] ? 1 : 0) <=> ($a['is_mutual'] ? 1 : 0));
+        // 번호표 오름차순. (매칭 여부는 is_mutual 뱃지로 구분)
+        usort($rows, fn ($a, $b) => $this->compareByTicket($a, $b));
 
         return $rows;
     }

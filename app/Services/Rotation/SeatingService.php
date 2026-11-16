@@ -63,7 +63,7 @@ class SeatingService
         $tableNos   = $tables->pluck('table_no')->map(fn ($n) => (int) $n)->all();
 
         // 이 행사의 기준(홈) 좌석 전부 로드.
-        $seats = RotationSeat::with('member')
+        $seats = RotationSeat::with('member.eventDrink')
             ->where('event_id', $eventId)
             ->get();
 
@@ -102,6 +102,8 @@ class SeatingService
                         'gender'     => $s->member?->gender,
                         'job'        => $s->member?->job,
                         'birth_year' => $s->member?->birth_year,
+                        // 선택한 음료 (1:1 소개팅, 미선택이면 null)
+                        'drink'      => $s->member?->eventDrink?->name,
                     ])->values(),
                 ];
             });

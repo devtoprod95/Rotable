@@ -98,6 +98,8 @@ class Member extends Authenticatable
         'friend_meet_frequency',
         // 신청 플랫폼 (문토/프립)
         'platform',
+        // 선택한 음료 (1:1 소개팅, event_drinks.id)
+        'event_drink_id',
         // 매칭 결과 리뷰 인증 완료 시각
         'result_reviewed_at',
     ];
@@ -130,6 +132,16 @@ class Member extends Authenticatable
     public function eventRound(): BelongsTo
     {
         return $this->belongsTo(EventRound::class, 'event_id');
+    }
+
+    /**
+     * 이 회원이 선택한 음료. (1:1 소개팅)
+     *
+     * @return BelongsTo<EventDrink, Member>
+     */
+    public function eventDrink(): BelongsTo
+    {
+        return $this->belongsTo(EventDrink::class, 'event_drink_id');
     }
 
     /**

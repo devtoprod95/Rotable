@@ -100,6 +100,16 @@ class EventRound extends Model
     }
 
     /**
+     * 이 회차의 음료 선택지. (1:1 소개팅)
+     *
+     * @return HasMany<EventDrink>
+     */
+    public function drinks(): HasMany
+    {
+        return $this->hasMany(EventDrink::class, 'event_id')->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
      * 이 회차의 로테이션 테이블들.
      *
      * @return HasMany<RotationTable>

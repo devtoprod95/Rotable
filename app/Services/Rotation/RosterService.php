@@ -818,6 +818,10 @@ class RosterService
 
                 $created = 0;
                 $skipped = 0;
+                // 트랜잭션 커밋 후 브로드캐스트할 음료 선택 회원 (롤백 시 잘못된 신호 방지)
+                $drinkChosen = [];
+                // 1:1 더미 음료 선택용 — 이 행사에 등록된 음료 id 목록
+                $drinkIds = $isOne ? $event->drinks()->pluck('id')->map(fn ($id) => (int) $id)->all() : [];
 
                 foreach ($rosters as $roster) {
                     $gender = (string) $roster->gender;
@@ -854,10 +858,12 @@ class RosterService
                     $factory = $gender === Member::GENDER_FEMALE ? $factory->female() : $factory->male();
 
                     $member = $factory->create([
-                        'name'     => (string) $ticket,
-                        'phone'    => $phone,
-                        'password' => 'q',
-                        'platform' => $this->normalizePlatform($roster->platform),
+                        'name'           => (string) $ticket,
+                        'phone'          => $phone,
+                        'password'       => 'q',
+                        'platform'       => $this->normalizePlatform($roster->platform),
+                        // 1:1 소개팅은 입장등록에서 음료를 고르므로 더미도 등록된 음료 중 하나를 무작위로 고른다.
+                        'event_drink_id' => $isOne && $drinkIds !== [] ? $drinkIds[array_rand($drinkIds)] : null,
                     ]);
 
                     \App\Models\RotationSeat::create([
@@ -866,6 +872,11 @@ class RosterService
                         'rotation_table_id' => $table->id,
                     ]);
 
+                    // 실제 입장등록과 동일하게, 음료를 골랐다면 관리자 로테이션 진행 화면에 실시간으로 알린다.
+                    if ($member->event_drink_id !== null) {
+                        $drinkChosen[] = $member;
+                    }
+
                     $occupied[$table->id][$gender] = true;
                     $created++;
                 }
@@ -873,6 +884,13 @@ class RosterService
                 $res            = helpersSuccessMessage("입장등록 더미 {$created}건 생성, {$skipped}건 건너뜀 (이미 등록/자리 없음)");
                 $res['created'] = $created;
                 $res['skipped'] = $skipped;
+
+                // 커밋이 끝난 뒤에 신호를 보낸다. (롤백되면 보내지 않음)
+                DB::afterCommit(function () use ($drinkChosen): void {
+                    foreach ($drinkChosen as $member) {
+                        broadcast(new \App\Events\MemberDrinkChosen($member));
+                    }
+                });
 
                 return $res;
             });

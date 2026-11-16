@@ -72,6 +72,7 @@ class PurgeData extends Command
                 'rotation_tables',
                 'event_rosters',
                 'members',
+                'event_drinks',
                 'event_rounds',
             ],
         };

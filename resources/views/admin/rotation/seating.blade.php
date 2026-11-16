@@ -278,9 +278,48 @@
                 members = res?.members || [];
                 renderActions(res?.board?.meta || {});
                 renderBoard(res?.board || {});
+                syncDrinkChannel($('#eventSelect').val(), !!res?.board?.meta?.is_one_to_one);
             }).always(function(){ dataXhr = null; });
             refreshCounts();
             return dataXhr;
+        }
+
+        // ===== 1:1 음료 선택 실시간 반영 =====
+        // 참가자가 음료를 고르면(event-drinks.{eventId}) 좌석 보드를 다시 불러와 테이블별 남/여 음료를 갱신한다.
+        const drinkReverb = {!! json_encode([
+            'key'    => config('broadcasting.connections.reverb.key'),
+            'host'   => env('VITE_REVERB_HOST', env('REVERB_HOST')),
+            'port'   => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 443)),
+            'scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', 'https')),
+        ], JSON_HEX_TAG | JSON_HEX_AMP) !!};
+        let drinkPusher = null;
+        let drinkChannelName = null;
+        let drinkReloadTimer = null;
+
+        function syncDrinkChannel(eventId, enabled){
+            let wanted = (enabled && eventId) ? ('event-drinks.' + eventId) : null;
+            if(wanted === drinkChannelName){ return; }
+            if(drinkPusher && drinkChannelName){ drinkPusher.unsubscribe(drinkChannelName); }
+            drinkChannelName = null;
+            if(!wanted){ return; }
+            if(!drinkPusher){
+                if(typeof Pusher === 'undefined' || !drinkReverb.key || !drinkReverb.host){ return; }
+                drinkPusher = new Pusher(drinkReverb.key, {
+                    wsHost: drinkReverb.host,
+                    wsPort: drinkReverb.port || 80,
+                    wssPort: drinkReverb.port || 443,
+                    forceTLS: drinkReverb.scheme === 'https',
+                    enabledTransports: ['ws', 'wss'],
+                    disableStats: true,
+                    cluster: '',
+                });
+            }
+            drinkChannelName = wanted;
+            drinkPusher.subscribe(wanted).bind('drink.chosen', function(){
+                // 연속 선택이 몰려도 한 번만 다시 불러온다.
+                clearTimeout(drinkReloadTimer);
+                drinkReloadTimer = setTimeout(loadData, 300);
+            });
         }
 
         // 상단 버튼들에 현재 행사의 매칭 쌍 수 / 메시지 수 / 요청 수를 표시한다.
@@ -518,8 +557,15 @@
                                    data-seating-id="${m.seating_id}" title="제거"
                                    style="width:1.3rem;height:1.3rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.9rem;line-height:1;"></i></a>`
                         : '';
+                    // 1:1 소개팅: 선택한 음료를 함께 표기 (미선택이면 흐리게)
+                    let drinkHtml = '';
+                    if(isOneToOne){
+                        drinkHtml = m.drink
+                            ? ` <span class="badge bg-red-lt ms-1" style="font-weight:700;">🍷 ${$('<div>').text(m.drink).html()}</span>`
+                            : ` <span class="text-muted ms-1" style="font-weight:400;font-size:0.82em;">음료 미선택</span>`;
+                    }
                     return `<span class="badge ${genderBadgeClass(m.gender)} mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1" style="max-width:100%;">
-                                <span class="text-truncate">${m.label || (m.name + "호")}${infoText}</span>
+                                <span class="text-truncate">${m.label || (m.name + "호")}${infoText}</span>${drinkHtml}
                                 ${removeBtn}
                             </span>`;
                 }

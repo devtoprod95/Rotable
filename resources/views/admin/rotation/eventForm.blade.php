@@ -164,7 +164,7 @@
                             <button type="button" class="btn btn-primary px-4 btn-update">수정</button>
                         @else
                             <button type="button" class="btn btn-success px-4 btn-create">생성</button>
-                            <small class="form-hint text-muted mt-2 d-block">※ 생성 시 상태는 자동으로 '대기'로 설정되며, 테이블 수를 입력하면 테이블과 0턴이 함께 생성됩니다.</small>
+                            <small class="form-hint text-muted mt-2 d-block">※ 생성 시 상태는 자동으로 '대기'로 설정되며, 테이블 수를 입력하면 테이블과 0턴이 함께 생성됩니다. 1:1 소개팅은 기본 음료 목록이 함께 채워집니다.</small>
                         @endif
                     </div>
                 </form>
@@ -213,6 +213,86 @@
             $topFemale = $topByGender('F');
             $rankMedal = [1 => '🥇', 2 => '🥈', 3 => '🥉'];
         @endphp
+
+        {{-- 음료 선택 (1:1 소개팅 전용) — 선택지 설정 + 참가자 선택 현황 --}}
+        @if ($event->isOneToOne())
+            @php
+                $drinkNoneMembers = $event->members->whereNull('event_drink_id');
+                $drinkMembersById = $event->members->whereNotNull('event_drink_id')->groupBy('event_drink_id');
+                // 음료 현황 표기: 성별(남/여 칸) · 번호표 · 기준 테이블만 (닉네임/플랫폼 없음)
+                $drinkWho = function ($m) use ($memberTableNos) {
+                    $tableNo = $memberTableNos[$m->id] ?? null;
+
+                    return [
+                        'gender'    => $m->gender,
+                        'no'        => $m->name,
+                        'tableText' => $tableNo !== null ? $tableNo . '번 테이블' : '미배정',
+                    ];
+                };
+                // 번호표 순 (성별 칸은 파샬에서 나눈다)
+                $drinkSorted = fn ($members) => $members
+                    ->sortBy(fn ($m) => (int) $m->name)
+                    ->map($drinkWho)
+                    ->values();
+            @endphp
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <h3 class="card-title mb-0"><i class="ti ti-glass-full text-red me-1"></i> 음료 선택</h3>
+                        <div id="drinkSummaryBadges" class="d-flex gap-2 flex-wrap">
+                            <span class="badge bg-green-lt">선택 {{ $event->members->count() - $drinkNoneMembers->count() }}명</span>
+                            <span class="badge bg-secondary-lt">미선택 {{ $drinkNoneMembers->count() }}명</span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-4">
+                            {{-- 선택지 설정 --}}
+                            <div class="col-12 col-lg-5">
+                                <label class="form-label">음료 목록 <span class="text-muted fw-normal">· 최대 {{ \App\Models\EventDrink::MAX_PER_EVENT }}개</span></label>
+                                <div class="input-group">
+                                    <input type="text" id="drinkNameInput" class="form-control" maxlength="50"
+                                           placeholder="음료 이름 입력 후 추가" enterkeyhint="done" autocomplete="off">
+                                    <button type="button" class="btn btn-outline-primary" id="drinkAddBtn"><i class="ti ti-plus me-1"></i>추가</button>
+                                </div>
+                                <div id="drinkChips" class="d-flex flex-wrap gap-2 mt-2"></div>
+                                <small class="form-hint text-muted mt-2 d-block">추가한 음료는 눌러서 삭제합니다. 지운 음료를 고른 참가자의 선택은 해제됩니다. 참가자 입장등록 화면에서 이 목록 중 하나를 고르며, 등록 후에는 바꿀 수 없습니다.</small>
+                                <button type="button" class="btn btn-primary mt-2 px-4 w-100" id="drinkSaveBtn">음료 목록 저장</button>
+                            </div>
+                            {{-- 선택 현황 --}}
+                            <div class="col-12 col-lg-7" id="drinkStatus">
+                                <label class="form-label">선택 현황</label>
+                                @forelse ($event->drinks as $drink)
+                                    <div class="border rounded p-2 mb-2">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <span class="fw-bold">{{ $drink->name }}</span>
+                                            <span class="badge bg-red-lt">{{ $drink->members_count }}명</span>
+                                        </div>
+                                        @if ($drinkMembersById->has($drink->id))
+                                            <div class="mt-2">
+                                                @include('admin.rotation._drinkPeople', ['people' => $drinkSorted($drinkMembersById[$drink->id])])
+                                            </div>
+                                        @endif
+                                    </div>
+                                @empty
+                                    <div class="text-muted py-3" style="font-size:0.9em;">등록된 음료가 없어요. 왼쪽에서 음료를 추가해 주세요.</div>
+                                @endforelse
+                                @if ($drinkNoneMembers->isNotEmpty() && $event->drinks->isNotEmpty())
+                                    <div class="border rounded p-2 bg-light">
+                                        <div class="d-flex align-items-center justify-content-between">
+                                            <span class="fw-bold text-muted">미선택</span>
+                                            <span class="badge bg-secondary-lt">{{ $drinkNoneMembers->count() }}명</span>
+                                        </div>
+                                        <div class="mt-2">
+                                            @include('admin.rotation._drinkPeople', ['people' => $drinkSorted($drinkNoneMembers)])
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
 
         {{-- 그날의 인기 TOP3 (받은 투표수 기준, 남/여 각각 · 동점은 공동 순위) --}}
         <div class="col-12">
@@ -361,6 +441,9 @@
                                                     <span class="badge {{ $platformBadgeCls[$member->platform] ?? 'bg-secondary-lt' }}">
                                                         {{ $platformLabels[$member->platform] ?? $member->platform }}
                                                     </span>
+                                                    @if ($event->isOneToOne() && $member->eventDrink)
+                                                        <span class="badge bg-red-lt">🍷 {{ $member->eventDrink->name }}</span>
+                                                    @endif
                                                 </div>
                                                 <div class="text-muted" style="font-size: 0.85em;">
                                                     @if ($member->birth_year)
@@ -678,6 +761,109 @@
         $(document).on('click', '.btn-member-detail', function(){
             var member = $(this).data('member');
             MemberDetailModal.open(member);
+        });
+
+        // ===== 상세: 음료 목록 편집/저장 (1:1 소개팅) — 입력 후 추가, 칩을 눌러 삭제 =====
+        var drinkList = @json($event->drinks->pluck('name')->values());
+        var drinkMax  = {{ \App\Models\EventDrink::MAX_PER_EVENT }};
+
+        function renderDrinkChips(){
+            var $box = $('#drinkChips').empty();
+            if(!drinkList.length){
+                $box.append('<span class="text-muted" style="font-size:0.9em;">추가된 음료가 없어요.</span>');
+                return;
+            }
+            drinkList.forEach(function(name, i){
+                var $chip = $('<button type="button" class="btn btn-sm btn-outline-red drink-chip py-2 px-3"></button>')
+                    .attr('data-index', i)
+                    .text(name + '  ✕');
+                $box.append($chip);
+            });
+        }
+
+        async function addDrink(){
+            var $input = $('#drinkNameInput');
+            var name = $input.val().trim();
+            if(!name){ $input.focus(); return; }
+            if(drinkList.indexOf(name) !== -1){
+                await salert({text: '이미 추가된 음료입니다.', cancel: false});
+                return;
+            }
+            if(drinkList.length >= drinkMax){
+                await salert({text: '음료는 최대 ' + drinkMax + '개까지 등록할 수 있습니다.', cancel: false});
+                return;
+            }
+            drinkList.push(name);
+            $input.val('').focus();
+            renderDrinkChips();
+        }
+
+        $('#drinkAddBtn').on('click', addDrink);
+        $('#drinkNameInput').on('keydown', function(e){
+            if(e.key === 'Enter' && !e.originalEvent?.isComposing){ e.preventDefault(); addDrink(); }
+        });
+        $(document).on('click', '.drink-chip', function(){
+            drinkList.splice($(this).data('index'), 1);
+            renderDrinkChips();
+        });
+        renderDrinkChips();
+
+        // ===== 음료 선택 현황 실시간 갱신 =====
+        // 참가자가 입장등록하며 음료를 고르면(event-drinks.{id}) 이 페이지를 다시 받아 현황 영역만 교체한다.
+        // (목록 편집 중인 입력값은 건드리지 않는다.)
+        (function(){
+            var cfg = {!! json_encode([
+                'key'    => config('broadcasting.connections.reverb.key'),
+                'host'   => env('VITE_REVERB_HOST', env('REVERB_HOST')),
+                'port'   => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 443)),
+                'scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', 'https')),
+            ], JSON_HEX_TAG | JSON_HEX_AMP) !!};
+            if(typeof Pusher === 'undefined' || !cfg.key || !cfg.host || !$('#drinkStatus').length){ return; }
+
+            var timer = null;
+            function refreshDrinkStatus(){
+                $.get(window.location.href, function(html){
+                    var $doc = $('<div>').append($.parseHTML(html));
+                    ['#drinkStatus', '#drinkSummaryBadges'].forEach(function(sel){
+                        var $new = $doc.find(sel);
+                        if($new.length){ $(sel).html($new.html()); }
+                    });
+                });
+            }
+
+            var pusher = new Pusher(cfg.key, {
+                wsHost: cfg.host,
+                wsPort: cfg.port || 80,
+                wssPort: cfg.port || 443,
+                forceTLS: cfg.scheme === 'https',
+                enabledTransports: ['ws', 'wss'],
+                disableStats: true,
+                cluster: '',
+            });
+            pusher.subscribe('event-drinks.{{ $event->id }}').bind('drink.chosen', function(){
+                clearTimeout(timer);
+                timer = setTimeout(refreshDrinkStatus, 300);
+            });
+        })();
+
+        $('#drinkSaveBtn').on('click', async function(){
+            // 입력창에 적어두고 추가를 안 누른 값도 함께 담는다.
+            var pending = $('#drinkNameInput').val().trim();
+            if(pending && drinkList.indexOf(pending) === -1 && drinkList.length < drinkMax){ drinkList.push(pending); }
+            var drinks = drinkList.slice();
+
+            if(await salert({text: '음료 목록을 저장하시겠습니까? 목록에서 빠진 음료의 선택은 해제됩니다.'})){
+                $.ajax({
+                    url: "{{ route('admin.rotation.event.drinks.save', $event->id) }}",
+                    type: 'PUT',
+                    data: { drinks: drinks },
+                    success: function(res){
+                        alert(res?.msg);
+                        if(res?.status === 200){ location.reload(); }
+                    },
+                    error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+                });
+            }
         });
 
         // ===== 상세: 리뷰 인증 게이트 토글 라벨 동기화 =====

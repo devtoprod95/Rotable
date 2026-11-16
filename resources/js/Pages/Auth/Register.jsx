@@ -24,6 +24,20 @@ const SMOKER_OPTIONS = [
     { id: '0', label: '비흡연' },
 ];
 
+/** 음료 이름에서 어울리는 이모지를 고른다. (관리자가 추가한 음료는 기본 🥤) */
+function drinkEmoji(name) {
+    if (name.includes('아메리카노') || name.includes('커피') || name.includes('라떼')) {
+        return name.includes('ICE') ? '🧊' : '☕';
+    }
+    if (name.includes('물')) {
+        return name.includes('HOT') ? '♨️' : '💧';
+    }
+    if (name.includes('카모마일') || name.includes('캐모마일') || name.includes('케모마일') || name.includes('차')) {
+        return '🌼';
+    }
+    return '🥤';
+}
+
 /** 랜덤 유틸 */
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -42,8 +56,10 @@ const TMI_SAMPLES = ['민트초코 파입니다', '물을 하루 2L 마셔요', 
  * 개발 편의용 자동 입력 값 생성. (production 이 아닐 때만 사용)
  * 행사(event_id)는 QR 로 정해지므로 제외하고 나머지 필드를 매번 랜덤으로 채운다.
  */
-function buildAutofill(lifestyle = {}) {
+function buildAutofill(lifestyle = {}, drinks = []) {
     return {
+        // 1:1 소개팅이면 음료도 랜덤으로
+        ...(drinks.length ? { event_drink_id: pick(drinks).id } : {}),
         // 번호표~비밀번호는 기존 고정값 유지
         phone: '01025466499',
         name: '1',
@@ -89,7 +105,7 @@ const STATUS_NOTICE = {
 };
 
 export default function Register() {
-    const { event = null, unavailable = 'none', closedLabel = null, lifestyleOptions = {}, isProduction = true } = usePage().props;
+    const { event = null, unavailable = 'none', closedLabel = null, lifestyleOptions = {}, drinks = [], isProduction = true } = usePage().props;
 
     // 제출 전 최종 확인 모달 노출 여부.
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -126,7 +142,11 @@ export default function Register() {
         drink_frequency: '',
         has_pet: '',
         friend_meet_frequency: '',
+        // 선택한 음료 (1:1 소개팅만 사용)
+        event_drink_id: '',
     });
+
+    const pickedDrink = drinks.find((d) => d.id === data.event_drink_id);
 
     // 성별 변경
     function changeGender(v) {
@@ -135,7 +155,7 @@ export default function Register() {
 
     // 나머지 필드를 매번 랜덤으로 채운다.
     function autofill() {
-        Object.entries(buildAutofill(lifestyleOptions)).forEach(([key, value]) => {
+        Object.entries(buildAutofill(lifestyleOptions, drinks)).forEach(([key, value]) => {
             setData(key, value);
         });
     }
@@ -160,6 +180,7 @@ export default function Register() {
             { key: 'friend_meet_frequency', empty: !data.friend_meet_frequency, message: '친구 약속 빈도를 선택해주세요.' },
             { key: 'has_pet',           empty: data.has_pet === '' || data.has_pet === null || data.has_pet === undefined, message: '애완동물 여부를 선택해주세요.' },
             { key: 'is_smoker',         empty: data.is_smoker === '' || data.is_smoker === null || data.is_smoker === undefined, message: '흡연 여부를 선택해주세요.' },
+            { key: 'event_drink_id',    empty: drinks.length > 0 && !data.event_drink_id, message: '음료를 선택해주세요.' },
         ];
 
         const firstMissing = requiredChecks.find((c) => c.empty);
@@ -382,6 +403,44 @@ export default function Register() {
                             error={errors.is_smoker}
                         />
 
+                        {/* 음료 선택 — 1:1 소개팅만. 입장 전 확인에서 한 번 더 확정한다. */}
+                        {drinks.length > 0 && (
+                            <div className="flex flex-col gap-2">
+                                <span className="text-sm font-bold text-secondary-700">
+                                    음료 선택 🍷
+                                </span>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    {drinks.map((drink) => {
+                                        const active = drink.id === data.event_drink_id;
+                                        return (
+                                            <button
+                                                key={drink.id}
+                                                type="button"
+                                                onClick={() => setData('event_drink_id', drink.id)}
+                                                aria-pressed={active}
+                                                className={
+                                                    'relative flex flex-col items-center justify-center gap-1.5 rounded-2xl border-2 px-2 py-4 text-center transition active:scale-[0.97] ' +
+                                                    (active
+                                                        ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/20'
+                                                        : 'border-secondary-200 bg-white text-secondary-600')
+                                                }
+                                            >
+                                                {active && (
+                                                    <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold leading-none text-white">
+                                                        ✓
+                                                    </span>
+                                                )}
+                                                <span className="text-3xl leading-none">{drinkEmoji(drink.name)}</span>
+                                                <span className="text-sm font-extrabold leading-snug">{drink.name}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                {errors.event_drink_id && (
+                                    <p className="text-xs font-medium text-rose-500">{errors.event_drink_id}</p>
+                                )}
+                            </div>
+                        )}
                         <button
                             type="submit"
                             disabled={processing}
@@ -439,6 +498,13 @@ export default function Register() {
                         <p className="mt-2 text-center text-sm text-secondary-400">
                             자리(테이블)는 호스트가 안내해 드린 자리로 자동 배정됩니다.
                         </p>
+                        {pickedDrink && (
+                            <p className="mt-4 rounded-2xl bg-primary/5 px-4 py-3 text-center text-sm leading-relaxed text-secondary-600">
+                                <span className="font-extrabold text-primary">{pickedDrink.name}</span>
+                                <br />
+                                가져다 드릴까요?
+                            </p>
+                        )}
                         <div className="mt-6 flex gap-3">
                             <button
                                 type="button"

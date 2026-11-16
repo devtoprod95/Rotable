@@ -90,6 +90,10 @@ class MemberAuthController extends Controller
                 'friendMeetFrequency' => Member::friendMeetFrequencyOptions(),
             ],
             'event'       => $unavailable === null ? ['id' => $event->id, 'label' => $event->label, 'status' => $event->status] : null,
+            // 1:1 소개팅은 입장등록에서 음료를 고른다. (와인파티/등록 불가 시 빈 목록)
+            'drinks'      => $unavailable === null && $event->isOneToOne()
+                ? $event->drinks()->get(['id', 'name'])
+                : [],
             'unavailable' => $unavailable,
             'closedLabel' => $unavailable === 'closed' ? $event->label : null,
         ]);
@@ -118,7 +122,14 @@ class MemberAuthController extends Controller
             'job'        => isset($fromRoster['job']) ? mb_substr($fromRoster['job'], 0, 50) : null,
         ]);
 
+        // 1:1 소개팅이고 음료가 등록되어 있으면 음료 선택이 필수다. (음료가 하나도 없으면 막지 않는다)
+        $drinkEvent    = (int) $request->input('event_id') > 0 ? EventRound::find((int) $request->input('event_id')) : null;
+        $drinkRequired = $drinkEvent !== null && $drinkEvent->isOneToOne() && $drinkEvent->drinks()->exists();
+
         $rules = [
+            'event_drink_id' => $drinkRequired
+                ? ['required', 'integer', Rule::exists('event_drinks', 'id')->where('event_id', $drinkEvent->id)]
+                : ['nullable'],
             'event_id' => [
                 'required',
                 'integer',
@@ -176,6 +187,8 @@ class MemberAuthController extends Controller
             'phone.regex'                => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'phone.unique'               => '해당 회차에 이미 등록된 핸드폰 번호입니다.',
             'name.required'              => '번호표를 입력해주세요.',
+            'event_drink_id.required'    => '음료를 선택해주세요.',
+            'event_drink_id.exists'      => '선택한 음료가 올바르지 않습니다.',
             'name.string'                => '번호표는 숫자만 입력해주세요.',
             'name.regex'                 => '번호표는 숫자만 입력해주세요.',
             'password.required'          => '비밀번호를 입력해주세요.',
@@ -240,6 +253,8 @@ class MemberAuthController extends Controller
             'drink_frequency'       => $validated['drink_frequency'],
             'has_pet'               => $validated['has_pet'],
             'friend_meet_frequency' => $validated['friend_meet_frequency'],
+            // 선택한 음료 (1:1 소개팅만, 그 외는 null)
+            'event_drink_id' => $drinkRequired ? (int) $validated['event_drink_id'] : null,
             // 신청 플랫폼: 사용자가 고르지 않고, 연결 키(행사·성별·번호표)로 찾은 체크인 명단의 값을 쓴다.
             'platform'   => app(RosterService::class)->platformForTicket(
                 (int) $validated['event_id'],
@@ -259,6 +274,11 @@ class MemberAuthController extends Controller
 
         Auth::guard('web')->login($member);
         $request->session()->regenerate();
+
+        // 음료를 골랐다면 관리자 로테이션 진행 화면에 실시간으로 알린다.
+        if ($member->event_drink_id !== null) {
+            broadcast(new \App\Events\MemberDrinkChosen($member));
+        }
 
         return redirect()->route('home');
     }

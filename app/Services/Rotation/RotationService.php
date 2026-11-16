@@ -3,6 +3,7 @@
 namespace App\Services\Rotation;
 
 use App\Dtos\RotationTableListRequestDto;
+use App\Models\EventDrink;
 use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\RotationTable;
@@ -134,6 +135,21 @@ class RotationService
                     }
                     RotationTable::insert($rows);
                 }
+
+                // 1:1 소개팅은 음료 선택이 필수라, 공통 기본 음료를 미리 채워 둔다. (행사 상세에서 수정 가능)
+                if ($event->isOneToOne()) {
+                    $drinkRows = [];
+                    foreach (EventDrink::DEFAULT_NAMES as $order => $name) {
+                        $drinkRows[] = [
+                            'event_id'   => $event->id,
+                            'name'       => $name,
+                            'sort_order' => $order,
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ];
+                    }
+                    EventDrink::insert($drinkRows);
+                }
             });
 
             $returnMsg = helpersSuccessMessage('행사를 생성했습니다.');
@@ -169,6 +185,56 @@ class RotationService
             $event->save();
 
             $returnMsg = helpersSuccessMessage('행사 정보를 수정했습니다.');
+        } catch (\Throwable $th) {
+            $returnMsg = helpersFailMessage($th->getMessage());
+        }
+
+        return $returnMsg;
+    }
+
+    /**
+     * 행사의 음료 선택지를 입력 목록으로 맞춘다. (1:1 소개팅)
+     *
+     * - 목록에 남은 음료는 유지(참가자 선택도 유지)하고 순서만 갱신한다.
+     * - 목록에서 빠진 음료는 삭제하며, 그 음료를 고른 회원의 선택은 null 로 풀린다.
+     * - 새 음료는 추가한다. 공백 제거·중복 제거 후 입력 순서를 sort_order 로 저장한다.
+     *
+     * @param list<string> $names 음료 이름 목록
+     */
+    public function eventDrinkSync(int $eventId, array $names): array
+    {
+        $returnMsg = $this->returnMsg;
+
+        try {
+            $event = EventRound::find($eventId);
+            if (! $event) {
+                throw new Exception('행사를 찾을 수 없습니다.');
+            }
+
+            $clean = [];
+            foreach ($names as $name) {
+                $name = trim((string) $name);
+                if ($name !== '' && ! in_array($name, $clean, true)) {
+                    $clean[] = $name;
+                }
+            }
+
+            if (count($clean) > EventDrink::MAX_PER_EVENT) {
+                throw new Exception('음료는 최대 ' . EventDrink::MAX_PER_EVENT . '개까지 등록할 수 있습니다.');
+            }
+
+            DB::transaction(function () use ($eventId, $clean) {
+                EventDrink::where('event_id', $eventId)->whereNotIn('name', $clean)->delete();
+
+                foreach ($clean as $order => $name) {
+                    EventDrink::updateOrCreate(
+                        ['event_id' => $eventId, 'name' => $name],
+                        ['sort_order' => $order],
+                    );
+                }
+            });
+
+            $returnMsg = helpersSuccessMessage('음료 목록을 저장했습니다.');
         } catch (\Throwable $th) {
             $returnMsg = helpersFailMessage($th->getMessage());
         }
@@ -215,7 +281,10 @@ class RotationService
     {
         $event = EventRound::with([
             'rotationTables' => fn ($q) => $q->orderBy('table_no'),
+            // 음료 선택지(1:1) + 음료별 선택 인원수
+            'drinks'         => fn ($q) => $q->withCount('members'),
             'members'        => fn ($q) => $q
+                ->with('eventDrink:id,name')
                 ->withCount([
                     'sentMessages',
                     // 받은 투표수는 해당 행사(event_id) 범위로 제한.

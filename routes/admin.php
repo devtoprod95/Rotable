@@ -50,6 +50,8 @@ Route::middleware('role')->group(function () {
                 Route::delete('/delete', [EventController::class, 'eventDelete'])->name('delete');
                 Route::get('/{id}', [EventController::class, 'eventDetail'])->whereNumber('id')->name('detail');
                 Route::put('/{id}', [EventController::class, 'eventUpdate'])->whereNumber('id')->name('update');
+                // 음료 선택지 설정 (1:1 소개팅)
+                Route::put('/{id}/drinks', [EventController::class, 'eventDrinkSave'])->whereNumber('id')->name('drinks.save');
                 Route::get('/{id}/tables', [EventController::class, 'eventTableList'])->whereNumber('id')->name('tables');
                 Route::post('/{id}/tables', [EventController::class, 'eventTableAdd'])->whereNumber('id')->name('tables.add');
                 Route::delete('/{id}/tables', [EventController::class, 'eventTableDelete'])->whereNumber('id')->name('tables.delete');

@@ -77,6 +77,9 @@
                     @if ($isEdit)
                         {{-- 결과 조회 버튼: 모바일에선 2열 그리드로, 데스크톱에선 한 줄로 --}}
                         <div class="eventform-result-grid">
+                            <button type="button" id="goRegisterQrBtn" class="btn btn-sm btn-outline-dark">
+                                <i class="ti ti-qrcode me-1"></i> 입장 QR
+                            </button>
                             <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
                                 <i class="ti ti-heart me-1"></i> 전체 매칭
                             </button>
@@ -554,6 +557,11 @@
             }
         });
         @else
+        // ===== 상세: 입장등록 QR 모달 =====
+        $('#goRegisterQrBtn').on('click', function(){
+            RegisterQrModal.open({{ $event->id }}, @json($event->label));
+        });
+
         // ===== 상세: 매칭 조회 모달 =====
         $('#goMatchesBtn').on('click', function(){
             MatchesModal.open({{ $event->id }}, @json($event->label));
@@ -730,5 +738,6 @@
     @include('admin.rotation._votedModal')
     @include('admin.rotation._requestsModal')
     @include('admin.rotation._memberDetailModal')
+    @include('admin.rotation._registerQrModal')
 @endif
 @endsection

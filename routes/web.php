@@ -57,7 +57,10 @@ Route::get('/guide/{type}', function (string $type) {
 // 입장/입장등록 화면.
 // 이미 등록(로그인)된 회원은 메인(홈)으로 보낸다. (단, 예외 이름 회원은 접근 허용)
 Route::middleware(RedirectIfRegistered::class)->group(function () {
-    Route::get('/register', [MemberAuthController::class, 'showRegister'])->name('register');
+    // 입장등록은 행사별 QR(/register/{행사id})로 진입한다. 회차 선택 없이 해당 행사에 바로 등록.
+    Route::get('/register/{eventId?}', [MemberAuthController::class, 'showRegister'])
+        ->whereNumber('eventId')
+        ->name('register');
     Route::post('/register', [MemberAuthController::class, 'register']);
     Route::get('/login', [MemberAuthController::class, 'showLogin'])->name('member.login');
     Route::post('/login', [MemberAuthController::class, 'login']);

@@ -21,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null    $height     키(cm) — 상세페이지 명단 자동 채움용
  * @property int|null    $birth_year 출생연도(4자리) — 상세페이지 명단 자동 채움용
  * @property string|null $job        직업 — 상세페이지 명단 자동 채움용
+ * @property string|null $merit      장점 — 상세페이지 명단 표시용
  * @property int|null    $ticket_no  번호표 숫자(같은 행사·같은 성별 안에서 유일). null=미배정
  * @property int|null    $rotation_table_id 체크인 때 지정한 기준(홈) 테이블 (rotation_tables.id)
  * @property \Illuminate\Support\Carbon|null $checked_in_at
@@ -37,6 +38,7 @@ class EventRoster extends Model
         'height',
         'birth_year',
         'job',
+        'merit',
         'platform',
         'ticket_no',
         'rotation_table_id',

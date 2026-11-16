@@ -41,6 +41,14 @@
     </div>
 </div>
 
+{{-- 이 화면에서만 쓰는 무거운 라이브러리(에디터·이미지 캡처·드래그 정렬)는 레이아웃이 아닌 여기서만 로드한다.
+     (전 페이지 공통 로드 시 모든 관리자 화면이 느려짐) --}}
+<script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+{{-- 상세페이지 이미지 캡처 (SVG foreignObject 렌더, UMD 전역: modernScreenshot) --}}
+<script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js"></script>
+{{-- 드래그 앤 드롭 정렬 (터치 지원, UMD 전역: Sortable) --}}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+
 <div class="row row-cards mt-2">
     <div class="col-12">
         <div class="card">
@@ -803,7 +811,13 @@
                 height: 680,
                 menubar: false,
                 branding: false,
-                plugins: 'lists link image table code fullscreen media emoticons autolink',
+                plugins: 'lists link image table code fullscreen media emoticons',
+                // 성능: 되돌리기 단계를 제한한다. (기본값은 무제한이라 큰 HTML 을 매 변경마다 통째로 저장해 점점 느려짐)
+                custom_undo_redo_levels: 20,
+                promotion: false,
+                resize: false,
+                contextmenu: false,
+                browser_spellcheck: false,
                 toolbar: 'undo redo | blocks fontsize | bold italic underline forecolor backcolor | '
                     + 'alignleft aligncenter alignright | bullist numlist | link image media table | emoticons | code fullscreen',
                 toolbar_mode: 'wrap',
@@ -888,13 +902,16 @@
                         if (recruit === 'manual') { people.push({ recruit: true }); return; }
                         // 성비 자동 맞춤으로 채워진 자리(data-recruit="1")는 실제 인원이 아니므로 건너뛴다.
                         if (recruit) { return; }
-                        var info = $(this).children('div').last().text(); // "177cm · 쇼핑몰 · 30대 초반"
+                        var $info = $(this).children('[data-roster-info]').first();
+                        if ($info.length === 0) { $info = $(this).children('div').not('[data-roster-merit]').last(); } // 예전 마크업 호환
+                        var info = $info.text(); // "177cm · 쇼핑몰 · 30대 초반"
                         var parts = info.split('·').map(function(x){ return x.trim(); });
                         var height = (parts[0] || '').replace(/cm$/i,'').trim();
                         people.push({
                             height: height,
                             job:    parts[1] || '',
-                            age:    parts[2] || ''
+                            age:    parts[2] || '',
+                            merit:  $(this).children('[data-roster-merit]').first().text().trim()
                         });
                     });
                     return people;
@@ -934,12 +951,21 @@
                     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
                     .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
             }
+            // 장점이 한 명이라도 있으면 모든 칸(참여자·모집중)을 2줄 분량만큼 키워 남/여 줄이 어긋나지 않게 한다.
+            var meritSize = Math.round((parseInt(cellInfoSize, 10) || 26) * 0.8) + 'px';
+            var hasMerit = (data.cards || []).some(function(card){
+                return [].concat(card.males || [], card.females || []).some(function(p){ return p && p.merit; });
+            });
+            if (hasMerit) {
+                cellHeight = ((parseInt(cellHeight, 10) || 108) + Math.round(parseInt(meritSize, 10) * 2.7)) + 'px';
+            }
             // 실제 참여자 칸
             function personCell(p, i, borderColor){
                 return ''
                   + '<div style="height:' + cellHeight + '; padding:' + cellPadding + '; border-bottom:2px solid ' + borderColor + '; text-align:center; display:flex; flex-direction:column; justify-content:center;">'
                   +   '<div style="font-weight:900; font-size:' + cellNoSize + '; color:#000000;">' + (i + 1) + '호</div>'
-                  +   '<div style="color:#000000; font-weight:800; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(p.height) + 'cm · ' + esc(p.job) + ' · ' + esc(p.age) + '</div>'
+                  +   '<div data-roster-info="1" style="color:#000000; font-weight:800; font-size:' + cellInfoSize + '; margin-top:4px; word-break:keep-all;">' + esc(p.height) + 'cm · ' + esc(p.job) + ' · ' + esc(p.age) + '</div>'
+                  + (p.merit ? '<div data-roster-merit="1" style="color:#374151; font-weight:700; font-size:' + meritSize + '; margin-top:3px; line-height:1.3; word-break:keep-all;">' + esc(p.merit) + '</div>' : '')
                   + '</div>';
             }
             // "모집중" 자리 칸.
@@ -1208,7 +1234,7 @@
             var $table = $(
                 '<table class="table table-sm table-vcenter mb-0">'
                 + '<thead><tr>'
-                + '<th style="width:64px;">#</th><th>키(cm)</th><th>직업</th><th>나이</th><th style="width:1%;"></th>'
+                + '<th style="width:64px;">#</th><th>키(cm)</th><th>직업</th><th>나이</th><th>장점</th><th style="width:1%;"></th>'
                 + '</tr></thead><tbody class="roster-rows"></tbody></table>'
             );
             var $tbody = $table.find('.roster-rows');
@@ -1235,7 +1261,7 @@
                 return $(
                     '<tr data-recruit="1" class="bg-pink-lt">'
                     + ROSTER_NO_CELL
-                    + '<td colspan="3" class="fw-bold text-pink"><i class="ti ti-heart-filled me-1"></i>모집중 자리 💗</td>'
+                    + '<td colspan="4" class="fw-bold text-pink"><i class="ti ti-heart-filled me-1"></i>모집중 자리 💗</td>'
                     + ROSTER_ACTION_CELL
                     + '</tr>'
                 );
@@ -1246,6 +1272,7 @@
                 + '<td><input type="text" class="form-control form-control-sm roster-height" value="' + $('<i>').text(p.height || '').html() + '"></td>'
                 + '<td><input type="text" class="form-control form-control-sm roster-job" value="' + $('<i>').text(p.job || '').html() + '"></td>'
                 + '<td><input type="text" class="form-control form-control-sm roster-age" value="' + $('<i>').text(p.age || '').html() + '"></td>'
+                + '<td><input type="text" class="form-control form-control-sm roster-merit" value="' + $('<i>').text(p.merit || '').html() + '"></td>'
                 + ROSTER_ACTION_CELL
                 + '</tr>'
             );
@@ -1283,7 +1310,8 @@
                         arr.push({
                             height: $(this).find('.roster-height').val().trim(),
                             job:    $(this).find('.roster-job').val().trim(),
-                            age:    $(this).find('.roster-age').val().trim()
+                            age:    $(this).find('.roster-age').val().trim(),
+                            merit:  $(this).find('.roster-merit').val().trim()
                         });
                     });
                     return arr;
@@ -1480,7 +1508,9 @@
                 $rows.empty();
                 var people = (pair[1] || []).map(function(p, i){
                     var row = Object.assign({}, p, { age: rosterAgeText(p.birth_year, pick.value.ageType, p.age) });
-                    return { row: row, i: i, age: ageSortValue(p.age || row.age), h: heightSortValue(p.height) };
+                    // [적용] 정렬(sortRosterEditor)과 같은 기준: 표에 보이는 나이 표기(예: 30대 초반)로 비교한다.
+                    // (서버가 준 정확한 출생연도로 정렬하면, 적용 때 대(代) 단위로 다시 묶여 순서가 달라진다.)
+                    return { row: row, i: i, age: ageSortValue(row.age), h: heightSortValue(row.height) };
                 });
                 people.sort(function(a, b){
                     if (a.age !== b.age) { return a.age < b.age ? -1 : 1; }

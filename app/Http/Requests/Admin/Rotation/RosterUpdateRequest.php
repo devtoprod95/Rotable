@@ -38,6 +38,7 @@ class RosterUpdateRequest extends ApiFormRequest
             'height'     => 'sometimes|required|integer|min:100|max:230',
             'birth_year' => 'sometimes|required|integer|min:0|max:2100',
             'job'        => 'sometimes|required|string|max:50',
+            'merit'      => 'sometimes|required|string|max:100',
         ];
     }
 
@@ -54,6 +55,7 @@ class RosterUpdateRequest extends ApiFormRequest
             'birth_year.required' => '년생을 입력해주세요. (예: 97)',
             'birth_year.integer'  => '년생은 숫자로 입력해주세요. (예: 97)',
             'job.required'        => '직업을 입력해주세요.',
+            'merit.required'      => '장점을 입력해주세요.',
         ];
     }
 }

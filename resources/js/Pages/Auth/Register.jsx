@@ -1,8 +1,7 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useMemo, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
-import SelectField from '@/Components/SelectField';
 import RadioField from '@/Components/RadioField';
 import AuthErrorModal from '@/Components/AuthErrorModal';
 
@@ -24,7 +23,6 @@ const MBTI_OPTIONS = [
     'ISTJ', 'ISFJ', 'INFJ', 'INTJ', 'ISTP', 'ISFP', 'INFP', 'INTP',
     'ESTP', 'ESFP', 'ENFP', 'ENTP', 'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ',
 ];
-const JOB_SAMPLES = ['개발자', '디자이너', '마케터', '간호사', '교사', '회계사', '요리사', '승무원', '약사', '건축가'];
 const REGION_SAMPLES = ['강남구', '서초구', '송파구', '마포구', '용산구', '성동구', '분당구', '수원시', '인천 연수구', '부산 해운대구'];
 const MERIT_SAMPLES = ['잘 웃고 리액션이 좋아요', '배려심이 깊어요', '성실하고 꾸준해요', '유머감각이 있어요', '긍정적이에요', '경청을 잘해요'];
 const IDEAL_SAMPLES = ['유머러스하고 다정한 사람', '대화가 잘 통하는 사람', '성실한 사람', '취미가 비슷한 사람', '배려심 있는 사람', '솔직한 사람'];
@@ -33,22 +31,16 @@ const TMI_SAMPLES = ['민트초코 파입니다', '물을 하루 2L 마셔요', 
 
 /**
  * 개발 편의용 자동 입력 값 생성. (production 이 아닐 때만 사용)
- * 회차(event_id)는 제외하고 나머지 필드를 매번 랜덤으로 채운다.
- * 출생연도는 실제 선택 가능한 값(birthYears)에서 뽑는다.
+ * 행사(event_id)는 QR 로 정해지므로 제외하고 나머지 필드를 매번 랜덤으로 채운다.
  */
-function buildAutofill(birthYears) {
-    const birthYearIds = birthYears.map((y) => (typeof y === 'object' ? y.id : y));
-
+function buildAutofill() {
     return {
         // 번호표~비밀번호는 기존 고정값 유지
         phone: '01025466499',
         name: '1',
         password: 'qqqq',
         gender: 'M',
-        // 출생연도~흡연 여부는 매번 랜덤
-        birth_year: birthYearIds.length ? String(pick(birthYearIds)) : String(randInt(1985, 2004)),
-        job: pick(JOB_SAMPLES),
-        height: String(randInt(155, 190)),
+        // MBTI~흡연 여부는 매번 랜덤
         mbti: pick(MBTI_OPTIONS),
         region: pick(REGION_SAMPLES),
         is_smoker: pick(['0', '1']),
@@ -60,7 +52,7 @@ function buildAutofill(birthYears) {
 }
 
 export default function Register() {
-    const { rounds = [], birthYears = [], tablesByEvent = {}, isProduction = true } = usePage().props;
+    const { event = null, isProduction = true } = usePage().props;
 
     // 제출 전 최종 확인 모달 노출 여부.
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -68,7 +60,7 @@ export default function Register() {
     // 입장등록 실패 사유를 모달로 크게 보여준다. (input 아래 작은 텍스트만으로는 놓치기 쉬움)
     const [errorModal, setErrorModal] = useState({ open: false, messages: [] });
 
-    // 필수 선택 누락 시 상단(회차/테이블)으로 스크롤하기 위한 ref.
+    // 필수 선택 누락 시 상단으로 스크롤하기 위한 ref.
     const topRef = useRef(null);
 
     // 자동 입력 버튼 노출 조건:
@@ -78,14 +70,12 @@ export default function Register() {
         !isProduction ||
         (typeof window !== 'undefined' && !!new URLSearchParams(window.location.search).get('dev'));
     const { data, setData, post, processing, errors, setError, clearErrors } = useForm({
-        event_id: '',
+        // 행사는 QR 로 정해진다. (회차 선택 없음)
+        event_id: event?.id ?? '',
         phone: '',
         name: '',
         password: '',
         gender: '',
-        birth_year: '',
-        job: '',
-        height: '',
         mbti: '',
         region: '',
         is_smoker: '',
@@ -96,19 +86,14 @@ export default function Register() {
         tmi: '',
     });
 
-    // 회차가 바뀌면 (별도 초기화할 테이블 선택 없음)
-    function changeEvent(v) {
-        setData('event_id', v);
-    }
-
     // 성별 변경
     function changeGender(v) {
         setData('gender', v);
     }
 
-    // 회차(event_id)는 유지하고 나머지 필드를 매번 랜덤으로 채운다.
+    // 나머지 필드를 매번 랜덤으로 채운다.
     function autofill() {
-        Object.entries(buildAutofill(birthYears)).forEach(([key, value]) => {
+        Object.entries(buildAutofill()).forEach(([key, value]) => {
             setData(key, value);
         });
     }
@@ -119,16 +104,13 @@ export default function Register() {
         e.preventDefault();
 
         // 검증 순서 = 화면에 보이는 순서. 첫 번째로 비어 있는 항목만 안내한다.
-        // scrollTop 이 true 인 항목(회차/테이블/성별)은 해당 입력 위치로 스크롤한다.
+        // scrollTop 이 true 인 항목(성별)은 해당 입력 위치로 스크롤한다.
+        // 출생연도·키·직업은 체크인 명단 값을 쓰므로 입력받지 않는다.
         const requiredChecks = [
             { key: 'gender',            empty: !data.gender,            message: '성별을 선택해주세요.',              field: 'gender',            scrollTop: true },
-            { key: 'event_id',          empty: !data.event_id,          message: '회차를 선택해주세요.',              field: 'event_id',          scrollTop: true },
             { key: 'name',              empty: !data.name,              message: '번호표를 입력해주세요.' },
             { key: 'phone',             empty: !data.phone,             message: '핸드폰 번호를 입력해주세요.' },
             { key: 'password',          empty: !data.password,          message: '비밀번호(4자리)를 입력해주세요.' },
-            { key: 'birth_year',        empty: !data.birth_year,        message: '출생연도를 선택해주세요.' },
-            { key: 'job',               empty: !data.job,               message: '직업을 입력해주세요.' },
-            { key: 'height',            empty: !data.height,            message: '키를 입력해주세요.' },
             { key: 'mbti',              empty: !data.mbti,              message: 'MBTI를 입력해주세요.' },
             { key: 'region',            empty: !data.region,            message: '지역을 입력해주세요.' },
             { key: 'is_smoker',         empty: data.is_smoker === '' || data.is_smoker === null || data.is_smoker === undefined, message: '흡연 여부를 선택해주세요.' },
@@ -147,7 +129,7 @@ export default function Register() {
             return;
         }
 
-        clearErrors('gender', 'event_id');
+        clearErrors('gender');
         setConfirmOpen(true);
     }
 
@@ -179,7 +161,7 @@ export default function Register() {
                         <h1 className="text-2xl font-extrabold text-secondary-800">입장등록</h1>
                     </div>
 
-                    {rounds.length === 0 ? (
+                    {!event ? (
                         <div className="mt-7">
                             <div className="flex flex-col items-center gap-3 text-center">
                                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-secondary-100 text-3xl">
@@ -187,10 +169,10 @@ export default function Register() {
                                 </div>
                                 <div>
                                     <p className="text-base font-bold text-secondary-800">
-                                        지금 등록할 수 있는 회차가 없어요
+                                        입장등록할 수 있는 행사가 아니에요
                                     </p>
                                     <p className="mt-1.5 text-sm leading-relaxed text-secondary-400">
-                                        현재 진행 중인 행사가 없어요.<br />
+                                        현장에서 안내받은 QR코드로 접속해 주세요.<br />
                                         궁금한 점이 있으면 운영진에게 문의해 주세요.
                                     </p>
                                 </div>
@@ -210,8 +192,19 @@ export default function Register() {
                         </div>
                     ) : (
                     <>
-                    <p className="mt-1.5 text-center text-sm text-secondary-400">
-                        회차를 선택하고 정보를 입력해 등록하세요.
+                    <div className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 px-4 py-5 text-center">
+                        <p className="text-xs font-bold tracking-wide text-primary/70">입장등록 행사</p>
+                        <p className="mt-1.5 text-2xl font-extrabold leading-snug text-secondary-800">
+                            {event.label.split(' (')[0]}
+                        </p>
+                        {event.label.includes(' (') && (
+                            <p className="mt-1.5 text-base font-bold text-primary">
+                                {event.label.slice(event.label.indexOf(' (') + 2).replace(/\)$/, '')}
+                            </p>
+                        )}
+                    </div>
+                    <p className="mt-4 text-center text-sm text-secondary-400">
+                        정보를 입력해 등록하세요.
                     </p>
 
                     <form onSubmit={submit} autoComplete="off" className="mt-7 flex flex-col gap-4">
@@ -222,7 +215,7 @@ export default function Register() {
                                 onClick={autofill}
                                 className="self-end rounded-full border border-dashed border-primary/40 bg-primary/5 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/10"
                             >
-                                ⚡ 자동 입력 (회차 제외)
+                                ⚡ 자동 입력
                             </button>
                         )}
                         <RadioField
@@ -232,15 +225,6 @@ export default function Register() {
                             options={GENDER_OPTIONS}
                             error={errors.gender}
                         />
-                        <SelectField
-                            label="회차"
-                            value={data.event_id}
-                            onChange={(v) => changeEvent(v)}
-                            options={rounds}
-                            placeholder="회차를 선택해주세요"
-                            error={errors.event_id}
-                            autoFocus
-                        />
                         <TextField
                             label="번호표"
                             value={data.name}
@@ -249,6 +233,7 @@ export default function Register() {
                             digitsOnly
                             maxLength={10}
                             error={errors.name}
+                            autoFocus
                         />
                         <TextField
                             label="핸드폰 번호"
@@ -267,35 +252,12 @@ export default function Register() {
                             error={errors.password}
                             maxLength={4}
                         />
-                        <SelectField
-                            label="출생연도"
-                            value={data.birth_year}
-                            onChange={(v) => setData('birth_year', v)}
-                            options={birthYears}
-                            placeholder="출생연도를 선택해주세요"
-                            error={errors.birth_year}
-                        />
                         <TextField
                             label="지역/거주지"
                             value={data.region}
                             onChange={(v) => setData('region', v)}
                             placeholder="예: 강남구"
                             error={errors.region}
-                        />
-                        <TextField
-                            label="키 (cm)"
-                            type="number"
-                            value={data.height}
-                            onChange={(v) => setData('height', v)}
-                            placeholder="예: 170"
-                            error={errors.height}
-                        />
-                        <TextField
-                            label="직업"
-                            value={data.job}
-                            onChange={(v) => setData('job', v)}
-                            placeholder="예: 개발자"
-                            error={errors.job}
                         />
                         <TextField
                             label="MBTI"

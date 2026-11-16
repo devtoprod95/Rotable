@@ -186,7 +186,7 @@ class RosterService
      *
      * - 전화번호가 없으므로 중복 판정은 하지 않는다. (동명이인·동일 닉네임 허용)
      *
-     * @param array{height?:mixed, birth_year?:mixed, job?:mixed} $profile 상세페이지 명단용 프로필(선택)
+     * @param array{height?:mixed, birth_year?:mixed, job?:mixed, merit?:mixed} $profile 상세페이지 명단용 프로필(선택)
      * @return array{isSuccess:bool, msg?:string}
      */
     public function rosterAdd(int $eventId, string $name, ?string $platform, ?string $gender, array $profile = []): array
@@ -200,6 +200,7 @@ class RosterService
                 'height'     => $this->normalizeHeight($profile['height'] ?? null),
                 'birth_year' => $this->normalizeBirthYear($profile['birth_year'] ?? null),
                 'job'        => $this->normalizeJob($profile['job'] ?? null),
+                'merit'      => $this->normalizeMerit($profile['merit'] ?? null),
             ]);
 
             return helpersSuccessMessage('명단에 추가했습니다.');
@@ -249,6 +250,16 @@ class RosterService
     }
 
     /**
+     * 장점 정규화. 비었으면 null, 100자 초과는 잘라낸다.
+     */
+    private function normalizeMerit(mixed $value): ?string
+    {
+        $merit = trim((string) ($value ?? ''));
+
+        return $merit !== '' ? mb_substr($merit, 0, 100) : null;
+    }
+
+    /**
      * 명단 1건 수정 (닉네임/플랫폼/성별).
      *
      * - 번호표가 배정된 뒤에는 성별을 바꿀 수 없다. (번호표는 성별 안에서만 유일하므로)
@@ -282,6 +293,9 @@ class RosterService
             }
             if (array_key_exists('job', $data)) {
                 $roster->job = $this->normalizeJob($data['job']);
+            }
+            if (array_key_exists('merit', $data)) {
+                $roster->merit = $this->normalizeMerit($data['merit']);
             }
             $roster->save();
 
@@ -643,6 +657,31 @@ class RosterService
     }
 
     /**
+     * 입장등록 시 체크인 명단에서 끌어다 쓸 프로필(출생연도·키·직업).
+     * 연결 키(행사·성별·번호표)로 체크인된 행을 찾아, 값이 있는 항목만 돌려준다.
+     *
+     * @return array{birth_year?:int, height?:int, job?:string}
+     */
+    public function profileForTicket(int $eventId, string $gender, int $ticket): array
+    {
+        $roster = EventRoster::where('event_id', $eventId)
+            ->where('gender', $gender)
+            ->where('ticket_no', $ticket)
+            ->whereNotNull('checked_in_at')
+            ->first(['birth_year', 'height', 'job']);
+
+        if ($roster === null) {
+            return [];
+        }
+
+        return array_filter([
+            'birth_year' => $roster->birth_year,
+            'height'     => $roster->height,
+            'job'        => $roster->job,
+        ], fn ($v) => $v !== null && $v !== '');
+    }
+
+    /**
      * 번호표(같은 행사·같은 성별)로 체크인 때 지정된 테이블 id 를 찾는다.
      *  - 참가자 입장등록 시, 참가자가 고르지 않고 이 값으로 좌석을 자동 생성한다.
      *
@@ -896,11 +935,12 @@ class RosterService
     /**
      * [개발용] 더미 명단용 프로필(키·출생연도·직업) — 성별에 맞는 현실적인 범위에서 무작위로 만든다.
      *
-     * @return array{height:int, birth_year:int, job:string}
+     * @return array{height:int, birth_year:int, job:string, merit:string}
      */
     private function dummyProfile(string $gender): array
     {
         $jobs = ['개발자', '디자이너', '간호사', '교사', '마케터', '회계사', '공무원', '의사', '연구원', '프리랜서', '대기업 사무직', '금융권', 'PD', '약사', '변호사'];
+        $merits = ['잘 웃어요', '배려심이 깊어요', '성실해요', '유머감각이 있어요', '긍정적이에요', '경청을 잘해요'];
         $year = (int) now()->year;
 
         return [
@@ -908,6 +948,7 @@ class RosterService
             // 만 24~39세 범위(출생연도)
             'birth_year' => $year - random_int(24, 39),
             'job'        => $jobs[array_rand($jobs)],
+            'merit'      => $merits[array_rand($merits)],
         ];
     }
 

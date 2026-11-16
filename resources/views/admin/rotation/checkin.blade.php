@@ -45,12 +45,15 @@
     <div class="col-12">
         <div class="card">
             <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-3">
-                <div>
+                <div class="w-100 w-md-auto">
                     <div class="text-secondary small">체크인</div>
                     <h2 class="mb-0">{{ $event->title }}</h2>
                     <div class="text-secondary small mt-1">
                         {{ $event->event_time ? $event->event_time->format('Y-m-d H:i') : '' }}
                     </div>
+                    <button type="button" class="btn btn-lg btn-dark mt-3 px-4 w-100 w-md-auto" id="goRegisterQrBtn">
+                        <i class="ti ti-qrcode fs-2 me-2"></i> 입장 QR
+                    </button>
                 </div>
                 {{-- 현황 통계: 모바일에선 4등분 그리드로 꽉 차게, 데스크톱에선 카드 나열 --}}
                 <div class="row g-2 w-100 w-md-auto flex-grow-1 flex-md-grow-0" aria-live="polite">
@@ -173,7 +176,11 @@
                         <label for="addJob" class="form-label mb-1 required">직업</label>
                         <input type="text" id="addJob" class="form-control" placeholder="예: 개발자" maxlength="50" autocomplete="off">
                     </div>
-                    <div class="col-12 col-md-5 text-secondary small">
+                    <div class="col-12 col-md-5">
+                        <label for="addMerit" class="form-label mb-1 required">장점</label>
+                        <input type="text" id="addMerit" class="form-control" placeholder="예: 잘 웃고 배려심이 깊어요" maxlength="100" autocomplete="off">
+                    </div>
+                    <div class="col-12 text-secondary small">
                         <i class="ti ti-info-circle me-1"></i>필수 입력 · 상세페이지 참여자 명단을 자동으로 채울 때 사용돼요. (년생은 2자리로 입력 가능)
                     </div>
                 </div>
@@ -342,6 +349,7 @@
             if(r.height){ profParts.push(r.height + 'cm'); }
             if(r.birth_year){ profParts.push(String(r.birth_year).slice(-2) + '년생'); }
             if(r.job){ profParts.push(esc(r.job)); }
+            if(r.merit){ profParts.push('장점: ' + esc(r.merit)); }
             var profile = profParts.length
                 ? `<span class="badge bg-green-lt"><i class="ti ti-id me-1"></i>${profParts.join(' · ')}</span>`
                 : `<span class="badge bg-secondary-lt">프로필 미입력</span>`;
@@ -960,18 +968,20 @@
             var height    = ($('#addHeight').val() || '').trim();
             var birthYear = ($('#addBirthYear').val() || '').trim();
             var job       = ($('#addJob').val() || '').trim();
+            var merit     = ($('#addMerit').val() || '').trim();
             if(!name){ await salert({text: '닉네임을 입력해주세요.', cancel: false}); return; }
             if(!height){ await salert({text: '키를 입력해주세요.', cancel: false}); $('#addHeight').focus(); return; }
             if(!birthYear){ await salert({text: '년생을 입력해주세요. (예: 97)', cancel: false}); $('#addBirthYear').focus(); return; }
             if(!job){ await salert({text: '직업을 입력해주세요.', cancel: false}); $('#addJob').focus(); return; }
+            if(!merit){ await salert({text: '장점을 입력해주세요.', cancel: false}); $('#addMerit').focus(); return; }
             $.ajax({
                 url: addUrl, type: 'POST',
-                data: { name: name, platform: platform, gender: gender, height: height, birth_year: birthYear, job: job },
+                data: { name: name, platform: platform, gender: gender, height: height, birth_year: birthYear, job: job, merit: merit },
                 success: function(res){
                     alert(res?.msg);
                     if(res?.status === 200){
                         // 연속 입력 편의: 닉네임·프로필만 비우고 플랫폼/성별 선택은 유지한다.
-                        $('#addHeight, #addBirthYear, #addJob').val('');
+                        $('#addHeight, #addBirthYear, #addJob, #addMerit').val('');
                         $('#addName').val('').focus();
                         load();
                     }
@@ -987,7 +997,7 @@
         });
 
         // 닉네임·프로필 입력창에서 Enter 로 바로 추가
-        $('#addName, #addHeight, #addBirthYear, #addJob').on('keydown', function(e){
+        $('#addName, #addHeight, #addBirthYear, #addJob, #addMerit').on('keydown', function(e){
             if(e.key === 'Enter'){ e.preventDefault(); $('#checkinAddBtn').trigger('click'); }
         });
 
@@ -1018,7 +1028,8 @@
                 title: (r.name ? esc(r.name) : '닉네임 없음') + ' 프로필',
                 html: field('swal-p-height', '키 (cm) *', 'text', r.height || '', '175', 'maxlength="3" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-birth', '년생 (2자리 가능) *', 'text', r.birth_year ? String(r.birth_year).slice(-2) : '', '97', 'maxlength="4" inputmode="numeric" pattern="[0-9]*"')
-                    + field('swal-p-job', '직업 *', 'text', r.job || '', '예: 개발자', 'maxlength="50"'),
+                    + field('swal-p-job', '직업 *', 'text', r.job || '', '예: 개발자', 'maxlength="50"')
+                    + field('swal-p-merit', '장점 *', 'text', r.merit || '', '예: 잘 웃고 배려심이 깊어요', 'maxlength="100"'),
                 focusConfirm: true,
                 showCancelButton: true,
                 reverseButtons: true,
@@ -1028,10 +1039,11 @@
                     var v = {
                         height:     (document.getElementById('swal-p-height').value || '').trim(),
                         birth_year: (document.getElementById('swal-p-birth').value || '').trim(),
-                        job:        (document.getElementById('swal-p-job').value || '').trim()
+                        job:        (document.getElementById('swal-p-job').value || '').trim(),
+                        merit:      (document.getElementById('swal-p-merit').value || '').trim()
                     };
-                    if(!v.height || !v.birth_year || !v.job){
-                        Swal.showValidationMessage('키, 년생, 직업을 모두 입력해 주세요.');
+                    if(!v.height || !v.birth_year || !v.job || !v.merit){
+                        Swal.showValidationMessage('키, 년생, 직업, 장점을 모두 입력해 주세요.');
                         return false;
                     }
                     return v;
@@ -1054,6 +1066,13 @@
         });
 
         load();
+    });
+</script>
+
+@include('admin.rotation._registerQrModal')
+<script>
+    document.getElementById('goRegisterQrBtn').addEventListener('click', function () {
+        RegisterQrModal.open({{ $event->id }}, @json($event->label));
     });
 </script>
 @endsection

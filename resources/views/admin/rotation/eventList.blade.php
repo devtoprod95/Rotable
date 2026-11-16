@@ -354,6 +354,11 @@
                             .html('<i class="ti ti-user-check me-1"></i>체크인')
                             .on("click", function(){ location.href = detailBase + "/" + data.id + "/checkin"; });
                         $wrap.append($checkin);
+                        var $registerQr = $("<button>")
+                            .addClass("btn btn-sm btn-outline-dark w-100")
+                            .html('<i class="ti ti-qrcode me-1"></i>입장 QR')
+                            .on("click", function(){ RegisterQrModal.open(data.id, data.title ?? ''); });
+                        $wrap.append($registerQr);
                         var $seating = $("<button>")
                             .addClass("btn btn-sm btn-outline-azure w-100")
                             .html('로테이션 진행')
@@ -395,4 +400,5 @@
 @include('admin.rotation._requestsModal')
 @include('admin.rotation._matchesModal')
 @include('admin.rotation._matchedModal')
+@include('admin.rotation._registerQrModal')
 @endsection

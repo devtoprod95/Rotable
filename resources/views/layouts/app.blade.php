@@ -28,7 +28,6 @@
     <link rel="stylesheet" href="{{ asset('css/tabler.min.css') }}">
     {{-- <link rel="stylesheet" href="{{ asset('css/tabler-icons.min.css') }}"> --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/quill@2.0.2/dist/quill.snow.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/flatpickr.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/sweetalert2.min.css') }}">
     <link rel="stylesheet" href="{{ asset('css/tabulator_bootstrap5.min.css') }}">
@@ -96,15 +95,7 @@
                     <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
                     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tabulator/6.3.0/js/tabulator.min.js"></script>
                     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-                    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
-                    <script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
-                    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-                    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
                     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-                    {{-- 상세페이지 이미지 캡처 (SVG foreignObject 렌더, UMD 전역: modernScreenshot) --}}
-                    <script src="https://cdn.jsdelivr.net/npm/modern-screenshot@4.7.0/dist/index.js"></script>
-                    {{-- 드래그 앤 드롭 정렬 (터치 지원, UMD 전역: Sortable) --}}
-                    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
                     {{-- QR 이미지 생성 (전역: QRCode) --}}
                     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 

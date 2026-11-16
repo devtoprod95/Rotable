@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\RotationSeat;
-use App\Models\RotationTable;
 use App\Services\Rotation\RosterService;
 use App\Services\TelegramNotifier;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +19,13 @@ use Inertia\Response as InertiaResponse;
 
 class MemberAuthController extends Controller
 {
+    /** 입장등록이 가능한 행사 상태 (대기/진행/투표중) */
+    private const REGISTRABLE_STATUSES = [
+        EventRound::STATUS_PENDING,
+        EventRound::STATUS_STARTED,
+        EventRound::STATUS_VOTING,
+    ];
+
     /**
      * 입장/등록 가능한 회차 목록을 셀렉트박스 옵션 형태로 반환.
      * - $statuses 에 해당하는 상태의 회차를 노출한다.
@@ -58,99 +64,28 @@ class MemberAuthController extends Controller
         return preg_replace('/\D+/', '', (string) $phone);
     }
 
-    /** 출생연도 선택 하한 (고정) */
-    private const BIRTH_YEAR_MIN = 1980;
-
-    /** 성인 기준 나이 (만 나이) */
-    private const ADULT_AGE = 19;
-
     /**
-     * 선택 가능한 출생연도의 상한(가장 최근 연도)을 반환한다.
-     * 현재 연도 기준 성인(만 19세)이 되는 출생연도까지만 허용한다.
+     * 입장등록 화면. 행사별 QR(/register/{행사id})로 진입하며 회차 선택은 하지 않는다.
+     * 행사가 없거나 등록 가능한 상태(대기/진행/투표중)가 아니면 event=null 로 내려 안내 화면을 보여준다.
      */
-    private function birthYearMax(): int
+    public function showRegister(?int $eventId = null): InertiaResponse
     {
-        return (int) now()->year - self::ADULT_AGE;
-    }
+        $event = $eventId !== null ? $this->registrableEvent($eventId) : null;
 
-    /**
-     * 출생연도 셀렉트박스 옵션 목록. 최근 연도가 위로 오도록 내림차순 정렬한다.
-     *
-     * @return array<int, array{id: int, label: string}>
-     */
-    private function birthYearOptions(): array
-    {
-        $max = $this->birthYearMax();
-
-        return collect(range($max, self::BIRTH_YEAR_MIN))
-            ->map(fn (int $year): array => [
-                'id'    => $year,
-                'label' => $year . '년생',
-            ])
-            ->all();
-    }
-
-    /**
-     * 입장등록(회원가입) 화면.
-     */
-    public function showRegister(): InertiaResponse
-    {
         return Inertia::render('Auth/Register', [
-            'rounds'          => $this->roundOptions([EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING]),
-            'birthYears'      => $this->birthYearOptions(),
-            'tablesByEvent'   => $this->tablesByEvent(),
+            'event' => $event !== null ? ['id' => $event->id, 'label' => $event->label] : null,
         ]);
     }
 
     /**
-     * 입장/등록 가능한 회차별 테이블(자리) 옵션 맵.
-     * 참가자가 입장등록 시 자기 자리를 직접 고르도록 제공한다.
-     *
-     * 1:1 소개팅(one)은 테이블당 남/여 각 1명이 원칙이므로, 각 테이블에
-     * "이미 남/여가 앉았는지"(taken_male / taken_female)와 행사 타입(is_one)을 함께 내려
-     * 프론트에서 같은 성별이 찬 테이블을 선택지에서 제외할 수 있게 한다.
-     *
-     * @return array<int, array<int, array{id: int, label: string, is_one: bool, taken_male: bool, taken_female: bool}>>
+     * 입장등록이 가능한 상태(대기/진행/투표중)의 행사. 없으면 null.
      */
-    private function tablesByEvent(): array
+    private function registrableEvent(int $eventId): ?EventRound
     {
-        // 노출 대상 행사(대기/진행/투표중)만 대상으로 한다.
-        $events = EventRound::query()
-            ->whereIn('status', [EventRound::STATUS_PENDING, EventRound::STATUS_STARTED, EventRound::STATUS_VOTING])
-            ->get()
-            ->keyBy('id');
-
-        // 각 테이블에 이미 앉은 성별 집합. rotation_seats + members.gender 로 집계.
-        // 결과: [rotation_table_id => ['M' => bool, 'F' => bool]]
-        $occupancy = RotationSeat::query()
-            ->with('member:id,gender')
-            ->get()
-            ->groupBy('rotation_table_id')
-            ->map(function ($seats) {
-                return [
-                    'M' => $seats->contains(fn ($s) => $s->member?->gender === Member::GENDER_MALE),
-                    'F' => $seats->contains(fn ($s) => $s->member?->gender === Member::GENDER_FEMALE),
-                ];
-            });
-
-        return RotationTable::query()
-            ->orderBy('event_id')
-            ->orderBy('table_no')
-            ->get()
-            ->groupBy('event_id')
-            ->map(fn ($tables, $eventId) => $tables->map(function (RotationTable $t) use ($events, $occupancy): array {
-                $isOne = ($events[$t->event_id] ?? null)?->isOneToOne() ?? false;
-                $occ   = $occupancy[$t->id] ?? ['M' => false, 'F' => false];
-
-                return [
-                    'id'           => $t->id,
-                    'label'        => $t->table_no . '번 테이블',
-                    'is_one'       => $isOne,
-                    'taken_male'   => (bool) $occ['M'],
-                    'taken_female' => (bool) $occ['F'],
-                ];
-            })->values()->all())
-            ->all();
+        return EventRound::query()
+            ->whereKey($eventId)
+            ->whereIn('status', self::REGISTRABLE_STATUSES)
+            ->first();
     }
 
     /**
@@ -161,8 +96,27 @@ class MemberAuthController extends Controller
         // 하이픈 등 비숫자 제거 후 검증한다. (예: 010-1234-5678 → 01012345678)
         $request->merge(['phone' => $this->normalizePhone($request->input('phone'))]);
 
+        // 출생연도·키·직업은 체크인 명단(필수 입력)에서 가져온다. 클라이언트가 보낸 값은 쓰지 않는다.
+        $rosterService = app(RosterService::class);
+        $gender        = (string) $request->input('gender');
+        $ticket        = $rosterService->normalizeTicket($request->input('name'));
+        $fromRoster    = [];
+        if ((int) $request->input('event_id') > 0 && $ticket !== null
+            && in_array($gender, [Member::GENDER_MALE, Member::GENDER_FEMALE], true)) {
+            $fromRoster = $rosterService->profileForTicket((int) $request->input('event_id'), $gender, $ticket);
+        }
+        $request->merge([
+            'birth_year' => $fromRoster['birth_year'] ?? null,
+            'height'     => $fromRoster['height'] ?? null,
+            'job'        => isset($fromRoster['job']) ? mb_substr($fromRoster['job'], 0, 50) : null,
+        ]);
+
         $rules = [
-            'event_id' => ['required', 'integer', 'exists:event_rounds,id'],
+            'event_id' => [
+                'required',
+                'integer',
+                Rule::exists('event_rounds', 'id')->whereIn('status', self::REGISTRABLE_STATUSES),
+            ],
             'phone'    => [
                 'required',
                 'string',
@@ -190,9 +144,9 @@ class MemberAuthController extends Controller
             ],
             'password'   => ['required', 'string', 'size:4'],
             'gender'     => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
-            'birth_year' => ['required', 'integer', 'between:' . self::BIRTH_YEAR_MIN . ',' . $this->birthYearMax()],
+            'birth_year' => ['required', 'integer'],
             'job'        => ['required', 'string', 'max:50'],
-            'height'     => ['required', 'integer', 'between:100,250'],
+            'height'     => ['required', 'integer'],
             'mbti'       => ['required', 'string', 'size:4'],
             'region'     => ['required', 'string', 'max:50'],
             'is_smoker'  => ['required', 'boolean'],
@@ -204,8 +158,8 @@ class MemberAuthController extends Controller
         ];
 
         $validated = $request->validate($rules, [
-            'event_id.required'          => '회차를 선택해주세요.',
-            'event_id.exists'            => '선택한 회차가 올바르지 않습니다.',
+            'event_id.required'          => '행사 정보가 올바르지 않습니다. QR코드로 다시 접속해주세요.',
+            'event_id.exists'            => '입장등록이 가능한 행사가 아닙니다.',
             'phone.required'             => '핸드폰 번호를 입력해주세요.',
             'phone.regex'                => '핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.',
             'phone.unique'               => '해당 회차에 이미 등록된 핸드폰 번호입니다.',
@@ -216,11 +170,9 @@ class MemberAuthController extends Controller
             'password.size'              => '비밀번호는 4자리로 입력해주세요.',
             'gender.required'            => '성별을 선택해주세요.',
             'gender.in'                  => '성별 선택이 올바르지 않습니다.',
-            'birth_year.required'        => '출생연도를 선택해주세요.',
-            'birth_year.between'         => '출생연도 선택이 올바르지 않습니다.',
-            'job.required'               => '직업을 입력해주세요.',
-            'height.required'            => '키를 입력해주세요.',
-            'height.between'             => '키는 100~250cm 사이로 입력해주세요.',
+            'birth_year.required'        => '체크인 명단에 출생연도가 없어요. 호스트에게 문의해 주세요.',
+            'job.required'               => '체크인 명단에 직업이 없어요. 호스트에게 문의해 주세요.',
+            'height.required'            => '체크인 명단에 키가 없어요. 호스트에게 문의해 주세요.',
             'mbti.required'              => 'MBTI를 입력해주세요.',
             'mbti.size'                  => 'MBTI는 4글자로 입력해주세요.',
             'region.required'            => '지역/거주지를 입력해주세요.',

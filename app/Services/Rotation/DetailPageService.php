@@ -56,7 +56,7 @@ class DetailPageService
      * 한 행사의 체크인 명단을 상세페이지 명단 행({height, job, age})으로 변환한다.
      * 남/여 각각 번호표 → 입력 순서로 정렬해 돌려준다. (최종 정렬은 [적용] 시 나이→키로 다시 수행)
      *
-     * @return array{title:string, date:string, males:list<array{height:string,job:string,age:string,birth_year:int|null}>, females:list<array{height:string,job:string,age:string,birth_year:int|null}>}|null
+     * @return array{title:string, date:string, males:list<array{height:string,job:string,merit:string,age:string,birth_year:int|null}>, females:list<array{height:string,job:string,merit:string,age:string,birth_year:int|null}>}|null
      */
     public function rosterSourcePeople(int $eventId): ?array
     {
@@ -74,6 +74,7 @@ class DetailPageService
         $toRow = fn (EventRoster $r): array => [
             'height' => $r->height !== null ? (string) $r->height : '',
             'job'    => (string) ($r->job ?? ''),
+            'merit'  => (string) ($r->merit ?? ''),
             // 나이 표기는 화면에서 선택(00년생 / 30대 / 30대 초·중·후반)하므로 출생연도 원본도 함께 내려준다.
             'age'        => $r->birth_year !== null ? sprintf('%02d년생', $r->birth_year % 100) : '',
             'birth_year' => $r->birth_year,

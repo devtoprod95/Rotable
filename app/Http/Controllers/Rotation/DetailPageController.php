@@ -47,6 +47,8 @@ class DetailPageController extends RotationBaseController
             'wineTwo'          => $this->detailPageService->detailSampleHtml(2, 'wine'),
             'soloOne'          => $this->detailPageService->detailSampleHtml(1, 'solo'),
             'soloTwo'          => $this->detailPageService->detailSampleHtml(2, 'solo'),
+            // 이전 로테이블 기록 — 실시간 DB 값. 에디터에 HTML 을 넣을 때마다 이 값으로 갱신한다.
+            'recentRecords'    => $this->detailPageService->recentRecords(),
         ]);
     }
 

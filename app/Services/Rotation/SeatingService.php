@@ -706,8 +706,8 @@ class SeatingService
             ->distinct('event_votes.voter_id')
             ->count('event_votes.voter_id');
 
-        // 상호 매칭 쌍 수 (남자 기준 1회 노출된 쌍 목록의 길이).
-        $pairCount = count($this->matchService->matchedPairList($event->id));
+        // 전체 상호 매칭 수(쌍). 남자 기준으로 묶은 목록의 길이는 "매칭된 사람 수"라 쓰지 않는다.
+        $pairCount = $this->matchService->mutualPairCount($event->id);
 
         // 노쇼: 체크인 명단(event_rosters)에 있었으나 당일 참석(체크인)하지 않은 신청자 수.
         // checked_in_at 이 null 이면 미참석(노쇼)으로 본다. 성별이 F 가 아니면 남(M)으로 귀속한다.

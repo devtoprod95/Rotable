@@ -6,7 +6,9 @@ use App\Models\EventPageDetail;
 use App\Models\EventPageDetailSave;
 use App\Models\EventRoster;
 use App\Models\EventRound;
+use App\Models\Member;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\View;
 
 /**
@@ -170,7 +172,69 @@ class DetailPageService
         return trim(View::make('admin.rotation._detailSample', [
             'columns' => $columns === 1 ? 1 : 2,
             'type'    => $type === 'solo' ? 'solo' : 'wine',
+            'records' => $this->recentRecords(),
         ])->render());
+    }
+
+    /** 이전 로테이블 기록에 보여줄 최대 행사 수 */
+    public const RECORD_LIMIT = 10;
+
+    /** @var list<array{date:string,title:string,people:string,couples:string}>|null 요청 내 재사용용 캐시 */
+    private ?array $recordsCache = null;
+
+    /**
+     * 이전 로테이블 기록 — 시작된(대기 제외, 행사일이 지난) 행사 중 최신 순 최대 10개를 실제 데이터로 만든다.
+     * 와인파티/1:1 등 행사 종류는 가리지 않는다.
+     *
+     * - 날짜: 행사일(2026.11.07), 인원: "22명 (12/10)" = 총원(남/여), 매칭: 서로 선택한 매칭 수(쌍) "6커플".
+     * - 참여자가 한 명도 없는 행사는 제외한다.
+     *
+     * @return list<array{date:string,title:string,people:string,couples:string}>
+     */
+    public function recentRecords(): array
+    {
+        if ($this->recordsCache !== null) {
+            return $this->recordsCache;
+        }
+
+        $events = EventRound::query()
+            ->where('status', '!=', EventRound::STATUS_PENDING)
+            ->where('event_time', '<=', now())
+            ->withCount([
+                'members as male_count'   => fn ($q) => $q->where('gender', Member::GENDER_MALE),
+                'members as female_count' => fn ($q) => $q->where('gender', Member::GENDER_FEMALE),
+            ])
+            ->orderByDesc('event_time')
+            ->orderByDesc('id')
+            ->get()
+            ->filter(fn (EventRound $e): bool => ($e->male_count + $e->female_count) > 0)
+            ->take(self::RECORD_LIMIT)
+            ->values();
+
+        // 상호 매칭 쌍 수: A→B 와 B→A 가 모두 있으면 2번 세어지므로 2로 나눈다.
+        $matchCounts = [];
+        if ($events->isNotEmpty()) {
+            DB::table('event_votes as v1')
+                ->join('event_votes as v2', function ($join) {
+                    $join->on('v1.event_id', '=', 'v2.event_id')
+                        ->on('v1.voter_id', '=', 'v2.target_id')
+                        ->on('v1.target_id', '=', 'v2.voter_id');
+                })
+                ->whereIn('v1.event_id', $events->pluck('id')->all())
+                ->groupBy('v1.event_id')
+                ->selectRaw('v1.event_id as event_id, COUNT(*) as cnt')
+                ->get()
+                ->each(function ($row) use (&$matchCounts): void {
+                    $matchCounts[(int) $row->event_id] = (int) ($row->cnt / 2);
+                });
+        }
+
+        return $this->recordsCache = $events->map(fn (EventRound $e): array => [
+            'date'    => $e->event_time?->format('Y.m.d') ?? '',
+            'title'   => (string) $e->title,
+            'people'  => ($e->male_count + $e->female_count) . '명 (' . $e->male_count . '/' . $e->female_count . ')',
+            'couples' => ($matchCounts[$e->id] ?? 0) . '커플',
+        ])->all();
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Services\Rotation;
 
 use App\Models\Member;
 use App\Models\Vote;
+use Illuminate\Support\Facades\DB;
 
 /**
  * 매칭(투표 기반 상호 매칭 조회) 도메인 서비스.
@@ -80,6 +81,26 @@ class MatchService
         });
 
         return $rows;
+    }
+
+    /**
+     * 특정 행사의 전체 상호 매칭 수(쌍의 개수).
+     *
+     * 한 사람이 여러 명과 서로 선택할 수 있으므로 "매칭된 사람 수"가 아니라 "성사된 쌍" 자체를 센다.
+     * (A→B 와 B→A 가 모두 있으면 self-join 에서 2행이 나오므로 2로 나눈다.)
+     */
+    public function mutualPairCount(int $eventId): int
+    {
+        $rows = DB::table('event_votes as v1')
+            ->join('event_votes as v2', function ($join) {
+                $join->on('v1.event_id', '=', 'v2.event_id')
+                    ->on('v1.voter_id', '=', 'v2.target_id')
+                    ->on('v1.target_id', '=', 'v2.voter_id');
+            })
+            ->where('v1.event_id', $eventId)
+            ->count();
+
+        return intdiv($rows, 2);
     }
 
     /**

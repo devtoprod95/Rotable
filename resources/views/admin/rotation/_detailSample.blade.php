@@ -158,12 +158,16 @@
      |  - data-detail-settings(JSON) 에 events 와 함께 records 로 실린다.
      |  - 기록표 div(data-setting-block="records")를 JS 가 이 배열로 다시 그린다.
      | ─────────────────────────────────────────────────────────────────*/
-    $records = [
-        ['date' => '2026.11.07', 'title' => '1회 ' . $typeConfig['eventName'], 'people' => '22명 (12/10)', 'couples' => '6커플'],
-    ];
+    //  - 컨트롤러/서비스가 실제 종료 행사 최신 10개($records)를 넘겨준다. (DetailPageService::recentRecords)
+    //  - 종료된 행사가 하나도 없을 때만 예시 1건을 보여준다.
+    $records = ! empty($records)
+        ? $records
+        : [
+            ['date' => '2026.11.07', 'title' => '1회 ' . $typeConfig['eventName'], 'people' => '22명 (12/10)', 'couples' => '6커플'],
+        ];
 
     // data 속성에 실어 JS 가 현재 설정을 읽게 할 JSON. (events + records)
-    $settingsJson = json_encode(['events' => $eventSettings, 'records' => $records], JSON_UNESCAPED_UNICODE);
+    $settingsJson = json_encode(['events' => $eventSettings], JSON_UNESCAPED_UNICODE);
 
     // 행사 수가 2개 이상일 때만 각 줄 앞에 행사명(전체)을 붙여 구분한다.
     $multiEvent = count($sampleEvents) > 1;
@@ -404,6 +408,32 @@
             </div>
         </div>
     </div>
+
+    {{-- 현장 사진 (와인·1:1 공통, 유형별 사진) — 파일명: on-site_{type}NN.jpeg (public/images)
+         한 줄에 전부 나란히 작게 보여준다. 파일이 있는 것만 노출한다.
+         html2canvas 호환을 위해 aspect-ratio 대신 padding-top 비율 트릭(4:3 = 75%) + object-fit:cover 사용. --}}
+    @php
+        $onSiteFiles = [
+            'wine' => ['on-site_wine01.jpeg', 'on-site_wine02.jpeg'],
+            'solo' => ['on-site_solo01.jpeg', 'on-site_solo02.jpeg', 'on-site_solo03.jpeg'],
+        ][$type];
+        $onSiteFiles = array_values(array_filter($onSiteFiles, fn ($f) => file_exists(public_path('images/' . $f))));
+    @endphp
+    @if (count($onSiteFiles) > 0)
+    <div style="margin-top:36px;">
+        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#ec4899; text-align:center; letter-spacing:0.5px; margin-bottom:20px;">📸 현장 스케치</div>
+        <div style="display:flex; padding:0 6px;">
+            @foreach ($onSiteFiles as $file)
+                <div style="width:{{ round(100 / count($onSiteFiles), 4) }}%; box-sizing:border-box; padding:0 5px;">
+                    <div style="position:relative; width:100%; padding-top:75%; border-radius:12px; overflow:hidden; background:#f3f4f6;">
+                        <img src="{{ asset('images/' . $file) }}" alt="현장 사진"
+                             style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+    @endif
 
     {{-- 핵심 매력 카드 그리드 --}}
     <div style="margin:44px 0;">

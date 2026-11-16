@@ -721,7 +721,11 @@
         //  - 예) prefix='rotable_상세페이지', 제목='11월 와인파티' → 'rotable_상세페이지_와인파티_11월 와인파티'
         //  - 저장본이 없으면(미저장) 제목 없이 유형만 붙인다.
         //  - 파일명에 못 쓰는 문자(\ / : * ? " < > |)는 _ 로 치환한다.
+        // 체크인 화면의 명단 이미지처럼 "행사 정보"로 파일명을 정해야 할 때 지정하는 값. (비어 있으면 저장본 기준 이름)
+        var downloadNameOverride = '';
+
         function buildDownloadBaseName(prefix){
+            if (downloadNameOverride) { return downloadNameOverride; }
             var type  = currentType();
             var label = type === 'solo' ? '1:1소개팅' : '와인파티';
             var cur   = CURRENT[type] || {};
@@ -3036,6 +3040,11 @@
                 // 두 행사는 날짜가 이른 쪽을 왼쪽에 둔다. (날짜 문구가 "2026.11.07(토) 19:30" 형식이라 문자열 비교로 충분)
                 if (datas.length === 2 && String(datas[1].date || '') < String(datas[0].date || '')) { datas.reverse(); }
                 datas.forEach(function(d, i){ fillRosterCard($cards.eq(i), d, ageType, withRecruit); });
+                // 파일명: 현재 행사 정보 — "행사명_날짜" (두 행사면 "A + B" 로 이어 붙임). 저장본 제목은 쓰지 않는다.
+                downloadNameOverride = datas.map(function(d){
+                    var day = String(d.date || '').split('(')[0].trim();
+                    return String(d.title || '행사') + (day ? '_' + day : '');
+                }).join(' + ').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, ' ').trim();
                 sortRosterEditor();
                 setHtml(applyUpdatedAtToSample(applyRosterToHtml(getHtml())));
             } catch (e) {

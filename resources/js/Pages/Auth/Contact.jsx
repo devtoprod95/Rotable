@@ -29,8 +29,6 @@ export default function Contact() {
 
                     <p className="mt-6 text-center text-sm text-secondary-400">
                         <Link href="/login" className="font-semibold text-primary">입장</Link>
-                        {' · '}
-                        <Link href="/register" className="font-semibold text-primary">입장등록</Link>
                         {' 하러 가기'}
                     </p>
                 </div>

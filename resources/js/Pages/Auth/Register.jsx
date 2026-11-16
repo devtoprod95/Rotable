@@ -51,8 +51,31 @@ function buildAutofill() {
     };
 }
 
+/** 등록할 수 없을 때 사유별 안내 */
+const UNAVAILABLE_COPY = {
+    none: {
+        title: '입장등록은 QR코드로 할 수 있어요',
+        desc: '현장에서 안내받은 QR코드로 접속해 주세요.\n궁금한 점이 있으면 운영진에게 문의해 주세요.',
+    },
+    missing: {
+        title: '행사를 찾을 수 없어요',
+        desc: 'QR코드가 올바르지 않거나 삭제된 행사예요.\n운영진에게 QR코드를 다시 안내받아 주세요.',
+    },
+    closed: {
+        title: '이미 종료된 행사예요',
+        desc: '종료된 행사는 입장등록을 할 수 없어요.\n이미 등록하셨다면 아래 입장하기로 결과를 확인해 주세요.',
+    },
+};
+
+/** 등록 가능한 행사의 상태별 안내 (P 대기 / S 진행 / V 매칭중) */
+const STATUS_NOTICE = {
+    P: '행사 시작 전이에요. 체크인 때 받은 번호표로 등록해 주세요.',
+    S: '로테이션이 진행 중이에요. 등록하면 현재 턴부터 바로 참여할 수 있어요.',
+    V: '매칭(투표)이 진행 중이에요. 등록 후 바로 상대를 선택할 수 있어요.',
+};
+
 export default function Register() {
-    const { event = null, isProduction = true } = usePage().props;
+    const { event = null, unavailable = 'none', closedLabel = null, isProduction = true } = usePage().props;
 
     // 제출 전 최종 확인 모달 노출 여부.
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -169,11 +192,13 @@ export default function Register() {
                                 </div>
                                 <div>
                                     <p className="text-base font-bold text-secondary-800">
-                                        입장등록할 수 있는 행사가 아니에요
+                                        {UNAVAILABLE_COPY[unavailable]?.title ?? UNAVAILABLE_COPY.none.title}
                                     </p>
-                                    <p className="mt-1.5 text-sm leading-relaxed text-secondary-400">
-                                        현장에서 안내받은 QR코드로 접속해 주세요.<br />
-                                        궁금한 점이 있으면 운영진에게 문의해 주세요.
+                                    {unavailable === 'closed' && closedLabel && (
+                                        <p className="mt-1 text-sm font-bold text-primary">{closedLabel}</p>
+                                    )}
+                                    <p className="mt-1.5 whitespace-pre-line text-sm leading-relaxed text-secondary-400">
+                                        {UNAVAILABLE_COPY[unavailable]?.desc ?? UNAVAILABLE_COPY.none.desc}
                                     </p>
                                 </div>
                             </div>
@@ -204,7 +229,7 @@ export default function Register() {
                         )}
                     </div>
                     <p className="mt-4 text-center text-sm text-secondary-400">
-                        정보를 입력해 등록하세요.
+                        {STATUS_NOTICE[event.status] ?? '정보를 입력해 등록하세요.'}
                     </p>
 
                     <form onSubmit={submit} autoComplete="off" className="mt-7 flex flex-col gap-4">

@@ -66,26 +66,28 @@ class MemberAuthController extends Controller
 
     /**
      * 입장등록 화면. 행사별 QR(/register/{행사id})로 진입하며 회차 선택은 하지 않는다.
-     * 행사가 없거나 등록 가능한 상태(대기/진행/투표중)가 아니면 event=null 로 내려 안내 화면을 보여준다.
+     *
+     * 등록할 수 없으면 event=null 과 함께 사유(unavailable)를 내려, 화면이 상황별 안내를 보여주게 한다.
+     *  - none    : 행사 id 없이 접속 (QR 없이 직접 주소 입력 등)
+     *  - missing : 존재하지 않는 행사 (잘못된/삭제된 QR)
+     *  - closed  : 이미 종료된 행사
+     * 등록 가능하면 행사 상태(status)를 함께 내려 상태별 안내 문구를 보여준다.
      */
     public function showRegister(?int $eventId = null): InertiaResponse
     {
-        $event = $eventId !== null ? $this->registrableEvent($eventId) : null;
+        $event       = $eventId !== null ? EventRound::find($eventId) : null;
+        $unavailable = match (true) {
+            $eventId === null                                        => 'none',
+            $event === null                                          => 'missing',
+            ! in_array($event->status, self::REGISTRABLE_STATUSES, true) => 'closed',
+            default                                                  => null,
+        };
 
         return Inertia::render('Auth/Register', [
-            'event' => $event !== null ? ['id' => $event->id, 'label' => $event->label] : null,
+            'event'       => $unavailable === null ? ['id' => $event->id, 'label' => $event->label, 'status' => $event->status] : null,
+            'unavailable' => $unavailable,
+            'closedLabel' => $unavailable === 'closed' ? $event->label : null,
         ]);
-    }
-
-    /**
-     * 입장등록이 가능한 상태(대기/진행/투표중)의 행사. 없으면 null.
-     */
-    private function registrableEvent(int $eventId): ?EventRound
-    {
-        return EventRound::query()
-            ->whereKey($eventId)
-            ->whereIn('status', self::REGISTRABLE_STATUSES)
-            ->first();
     }
 
     /**

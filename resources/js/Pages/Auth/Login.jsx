@@ -75,14 +75,8 @@ export default function Login() {
                                 </div>
                             </div>
                             <Link
-                                href="/register"
-                                className="mt-6 block w-full rounded-full bg-primary py-3 text-center text-base font-bold text-white transition hover:bg-primary-600"
-                            >
-                                입장등록하기
-                            </Link>
-                            <Link
                                 href="/contact-us"
-                                className="mt-3 block w-full rounded-full border border-secondary-200 bg-white py-3 text-center text-base font-bold text-secondary-600 transition hover:bg-secondary-50"
+                                className="mt-6 block w-full rounded-full border border-secondary-200 bg-white py-3 text-center text-base font-bold text-secondary-600 transition hover:bg-secondary-50"
                             >
                                 문의하기
                             </Link>
@@ -140,12 +134,6 @@ export default function Login() {
                     </form>
 
                     <p className="mt-6 text-center text-sm text-secondary-400">
-                        아직 등록하지 않으셨나요?{' '}
-                        <Link href="/register" className="font-semibold text-primary">
-                            입장등록
-                        </Link>
-                    </p>
-                    <p className="mt-2 text-center text-sm text-secondary-400">
                         궁금한 점이 있으신가요?{' '}
                         <Link href="/contact-us" className="font-semibold text-primary">
                             문의하기

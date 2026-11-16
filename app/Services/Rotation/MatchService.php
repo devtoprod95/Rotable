@@ -118,13 +118,13 @@ class MatchService
      * 특정 행사의 "상호 매칭된 쌍"만, 남자(voter) 기준으로 묶어 반환한다.
      * - 쌍방이 서로 선택한 경우만 포함(단방향 투표 제외).
      * - A↔B 쌍은 남자 쪽을 voter 로 하여 한 번만 노출한다. (성별이 모호하면 중복 방지를 위해 id 작은 쪽을 기준으로)
-     * - voted_at 은 해당 남자의 매칭 투표 중 최신 1개만 표기한다.
+     * - 투표 시각(target.voted_at)은 해당 남자가 그 상대를 선택한 투표의 생성 시각이다.
+     * - 남자(행)와 각 남자의 매칭 상대는 번호표 오름차순으로 정렬한다.
      *
      * @return array<int, array{
      *     voter: array{id:int, name:?string, gender:?string, phone:?string, birth_year:?int, job:?string, height:?int, region:?string, is_smoker:?bool, mbti:?string},
-     *     targets: array<int, array{id:int, name:?string, gender:?string, phone:?string, birth_year:?int, job:?string, height:?int, region:?string, is_smoker:?bool, mbti:?string, is_mutual:bool}>,
-     *     has_mutual: bool,
-     *     voted_at: ?string
+     *     targets: array<int, array{id:int, name:?string, gender:?string, phone:?string, birth_year:?int, job:?string, height:?int, region:?string, is_smoker:?bool, mbti:?string, is_mutual:bool, voted_at:?string}>,
+     *     has_mutual: bool
      * }>
      */
     public function matchedPairList(int $eventId): array
@@ -164,21 +164,25 @@ class MatchService
                     'voter'      => $this->personPayload($vote->voter, $voterId, null, $labelMap),
                     'targets'    => [],
                     'has_mutual' => true,
-                    'voted_at'   => null,
                 ];
             }
 
-            $grouped[$voterId]['targets'][] = $this->personPayload($vote->target, (int) $vote->target_id, true, $labelMap);
-
-            $this->keepLatestVotedAt($grouped[$voterId], $vote);
+            $target = $this->personPayload($vote->target, (int) $vote->target_id, true, $labelMap);
+            // 선택한 상대별 투표 시각 (투표 생성 시각)
+            $target['voted_at'] = $vote->created_at?->toIso8601String();
+            $grouped[$voterId]['targets'][] = $target;
         }
 
         $rows = array_values($grouped);
 
-        // 최신 투표순 정렬.
-        usort($rows, function ($a, $b) {
-            return ($b['voted_at'] ?? '') <=> ($a['voted_at'] ?? '');
-        });
+        // 매칭 상대: 번호표 오름차순.
+        foreach ($rows as &$row) {
+            usort($row['targets'], fn ($a, $b) => $this->compareByTicket($a, $b));
+        }
+        unset($row);
+
+        // 남자(행): 번호표 오름차순.
+        usort($rows, fn ($a, $b) => $this->compareByTicket($a['voter'], $b['voter']));
 
         return $rows;
     }
@@ -249,19 +253,6 @@ class MatchService
         }
 
         return $payload;
-    }
-
-    /**
-     * 그룹 행에 들어있는 voted_at 을, 전달된 투표의 생성 시각과 비교해 더 최신값으로 갱신한다.
-     *
-     * @param array<string, mixed> $row
-     */
-    private function keepLatestVotedAt(array &$row, Vote $vote): void
-    {
-        $votedAt = $vote->created_at?->toIso8601String();
-        if ($votedAt !== null && ($row['voted_at'] === null || $votedAt > $row['voted_at'])) {
-            $row['voted_at'] = $votedAt;
-        }
     }
 
     /**

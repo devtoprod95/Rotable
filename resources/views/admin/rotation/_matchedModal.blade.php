@@ -42,8 +42,7 @@
                             <tr>
                                 <th class="text-center" style="width:200px;">남자</th>
                                 <th class="text-center" style="width:44px;"></th>
-                                <th>매칭된 상대</th>
-                                <th class="text-center" style="width:130px;">투표 시각</th>
+                                <th>매칭된 상대 <span class="text-muted fw-normal">· 투표 시각</span></th>
                             </tr>
                         </thead>
                         <tbody id="matched-tbody"></tbody>
@@ -123,17 +122,22 @@
                 var specs = specsText(t);
                 var specLine = specs ? `<div class="text-start" style="font-size:0.8em;color:#666;">${specs}</div>` : '';
                 var sepCls = (multiple && i < targets.length - 1) ? 'border-bottom pb-1 mb-1' : '';
+                var at = votedAtText(t.voted_at);
+                var atHtml = at ? `<span class="text-muted ms-auto text-nowrap" style="font-size:0.8em;"><i class="ti ti-clock me-1"></i>${at}</span>` : '';
                 return `<div class="py-1 text-start ${sepCls}">`
-                         + `<div class="d-flex align-items-center gap-1"><span class="fw-bold">${esc(t.label || (t.name ? t.name + '호' : '-'))}</span> ${genderBadge(t.gender)} <span class="badge bg-pink-lt"><i class="ti ti-heart-filled text-pink"></i> 매칭</span></div>`
+                         + `<div class="d-flex align-items-center gap-1"><span class="fw-bold">${esc(t.label || (t.name ? t.name + '호' : '-'))}</span> ${genderBadge(t.gender)} <span class="badge bg-pink-lt"><i class="ti ti-heart-filled text-pink"></i> 매칭</span>${atHtml}</div>`
                          + specLine
                      + `</div>`;
             }).join('');
         }
 
-        function votedAtCell(v){
-            if(!v){ return '-'; }
-            var s = new Date(v).toLocaleString('ko-KR');
-            return s.replace(/\s(오전|오후)/, '<br>$1');
+        // 투표 시각 한 줄 표기 (예: 11/16 17:02:05)
+        function votedAtText(v){
+            if(!v){ return ''; }
+            var d = new Date(v);
+            if(isNaN(d.getTime())){ return ''; }
+            var p = function(n){ return (n < 10 ? '0' : '') + n; };
+            return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
         }
 
         function filterRows(kw){
@@ -154,14 +158,13 @@
             var $tb = $('#matched-tbody').empty();
 
             if(!list.length){
-                $tb.append('<tr><td colspan="4" class="text-center text-muted py-4">매칭된 쌍이 없습니다.</td></tr>');
+                $tb.append('<tr><td colspan="3" class="text-center text-muted py-4">매칭된 쌍이 없습니다.</td></tr>');
             } else {
                 var html = list.map(function(r){
                     return `<tr>`
                              + `<td class="text-center align-middle">${voterCell(r.voter)}</td>`
                              + `<td class="text-center align-middle"><i class="ti ti-arrow-right text-muted"></i></td>`
                              + `<td class="align-middle">${targetsCell(r.targets)}</td>`
-                             + `<td class="text-center align-middle">${votedAtCell(r.voted_at)}</td>`
                          + `</tr>`;
                 }).join('');
                 $tb.html(html);
@@ -173,13 +176,13 @@
 
         function load(){
             if(!currentEventId){ return; }
-            $('#matched-tbody').html('<tr><td colspan="4" class="text-center text-muted py-4">불러오는 중...</td></tr>');
+            $('#matched-tbody').html('<tr><td colspan="3" class="text-center text-muted py-4">불러오는 중...</td></tr>');
             $.get(listUrl(currentEventId), function(res){
                 rows = (res && res.data) ? res.data : [];
                 render();
             }).fail(function(){
                 rows = [];
-                $('#matched-tbody').html('<tr><td colspan="4" class="text-center text-danger py-4">불러오지 못했습니다.</td></tr>');
+                $('#matched-tbody').html('<tr><td colspan="3" class="text-center text-danger py-4">불러오지 못했습니다.</td></tr>');
                 $('#matched-pageCount').text('');
             });
         }

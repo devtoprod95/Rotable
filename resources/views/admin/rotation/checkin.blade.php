@@ -51,9 +51,14 @@
                     <div class="text-secondary small mt-1">
                         {{ $event->event_time ? $event->event_time->format('Y-m-d H:i') : '' }}
                     </div>
-                    <button type="button" class="btn btn-lg btn-dark mt-3 px-4 w-100 w-md-auto" id="goRegisterQrBtn">
-                        <i class="ti ti-qrcode fs-2 me-2"></i> 입장 QR
-                    </button>
+                    <div class="d-flex flex-column flex-md-row gap-2 mt-3">
+                        <button type="button" class="btn btn-lg btn-dark px-4" id="goRegisterQrBtn">
+                            <i class="ti ti-qrcode fs-2 me-2"></i> 입장 QR
+                        </button>
+                        <button type="button" class="btn btn-lg btn-outline-pink px-4" id="rosterImageBtn">
+                            <i class="ti ti-photo-down fs-2 me-2"></i> 참가자 명단 이미지
+                        </button>
+                    </div>
                 </div>
                 {{-- 현황 통계: 모바일에선 4등분 그리드로 꽉 차게, 데스크톱에선 카드 나열 --}}
                 <div class="row g-2 w-100 w-md-auto flex-grow-1 flex-md-grow-0" aria-live="polite">
@@ -1065,9 +1070,133 @@
             }
         });
 
+        /* =====================================================================
+         * 참가자 명단 이미지 — 상세페이지의 "참가자 명단만"(2번 장)과 완전히 같은 이미지를 받는다.
+         *  - 상세페이지 제작 화면을 숨김 iframe 으로 불러 이 행사의 체크인 명단을 반영(나이 어린 순 → 키 큰 순)하고,
+         *    2번 장(참가자 명단)만 자동으로 다운로드한다. 같은 코드를 쓰므로 디자인·분포도가 항상 동일하다.
+         * =================================================================== */
+        @php
+            // 상세페이지 유형: 1:1(one) → solo, 와인파티(wine) → wine
+            $rosterImgType = $event->isOneToOne() ? 'solo' : 'wine';
+        @endphp
+        var ROSTER_IMG_URL  = {!! json_encode(route('admin.rotation.detail.index'), JSON_UNESCAPED_SLASHES) !!};
+        var ROSTER_IMG_TYPE = {!! json_encode($rosterImgType) !!};
+        var ROSTER_IMG_EVENTS_URL = {!! json_encode(route('admin.rotation.detail.rosterSource.events'), JSON_UNESCAPED_SLASHES) !!};
+
+        $('#rosterImageBtn').on('click', async function(){
+            var arrived = rosters.filter(function(r){ return r.checked_in; }).length;
+
+            // 함께 넣을 행사(2열) 후보 — 체크인 명단을 불러올 수 있는 행사 목록(현재 행사 제외).
+            var otherEvents = [];
+            try { otherEvents = ((await $.getJSON(ROSTER_IMG_EVENTS_URL)).items || []).filter(function(ev){ return ev.id !== {{ $event->id }}; }); } catch(e){ otherEvents = []; }
+            var eventOpts = '<option value="">없음 (이 행사만, 1열)</option>' + otherEvents.map(function(ev){
+                return '<option value="' + ev.id + '">' + esc(ev.title) + ' · ' + esc(ev.date) + '</option>';
+            }).join('');
+
+            var pick = await Swal.fire({
+                title: '참가자 명단 이미지',
+                html: '<div style="text-align:left;font-size:.85rem;color:#475569;margin-bottom:6px;">상세페이지의 <b>참가자 명단</b>(2번 장) 이미지를 바로 받아요.</div>'
+                    + '<div style="text-align:left;font-size:.85rem;color:#475569;font-weight:700;margin:8px 0 4px;">대상</div>'
+                    + '<select id="swal-ri-scope" class="swal2-select" style="width:100%;margin:0;">'
+                    +   '<option value="all">전체 신청자 (' + rosters.length + '명)</option>'
+                    +   '<option value="in">참석(체크인)한 사람만 (' + arrived + '명)</option>'
+                    + '</select>'
+                    + '<div style="text-align:left;font-size:.85rem;color:#475569;font-weight:700;margin:12px 0 4px;">함께 넣을 행사 (2열)</div>'
+                    + '<select id="swal-ri-event2" class="swal2-select" style="width:100%;margin:0;">' + eventOpts + '</select>'
+                    + '<div style="text-align:left;font-size:.85rem;color:#475569;font-weight:700;margin:12px 0 4px;">나이 표기</div>'
+                    + '<select id="swal-ri-age" class="swal2-select" style="width:100%;margin:0;">'
+                    +   '<option value="decade" selected>30대 (기본)</option>'
+                    +   '<option value="half">30대 초반 / 중반 / 후반</option>'
+                    +   '<option value="year">97년생</option>'
+                    + '</select>'
+                    + '<label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:.9rem;font-weight:700;color:#374151;cursor:pointer;">'
+                    +   '<input type="checkbox" id="swal-ri-recruit" checked style="width:18px;height:18px;"> 모집중 자리 넣기 (남/여 줄 수 맞춤, 최대 2자리)</label>',
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonText: '이미지 다운로드',
+                cancelButtonText: '취소',
+                preConfirm: function(){
+                    return {
+                        scope: document.getElementById('swal-ri-scope').value,
+                        event2: document.getElementById('swal-ri-event2').value,
+                        ageType: document.getElementById('swal-ri-age').value,
+                        recruit: document.getElementById('swal-ri-recruit').checked
+                    };
+                }
+            });
+            if(!pick.isConfirmed){ return; }
+
+            var qs = '?type=' + ROSTER_IMG_TYPE
+                + '&rosterEvent={{ $event->id }}'
+                + '&scope=' + encodeURIComponent(pick.value.scope)
+                + '&ageType=' + encodeURIComponent(pick.value.ageType)
+                + '&recruit=' + (pick.value.recruit ? '1' : '0')
+                + (pick.value.event2 ? '&rosterEvent2=' + encodeURIComponent(pick.value.event2) : '');
+
+            // 화면 이동 없이 처리: 상세페이지 제작 화면을 "숨김 iframe"으로 불러 명단 반영·이미지 생성·다운로드를 맡기고,
+            // 끝나면 iframe 이 postMessage 로 알려준다. (같은 도메인이라 다운로드가 그대로 동작)
+            var $btn = $('#rosterImageBtn');
+            var original = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>명단 이미지 만드는 중…');
+
+            // 진행 상태 오버레이 — 단계 문구는 숨김 iframe 이 알려주는 대로 갱신한다.
+            var $ov = $('#rosterImageOverlay');
+            $('#rosterImageOverlayIcon').html('<div class="spinner-border text-pink" style="width:2.5rem;height:2.5rem;" role="status" aria-hidden="true"></div>');
+            $('#rosterImageOverlayText').text('참가자 명단 불러오는 중…');
+            $('#rosterImageOverlaySub').text('잠시만 기다려 주세요 (고화질 처리 중, 몇 초 걸려요)');
+            $ov.css('display', 'flex');
+
+            var frame = document.createElement('iframe');
+            frame.style.cssText = 'position:fixed; left:-10000px; top:0; width:1280px; height:800px; border:0; opacity:0; pointer-events:none;';
+            frame.setAttribute('aria-hidden', 'true');
+            frame.tabIndex = -1;
+
+            var timer = null;
+            var finish = function(ok, msg){
+                clearTimeout(timer);
+                window.removeEventListener('message', onMessage);
+                if (frame.parentNode) { frame.parentNode.removeChild(frame); }
+                $btn.prop('disabled', false).html(original);
+                if (ok) {
+                    // 완료 표시를 잠깐 보여준 뒤 닫는다.
+                    $('#rosterImageOverlayIcon').html('<div style="font-size:2.5rem;line-height:1;">✅</div>');
+                    $('#rosterImageOverlayText').text('다운로드가 완료됐어요');
+                    $('#rosterImageOverlaySub').text('다운로드 폴더에서 이미지를 확인해 주세요');
+                    setTimeout(function(){ $ov.hide(); }, 1500);
+                } else {
+                    $ov.hide();
+                    salert({text: msg || '이미지를 만들지 못했습니다.', cancel: false});
+                }
+            };
+            var onMessage = function(ev){
+                if (ev.origin !== window.location.origin) { return; }
+                var d = ev.data || {};
+                if (d.source !== 'rotable-roster-download') { return; }
+                if (d.progress) { $('#rosterImageOverlayText').text(d.text || '이미지 생성 중…'); return; }
+                // 파일 저장이 시작될 시간을 잠깐 준 뒤 정리한다.
+                if (d.ok) { $('#rosterImageOverlayText').text('파일 저장 중…'); }
+                setTimeout(function(){ finish(!!d.ok, d.msg); }, d.ok ? 1500 : 0);
+            };
+            window.addEventListener('message', onMessage);
+            timer = setTimeout(function(){ finish(false, '시간이 오래 걸리고 있어요. 잠시 후 다시 시도해 주세요.'); }, 120000);
+
+            frame.src = ROSTER_IMG_URL + qs;
+            document.body.appendChild(frame);
+        });
+
         load();
     });
 </script>
+
+{{-- 참가자 명단 이미지 생성 중 로딩 화면 (숨김 iframe 이 진행 문구를 알려준다) --}}
+<div id="rosterImageOverlay"
+     style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(17,24,39,0.55); align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#ffffff; border-radius:14px; padding:26px 34px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.25); max-width:100%;">
+        <div id="rosterImageOverlayIcon"></div>
+        <div id="rosterImageOverlayText" style="margin-top:14px; font-size:16px; font-weight:700; color:#374151;"></div>
+        <div id="rosterImageOverlaySub" style="margin-top:4px; font-size:13px; color:#9ca3af;"></div>
+    </div>
+</div>
 
 @include('admin.rotation._registerQrModal')
 <script>

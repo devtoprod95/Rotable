@@ -60,7 +60,7 @@ class DetailPageService
      *
      * @return array{title:string, date:string, males:list<array{height:string,job:string,merit:string,age:string,birth_year:int|null}>, females:list<array{height:string,job:string,merit:string,age:string,birth_year:int|null}>}|null
      */
-    public function rosterSourcePeople(int $eventId): ?array
+    public function rosterSourcePeople(int $eventId, bool $onlyCheckedIn = false): ?array
     {
         $event = EventRound::find($eventId);
         if ($event === null) {
@@ -68,6 +68,7 @@ class DetailPageService
         }
 
         $rosters = EventRoster::where('event_id', $eventId)
+            ->when($onlyCheckedIn, fn ($q) => $q->whereNotNull('checked_in_at'))
             ->orderByRaw('ticket_no is null')
             ->orderBy('ticket_no')
             ->orderBy('id')

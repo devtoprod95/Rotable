@@ -409,13 +409,13 @@
         </div>
     </div>
 
-    {{-- 현장 사진 (와인·1:1 공통, 유형별 사진) — 파일명: on-site_{type}NN.jpeg (public/images)
+    {{-- 현장 사진 (와인·1:1 공통, 유형별 사진) — 파일명: on-site_{type}NN.png (public/images)
          2열로 나란히 보여준다. 파일이 있는 것만 노출한다.
          html2canvas 호환을 위해 aspect-ratio 대신 padding-top 비율 트릭(4:3 = 75%) + object-fit:cover 사용. --}}
     @php
         $onSiteFiles = [
-            'wine' => ['on-site_wine01.jpeg', 'on-site_wine02.jpeg'],
-            'solo' => ['on-site_solo01.jpeg', 'on-site_solo02.jpeg', 'on-site_solo03.jpeg', 'on-site_solo04.jpeg'],
+            'wine' => ['on-site_wine01.png', 'on-site_wine02.png'],
+            'solo' => ['on-site_solo01.png', 'on-site_solo02.png', 'on-site_solo03.png', 'on-site_solo04.png'],
         ][$type];
         $onSiteFiles = array_values(array_filter($onSiteFiles, fn ($f) => file_exists(public_path('images/' . $f))));
     @endphp

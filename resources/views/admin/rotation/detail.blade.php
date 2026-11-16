@@ -548,6 +548,10 @@
 
         // 이미지 생성 로딩 오버레이 제어 (드롭다운 닫힘과 무관하게 항상 보인다)
         function showExportOverlay(text){
+            // 체크인 화면의 숨김 iframe 안이면, 진행 문구를 부모 창에 전달해 그쪽 로딩 화면에 보여준다.
+            if (window.self !== window.top) {
+                window.parent.postMessage({ source: 'rotable-roster-download', progress: true, text: text || '이미지 생성 중…' }, window.location.origin);
+            }
             $('#imageExportOverlayText').text(text || '이미지 생성 중…');
             $('#imageExportOverlay').css('display', 'flex');
         }
@@ -1467,6 +1471,46 @@
         var ROSTER_SOURCE_EVENTS_URL = "{{ route('admin.rotation.detail.rosterSource.events') }}";
         var ROSTER_SOURCE_PEOPLE_TPL = "{{ route('admin.rotation.detail.rosterSource.people', ['id' => '__ID__']) }}";
 
+        // 불러온 체크인 명단(data)으로 한 행사 카드($card)의 행사명·날짜·남/여 표를 채운다.
+        //  - 남/여 각각 나이 어린 순 → 키 큰 순으로 정렬해 넣는다.
+        //  - 모집중 자리(withRecruit): "많은 쪽 인원 + 최대 2자리"를 목표 줄 수로 잡고, 양쪽을 그 줄 수에 맞춰 모집중으로 채운다.
+        //    (남 6 / 여 4 → 목표 8줄: 남 +2, 여 +4 — 남/여 줄이 항상 같은 높이로 맞는다.)
+        function fillRosterCard($card, data, ageType, withRecruit){
+            $card.find('.roster-ev-title').val(data.title || '');
+            var dateEl = $card.find('.roster-ev-date').get(0);
+            if (dateEl && dateEl._flatpickr && data.date) {
+                dateEl._flatpickr.setDate(data.date, false);
+            } else {
+                $card.find('.roster-ev-date').val(data.date || '');
+            }
+
+            function sortedPeople(list){
+                var people = (list || []).map(function(p, i){
+                    var row = Object.assign({}, p, { age: rosterAgeText(p.birth_year, ageType, p.age) });
+                    // [적용] 정렬(sortRosterEditor)과 같은 기준: 표에 보이는 나이 표기(예: 30대 초반)로 비교한다.
+                    // (서버가 준 정확한 출생연도로 정렬하면, 적용 때 대(代) 단위로 다시 묶여 순서가 달라진다.)
+                    return { row: row, i: i, age: ageSortValue(row.age), h: heightSortValue(row.height) };
+                });
+                people.sort(function(a, b){
+                    if (a.age !== b.age) { return a.age < b.age ? -1 : 1; }
+                    if (a.h !== b.h) { return a.h > b.h ? -1 : 1; }
+                    return a.i - b.i;
+                });
+                return people;
+            }
+
+            var sets = { male: sortedPeople(data.males), female: sortedPeople(data.females) };
+            var RECRUIT_MAX = 2;
+            var target = withRecruit === false ? 0 : Math.max(sets.male.length, sets.female.length) + RECRUIT_MAX;
+
+            ['male', 'female'].forEach(function(g){
+                var $rows = $card.find('[data-gender="' + g + '"] .roster-rows').empty();
+                sets[g].forEach(function(x){ $rows.append(rosterRow(x.row)); });
+                for (var k = sets[g].length; k < target; k++) { $rows.append(rosterRow({ recruit: true })); }
+            });
+            renumberRoster($card);
+        }
+
         $('#rosterEditorBody').on('click', '.roster-import', async function(){
             var $card = $(this).closest('.roster-ev-card');
             var events;
@@ -1488,14 +1532,16 @@
             var pick = await Swal.fire({
                 title: '체크인 명단 불러오기',
                 html: '<div style="text-align:left;font-size:.85rem;color:#475569;margin-bottom:6px;">'
-                    + '선택한 행사의 체크인 명단으로 이 카드의 남/여 명단을 <b>덮어씁니다.</b><br>(나이 → 키 순 정렬 · 모집중 자리 성별당 2개 추가)</div>'
+                    + '선택한 행사의 체크인 명단으로 이 카드의 남/여 명단을 <b>덮어씁니다.</b><br>(나이 → 키 순 정렬 · 모집중 자리는 남/여 줄 수를 맞춰 최대 2자리 추가)</div>'
                     + '<select id="swal-roster-event" class="swal2-select" style="width:100%;margin:0;">' + opts + '</select>'
                     + '<div style="text-align:left;font-size:.85rem;color:#475569;font-weight:700;margin:12px 0 4px;">나이 표기</div>'
                     + '<select id="swal-roster-age" class="swal2-select" style="width:100%;margin:0;">'
                     +   '<option value="decade" selected>30대 (기본)</option>'
                     +   '<option value="half">30대 초반 / 중반 / 후반</option>'
                     +   '<option value="year">97년생</option>'
-                    + '</select>',
+                    + '</select>'
+                    + '<label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:.9rem;font-weight:700;color:#374151;cursor:pointer;">'
+                    +   '<input type="checkbox" id="swal-roster-recruit" checked style="width:18px;height:18px;"> 모집중 자리 넣기 (남/여 줄 수 맞춤, 최대 2자리)</label>',
                 showCancelButton: true,
                 reverseButtons: true,
                 confirmButtonText: '불러오기',
@@ -1503,7 +1549,8 @@
                 preConfirm: function(){
                     return {
                         eventId: document.getElementById('swal-roster-event').value,
-                        ageType: document.getElementById('swal-roster-age').value
+                        ageType: document.getElementById('swal-roster-age').value,
+                        recruit: document.getElementById('swal-roster-recruit').checked
                     };
                 }
             });
@@ -1517,35 +1564,8 @@
                 return;
             }
 
-            $card.find('.roster-ev-title').val(data.title || '');
-            var dateEl = $card.find('.roster-ev-date').get(0);
-            if (dateEl && dateEl._flatpickr && data.date) {
-                dateEl._flatpickr.setDate(data.date, false);
-            } else {
-                $card.find('.roster-ev-date').val(data.date || '');
-            }
-
-            // 남/여 각각: 나이 어린 순 → 키 큰 순으로 정렬해 채우고, 끝에 여유 "모집중" 자리를 2개씩 둔다.
-            var RECRUIT_SPARE = 2;
-            [['male', data.males], ['female', data.females]].forEach(function(pair){
-                var $rows = $card.find('[data-gender="' + pair[0] + '"] .roster-rows');
-                $rows.empty();
-                var people = (pair[1] || []).map(function(p, i){
-                    var row = Object.assign({}, p, { age: rosterAgeText(p.birth_year, pick.value.ageType, p.age) });
-                    // [적용] 정렬(sortRosterEditor)과 같은 기준: 표에 보이는 나이 표기(예: 30대 초반)로 비교한다.
-                    // (서버가 준 정확한 출생연도로 정렬하면, 적용 때 대(代) 단위로 다시 묶여 순서가 달라진다.)
-                    return { row: row, i: i, age: ageSortValue(row.age), h: heightSortValue(row.height) };
-                });
-                people.sort(function(a, b){
-                    if (a.age !== b.age) { return a.age < b.age ? -1 : 1; }
-                    if (a.h !== b.h) { return a.h > b.h ? -1 : 1; }
-                    return a.i - b.i;
-                });
-                people.forEach(function(x){ $rows.append(rosterRow(x.row)); });
-                for (var k = 0; k < RECRUIT_SPARE; k++) { $rows.append(rosterRow({ recruit: true })); }
-            });
-            renumberRoster($card);
-            await salert({text: '체크인 명단을 불러왔어요. 나이 → 키 순으로 정렬했고, 모집중 자리를 성별마다 2개씩 넣었어요.', cancel: false});
+            fillRosterCard($card, data, pick.value.ageType, pick.value.recruit);
+            await salert({text: '체크인 명단을 불러왔어요. 나이 → 키 순으로 정렬했고, 모집중 자리를 남/여 줄 수에 맞춰 넣었어요.', cancel: false});
         });
 
         // 위/아래 버튼으로 한 칸씩 이동
@@ -2975,11 +2995,64 @@
             whenEditorReady(restoreFromUrl);
         });
 
+        // 체크인 화면의 "참가자 명단 이미지" — 주소: ?type=&rosterEvent=행사id&scope=all|in&ageType=decade|half|year
+        //  1) 해당 유형 1열 샘플로 에디터를 채우고 → 2) 그 행사의 체크인 명단을 불러와([적용]과 같은 정렬) 반영한 뒤
+        //  3) "참가자 명단만"(2번 장) 이미지를 자동 다운로드한다. (저장은 하지 않는다)
+        async function runRosterAutoDownload(q){
+            // 체크인 화면이 숨김 iframe 으로 띄운 경우: 화면 알림 대신 부모 창에 결과를 알린다.
+            var inFrame = window.self !== window.top;
+            function notifyParent(ok, msg){
+                if (inFrame) { window.parent.postMessage({ source: 'rotable-roster-download', ok: ok, msg: msg || '' }, window.location.origin); }
+            }
+
+            var type    = q.get('type') === 'wine' ? 'wine' : 'solo';
+            var eventId = parseInt(q.get('rosterEvent'), 10);
+            var eventId2 = parseInt(q.get('rosterEvent2'), 10) || 0;   // 2열(두 행사) 모드
+            var scope   = q.get('scope') === 'in' ? 'in' : 'all';
+            var ageType = ['decade', 'half', 'year'].indexOf(q.get('ageType')) >= 0 ? q.get('ageType') : 'decade';
+            var withRecruit = q.get('recruit') !== '0';
+
+            showExportOverlay('참가자 명단 준비 중…');
+            try {
+                // 주소를 깨끗하게(새로고침 시 다시 다운로드되지 않도록) 정리하고 유형을 맞춘다.
+                history.replaceState({ type: type, saveId: null }, '', detailPageUrl + '?type=' + type);
+                suppressUrlSync = true;
+                if (type !== currentType()) {
+                    $('input[name="sampleType"][value="' + type + '"]').prop('checked', true).trigger('change');
+                }
+                suppressUrlSync = false;
+
+                setHtml(applyUpdatedAtToSample(SAMPLES[type][eventId2 ? 2 : 1]));
+                populateRosterEditor();
+                var $cards = $('#rosterEditorBody .roster-ev-card');
+                if (!$cards.length || (eventId2 && $cards.length < 2)) { throw new Error('명단 영역을 찾지 못했습니다.'); }
+
+                var peopleUrl = function(id){ return ROSTER_SOURCE_PEOPLE_TPL.replace('__ID__', id) + '?scope=' + scope; };
+                var datas = [await $.getJSON(peopleUrl(eventId))];
+                if (eventId2) { datas.push(await $.getJSON(peopleUrl(eventId2))); }
+                // 두 행사는 날짜가 이른 쪽을 왼쪽에 둔다. (날짜 문구가 "2026.11.07(토) 19:30" 형식이라 문자열 비교로 충분)
+                if (datas.length === 2 && String(datas[1].date || '') < String(datas[0].date || '')) { datas.reverse(); }
+                datas.forEach(function(d, i){ fillRosterCard($cards.eq(i), d, ageType, withRecruit); });
+                sortRosterEditor();
+                setHtml(applyUpdatedAtToSample(applyRosterToHtml(getHtml())));
+            } catch (e) {
+                hideExportOverlay();
+                if (inFrame) { notifyParent(false, '명단을 불러오지 못했습니다: ' + (e?.message || e)); return; }
+                await salert({text: '명단을 불러오지 못했습니다: ' + (e?.message || e), cancel: false});
+                return;
+            }
+            hideExportOverlay();
+            await runDetailDownload('참가자명단');
+            notifyParent(true);
+        }
+
         // 최초 진입: 주소에 type/saveId 가 있으면 그 선택을 복원한다.
         //  - 아무 파라미터도 없으면, 현재(기본) 상태를 주소에 한 번 심어 둔다(replaceState).
         whenEditorReady(function(){
             var q = new URLSearchParams(window.location.search);
-            if (q.get('type') || q.get('saveId')) {
+            if (q.get('rosterEvent')) {
+                runRosterAutoDownload(q);
+            } else if (q.get('type') || q.get('saveId')) {
                 restoreFromUrl();
             } else {
                 syncUrl(true);

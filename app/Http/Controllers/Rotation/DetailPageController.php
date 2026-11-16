@@ -65,7 +65,8 @@ class DetailPageController extends RotationBaseController
      */
     public function rosterSourcePeople(int $id): JsonResponse
     {
-        $data = $this->detailPageService->rosterSourcePeople($id);
+        // scope=in 이면 참석(체크인)한 사람만, 아니면 전체 신청자.
+        $data = $this->detailPageService->rosterSourcePeople($id, $this->request->input('scope') === 'in');
         if ($data === null) {
             return response()->json(['message' => '행사를 찾을 수 없습니다.'], Response::HTTP_NOT_FOUND);
         }

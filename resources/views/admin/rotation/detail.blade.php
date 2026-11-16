@@ -1479,14 +1479,7 @@
                 return '<option value="' + ev.id + '">' + esc2(ev.title) + ' · ' + esc2(ev.date)
                      + ' (명단 ' + ev.total + '명 / 프로필 ' + ev.filled + '명)</option>';
             }).join('');
-            // 설정 모달(Bootstrap) 위에 SweetAlert 를 띄우면 모달의 포커스 트랩이 select 등으로 가는 포커스를 되돌려
-            // 모바일에서 드롭다운이 열리자마자 닫혀 다른 행사를 고를 수 없었다. 이 팝업이 떠 있는 동안만 트랩을 끈다.
-            var settingsM = getSettingsModal();
-            var focusTrap = settingsM && settingsM._focustrap;
-            if (focusTrap && focusTrap.deactivate) { focusTrap.deactivate(); }
-            var pick;
-            try {
-            pick = await Swal.fire({
+            var pick = await Swal.fire({
                 title: '체크인 명단 불러오기',
                 html: '<div style="text-align:left;font-size:.85rem;color:#475569;margin-bottom:6px;">'
                     + '선택한 행사의 체크인 명단으로 이 카드의 남/여 명단을 <b>덮어씁니다.</b><br>(나이 → 키 순 정렬 · 모집중 자리 성별당 2개 추가)</div>'
@@ -1508,9 +1501,6 @@
                     };
                 }
             });
-            } finally {
-                if (focusTrap && focusTrap.activate) { focusTrap.activate(); }
-            }
             if (!pick.isConfirmed) { return; }
 
             var data;

@@ -103,6 +103,18 @@
                     <script src="{{ asset('js/common.js') }}?v={{ filemtime(public_path('js/common.js')) }}"></script>
 
                     <script>
+                        // 이중 모달 입력 불가 수정 (전역):
+                        //  Bootstrap 모달이 열려 있으면 포커스 트랩이 document 의 focusin 을 감시해, 모달 밖(= 그 위에 뜬
+                        //  SweetAlert 의 입력창/select)으로 가는 포커스를 모달 안으로 되돌린다. 그래서 모달 위 팝업에서
+                        //  글자를 입력하거나 드롭다운을 고를 수 없었다.
+                        //  → SweetAlert 컨테이너 안에서 발생한 focusin 은 capture 단계에서 전파를 끊어 트랩이 못 보게 한다.
+                        document.addEventListener('focusin', function (e) {
+                            if (e.target && e.target.closest && e.target.closest('.swal2-container')) {
+                                e.stopPropagation();
+                            }
+                        }, true);
+                    </script>
+                    <script>
                         $(document).ready(function() {
                             // 전역 로딩 모달 — 동시/연쇄 ajax 요청에서도 안전하게 닫히도록 "진행 중 요청 수"로 관리한다.
                             //  문제: 단일 핸들(loadingSwal)로 관리하면, 한 요청의 success 안에서 또 다른 요청을 시작할 때

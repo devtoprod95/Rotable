@@ -135,6 +135,46 @@
                         @endforeach
                     </div>
 
+                    {{-- 행사별 참여 인원 (총/남/여/플랫폼별) — 스냅샷 시점 기준. 모바일은 가로 스크롤 --}}
+                    @php $eventCounts = $visitSnapshot->event_counts ?? null; @endphp
+                    <div class="mt-3">
+                        <div class="text-muted mb-1" style="font-size:0.9em;">행사별 참여 인원</div>
+                        @if (! empty($eventCounts))
+                            <div class="table-responsive border rounded" style="max-height: 320px; overflow:auto;">
+                                <table class="table table-sm table-vcenter text-center mb-0" style="min-width:560px;">
+                                    <thead class="sticky-top bg-white">
+                                        <tr>
+                                            <th class="text-start">행사</th>
+                                            <th>일시</th>
+                                            <th>총</th>
+                                            <th><span class="badge bg-blue-lt">남</span></th>
+                                            <th><span class="badge bg-pink-lt">여</span></th>
+                                            @foreach (\App\Models\Member::platformOptions() as $opt)
+                                                <th><span class="badge {{ $platformBadgeCls[$opt['id']] ?? 'bg-secondary-lt' }}">{{ $opt['label'] }}</span></th>
+                                            @endforeach
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($eventCounts as $ec)
+                                            <tr>
+                                                <td class="text-start fw-bold">{{ $ec['title'] }}</td>
+                                                <td class="text-muted">{{ $ec['date'] }}</td>
+                                                <td class="fw-bold">{{ number_format($ec['total']) }}</td>
+                                                <td>{{ number_format($ec['male']) }}</td>
+                                                <td>{{ number_format($ec['female']) }}</td>
+                                                @foreach (\App\Models\Member::platformOptions() as $opt)
+                                                    <td>{{ number_format($ec['platform_counts'][$opt['id']] ?? 0) }}</td>
+                                                @endforeach
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="text-muted" style="font-size:0.9em;">이 스냅샷에는 행사별 기록이 없어요. 다음 자정 스냅샷부터 기록됩니다.</div>
+                        @endif
+                    </div>
+
                     {{-- 노쇼(신청했으나 미참석) — 성별·플랫폼으로 분류. 체크인 명단(event_rosters) 중 미참석 기준 --}}
                     @php
                         $noShowPlatform = $visitSnapshot->no_show_platform_counts ?? [];

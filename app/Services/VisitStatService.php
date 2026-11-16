@@ -109,7 +109,67 @@ class VisitStatService
             'total_male'      => $totalMale,
             'total_female'    => $totalFemale,
             'platform_counts' => $platformCounts,
+            'event_counts'    => $this->aggregateByEvent($until),
         ], $buckets, $this->aggregateNoShow($until));
+    }
+
+    /**
+     * 행사별 참여 인원 — 총/남/여/신청 플랫폼별. (참여 = 회원 레코드 1건, 총 방문 집계와 같은 단위·컷오프)
+     *
+     * 최신 행사일 순. 참여자가 없는 행사는 제외한다. 삭제된 회원도 포함해 재집계해도 값이 같다(멱등).
+     *
+     * @return list<array{event_id:int,title:string,date:string,type:string,total:int,male:int,female:int,platform_counts:array<string,int>}>
+     */
+    private function aggregateByEvent(?CarbonInterface $until = null): array
+    {
+        $base = Member::query()->withTrashed();
+        if ($until !== null) {
+            $base->where('members.created_at', '<', $until);
+        }
+
+        $rows = $base
+            ->selectRaw('members.event_id as event_id, members.gender as gender, members.platform as platform, COUNT(*) as cnt')
+            ->groupBy('members.event_id', 'members.gender', 'members.platform')
+            ->get();
+
+        $platformKeys = array_column(Member::platformOptions(), 'id');
+        $byEvent      = [];
+        foreach ($rows as $row) {
+            $eid = (int) $row->event_id;
+            if (! isset($byEvent[$eid])) {
+                $byEvent[$eid] = [
+                    'total' => 0, 'male' => 0, 'female' => 0,
+                    'platform_counts' => array_fill_keys($platformKeys, 0),
+                ];
+            }
+            $cnt      = (int) $row->cnt;
+            $platform = $row->platform ?? Member::PLATFORM_MUNTO; // null 은 기본(문토)로 귀속
+            $byEvent[$eid]['total'] += $cnt;
+            if ($row->gender === Member::GENDER_MALE) {
+                $byEvent[$eid]['male'] += $cnt;
+            } elseif ($row->gender === Member::GENDER_FEMALE) {
+                $byEvent[$eid]['female'] += $cnt;
+            }
+            $byEvent[$eid]['platform_counts'][$platform] = ($byEvent[$eid]['platform_counts'][$platform] ?? 0) + $cnt;
+        }
+
+        if (empty($byEvent)) {
+            return [];
+        }
+
+        return EventRound::query()
+            ->whereIn('id', array_keys($byEvent))
+            ->orderByDesc('event_time')
+            ->orderByDesc('id')
+            ->get(['id', 'title', 'type', 'event_time'])
+            ->map(fn (EventRound $e): array => [
+                'event_id' => (int) $e->id,
+                'title'    => (string) $e->title,
+                'date'     => $e->event_time?->format('Y.m.d') ?? '',
+                'type'     => (string) $e->type,
+            ] + $byEvent[(int) $e->id])
+            ->values()
+            ->all();
     }
 
     /**

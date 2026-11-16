@@ -410,21 +410,21 @@
     </div>
 
     {{-- 현장 사진 (와인·1:1 공통, 유형별 사진) — 파일명: on-site_{type}NN.jpeg (public/images)
-         한 줄에 전부 나란히 작게 보여준다. 파일이 있는 것만 노출한다.
+         2열로 나란히 보여준다. 파일이 있는 것만 노출한다.
          html2canvas 호환을 위해 aspect-ratio 대신 padding-top 비율 트릭(4:3 = 75%) + object-fit:cover 사용. --}}
     @php
         $onSiteFiles = [
             'wine' => ['on-site_wine01.jpeg', 'on-site_wine02.jpeg'],
-            'solo' => ['on-site_solo01.jpeg', 'on-site_solo02.jpeg', 'on-site_solo03.jpeg'],
+            'solo' => ['on-site_solo01.jpeg', 'on-site_solo02.jpeg', 'on-site_solo03.jpeg', 'on-site_solo04.jpeg'],
         ][$type];
         $onSiteFiles = array_values(array_filter($onSiteFiles, fn ($f) => file_exists(public_path('images/' . $f))));
     @endphp
     @if (count($onSiteFiles) > 0)
     <div style="margin-top:36px;">
         <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#ec4899; text-align:center; letter-spacing:0.5px; margin-bottom:20px;">📸 현장 스케치</div>
-        <div style="display:flex; padding:0 6px;">
+        <div style="display:flex; flex-wrap:wrap; justify-content:center; padding:0 6px;">
             @foreach ($onSiteFiles as $file)
-                <div style="width:{{ round(100 / count($onSiteFiles), 4) }}%; box-sizing:border-box; padding:0 5px;">
+                <div style="width:50%; box-sizing:border-box; padding:5px;">
                     <div style="position:relative; width:100%; padding-top:75%; border-radius:12px; overflow:hidden; background:#f3f4f6;">
                         <img src="{{ asset('images/' . $file) }}" alt="현장 사진"
                              style="position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover;">

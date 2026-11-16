@@ -129,6 +129,9 @@
                             <button type="button" class="dropdown-item btn-detail-download-page" data-page-only="참가자명단">
                                 <i class="ti ti-user-heart me-2 fs-2"></i> 참가자 명단만 <span class="text-secondary small ms-1">(2번 장)</span>
                             </button>
+                            <button type="button" class="dropdown-item btn-detail-download-pick">
+                                <i class="ti ti-list-numbers me-2 fs-2"></i> 원하는 장만 선택 <span class="text-secondary small ms-1">(몇 번째 장)</span>
+                            </button>
                             <button type="button" class="dropdown-item btn-open-feed">
                                 <i class="ti ti-photo-down me-2 fs-2"></i> 피드 이미지 다운
                             </button>
@@ -193,6 +196,9 @@
                         </button>
                         <button type="button" class="dropdown-item btn-detail-download-page" data-page-only="참가자명단">
                             <i class="ti ti-user-heart me-2 fs-2"></i> 참가자 명단만 <span class="text-secondary small ms-1">(2번 장)</span>
+                        </button>
+                        <button type="button" class="dropdown-item btn-detail-download-pick">
+                            <i class="ti ti-list-numbers me-2 fs-2"></i> 원하는 장만 선택 <span class="text-secondary small ms-1">(몇 번째 장)</span>
                         </button>
                         <button type="button" class="dropdown-item btn-open-feed btn-open-feed-from-preview">
                             <i class="ti ti-photo-down me-2 fs-2"></i> 피드 이미지 다운
@@ -2689,6 +2695,28 @@
 
         // 전체 다운로드(드롭다운/미리보기 버튼) — 5장 모두.
         $('.btn-detail-download').on('click', function(){ runDetailDownload(null); });
+        // 몇 번째 장만 골라서 다운로드 — 장 번호를 고르면 그 장만 이미지로 저장한다.
+        //  (1=메인, 2=참가자 명단, 3~5=안내. 내용에 따라 장 수가 5장보다 적으면 안내 문구가 뜬다.)
+        $('.btn-detail-download-pick').on('click', async function(){
+            var r = await Swal.fire({
+                title: '다운로드할 장 선택',
+                input: 'select',
+                inputOptions: {
+                    1: '1번 장 · 메인',
+                    2: '2번 장 · 참가자 명단',
+                    3: '3번 장 · 안내',
+                    4: '4번 장 · 안내',
+                    5: '5번 장 · 안내'
+                },
+                inputValue: 1,
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonText: '다운로드',
+                cancelButtonText: '취소'
+            });
+            if (r.isConfirmed) { runDetailDownload(parseInt(r.value, 10)); }
+        });
+
         // 특정 장만 다운로드 — data-page-only 가 숫자면 그 번호, 문자열이면 그 라벨의 장.
         $('.btn-detail-download-page').on('click', function(){
             var raw = $(this).attr('data-page-only');

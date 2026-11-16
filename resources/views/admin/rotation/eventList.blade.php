@@ -53,7 +53,7 @@
                        data-bs-placement="right"
                        data-bs-html="true"
                        data-bs-custom-class="visit-stat-tooltip"
-                       title="‘총 방문수’는 방문 횟수, ‘1~6번 방문’ 칸은 사람 수 기준이에요.<br>그래서 같은 사람이 여러 번 방문하면 두 숫자가 다를 수 있습니다.<br>예) 혼자 3번 온 사람 1명 → 사람은 1명, 방문수는 3회로 집계"></i>
+                       title="<b>총 방문수</b> = 입장등록 건수예요.<br>같은 사람이 3번 오면 3으로 셉니다.<br><br><b>1~6번 방문</b> = 그만큼 온 &quot;사람 수&quot;예요.<br>3번 온 사람은 &quot;3번 방문&quot; 칸에 1명으로 들어가요.<br><br>그래서 아래 칸의 사람 수를 더해도 총 방문수와 다른 게 정상이에요.<br>예) A는 1번, B·C는 3번 → 총 방문수 7, 1번 방문 1명 / 3번 방문 2명"></i>
                 </h3>
                 @if ($visitSnapshot)
                     <span class="text-muted" style="font-size: 0.9em;">

@@ -2,6 +2,7 @@ import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
+import SelectField from '@/Components/SelectField';
 import RadioField from '@/Components/RadioField';
 import AuthErrorModal from '@/Components/AuthErrorModal';
 
@@ -9,6 +10,14 @@ const GENDER_OPTIONS = [
     { id: 'M', label: '남' },
     { id: 'F', label: '여' },
 ];
+
+const PET_OPTIONS = [
+    { id: '1', label: '있어요' },
+    { id: '0', label: '없어요' },
+];
+
+/** 서버가 내려준 문구 목록 → 셀렉트 옵션({id,label}) */
+const toOptions = (list = []) => list.map((v) => ({ id: v, label: v }));
 
 const SMOKER_OPTIONS = [
     { id: '1', label: '흡연' },
@@ -33,7 +42,7 @@ const TMI_SAMPLES = ['민트초코 파입니다', '물을 하루 2L 마셔요', 
  * 개발 편의용 자동 입력 값 생성. (production 이 아닐 때만 사용)
  * 행사(event_id)는 QR 로 정해지므로 제외하고 나머지 필드를 매번 랜덤으로 채운다.
  */
-function buildAutofill() {
+function buildAutofill(lifestyle = {}) {
     return {
         // 번호표~비밀번호는 기존 고정값 유지
         phone: '01025466499',
@@ -48,6 +57,11 @@ function buildAutofill() {
         ideal_type: pick(IDEAL_SAMPLES),
         hobby: pick(HOBBY_SAMPLES),
         tmi: pick(TMI_SAMPLES),
+        // 생활 습관은 서버가 내려준 선택지에서 랜덤
+        drink_capacity: pick(lifestyle.drinkCapacity ?? ['']),
+        drink_frequency: pick(lifestyle.drinkFrequency ?? ['']),
+        has_pet: pick(['0', '1']),
+        friend_meet_frequency: pick(lifestyle.friendMeetFrequency ?? ['']),
     };
 }
 
@@ -75,7 +89,7 @@ const STATUS_NOTICE = {
 };
 
 export default function Register() {
-    const { event = null, unavailable = 'none', closedLabel = null, isProduction = true } = usePage().props;
+    const { event = null, unavailable = 'none', closedLabel = null, lifestyleOptions = {}, isProduction = true } = usePage().props;
 
     // 제출 전 최종 확인 모달 노출 여부.
     const [confirmOpen, setConfirmOpen] = useState(false);
@@ -107,6 +121,11 @@ export default function Register() {
         ideal_type: '',
         hobby: '',
         tmi: '',
+        // 생활 습관 — 주량 / 평균 음주 횟수 / 애완동물 여부 / 친구 약속 빈도
+        drink_capacity: '',
+        drink_frequency: '',
+        has_pet: '',
+        friend_meet_frequency: '',
     });
 
     // 성별 변경
@@ -116,7 +135,7 @@ export default function Register() {
 
     // 나머지 필드를 매번 랜덤으로 채운다.
     function autofill() {
-        Object.entries(buildAutofill()).forEach(([key, value]) => {
+        Object.entries(buildAutofill(lifestyleOptions)).forEach(([key, value]) => {
             setData(key, value);
         });
     }
@@ -136,6 +155,10 @@ export default function Register() {
             { key: 'password',          empty: !data.password,          message: '비밀번호(4자리)를 입력해주세요.' },
             { key: 'mbti',              empty: !data.mbti,              message: 'MBTI를 입력해주세요.' },
             { key: 'region',            empty: !data.region,            message: '지역을 입력해주세요.' },
+            { key: 'drink_capacity',    empty: !data.drink_capacity,    message: '주량을 선택해주세요.' },
+            { key: 'drink_frequency',   empty: !data.drink_frequency,   message: '평균 음주 횟수를 선택해주세요.' },
+            { key: 'friend_meet_frequency', empty: !data.friend_meet_frequency, message: '친구 약속 빈도를 선택해주세요.' },
+            { key: 'has_pet',           empty: data.has_pet === '' || data.has_pet === null || data.has_pet === undefined, message: '애완동물 여부를 선택해주세요.' },
             { key: 'is_smoker',         empty: data.is_smoker === '' || data.is_smoker === null || data.is_smoker === undefined, message: '흡연 여부를 선택해주세요.' },
         ];
 
@@ -291,6 +314,37 @@ export default function Register() {
                             placeholder="예: ENFP"
                             error={errors.mbti}
                         />
+                        <SelectField
+                            label="주량"
+                            value={data.drink_capacity}
+                            onChange={(v) => setData('drink_capacity', v)}
+                            options={toOptions(lifestyleOptions.drinkCapacity)}
+                            placeholder="주량을 선택해주세요"
+                            error={errors.drink_capacity}
+                        />
+                        <SelectField
+                            label="평균 음주 횟수"
+                            value={data.drink_frequency}
+                            onChange={(v) => setData('drink_frequency', v)}
+                            options={toOptions(lifestyleOptions.drinkFrequency)}
+                            placeholder="평균 음주 횟수를 선택해주세요"
+                            error={errors.drink_frequency}
+                        />
+                        <SelectField
+                            label="친구 약속 빈도"
+                            value={data.friend_meet_frequency}
+                            onChange={(v) => setData('friend_meet_frequency', v)}
+                            options={toOptions(lifestyleOptions.friendMeetFrequency)}
+                            placeholder="친구 약속 빈도를 선택해주세요"
+                            error={errors.friend_meet_frequency}
+                        />
+                        <RadioField
+                            label="애완동물 여부"
+                            value={data.has_pet}
+                            onChange={(v) => setData('has_pet', v)}
+                            options={PET_OPTIONS}
+                            error={errors.has_pet}
+                        />
                         <TextField
                             label="이상형"
                             value={data.ideal_type}
@@ -319,6 +373,7 @@ export default function Register() {
                             placeholder="예: 민트초코 파입니다 🍫"
                             error={errors.tmi}
                         />
+
                         <RadioField
                             label="흡연 여부"
                             value={data.is_smoker}

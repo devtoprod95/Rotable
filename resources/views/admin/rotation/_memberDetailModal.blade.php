@@ -131,6 +131,10 @@
             basic += gridItem('MBTI', esc(d.mbti));
             basic += gridItem('직업', esc(d.job));
             basic += gridItem('지역/거주지', esc(d.region));
+            basic += gridItem('주량', esc(d.drink_capacity) || '-');
+            basic += gridItem('평균 음주 횟수', esc(d.drink_frequency) || '-');
+            basic += gridItem('애완동물', (d.has_pet === true || d.has_pet === 1) ? '있음' : ((d.has_pet === false || d.has_pet === 0) ? '없음' : '-'));
+            basic += gridItem('친구 약속 빈도', esc(d.friend_meet_frequency) || '-');
             basic += gridItem('흡연 여부', smokerBadge(d.is_smoker));
             basic += gridItem('신청 플랫폼', platformBadge(d.platform));
             $('#memberDetail-basic').html(basic);

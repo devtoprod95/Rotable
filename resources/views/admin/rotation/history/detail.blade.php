@@ -201,6 +201,11 @@
                 if(p.is_smoker === false){ return '비흡연'; }
                 return '-';
             }
+            if(key === 'pet'){
+                if(p.has_pet === true){ return '있음'; }
+                if(p.has_pet === false){ return '없음'; }
+                return '-';
+            }
             return esc(p[key] || '-');
         }
 
@@ -211,6 +216,7 @@
                 ['플랫폼', 'platform'], ['닉네임', 'nickname'], ['번호표', 'ticket'], ['성별', 'gender'],
                 ['나이', 'age'], ['직업', 'job'], ['키', 'height'],
                 ['MBTI', 'mbti'], ['지역', 'region'], ['흡연', 'smoke'],
+                ['주량', 'drink_capacity'], ['음주 횟수', 'drink_frequency'], ['애완동물', 'pet'], ['친구 약속', 'friend_meet_frequency'],
             ];
             var body = rows.map(function(r){
                 return `<tr>`

@@ -84,6 +84,11 @@ class MemberAuthController extends Controller
         };
 
         return Inertia::render('Auth/Register', [
+            'lifestyleOptions' => [
+                'drinkCapacity'       => Member::drinkCapacityOptions(),
+                'drinkFrequency'      => Member::drinkFrequencyOptions(),
+                'friendMeetFrequency' => Member::friendMeetFrequencyOptions(),
+            ],
             'event'       => $unavailable === null ? ['id' => $event->id, 'label' => $event->label, 'status' => $event->status] : null,
             'unavailable' => $unavailable,
             'closedLabel' => $unavailable === 'closed' ? $event->label : null,
@@ -157,6 +162,11 @@ class MemberAuthController extends Controller
             'merit'      => ['required', 'string', 'max:100'],
             'hobby'      => ['required', 'string', 'max:100'],
             'tmi'        => ['required', 'string', 'max:100'],
+            // 생활 습관 — 정해진 선택지만 허용
+            'drink_capacity'        => ['required', Rule::in(Member::drinkCapacityOptions())],
+            'drink_frequency'       => ['required', Rule::in(Member::drinkFrequencyOptions())],
+            'has_pet'               => ['required', 'boolean'],
+            'friend_meet_frequency' => ['required', Rule::in(Member::friendMeetFrequencyOptions())],
         ];
 
         $validated = $request->validate($rules, [
@@ -185,6 +195,13 @@ class MemberAuthController extends Controller
             'merit.required'             => '나의 장점을 입력해주세요.',
             'hobby.required'             => '취미/요즘 빠진 것을 입력해주세요.',
             'tmi.required'               => 'TMI를 입력해주세요.',
+            'drink_capacity.required'        => '주량을 선택해주세요.',
+            'drink_capacity.in'              => '주량 선택이 올바르지 않습니다.',
+            'drink_frequency.required'       => '평균 음주 횟수를 선택해주세요.',
+            'drink_frequency.in'             => '평균 음주 횟수 선택이 올바르지 않습니다.',
+            'has_pet.required'               => '애완동물 여부를 선택해주세요.',
+            'friend_meet_frequency.required' => '친구 약속 빈도를 선택해주세요.',
+            'friend_meet_frequency.in'       => '친구 약속 빈도 선택이 올바르지 않습니다.',
         ]);
 
         // 기준(홈) 테이블은 참가자가 고르지 않고, 체크인 때 관리자가 지정한 값(roster)을 따른다.
@@ -218,6 +235,11 @@ class MemberAuthController extends Controller
             'merit'      => $validated['merit'],
             'hobby'      => $validated['hobby'],
             'tmi'        => $validated['tmi'],
+            // 생활 습관
+            'drink_capacity'        => $validated['drink_capacity'],
+            'drink_frequency'       => $validated['drink_frequency'],
+            'has_pet'               => $validated['has_pet'],
+            'friend_meet_frequency' => $validated['friend_meet_frequency'],
             // 신청 플랫폼: 사용자가 고르지 않고, 연결 키(행사·성별·번호표)로 찾은 체크인 명단의 값을 쓴다.
             'platform'   => app(RosterService::class)->platformForTicket(
                 (int) $validated['event_id'],

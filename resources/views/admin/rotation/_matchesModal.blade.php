@@ -84,6 +84,10 @@
             if(m.region){ specs.push(esc(m.region)); }
             if(m.is_smoker === true){ specs.push('흡연'); }
             else if(m.is_smoker === false){ specs.push('비흡연'); }
+            if(m.drink_capacity){ specs.push('🍶' + esc(m.drink_capacity)); }
+            if(m.drink_frequency){ specs.push('🍻' + esc(m.drink_frequency)); }
+            if(m.has_pet === true){ specs.push('🐾있음'); } else if(m.has_pet === false){ specs.push('🐾없음'); }
+            if(m.friend_meet_frequency){ specs.push('👫' + esc(m.friend_meet_frequency)); }
             return specs.join(' · ');
         }
 
@@ -99,11 +103,17 @@
             if(m.region){ line2.push(esc(m.region)); }
             if(m.is_smoker === true){ line2.push('흡연'); }
             else if(m.is_smoker === false){ line2.push('비흡연'); }
+            var line3 = [];
+            if(m.drink_capacity){ line3.push('🍶' + esc(m.drink_capacity)); }
+            if(m.drink_frequency){ line3.push('🍻' + esc(m.drink_frequency)); }
+            if(m.has_pet === true){ line3.push('🐾있음'); } else if(m.has_pet === false){ line3.push('🐾없음'); }
+            if(m.friend_meet_frequency){ line3.push('👫' + esc(m.friend_meet_frequency)); }
 
             var html = `<div class="text-center">`
                      + `<div><span class="fw-bold">${esc(m.label || (m.name ? m.name + '호' : '-'))}</span> ${genderBadge(m.gender)}</div>`;
             if(line1.length){ html += `<div style="font-size:0.8em;color:#666;">${line1.join(' · ')}</div>`; }
             if(line2.length){ html += `<div style="font-size:0.8em;color:#666;">${line2.join(' · ')}</div>`; }
+            if(line3.length){ html += `<div style="font-size:0.8em;color:#666;">${line3.join(' · ')}</div>`; }
             if(m.phone){ html += `<div style="font-size:0.8em;color:#888;">${esc(m.phone)}</div>`; }
             html += `</div>`;
             return html;

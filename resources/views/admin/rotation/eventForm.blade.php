@@ -417,6 +417,20 @@
                                                         <span class="badge bg-green-lt">비흡연</span>
                                                     @endif
                                                 </div>
+                                                {{-- 생활 습관 (주량 / 음주 횟수 / 애완동물 / 친구 약속) --}}
+                                                <div class="text-muted" style="font-size: 0.8em;">
+                                                    @if ($member->drink_capacity || $member->drink_frequency)
+                                                        🍶 {{ $member->drink_capacity ?? '-' }} · 🍻 {{ $member->drink_frequency ?? '-' }}
+                                                    @endif
+                                                </div>
+                                                <div class="text-muted" style="font-size: 0.8em;">
+                                                    @if (! is_null($member->has_pet))
+                                                        🐾 {{ $member->has_pet ? '애완동물 있음' : '애완동물 없음' }}
+                                                    @endif
+                                                    @if ($member->friend_meet_frequency)
+                                                        · 👫 {{ $member->friend_meet_frequency }}
+                                                    @endif
+                                                </div>
                                             </td>
                                             <td class="text-center" data-label="투표(보낸/받은)">
                                                 <div class="d-flex flex-column align-items-center gap-1">

@@ -34,6 +34,11 @@ export default function ProfileDetailModal({ member, tone, onClose }) {
         { icon: '✨', label: '나의 장점', value: member.merit },
         { icon: '🎯', label: '취미 / 요즘 빠진 것', value: member.hobby },
         { icon: '💡', label: 'TMI', value: member.tmi },
+        // 생활 습관 — 입장등록 폼과 같은 항목 (값이 있을 때만 노출)
+        { icon: '🍶', label: '주량', value: member.drink_capacity },
+        { icon: '🍻', label: '평균 음주 횟수', value: member.drink_frequency },
+        { icon: '🐾', label: '애완동물', value: member.has_pet == null ? null : (member.has_pet ? '있어요' : '없어요') },
+        { icon: '👫', label: '친구 약속 빈도', value: member.friend_meet_frequency },
     ].filter((e) => e.value);
 
     const headCls = tone === 'female' ? 'bg-rose-50' : 'bg-sky-100';
@@ -44,7 +49,7 @@ export default function ProfileDetailModal({ member, tone, onClose }) {
             onClick={onClose}
         >
             <div
-                className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl"
+                className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}
@@ -73,7 +78,7 @@ export default function ProfileDetailModal({ member, tone, onClose }) {
                     )}
                 </div>
 
-                <div className="px-5 py-4">
+                <div className="overflow-y-auto px-5 py-4">
                     {/* 기본 스펙 */}
                     <div className="flex flex-wrap gap-1.5">
                         {specs.map((s, i) => (
@@ -88,13 +93,13 @@ export default function ProfileDetailModal({ member, tone, onClose }) {
 
                     {/* 추가 정보 */}
                     {extras.length > 0 ? (
-                        <div className="mt-4 space-y-3">
+                        <div className="mt-4 grid grid-cols-2 gap-2">
                             {extras.map((e, i) => (
-                                <div key={i} className="rounded-2xl border border-secondary-100 bg-secondary-50 p-3">
+                                <div key={i} className="min-w-0 rounded-2xl border border-secondary-100 bg-secondary-50 p-3">
                                     <div className="text-xs font-bold text-primary">
                                         {e.icon} {e.label}
                                     </div>
-                                    <div className="mt-1 text-sm leading-relaxed text-secondary-700">
+                                    <div className="mt-1 break-words text-sm leading-relaxed text-secondary-700">
                                         {e.value}
                                     </div>
                                 </div>

@@ -43,6 +43,36 @@ class Member extends Authenticatable
      */
     public const BYPASS_REDIRECT_NAME = '김도한';
 
+    /**
+     * 주량 선택지 — 소주 기준 반 병 단위. (입장등록 셀렉트 / 서버 검증 공용, 저장 값은 문구 그대로)
+     *
+     * @return list<string>
+     */
+    public static function drinkCapacityOptions(): array
+    {
+        return ['못 마셔요', '소주 반 병', '소주 1병', '소주 1병 반', '소주 2병', '소주 2병 반', '소주 3병 이상'];
+    }
+
+    /**
+     * 평균 음주 횟수 선택지.
+     *
+     * @return list<string>
+     */
+    public static function drinkFrequencyOptions(): array
+    {
+        return ['마시지 않아요', '한 달에 1~2번', '주 1번', '주 2~3번', '거의 매일'];
+    }
+
+    /**
+     * 친구 약속 빈도 선택지.
+     *
+     * @return list<string>
+     */
+    public static function friendMeetFrequencyOptions(): array
+    {
+        return ['한 달에 1번 이하', '한 달에 2~3번', '주 1번', '주 2번 이상'];
+    }
+
     /** @var list<string> */
     protected $fillable = [
         'event_id',
@@ -61,6 +91,11 @@ class Member extends Authenticatable
         'ideal_type',
         'hobby',
         'tmi',
+        // 생활 습관 — 주량/평균 음주 횟수/애완동물 여부/친구 약속 빈도
+        'drink_capacity',
+        'drink_frequency',
+        'has_pet',
+        'friend_meet_frequency',
         // 신청 플랫폼 (문토/프립)
         'platform',
         // 매칭 결과 리뷰 인증 완료 시각
@@ -82,6 +117,7 @@ class Member extends Authenticatable
             'birth_year' => 'integer',
             'height'     => 'integer',
             'is_smoker'  => 'boolean',
+            'has_pet'    => 'boolean',
             'result_reviewed_at' => 'datetime',
         ];
     }

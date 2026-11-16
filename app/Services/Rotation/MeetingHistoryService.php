@@ -413,6 +413,11 @@ class MeetingHistoryService
             'mbti'           => $member?->mbti,
             'region'         => $member?->region,
             'is_smoker'      => $member?->is_smoker,
+            // 생활 습관
+            'drink_capacity'        => $member?->drink_capacity,
+            'drink_frequency'       => $member?->drink_frequency,
+            'has_pet'               => $member?->has_pet,
+            'friend_meet_frequency' => $member?->friend_meet_frequency,
         ];
     }
 

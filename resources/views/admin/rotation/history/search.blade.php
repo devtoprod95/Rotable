@@ -132,6 +132,10 @@
             if(p.region){ s.push(esc(p.region)); }
             if(p.is_smoker === true){ s.push('흡연'); }
             else if(p.is_smoker === false){ s.push('비흡연'); }
+            if(p.drink_capacity){ s.push('🍶' + esc(p.drink_capacity)); }
+            if(p.drink_frequency){ s.push('🍻' + esc(p.drink_frequency)); }
+            if(p.has_pet === true){ s.push('🐾있음'); } else if(p.has_pet === false){ s.push('🐾없음'); }
+            if(p.friend_meet_frequency){ s.push('👫' + esc(p.friend_meet_frequency)); }
             return s.join(' · ');
         }
 

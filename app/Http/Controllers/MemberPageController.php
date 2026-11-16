@@ -221,6 +221,11 @@ class MemberPageController extends Controller
             'merit'            => $member->merit,
             'hobby'            => $member->hobby,
             'tmi'              => $member->tmi,
+            // 생활 습관 (미입력 과거 회원은 null)
+            'drink_capacity'        => $member->drink_capacity,
+            'drink_frequency'       => $member->drink_frequency,
+            'has_pet'               => $member->has_pet,
+            'friend_meet_frequency' => $member->friend_meet_frequency,
         ];
     }
 

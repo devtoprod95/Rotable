@@ -98,6 +98,11 @@ class MemberFactory extends Factory
             'hobby'      => $this->faker->randomElement(self::HOBBIES),
             'ideal_type' => $this->faker->randomElement(self::IDEAL_TYPES),
             'tmi'        => $this->faker->randomElement(self::TMIS),
+            // 생활 습관
+            'drink_capacity'        => $this->faker->randomElement(Member::drinkCapacityOptions()),
+            'drink_frequency'       => $this->faker->randomElement(Member::drinkFrequencyOptions()),
+            'has_pet'               => $this->faker->boolean(),
+            'friend_meet_frequency' => $this->faker->randomElement(Member::friendMeetFrequencyOptions()),
         ];
     }
 

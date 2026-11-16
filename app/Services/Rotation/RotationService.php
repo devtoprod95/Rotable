@@ -284,7 +284,6 @@ class RotationService
             // 음료 선택지(1:1) + 음료별 선택 인원수
             'drinks'         => fn ($q) => $q->withCount('members'),
             'members'        => fn ($q) => $q
-                ->with('eventDrink:id,name')
                 ->withCount([
                     'sentMessages',
                     // 받은 투표수는 해당 행사(event_id) 범위로 제한.

@@ -14,16 +14,10 @@
 @section('content')
 
 <style>
-    /* 행사 상세 상단 버튼 영역 */
-    .eventform-actions{ display:flex; align-items:center; gap:.5rem; }
-    .eventform-result-grid{ display:flex; gap:.5rem; flex-wrap:wrap; }
-    @media (max-width: 767.98px){
-        /* 모바일: 버튼 영역을 카드 폭 전체로, 결과 버튼은 2열 그리드, 목록은 아래 한 줄 */
-        .card-header .eventform-actions{ width:100%; flex-direction:column; align-items:stretch; }
-        .eventform-result-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
-        .eventform-result-grid .btn{ width:100%; }
-        .eventform-list-btn{ width:100%; }
-    }
+    /* 행사 상세 바로가기 버튼: 모두 같은 크기. 모바일 2열 / 데스크톱 자동 다열 */
+    .eventform-btn-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:.5rem; }
+    .eventform-btn-grid .btn{ width:100%; min-height:44px; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
+    @media (min-width: 768px){ .eventform-btn-grid{ grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); } }
 
     /* 참여자 성별 탭: 터치하기 편한 높이, 데스크톱에선 폭 제한 */
     .member-gender-tabs .btn{ min-height:44px; font-weight:700; font-size:1rem; }
@@ -72,37 +66,50 @@
 
 <div class="row row-cards">
 
+    {{-- 바로가기 버튼 (상세일 때만) — 정보 수정 영역과 분리, 같은 크기 --}}
+    @if ($isEdit)
+        <div class="col-12">
+            <div class="eventform-btn-grid">
+                <button type="button" id="goRegisterQrBtn" class="btn btn-outline-dark">
+                    <i class="ti ti-qrcode me-1"></i> 입장 QR
+                </button>
+                <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
+                    <i class="ti ti-heart me-1"></i> 전체 매칭
+                </button>
+                <button type="button" id="goMatchedBtn" class="btn btn-outline-pink">
+                    <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
+                </button>
+                <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
+                    <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
+                </button>
+                <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow">
+                    <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
+                </button>
+                <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary">
+                    <i class="ti ti-list me-1"></i> 목록
+                </a>
+            </div>
+        </div>
+    @endif
+
     {{-- 행사 정보 (생성/상세 공용) --}}
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <h3 class="card-title mb-0">{{ $isEdit ? '행사 정보 수정' : '행사 생성' }}</h3>
-                <div class="eventform-actions">
-                    @if ($isEdit)
-                        {{-- 결과 조회 버튼: 모바일에선 2열 그리드로, 데스크톱에선 한 줄로 --}}
-                        <div class="eventform-result-grid">
-                            <button type="button" id="goRegisterQrBtn" class="btn btn-sm btn-outline-dark">
-                                <i class="ti ti-qrcode me-1"></i> 입장 QR
-                            </button>
-                            <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
-                                <i class="ti ti-heart me-1"></i> 전체 매칭
-                            </button>
-                            <button type="button" id="goMatchedBtn" class="btn btn-sm btn-outline-pink">
-                                <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
-                            </button>
-                            <button type="button" id="goMessagesBtn" class="btn btn-sm btn-outline-primary">
-                                <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
-                            </button>
-                            <button type="button" id="goRequestsBtn" class="btn btn-sm btn-outline-yellow">
-                                <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
-                            </button>
-                        </div>
-                    @endif
-                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary eventform-list-btn">
+            @if ($isEdit)
+                {{-- 접기/펼치기(상태 기억) --}}
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2" role="button" tabindex="0"
+                     data-bs-toggle="collapse" data-bs-target="#eventInfoCollapse" aria-expanded="true" aria-controls="eventInfoCollapse" style="cursor:pointer;">
+                    <h3 class="card-title mb-0">행사 정보 수정 <span class="text-secondary small fw-normal ms-1">탭하여 접기/펼치기</span></h3>
+                </div>
+            @else
+                <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <h3 class="card-title mb-0">행사 생성</h3>
+                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary">
                         <i class="ti ti-list me-1"></i> 목록
                     </a>
                 </div>
-            </div>
+            @endif
+            <div @if ($isEdit) class="collapse show" id="eventInfoCollapse" @endif>
             <div class="card-body">
                 <form id="eventForm">
                     <div class="row g-3">
@@ -168,6 +175,7 @@
                         @endif
                     </div>
                 </form>
+            </div>
             </div>
         </div>
     </div>
@@ -441,9 +449,6 @@
                                                     <span class="badge {{ $platformBadgeCls[$member->platform] ?? 'bg-secondary-lt' }}">
                                                         {{ $platformLabels[$member->platform] ?? $member->platform }}
                                                     </span>
-                                                    @if ($event->isOneToOne() && $member->eventDrink)
-                                                        <span class="badge bg-red-lt">🍷 {{ $member->eventDrink->name }}</span>
-                                                    @endif
                                                 </div>
                                                 <div class="text-muted" style="font-size: 0.85em;">
                                                     @if ($member->birth_year)
@@ -667,6 +672,22 @@
             }
         });
         @else
+        // ===== 상세: 행사 정보 수정 영역 접힘 상태 기억 (새로고침 후에도 유지) =====
+        (function(){
+            var KEY = 'rotable.eventDetail.infoCollapsed';
+            var el = document.getElementById('eventInfoCollapse');
+            if(!el){ return; }
+            var collapsed = false;
+            try { collapsed = localStorage.getItem(KEY) === '1'; } catch(e) { /* 저장소 사용 불가 시 기본(펼침) */ }
+            if(collapsed){
+                el.classList.remove('show');
+                $('[data-bs-target="#eventInfoCollapse"]').attr('aria-expanded', 'false');
+            }
+            function save(v){ try { localStorage.setItem(KEY, v ? '1' : '0'); } catch(e) {} }
+            el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(true); } });
+            el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
+        })();
+
         // ===== 상세: 입장등록 QR 모달 =====
         $('#goRegisterQrBtn').on('click', function(){
             RegisterQrModal.open({{ $event->id }}, @json($event->label));

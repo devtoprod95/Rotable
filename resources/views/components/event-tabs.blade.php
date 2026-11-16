@@ -69,6 +69,18 @@
     .tab-type-wine { background: #fdeee3; color: #c2410c; }
     .tab-type-one  { background: #e9e4fb; color: #5b21b6; }
     .event-tabs__picker { min-width: 260px; max-width: 440px; flex: 1 1 280px; }
+
+    /* 모바일: 행사 선택은 한 줄 전체, 탭 3개는 같은 폭으로 꽉 채우고 라벨 아래에 배지를 쌓는다. */
+    @media (max-width: 767.98px) {
+        .event-tabs__picker { min-width: 0; max-width: none; flex: 1 1 100%; }
+        .event-tabs .event-tabs__nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: .4rem; }
+        .event-tabs .event-tabs__btn {
+            flex-direction: column; justify-content: center; text-align: center;
+            width: 100%; min-height: 56px; padding: .45rem .25rem; gap: .2rem;
+            font-size: .85rem; word-break: keep-all;
+        }
+        .event-tabs .event-tabs__btn .badge { font-size: .7rem; padding: .2rem .4rem; }
+    }
 </style>
 
 <div class="card mb-3 event-tabs">

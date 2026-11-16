@@ -59,6 +59,12 @@
                             <i class="ti ti-photo-down fs-2 me-2"></i> 참가자 명단 이미지
                         </button>
                     </div>
+                    <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 mt-2">
+                        <button type="button" class="btn btn-lg btn-outline-primary px-4" id="checkinRefreshBtn">
+                            <i class="ti ti-refresh me-1"></i><span>새로고침</span>
+                        </button>
+                        <span class="text-secondary small text-center text-md-start" id="lastUpdated" aria-live="polite"></span>
+                    </div>
                 </div>
                 {{-- 현황 통계: 모바일에선 4등분 그리드로 꽉 차게, 데스크톱에선 카드 나열 --}}
                 <div class="row g-2 w-100 w-md-auto flex-grow-1 flex-md-grow-0" aria-live="polite">
@@ -83,64 +89,15 @@
         </div>
     </div>
 
-    {{-- 테이블별 성비 (입장등록 좌석 기준) + 새로고침 --}}
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header py-2 d-flex align-items-center flex-wrap gap-2">
-                <h3 class="card-title mb-0"><i class="ti ti-layout-grid me-1"></i> 테이블별 성비</h3>
-                <span class="text-secondary small">입장등록한 참가자 기준 · 자리 안내에 참고하세요</span>
-            </div>
-            <div class="card-body py-2">
-                {{-- 새로고침 영역 (성비/명단 최신화) — 모바일: 한 줄에 하나씩 / PC(md↑): 가로 나열 --}}
-                <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center flex-md-wrap gap-2 mb-2">
-                    <button type="button" class="btn btn-outline-primary" id="checkinRefreshBtn">
-                        <i class="ti ti-refresh me-1"></i><span>새로고침</span>
-                    </button>
-                    {{-- 더미 데이터 도구: 최고관리자 + 운영(production) 환경이 아닐 때만 --}}
-                    @if (! empty($dummyMode))
-                        <button type="button" class="btn btn-outline-warning" id="checkinDevRosterBtn"
-                                title="체크인 명단에 더미 신청자를 추가합니다 (개발용)">
-                            <i class="ti ti-user-plus me-1"></i><span>더미 명단 추가</span>
-                        </button>
-                        <button type="button" class="btn btn-outline-warning" id="checkinDevCheckInBtn"
-                                title="미도착인 사람 전원을 번호표·테이블 자동으로 체크인합니다 (개발용)">
-                            <i class="ti ti-checks me-1"></i><span>더미 체크인</span>
-                        </button>
-                        <button type="button" class="btn btn-outline-warning" id="checkinDevSeedBtn"
-                                title="참석(체크인)한 사람 기준으로 입장등록 더미 데이터를 생성합니다 (개발용)">
-                            <i class="ti ti-flask me-1"></i><span>더미 입장등록</span>
-                        </button>
-                    @endif
-                    @isset($devMode)
-                        @if ($devMode)
-                            <button type="button" class="btn btn-outline-azure" id="checkinSyncTablesBtn"
-                                    title="이미 입장등록된 좌석(테이블)을 체크인 명단에 역동기화합니다 (기존 데이터 보정용)">
-                                <i class="ti ti-refresh-dot me-1"></i><span>기존 테이블 동기화</span>
-                            </button>
-                        @endif
-                    @endisset
-                    <span class="text-secondary small ms-md-auto" id="lastUpdated" aria-live="polite"></span>
-                </div>
-                <div id="checkinSearchHint" class="form-hint mb-2">
-                    미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
-                </div>
-
-                {{-- 성비 그리드 (입장등록 좌석 없으면 안내) --}}
-                <div class="row g-2" id="tableRatioBody"></div>
-                <div class="text-secondary small text-center py-2" id="tableRatioEmpty">
-                    이 회차에 생성된 테이블이 없어요. 행사 상세에서 테이블을 먼저 추가해 주세요.
-                </div>
-            </div>
-        </div>
-    </div>
-
     {{-- 명단 추가 (한 명씩 입력) --}}
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <h3 class="card-title mb-0"><i class="ti ti-user-plus me-1"></i> 체크인 명단 추가</h3>
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2" role="button" tabindex="0"
+                 data-bs-toggle="collapse" data-bs-target="#addRosterCollapse" aria-expanded="true" aria-controls="addRosterCollapse" style="cursor:pointer;">
+                <h3 class="card-title mb-0"><i class="ti ti-user-plus me-1"></i> 체크인 명단 추가 <span class="text-secondary small fw-normal ms-1">탭하여 접기/펼치기</span></h3>
                 <span class="badge bg-azure-lt"><i class="ti ti-info-circle me-1"></i> 전화번호 없이 닉네임·플랫폼·성별만 관리해요</span>
             </div>
+            <div class="collapse show" id="addRosterCollapse">
             <div class="card-body">
                 <div class="row g-2 align-items-end">
                     <div class="col-12 col-md-4">
@@ -198,6 +155,13 @@
                     </div>
                 </div>
             </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12">
+        <div id="checkinSearchHint" class="form-hint">
+            미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
         </div>
     </div>
 
@@ -236,6 +200,43 @@
             </div>
         </div>
     </div>
+
+    {{-- 개발 도구 (더미/보정) — 운영 화면에서는 접어 둔다 --}}
+    @if (! empty($dummyMode) || ! empty($devMode))
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header py-2" role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target="#devToolsCollapse"
+                 aria-expanded="false" aria-controls="devToolsCollapse" style="cursor:pointer;">
+                <h3 class="card-title mb-0"><i class="ti ti-tool me-1"></i> 개발 도구 <span class="text-secondary small fw-normal ms-1">탭하여 펼치기</span></h3>
+            </div>
+            <div class="collapse" id="devToolsCollapse">
+                <div class="card-body d-flex flex-column flex-md-row flex-md-wrap gap-2">
+                    {{-- 더미 데이터 도구: 최고관리자 + 운영(production) 환경이 아닐 때만 --}}
+                    @if (! empty($dummyMode))
+                        <button type="button" class="btn btn-outline-warning" id="checkinDevRosterBtn"
+                                title="체크인 명단에 더미 신청자를 추가합니다 (개발용)">
+                            <i class="ti ti-user-plus me-1"></i><span>더미 명단 추가</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" id="checkinDevCheckInBtn"
+                                title="미도착인 사람 전원을 번호표·테이블 자동으로 체크인합니다 (개발용)">
+                            <i class="ti ti-checks me-1"></i><span>더미 체크인</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-warning" id="checkinDevSeedBtn"
+                                title="참석(체크인)한 사람 기준으로 입장등록 더미 데이터를 생성합니다 (개발용)">
+                            <i class="ti ti-flask me-1"></i><span>더미 입장등록</span>
+                        </button>
+                    @endif
+                    @if (! empty($devMode))
+                        <button type="button" class="btn btn-outline-azure" id="checkinSyncTablesBtn"
+                                title="이미 입장등록된 좌석(테이블)을 체크인 명단에 역동기화합니다 (기존 데이터 보정용)">
+                            <i class="ti ti-refresh-dot me-1"></i><span>기존 테이블 동기화</span>
+                        </button>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 
 <script>
@@ -250,6 +251,22 @@
         var devRosterUrl = "{{ route('admin.rotation.event.rosters.devSeedRosters', ['id' => $event->id]) }}";
         var devCheckInUrl = "{{ route('admin.rotation.event.rosters.devCheckIn', ['id' => $event->id]) }}";
         var syncTablesUrl = "{{ route('admin.rotation.event.rosters.syncTables', ['id' => $event->id]) }}";
+
+        // 체크인 명단 추가 영역: 기본은 펼침. 사용자가 접으면 그 상태를 기억해 새로고침 후에도 접어 둔다.
+        (function(){
+            var KEY = 'rotable.checkin.addRosterCollapsed';
+            var el = document.getElementById('addRosterCollapse');
+            if(!el){ return; }
+            var collapsed = false;
+            try { collapsed = localStorage.getItem(KEY) === '1'; } catch(e) { /* 저장소 사용 불가 시 기본(펼침) */ }
+            if(collapsed){
+                el.classList.remove('show');
+                $('[data-bs-target="#addRosterCollapse"]').attr('aria-expanded', 'false');
+            }
+            function save(v){ try { localStorage.setItem(KEY, v ? '1' : '0'); } catch(e) {} }
+            el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(true); } });
+            el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
+        })();
 
         var rosters = [];
         var tableRatios = [];  // 테이블별 성비 (load 때 갱신, 번호표 모달에서도 재사용)
@@ -411,44 +428,9 @@
         // 처음 열 때와 [새로고침] 버튼에서 쓰고, 마지막 갱신 시각과 실패 여부를 화면에 표시한다.
         var loading = false;
         function pad(n){ return (n < 10 ? '0' : '') + n; }
-        // 테이블별 성비 요약 렌더. (입장등록 좌석 기준)
+        // 테이블별 성비 보관. (번호표 모달의 ratioModalHtml 에서 사용 — 화면에는 따로 그리지 않는다)
         function renderTableRatios(ratios){
             tableRatios = ratios || [];
-            var $body  = $('#tableRatioBody');
-            var $empty = $('#tableRatioEmpty');
-            // 테이블 자체가 없을 때만 안내 문구. (테이블이 있으면 입장등록이 없어도 남0·여0 으로 전부 표시)
-            if(!ratios.length){
-                $body.empty();
-                $empty.show();
-                return;
-            }
-            $empty.hide();
-            var cards = ratios.map(function(r){
-                var m = r.male || 0, f = r.female || 0, total = r.total || 0;
-                // 성비 상태로 헤더 색을 바꿔 한눈에: 비어있음(회색) / 균형(초록) / 불균형(주황)
-                var balanced = (m === f);
-                var headBg = total === 0 ? '#94a3b8' : (balanced ? '#16a34a' : '#f59e0b');
-                return ''
-                  // 모바일 3열 / 태블릿 4열 / 데스크톱 6열 → 12개 테이블도 깔끔하게 수용
-                  + '<div class="col-4 col-md-3 col-lg-2">'
-                  +   '<div style="border-radius:10px;overflow:hidden;box-shadow:0 1px 3px rgba(20,30,60,.12);border:1px solid #e5e7eb;">'
-                  +     '<div style="background:' + headBg + ';color:#fff;padding:4px 6px;text-align:center;font-weight:800;font-size:0.9rem;white-space:nowrap;">'
-                  +       r.table_no + '번'
-                  +     '</div>'
-                  +     '<div style="display:flex;">'
-                  +       '<div style="flex:1;background:#eff6ff;padding:6px 2px;text-align:center;border-right:1px solid #e5e7eb;">'
-                  +         '<div style="font-size:0.68rem;color:#2563eb;font-weight:700;">남</div>'
-                  +         '<div style="font-size:1.3rem;font-weight:800;color:#2563eb;line-height:1.1;">' + m + '</div>'
-                  +       '</div>'
-                  +       '<div style="flex:1;background:#fdf2f8;padding:6px 2px;text-align:center;">'
-                  +         '<div style="font-size:0.68rem;color:#db2777;font-weight:700;">여</div>'
-                  +         '<div style="font-size:1.3rem;font-weight:800;color:#db2777;line-height:1.1;">' + f + '</div>'
-                  +       '</div>'
-                  +     '</div>'
-                  +   '</div>'
-                  + '</div>';
-            }).join('');
-            $body.html(cards);
         }
 
         // 번호표 모달 등에 끼워 넣을 "테이블별 성비" 요약 HTML. (테이블이 없으면 빈 문자열)

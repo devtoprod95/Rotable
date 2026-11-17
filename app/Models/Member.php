@@ -200,10 +200,15 @@ class Member extends Authenticatable
     }
 
     /**
+     * 정렬 접근자 생성 헬퍼.
+     *
+     * ⚠️ 반환 타입(: Attribute)을 선언하지 않는다. Eloquent 는 Attribute 를 반환 타입으로 가진 메서드를
+     *    모두 "속성 접근자"로 보고 인자 없이 호출하므로, 인자가 필요한 이 헬퍼가 거기에 잡히면 안 된다.
+     *
      * @param  list<string>  $options  기준 순서(선택지 목록)
      * @return Attribute<list<string>|null, list<string>|null>
      */
-    private function sortedListAttribute(array $options): Attribute
+    private function sortedListAttribute(array $options)
     {
         return Attribute::make(
             get: fn (?string $value): ?array => $value === null

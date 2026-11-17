@@ -109,7 +109,7 @@
 
     @if( !empty(auth('admin')->user()) )
     {{-- 관리자 사용 설명서 모달 --}}
-    <div class="modal modal-blur fade" id="adminGuideModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="adminGuideModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">

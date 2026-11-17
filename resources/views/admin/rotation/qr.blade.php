@@ -160,7 +160,7 @@
 </div>
 
 {{-- QR 미리보기 / 다운로드 모달 --}}
-<div class="modal modal-blur fade" id="qrModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">

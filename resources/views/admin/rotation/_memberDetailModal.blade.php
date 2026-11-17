@@ -4,8 +4,39 @@
     - 추가된 회원 정보(프로필 전체)를 보기 좋은 UI로 보여준다.
     - 사용법(JS): MemberDetailModal.open(memberData)
       memberData 는 참여자 행의 data-member(@json) 객체.
+    - [수정] 으로 같은 모달에서 회원 정보를 고칠 수 있다. (저장 시 PUT members.update)
+      번호표·성별은 체크인 명단과 함께 바뀐다. (서버가 중복·기록 여부를 검증) 테이블·플랫폼은 여기서 바꾸지 않는다.
+    - 비밀번호는 최고관리자(isSuperAdmin)에게만 입력칸이 보인다.
+    포함 시 변수: $event(EventRound), $isSuperAdmin(bool)
 --}}
-<div class="modal modal-blur fade" id="memberDetailModal" tabindex="-1" aria-hidden="true">
+@php
+    $lifestyleOptions = [
+        'drinkCapacity'       => \App\Models\Member::drinkCapacityOptions(),
+        'drinkFrequency'      => \App\Models\Member::drinkFrequencyOptions(),
+        'friendMeetFrequency' => \App\Models\Member::friendMeetFrequencyOptions(),
+    ];
+    $memberEditDrinks = ($event ?? null) && $event->isOneToOne()
+        ? $event->drinks->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values()
+        : collect();
+    $memberUpdateUrlTemplate = route('admin.rotation.event.members.update', ['id' => $event->id, 'memberId' => '__MID__']);
+@endphp
+<style>
+    /* 수정 폼 안내문구: 한 줄씩, 작은 화면에서도 읽히는 크기/색 */
+    #memberDetailModal .member-edit-notes > div,
+    #memberDetailModal .member-edit-hint > div,
+    #memberDetailModal .member-edit-hint{ display:block; width:100%; white-space:normal; word-break:keep-all; overflow-wrap:break-word; }
+    /* Tabler 의 .alert 는 display:flex 라 자식 div 가 가로(열)로 늘어선다 → block 으로 바꿔 한 행에 한 문장 */
+    #memberDetailModal .member-edit-notes{ display:block !important; font-size:.92rem; line-height:1.7; }
+    #memberDetailModal .member-edit-hint{ font-size:.88rem; line-height:1.65; color:#495057; }
+    /* 모바일: 우측 하단 "요청" 플로팅 버튼(.ar-fab)이 모달 하단 버튼을 가리지 않게 모달이 열려 있는 동안 숨기고,
+       하단 버튼은 홈 인디케이터(safe area)만큼 띄운다. */
+    @media (max-width: 767.98px){
+        body.member-detail-open .ar-fab,
+        body.member-detail-open .ar-panel{ display:none !important; }
+        #memberDetailModal .modal-footer{ padding-bottom:calc(.75rem + env(safe-area-inset-bottom)); }
+    }
+</style>
+<div class="modal fade" id="memberDetailModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header border-0 pb-0">
@@ -14,6 +45,7 @@
             </div>
 
             <div class="modal-body pt-2">
+              <div id="memberDetail-view">
                 {{-- 프로필 헤더 --}}
                 <div class="card card-sm mb-3">
                     <div class="card-body d-flex align-items-center gap-3">
@@ -35,10 +67,116 @@
                 {{-- 자기소개 --}}
                 <div class="mb-1 text-uppercase text-muted fw-bold small">자기소개</div>
                 <div class="row g-2" id="memberDetail-intro"></div>
+              </div>
+
+              {{-- 수정 폼 --}}
+              <form id="memberDetail-edit" class="d-none" autocomplete="off" onsubmit="return false;">
+                <div class="alert alert-info py-2 mb-3 member-edit-notes">
+                    <div><i class="ti ti-info-circle me-1"></i>번호표·성별을 바꾸면 체크인 명단에도 함께 바뀌어요.</div>
+                    <div><i class="ti ti-info-circle me-1"></i>이미 다른 사람이 쓰는 번호는 쓸 수 없어요.</div>
+                    <div><i class="ti ti-info-circle me-1"></i>투표·메시지 기록이 있으면 성별을 바꿀 수 없어요.</div>
+                    <div><i class="ti ti-info-circle me-1"></i>테이블은 체크인 화면의 <b>번호·테이블 변경</b>에서 바꿔요.</div>
+                </div>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label mb-1">번호표 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg" name="name" inputmode="numeric" maxlength="3" placeholder="예: 3">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label mb-1 d-block">성별 <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100" role="group" aria-label="성별">
+                            <input type="radio" class="btn-check" name="gender" id="memberEditGenderM" value="M" autocomplete="off">
+                            <label class="btn btn-outline-blue btn-lg" for="memberEditGenderM">남</label>
+                            <input type="radio" class="btn-check" name="gender" id="memberEditGenderF" value="F" autocomplete="off">
+                            <label class="btn btn-outline-pink btn-lg" for="memberEditGenderF">여</label>
+                        </div>
+                    </div>
+                    <div class="col-12 d-none" id="memberDetail-nameHint">
+                        <div class="member-edit-hint">숫자 번호표가 아니라 번호표는 바꿀 수 없어요.</div>
+                    </div>
+                    @if (($event->current_round ?? 0) > 0)
+                        <div class="col-12">
+                            <div class="member-edit-hint">
+                                <div><i class="ti ti-alert-triangle me-1 text-warning"></i>로테이션이 시작된 뒤 성별을 바꾸면</div>
+                                <div class="ps-4">자리 이동 방식(여자 고정 / 남자 이동)이 바뀌어</div>
+                                <div class="ps-4">현재 자리가 달라져요.</div>
+                            </div>
+                        </div>
+                    @endif
+                    <div class="col-12">
+                        <label class="form-label mb-1">핸드폰 <span class="text-danger">*</span></label>
+                        <input type="tel" class="form-control" name="phone" inputmode="numeric" maxlength="13" placeholder="01012345678">
+                        <div class="member-edit-hint mt-1">
+                            <div>로그인 아이디예요.</div>
+                            <div>바꾸면 참가자도 새 번호로 입장해야 해요.</div>
+                            <div>만남 이력(번호 기준) 연결도 달라져요.</div>
+                        </div>
+                    </div>
+                    @if (! empty($isSuperAdmin))
+                        <div class="col-12">
+                            <label class="form-label mb-1">비밀번호 <span class="text-muted fw-normal">(4자리)</span></label>
+                            <input type="text" class="form-control font-monospace" name="password" maxlength="4" placeholder="변경할 때만 입력">
+                            <div class="member-edit-hint mt-1"><div>비워두면 그대로 둬요.</div></div>
+                        </div>
+                    @endif
+                    <div class="col-6 col-md-4">
+                        <label class="form-label mb-1">출생연도</label>
+                        <input type="text" class="form-control" name="birth_year" inputmode="numeric" maxlength="4" placeholder="1997">
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-label mb-1">키 (cm)</label>
+                        <input type="text" class="form-control" name="height" inputmode="numeric" maxlength="3" placeholder="175">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label mb-1">직업</label>
+                        <input type="text" class="form-control" name="job" maxlength="50">
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-label mb-1">MBTI</label>
+                        <input type="text" class="form-control text-uppercase" name="mbti" maxlength="4" placeholder="ENFP">
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-label mb-1">지역/거주지</label>
+                        <input type="text" class="form-control" name="region" maxlength="50">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-label mb-1">흡연 여부</label>
+                        <select class="form-select" name="is_smoker">
+                            <option value="">미입력</option><option value="1">흡연</option><option value="0">비흡연</option>
+                        </select>
+                    </div>
+                    <div class="col-6"><label class="form-label mb-1">주량</label><select class="form-select" name="drink_capacity"></select></div>
+                    <div class="col-6"><label class="form-label mb-1">평균 음주 횟수</label><select class="form-select" name="drink_frequency"></select></div>
+                    <div class="col-6"><label class="form-label mb-1">친구 약속 빈도</label><select class="form-select" name="friend_meet_frequency"></select></div>
+                    <div class="col-6">
+                        <label class="form-label mb-1">애완동물</label>
+                        <select class="form-select" name="has_pet">
+                            <option value="">미입력</option><option value="1">있음</option><option value="0">없음</option>
+                        </select>
+                    </div>
+                    @if ($memberEditDrinks->isNotEmpty())
+                        <div class="col-12">
+                            <label class="form-label mb-1">음료 <span class="text-muted fw-normal">(1:1)</span></label>
+                            <select class="form-select" name="event_drink_id"></select>
+                        </div>
+                    @endif
+                    <div class="col-12 col-md-6"><label class="form-label mb-1">이상형</label><input type="text" class="form-control" name="ideal_type" maxlength="100"></div>
+                    <div class="col-12 col-md-6"><label class="form-label mb-1">나의 장점</label><input type="text" class="form-control" name="merit" maxlength="100"></div>
+                    <div class="col-12 col-md-6"><label class="form-label mb-1">취미 / 요즘 빠진 것</label><input type="text" class="form-control" name="hobby" maxlength="100"></div>
+                    <div class="col-12 col-md-6"><label class="form-label mb-1">TMI</label><input type="text" class="form-control" name="tmi" maxlength="100"></div>
+                </div>
+                <div class="member-edit-hint mt-3">
+                    <div>키·출생연도·직업은 체크인 명단에도 같은 값으로 반영돼요.</div>
+                    <div>비워두면 명단 값은 그대로 두고 회원 값만 비워요.</div>
+                </div>
+              </form>
             </div>
 
-            <div class="modal-footer border-0 pt-0">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">닫기</button>
+            <div class="modal-footer border-0 pt-0 flex-nowrap gap-2">
+                <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0" id="memberDetail-closeBtn" data-bs-dismiss="modal">닫기</button>
+                <button type="button" class="btn btn-primary flex-fill flex-md-grow-0" id="memberDetail-editBtn"><i class="ti ti-edit me-1"></i>수정</button>
+                <button type="button" class="btn btn-outline-secondary flex-fill flex-md-grow-0 d-none" id="memberDetail-cancelBtn">취소</button>
+                <button type="button" class="btn btn-primary flex-fill flex-md-grow-0 d-none" id="memberDetail-saveBtn"><i class="ti ti-device-floppy me-1"></i>저장</button>
             </div>
         </div>
     </div>
@@ -48,6 +186,10 @@
     window.MemberDetailModal = (function(){
         var modalEl = null;
         var bsModal = null;
+        var current = null;   // 지금 보고 있는 회원 데이터
+        var UPDATE_URL_TPL = {!! json_encode($memberUpdateUrlTemplate, JSON_UNESCAPED_SLASHES) !!};
+        var OPTIONS = {!! json_encode($lifestyleOptions, JSON_UNESCAPED_UNICODE) !!};
+        var DRINKS  = {!! json_encode($memberEditDrinks, JSON_UNESCAPED_UNICODE) !!};
 
         function esc(v){
             if(v === null || v === undefined || v === '') { return '-'; }
@@ -148,9 +290,99 @@
             $('#memberDetail-intro').html(intro);
         }
 
+        // ----- 수정 모드 -----
+        function fillSelect($sel, values, current){
+            $sel.empty().append($('<option>').val('').text('미입력'));
+            (values || []).forEach(function(v){ $sel.append($('<option>').val(v).text(v)); });
+            $sel.val(current == null ? '' : current);
+        }
+        function boolVal(v){
+            if(v === true || v === 1 || v === '1'){ return '1'; }
+            if(v === false || v === 0 || v === '0'){ return '0'; }
+            return '';
+        }
+        function setMode(editing){
+            $('#memberDetail-view').toggleClass('d-none', editing);
+            $('#memberDetail-edit').toggleClass('d-none', !editing);
+            $('#memberDetail-closeBtn, #memberDetail-editBtn').toggleClass('d-none', editing);
+            $('#memberDetail-cancelBtn, #memberDetail-saveBtn').toggleClass('d-none', !editing);
+        }
+        function startEdit(){
+            var d = current, $f = $('#memberDetail-edit');
+            if(!d){ return; }
+            $f[0].reset();
+            // 번호표·성별. 숫자 번호표가 아닌 예외 회원(이름 등)은 번호표를 바꿀 수 없어 입력을 막는다.
+            var numeric = /^\d+$/.test(String(d.name == null ? '' : d.name));
+            $f.find('[name=name]').val(numeric ? d.name : '').prop('disabled', !numeric);
+            $('#memberDetail-nameHint').toggleClass('d-none', numeric);
+            $f.find('[name=gender]').prop('checked', false).filter('[value=' + (d.gender === 'F' ? 'F' : 'M') + ']').prop('checked', true);
+            $f.find('[name=phone]').val(d.phone || '');
+            $f.find('[name=password]').val('');
+            $f.find('[name=birth_year]').val(d.birth_year || '');
+            $f.find('[name=height]').val(d.height || '');
+            $f.find('[name=job]').val(d.job || '');
+            $f.find('[name=mbti]').val(d.mbti || '');
+            $f.find('[name=region]').val(d.region || '');
+            $f.find('[name=is_smoker]').val(boolVal(d.is_smoker));
+            $f.find('[name=has_pet]').val(boolVal(d.has_pet));
+            fillSelect($f.find('[name=drink_capacity]'), OPTIONS.drinkCapacity, d.drink_capacity);
+            fillSelect($f.find('[name=drink_frequency]'), OPTIONS.drinkFrequency, d.drink_frequency);
+            fillSelect($f.find('[name=friend_meet_frequency]'), OPTIONS.friendMeetFrequency, d.friend_meet_frequency);
+            var $drink = $f.find('[name=event_drink_id]');
+            if($drink.length){
+                $drink.empty().append($('<option>').val('').text('미선택'));
+                DRINKS.forEach(function(x){ $drink.append($('<option>').val(x.id).text(x.name)); });
+                $drink.val(d.event_drink_id == null ? '' : String(d.event_drink_id));
+            }
+            ['ideal_type', 'merit', 'hobby', 'tmi'].forEach(function(k){ $f.find('[name=' + k + ']').val(d[k] || ''); });
+            setMode(true);
+        }
+        function save(){
+            var d = current;
+            if(!d || !d.id){ return; }
+            var $f = $('#memberDetail-edit');
+            var phone = String($f.find('[name=phone]').val() || '').replace(/\D+/g, '');
+            if(!/^010\d{8}$/.test(phone)){ alert('핸드폰 번호는 010으로 시작하는 11자리 숫자여야 합니다.'); return; }
+
+            var $name = $f.find('[name=name]');
+            if(!$name.prop('disabled')){
+                var t = parseInt($name.val(), 10);
+                if(!/^\d+$/.test(String($name.val() || '').trim()) || t < 1 || t > 999){ alert('번호표는 1~999 사이 숫자로 입력해 주세요.'); return; }
+            }
+
+            var data = {};
+            $f.serializeArray().forEach(function(x){ data[x.name] = x.value; });
+            data.phone = phone;
+
+            var $btn = $('#memberDetail-saveBtn').prop('disabled', true);
+            $.ajax({
+                url: UPDATE_URL_TPL.replace('__MID__', d.id),
+                type: 'PUT',
+                data: data,
+                success: function(res){
+                    alert(res?.msg);
+                    // 표/뱃지/음료 현황이 모두 서버 값으로 다시 그려지도록 새로고침한다.
+                    if(res?.status === 200){ location.reload(); }
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); },
+            }).always(function(){ $btn.prop('disabled', false); });
+        }
+        $(function(){
+            var el = document.getElementById('memberDetailModal');
+            if(el){
+                el.addEventListener('show.bs.modal', function(e){ if(e.target === el){ document.body.classList.add('member-detail-open'); } });
+                el.addEventListener('hidden.bs.modal', function(e){ if(e.target === el){ document.body.classList.remove('member-detail-open'); } });
+            }
+            $('#memberDetail-editBtn').on('click', startEdit);
+            $('#memberDetail-cancelBtn').on('click', function(){ setMode(false); });
+            $('#memberDetail-saveBtn').on('click', save);
+        });
+
         return {
             open: function(memberData){
                 if(!memberData){ return; }
+                current = memberData;
+                setMode(false);
                 render(memberData);
 
                 if(!modalEl){

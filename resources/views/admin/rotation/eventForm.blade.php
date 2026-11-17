@@ -47,6 +47,12 @@
         .members-table td .d-flex.flex-column{ align-items:flex-start !important; }
     }
 
+    /* 참여자 카드의 상세보기/만남 이력 버튼: 모바일에서 같은 폭으로 나란히, 터치하기 편한 높이 */
+    @media (max-width: 767.98px){
+        .members-table .member-action-btns{ width:100%; }
+        .members-table .member-action-btns .btn{ flex:1 1 0; min-height:40px; display:inline-flex; align-items:center; justify-content:center; }
+    }
+
     /* 테이블 관리 표: 엑셀(격자) 느낌 제거 — 세로 격자선 없이 일반 테이블처럼. (모바일 접기 동작은 유지) */
     #table-table.tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
     #table-table.tabulator .tabulator-header { background: #f6f8fb; border-bottom: 1px solid #e9ecf1; }
@@ -420,18 +426,21 @@
                                                         <span class="badge bg-blue-lt">남</span>
                                                     @endif
                                                 </div>
-                                                <button type="button"
-                                                        class="btn btn-sm btn-outline-azure py-1 px-3 mt-1 btn-member-detail"
-                                                        data-member='@json($memberData)'>
-                                                    상세보기
-                                                </button>
-                                                @if ($isSuperAdmin && $member->phone)
-                                                    <a href="{{ route('admin.rotation.history.index', ['phone' => $member->phone]) }}"
-                                                       target="_blank" rel="noopener"
-                                                       class="btn btn-sm btn-outline-teal py-1 px-3 mt-1">
-                                                        만남 이력
-                                                    </a>
-                                                @endif
+                                                {{-- 상세보기 / 만남 이력: 모바일에선 한 줄에 같은 폭으로 나란히 --}}
+                                                <div class="member-action-btns d-flex gap-2 mt-1">
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-azure py-1 px-3 btn-member-detail"
+                                                            data-member='@json($memberData)'>
+                                                        상세보기
+                                                    </button>
+                                                    @if ($isSuperAdmin && $member->phone)
+                                                        <a href="{{ route('admin.rotation.history.index', ['phone' => $member->phone]) }}"
+                                                           target="_blank" rel="noopener"
+                                                           class="btn btn-sm btn-outline-teal py-1 px-3">
+                                                            만남 이력
+                                                        </a>
+                                                    @endif
+                                                </div>
                                                 <div class="fw-bold" style="font-size: 0.85em;">
                                                     {{ $member->phone ?? '-' }}
                                                 </div>
@@ -982,7 +991,7 @@
     @include('admin.rotation._votersModal')
     @include('admin.rotation._votedModal')
     @include('admin.rotation._requestsModal')
-    @include('admin.rotation._memberDetailModal')
+    @include('admin.rotation._memberDetailModal', ['event' => $event, 'isSuperAdmin' => $isSuperAdmin ?? false])
     @include('admin.rotation._registerQrModal')
 @endif
 @endsection

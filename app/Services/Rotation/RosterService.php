@@ -657,6 +657,35 @@ class RosterService
     }
 
     /**
+     * 관리자가 입장 회원의 키·출생연도·직업을 고쳤을 때, 연결된 체크인 명단 행에도 같은 값을 반영한다.
+     *
+     * 입장등록은 이 값을 체크인 명단에서 복사해 오고, 상세페이지/명단 이미지는 체크인 명단을 읽으므로
+     * 한쪽만 고치면 두 화면의 값이 어긋난다. 연결 키는 (행사, 성별, 번호표)이며 값이 있는 항목만 덮어쓴다.
+     *
+     * @param array{height?:?int, birth_year?:?int, job?:?string} $profile
+     */
+    public function syncProfileFromMember(int $eventId, string $gender, int $ticket, array $profile): void
+    {
+        $roster = EventRoster::where('event_id', $eventId)
+            ->where('gender', $gender)
+            ->where('ticket_no', $ticket)
+            ->first();
+        if ($roster === null) {
+            return;
+        }
+
+        foreach (['height', 'birth_year', 'job'] as $key) {
+            if (($profile[$key] ?? null) !== null && $profile[$key] !== '') {
+                $roster->{$key} = $profile[$key];
+            }
+        }
+
+        if ($roster->isDirty()) {
+            $roster->save();
+        }
+    }
+
+    /**
      * 입장등록 시 체크인 명단에서 끌어다 쓸 프로필(출생연도·키·직업).
      * 연결 키(행사·성별·번호표)로 체크인된 행을 찾아, 값이 있는 항목만 돌려준다.
      *

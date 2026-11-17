@@ -7,7 +7,7 @@
     $registerUrlTemplate = route('register', ['eventId' => '__ID__']);
 @endphp
 
-<div class="modal modal-blur fade" id="registerQrModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="registerQrModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">

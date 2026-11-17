@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Rotation;
 
 use App\Dtos\RotationTableListRequestDto;
 use App\Http\Requests\Admin\Rotation\EventDrinkSaveRequest;
+use App\Http\Requests\Admin\Rotation\EventMemberUpdateRequest;
 use App\Http\Requests\Admin\Rotation\EventStoreRequest;
 use App\Http\Requests\Admin\Rotation\EventUpdateRequest;
 use App\Http\Requests\Admin\Rotation\IdsRequest;
@@ -11,6 +12,7 @@ use App\Models\EventRound;
 use App\Models\EventVisitSnapshot;
 use App\Models\Member;
 use App\Services\Rotation\MemberLabelService;
+use App\Services\Rotation\MemberProfileService;
 use App\Services\Rotation\RotationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,6 +28,7 @@ class EventController extends RotationBaseController
         Request $request,
         protected RotationService $rotationService,
         protected MemberLabelService $memberLabelService,
+        protected MemberProfileService $memberProfileService,
     ) {
         parent::__construct($request);
     }
@@ -136,6 +139,18 @@ class EventController extends RotationBaseController
     public function eventDrinkSave(EventDrinkSaveRequest $request, int $id): JsonResponse
     {
         return $this->respond($this->rotationService->eventDrinkSync($id, $request->validated('drinks') ?? []), Response::HTTP_INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * 행사 상세의 참여자 정보 수정. 번호표·성별·테이블은 체크인 화면에서만 바꾼다.
+     * 비밀번호는 최고관리자만 바꿀 수 있다. (일반 관리자가 보내도 무시)
+     */
+    public function eventMemberUpdate(EventMemberUpdateRequest $request, int $id, int $memberId): JsonResponse
+    {
+        return $this->respond(
+            $this->memberProfileService->update($id, $memberId, $request->validated(), $this->isSuperAdmin()),
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+        );
     }
 
     /**

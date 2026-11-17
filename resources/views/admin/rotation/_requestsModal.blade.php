@@ -48,7 +48,7 @@
     }
 </style>
 
-<div class="modal modal-blur fade" id="requestsModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="requestsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header py-3 px-4 align-items-start">

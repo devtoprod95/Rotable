@@ -265,7 +265,7 @@
 </div>
 
 {{-- ===== 저장 모달 ===== --}}
-<div class="modal modal-blur fade" id="bepSaveModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="bepSaveModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">
@@ -288,7 +288,7 @@
 </div>
 
 {{-- ===== 불러오기 모달 ===== --}}
-<div class="modal modal-blur fade" id="bepLoadModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="bepLoadModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content">
             <div class="modal-header">

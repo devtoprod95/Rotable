@@ -74,6 +74,8 @@ Route::middleware('role')->group(function () {
                 // [운영/마이그레이션용] 기존 좌석(rotation_seats) 테이블을 체크인 명단(event_rosters)에 역동기화 (최고관리자 전용)
                 Route::post('/{id}/rosters/sync-tables', [RosterController::class, 'rosterSyncTables'])->whereNumber('id')->middleware('superAdmin')->name('rosters.syncTables');
                 Route::get('/{id}/matches/list', [MatchController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
+                // 참여자 정보 수정 (번호표·성별·테이블은 체크인에서만)
+                Route::put('/{id}/members/{memberId}', [EventController::class, 'eventMemberUpdate'])->whereNumber('id')->whereNumber('memberId')->name('members.update');
                 Route::get('/{id}/members/{memberId}/voters/list', [MatchController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
                 Route::get('/{id}/members/{memberId}/voted/list', [MatchController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');
             });

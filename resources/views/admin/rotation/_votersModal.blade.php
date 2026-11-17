@@ -36,7 +36,7 @@
     }
 </style>
 
-<div class="modal modal-blur fade" id="votersModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="votersModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header py-3 px-4 align-items-start">

@@ -8,7 +8,7 @@
     $matchedUrlTemplate = route('admin.rotation.event.matches.list', ['id' => '__ID__']);
 @endphp
 
-<div class="modal modal-blur fade" id="matchedModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="matchedModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header py-3 px-4 align-items-start">

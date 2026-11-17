@@ -55,6 +55,74 @@ export default function AppLayout({
         };
     }, [eventId]);
 
+    // 실시간 이벤트 유실 보정.
+    // 모바일에서 화면 잠금·네트워크 전환으로 WebSocket 이 끊기면 그 사이의 이벤트(턴 진행·매칭 시작·종료 등)를
+    // 받지 못한다. 이벤트는 "변경 신호"일 뿐이므로, 연결이 복구되거나 탭이 다시 보일 때
+    // 서버에서 현재 페이지의 props 를 다시 조회해 화면을 따라잡는다.
+    const visitingRef = useRef(false);
+    const lastSyncRef = useRef(0);
+    const hiddenAtRef = useRef(null);
+    useEffect(() => {
+        if (!eventId) {
+            return undefined;
+        }
+
+        const MIN_INTERVAL_MS = 3000; // 연속 재조회 방지
+        const MIN_HIDDEN_MS = 5000; // 잠깐 탭 전환은 무시
+
+        const resync = () => {
+            const now = Date.now();
+            // 진행 중인 요청(폼 전송 등)을 끊지 않도록 건너뛴다.
+            if (visitingRef.current || now - lastSyncRef.current < MIN_INTERVAL_MS) {
+                return;
+            }
+            lastSyncRef.current = now;
+            router.reload();
+        };
+
+        const offStart = router.on("start", () => {
+            visitingRef.current = true;
+        });
+        const offFinish = router.on("finish", () => {
+            visitingRef.current = false;
+        });
+
+        // 연결이 끊겼다가 "다시" 연결된 시점에만 재조회한다. (최초 연결은 제외)
+        const connection = echo.connector?.pusher?.connection;
+        let everConnected = connection?.state === "connected";
+        const onStateChange = ({ current }) => {
+            if (current !== "connected") {
+                return;
+            }
+            if (everConnected) {
+                resync();
+            }
+            everConnected = true;
+        };
+        connection?.bind("state_change", onStateChange);
+
+        // 탭/앱이 다시 보일 때: 충분히 오래 가려져 있었다면 재조회.
+        const onVisibility = () => {
+            if (document.visibilityState === "hidden") {
+                hiddenAtRef.current = Date.now();
+                return;
+            }
+            const hiddenAt = hiddenAtRef.current;
+            hiddenAtRef.current = null;
+            if (hiddenAt !== null && Date.now() - hiddenAt >= MIN_HIDDEN_MS) {
+                resync();
+            }
+        };
+        document.addEventListener("visibilitychange", onVisibility);
+
+        return () => {
+            offStart();
+            offFinish();
+            connection?.unbind("state_change", onStateChange);
+            document.removeEventListener("visibilitychange", onVisibility);
+        };
+    }, [eventId]);
+
     // 헤더의 "~님" 버튼을 2번 연속 터치하면 로그아웃되는 숨김 제스처.
     const logoutTapRef = useRef({ count: 0, timer: null });
     const handleNameTap = () => {

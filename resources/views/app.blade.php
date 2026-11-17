@@ -25,8 +25,20 @@
 
         {{-- 웹폰트: Pretendard 는 CDN 을 <link> 로 병렬 로딩 (CSS @import 직렬 로딩 방지). font-display: swap. --}}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-        {{-- 로고 폰트(Lilita One)는 우리 서버에서 직접 내려준다. (외부 연결 2개 절약) @font-face 는 app.css --}}
+        {{-- 로고 폰트(Lilita One)는 우리 서버에서 직접 내려준다. (외부 연결 2개 절약) @font-face 는 아래 <style> --}}
         <link rel="preload" href="/fonts/lilita-one-latin.woff2" as="font" type="font/woff2" crossorigin>
+        <style>
+            /* 브랜드 로고 폰트 Lilita One (SIL OFL) — 로고 글자(영문)만 쓰므로 라틴 서브셋 하나만 자체 호스팅한다.
+               문서 기준 경로(/fonts)로 풀리도록 CSS 파일이 아니라 여기에 둔다. (로컬 Vite dev 서버에서도 동작) */
+            @font-face {
+                font-family: 'Lilita One';
+                font-style: normal;
+                font-weight: 400;
+                font-display: swap;
+                src: url('/fonts/lilita-one-latin.woff2') format('woff2');
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+            }
+        </style>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>

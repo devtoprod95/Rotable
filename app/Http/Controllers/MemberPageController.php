@@ -193,7 +193,13 @@ class MemberPageController extends Controller
             'matchSelectable' => $event !== null && $event->isMatchSelectable(),
             'myVotedIds'      => $myVotedIds,
             'maxVotes'        => Vote::MAX_VOTES_PER_MEMBER,
-            ...$this->messagingData($me),
+            // 위에서 이미 조회·계산한 행사/현재 테이블 맵을 넘겨 같은 쿼리를 반복하지 않는다.
+            // (종료(X) 뒤에는 "현재 테이블"을 노출하지 않는 규칙을 그대로 유지)
+            ...$this->messagingData(
+                $me,
+                $event,
+                $event?->status === EventRound::STATUS_CLOSED ? [] : $currentTableNoByMember,
+            ),
         ]);
     }
 
@@ -236,9 +242,9 @@ class MemberPageController extends Controller
      *
      * @return array<int, int> member_id => 현재 테이블 번호
      */
-    private function currentTableNoMap(int $eventId): array
+    private function currentTableNoMap(int $eventId, ?EventRound $event = null): array
     {
-        $event = EventRound::find($eventId);
+        $event ??= EventRound::find($eventId);
         $round = (int) ($event?->current_round ?? 0);
 
         // 로테이션 시작 전(round<1)이거나 매칭이 종료(X)된 뒤에는 "현재 테이블"을 노출하지 않는다.
@@ -283,14 +289,16 @@ class MemberPageController extends Controller
      *
      * @return array{partners: \Illuminate\Support\Collection<int, array<string, mixed>>, partnerGender: string, sendLimit: array{max: int, used: int, remaining: int}}
      */
-    private function messagingData(Member $me): array
+    private function messagingData(Member $me, ?EventRound $event = null, ?array $currentTableNoByMember = null): array
     {
         $oppositeGen = $me->gender === Member::GENDER_MALE
             ? Member::GENDER_FEMALE
             : Member::GENDER_MALE;
 
         // 현재 턴 기준 각 회원의 테이블 번호. (상세 모달 "현재 테이블" 표기용)
-        $currentTableNoByMember = $this->currentTableNoMap($me->event_id);
+        // 호출한 쪽이 이미 알고 있으면 재사용하고, 아니면 여기서 조회한다. (행사는 한 번만 조회)
+        $event ??= EventRound::find($me->event_id);
+        $currentTableNoByMember ??= $this->currentTableNoMap($me->event_id, $event);
 
         $partners = Member::query()
             ->where('event_id', $me->event_id)
@@ -310,7 +318,7 @@ class MemberPageController extends Controller
         $max  = Message::MAX_SENDS_PER_MEMBER;
 
         // 메시지 전달은 로테이션 진행중(S)·매칭중(V) 상태에서만 가능하다.
-        $eventStatus    = EventRound::whereKey($me->event_id)->value('status') ?? EventRound::STATUS_PENDING;
+        $eventStatus    = $event?->status ?? EventRound::STATUS_PENDING;
         $canSendMessage = in_array($eventStatus, [EventRound::STATUS_STARTED, EventRound::STATUS_VOTING], true);
 
         return [
@@ -557,7 +565,7 @@ class MemberPageController extends Controller
             ->all();
 
         // 현재 턴 기준 각 회원이 앉아 있는 테이블 번호 맵. (상세 모달에 "현재 테이블" 표기)
-        $currentTableNoByMember = $this->currentTableNoMap($me->event_id);
+        $currentTableNoByMember = $this->currentTableNoMap($me->event_id, $event);
 
         $candidateList = $candidates->map(function (Member $c) use ($myVotedIds, $votedForMeIds, $isClosed, $isOneToOne, $currentTableNoByMember) {
             $data        = $this->transformMember($c, $currentTableNoByMember[$c->id] ?? null);

@@ -224,6 +224,11 @@ class RotationService
             }
 
             DB::transaction(function () use ($eventId, $clean) {
+                // 삭제될 음료를 고른 회원은 선택이 풀리므로(FK set null) 전달 완료 표시도 함께 지운다.
+                $removedIds = EventDrink::where('event_id', $eventId)->whereNotIn('name', $clean)->pluck('id');
+                if ($removedIds->isNotEmpty()) {
+                    Member::where('event_id', $eventId)->whereIn('event_drink_id', $removedIds)->update(['drink_served_at' => null]);
+                }
                 EventDrink::where('event_id', $eventId)->whereNotIn('name', $clean)->delete();
 
                 foreach ($clean as $order => $name) {

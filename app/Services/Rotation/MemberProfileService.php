@@ -3,6 +3,7 @@
 namespace App\Services\Rotation;
 
 use App\Events\MemberDrinkChosen;
+use App\Events\MemberDrinkServed;
 use App\Models\EventRoster;
 use App\Models\EventRound;
 use App\Models\Member;
@@ -88,6 +89,10 @@ class MemberProfileService
                     $newDrink     = $data['event_drink_id'] !== null ? (int) $data['event_drink_id'] : null;
                     $drinkChanged = $newDrink !== ($member->event_drink_id !== null ? (int) $member->event_drink_id : null);
                     $member->event_drink_id = $newDrink;
+                    // 음료가 바뀌면 새 음료는 아직 전달 전이다.
+                    if ($drinkChanged) {
+                        $member->drink_served_at = null;
+                    }
                 }
 
                 $member->save();
@@ -110,6 +115,47 @@ class MemberProfileService
             }
 
             return helpersSuccessMessage('회원 정보를 수정했습니다.');
+        } catch (\Throwable $th) {
+            return helpersFailMessage($th->getMessage());
+        }
+    }
+
+    /**
+     * 음료 전달 완료 체크/해제. 음료를 고른 회원만 체크할 수 있다.
+     *
+     * @return array{isSuccess:bool, msg?:string, served?:bool, served_at?:?string}
+     */
+    public function setDrinkServed(int $eventId, int $memberId, bool $served): array
+    {
+        try {
+            $member = DB::transaction(function () use ($eventId, $memberId, $served): Member {
+                $member = Member::where('event_id', $eventId)->lockForUpdate()->find($memberId);
+                if ($member === null) {
+                    throw new \RuntimeException('회원을 찾을 수 없습니다.');
+                }
+                if ($served && $member->event_drink_id === null) {
+                    throw new \RuntimeException('음료를 고르지 않은 회원은 전달 완료로 체크할 수 없습니다.');
+                }
+
+                // 이미 같은 상태면 그대로 둔다. (처음 체크한 시각 보존)
+                if ($served && $member->drink_served_at === null) {
+                    $member->drink_served_at = now();
+                } elseif (! $served) {
+                    $member->drink_served_at = null;
+                }
+                $member->save();
+
+                return $member;
+            });
+
+            // 같은 행사 상세를 보고 있는 다른 관리자 화면도 갱신한다.
+            broadcast(new MemberDrinkServed($member));
+
+            $res              = helpersSuccessMessage($served ? '전달 완료로 체크했습니다.' : '전달 완료를 해제했습니다.');
+            $res['served']    = $member->drink_served_at !== null;
+            $res['served_at'] = $member->drink_served_at?->format('H:i');
+
+            return $res;
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }

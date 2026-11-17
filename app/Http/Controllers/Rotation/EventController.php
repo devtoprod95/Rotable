@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Rotation;
 
 use App\Dtos\RotationTableListRequestDto;
 use App\Http\Requests\Admin\Rotation\EventDrinkSaveRequest;
+use App\Http\Requests\Admin\Rotation\EventMemberDrinkServedRequest;
 use App\Http\Requests\Admin\Rotation\EventMemberUpdateRequest;
 use App\Http\Requests\Admin\Rotation\EventStoreRequest;
 use App\Http\Requests\Admin\Rotation\EventUpdateRequest;
@@ -151,6 +152,14 @@ class EventController extends RotationBaseController
             $this->memberProfileService->update($id, $memberId, $request->validated(), $this->isSuperAdmin()),
             Response::HTTP_INTERNAL_SERVER_ERROR,
         );
+    }
+
+    /**
+     * 음료 전달 완료 체크/해제 (1:1 소개팅 음료 선택 현황).
+     */
+    public function eventMemberDrinkServed(EventMemberDrinkServedRequest $request, int $id, int $memberId): JsonResponse
+    {
+        return $this->respond($this->memberProfileService->setDrinkServed($id, $memberId, $request->boolean('served')));
     }
 
     /**

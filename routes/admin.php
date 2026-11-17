@@ -75,6 +75,8 @@ Route::middleware('role')->group(function () {
                 Route::post('/{id}/rosters/sync-tables', [RosterController::class, 'rosterSyncTables'])->whereNumber('id')->middleware('superAdmin')->name('rosters.syncTables');
                 Route::get('/{id}/matches/list', [MatchController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
                 // 참여자 정보 수정 (번호표·성별·테이블은 체크인에서만)
+                // 음료 전달 완료 체크/해제 (1:1)
+                Route::patch('/{id}/members/{memberId}/drink-served', [EventController::class, 'eventMemberDrinkServed'])->whereNumber('id')->whereNumber('memberId')->name('members.drinkServed');
                 Route::put('/{id}/members/{memberId}', [EventController::class, 'eventMemberUpdate'])->whereNumber('id')->whereNumber('memberId')->name('members.update');
                 Route::get('/{id}/members/{memberId}/voters/list', [MatchController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
                 Route::get('/{id}/members/{memberId}/voted/list', [MatchController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');

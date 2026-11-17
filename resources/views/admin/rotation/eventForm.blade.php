@@ -47,6 +47,30 @@
         .members-table td .d-flex.flex-column{ align-items:flex-start !important; }
     }
 
+    /* 음료 목록 설정 (접기/펼치기) */
+    .drink-setting-head{ cursor:pointer; user-select:none; min-height:48px; }
+    .drink-setting-chevron{ transition:transform .15s ease; }
+    .drink-setting-head[aria-expanded="true"] .drink-setting-chevron{ transform:rotate(180deg); }
+    .drink-setting-notes > div{ display:block; font-size:.85rem; line-height:1.65; color:#495057; word-break:keep-all; }
+    /* 음료 카드 그리드: 모바일 2열 / 태블릿 3열 / 데스크톱 4열 */
+    .drink-chip-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.5rem; }
+    @media (min-width: 576px){ .drink-chip-grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+    @media (min-width: 992px){ .drink-chip-grid{ grid-template-columns:repeat(4, minmax(0, 1fr)); } }
+    .drink-card{ display:flex; align-items:center; gap:.5rem; padding:.55rem .6rem; border:1px solid #f1d4da; border-radius:12px; background:#fff7f8; min-height:48px; }
+    .drink-card-emoji{ font-size:1.3rem; line-height:1; flex:0 0 auto; }
+    .drink-card-name{ flex:1 1 auto; min-width:0; font-weight:700; font-size:.92rem; overflow-wrap:anywhere; line-height:1.3; }
+    .drink-card-del{ flex:0 0 auto; width:32px; height:32px; border:0; border-radius:50%; background:transparent; color:#d63939; display:inline-flex; align-items:center; justify-content:center; }
+    .drink-card-del:hover, .drink-card-del:focus{ background:#fde2e2; }
+    .drink-chip-empty{ grid-column:1 / -1; color:#868e96; font-size:.9rem; padding:.5rem 0; }
+
+    /* 음료 전달 완료 체크 버튼 */
+    .drink-serve-btn{ cursor:pointer; transition:background .12s ease, color .12s ease; min-height:44px; }
+    .drink-serve-btn .drink-serve-check{ font-size:1.15rem; line-height:1; color:#94a3b8; }
+    .drink-serve-btn.is-served{ background:#0ca678 !important; color:#fff; }
+    .drink-serve-btn.is-served .text-dark{ color:#fff !important; }
+    .drink-serve-btn.is-served .drink-serve-check{ color:#fff; }
+    .drink-serve-btn:disabled{ opacity:.6; }
+
     /* 참여자 카드의 상세보기/만남 이력 버튼: 모바일에서 같은 폭으로 나란히, 터치하기 편한 높이 */
     @media (max-width: 767.98px){
         .members-table .member-action-btns{ width:100%; }
@@ -233,14 +257,21 @@
             @php
                 $drinkNoneMembers = $event->members->whereNull('event_drink_id');
                 $drinkMembersById = $event->members->whereNotNull('event_drink_id')->groupBy('event_drink_id');
+                // 음료 전달 현황: 음료를 고른 사람 중 전달 완료/대기 인원
+                $drinkChosenCount = $event->members->whereNotNull('event_drink_id')->count();
+                $drinkServedCount = $event->members->whereNotNull('event_drink_id')->whereNotNull('drink_served_at')->count();
                 // 음료 현황 표기: 성별(남/여 칸) · 번호표 · 기준 테이블만 (닉네임/플랫폼 없음)
                 $drinkWho = function ($m) use ($memberTableNos) {
                     $tableNo = $memberTableNos[$m->id] ?? null;
 
                     return [
+                        'id'        => $m->id,
                         'gender'    => $m->gender,
                         'no'        => $m->name,
                         'tableText' => $tableNo !== null ? $tableNo . '번 테이블' : '미배정',
+                        // 음료 전달 완료 (관리자 체크)
+                        'served'    => $m->drink_served_at !== null,
+                        'servedAt'  => $m->drink_served_at?->format('H:i'),
                     ];
                 };
                 // 번호표 순 (성별 칸은 파샬에서 나눈다)
@@ -256,42 +287,82 @@
                         <div id="drinkSummaryBadges" class="d-flex gap-2 flex-wrap">
                             <span class="badge bg-green-lt">선택 {{ $event->members->count() - $drinkNoneMembers->count() }}명</span>
                             <span class="badge bg-secondary-lt">미선택 {{ $drinkNoneMembers->count() }}명</span>
+                            <span class="badge bg-teal text-white"><i class="ti ti-circle-check me-1"></i>전달 {{ $drinkServedCount }}/{{ $drinkChosenCount }}</span>
+                            @if ($drinkChosenCount - $drinkServedCount > 0)
+                                <span class="badge bg-orange-lt">전달 대기 {{ $drinkChosenCount - $drinkServedCount }}명</span>
+                            @endif
                         </div>
                     </div>
                     <div class="card-body">
                         <div class="row g-4">
-                            {{-- 선택지 설정 --}}
-                            <div class="col-12 col-lg-5">
-                                <label class="form-label">음료 목록 <span class="text-muted fw-normal">· 최대 {{ \App\Models\EventDrink::MAX_PER_EVENT }}개</span></label>
-                                <div class="input-group">
-                                    <input type="text" id="drinkNameInput" class="form-control" maxlength="50"
-                                           placeholder="음료 이름 입력 후 추가" enterkeyhint="done" autocomplete="off">
-                                    <button type="button" class="btn btn-outline-primary" id="drinkAddBtn"><i class="ti ti-plus me-1"></i>추가</button>
+                            {{-- 음료 목록 설정 — 접기/펼치기(기본 접힘, 상태 기억) --}}
+                            <div class="col-12">
+                                <div class="drink-setting border rounded">
+                                    <div class="drink-setting-head d-flex align-items-center justify-content-between gap-2 px-3 py-2"
+                                         role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target="#drinkSettingCollapse"
+                                         aria-expanded="false" aria-controls="drinkSettingCollapse">
+                                        <span class="fw-bold"><i class="ti ti-list-details me-1"></i>음료 목록 설정
+                                            <span class="badge bg-red-lt ms-1" id="drinkCountBadge">{{ $event->drinks->count() }}개</span>
+                                        </span>
+                                        <span class="text-muted small d-flex align-items-center gap-1">
+                                            <span class="d-none d-sm-inline">탭하여 접기/펼치기</span>
+                                            <i class="ti ti-chevron-down drink-setting-chevron"></i>
+                                        </span>
+                                    </div>
+                                    <div class="collapse" id="drinkSettingCollapse">
+                                        <div class="px-3 pb-3 pt-1">
+                                            <div class="input-group">
+                                                <input type="text" id="drinkNameInput" class="form-control" maxlength="50"
+                                                       placeholder="음료 이름 입력 후 추가" enterkeyhint="done" autocomplete="off">
+                                                <button type="button" class="btn btn-primary" id="drinkAddBtn"><i class="ti ti-plus me-1"></i>추가</button>
+                                            </div>
+                                            <div class="text-muted mt-1" style="font-size:0.82em;">최대 {{ \App\Models\EventDrink::MAX_PER_EVENT }}개</div>
+                                            <div id="drinkChips" class="drink-chip-grid mt-2"></div>
+                                            <div class="drink-setting-notes mt-2">
+                                                <div><i class="ti ti-point me-1"></i>음료 카드의 ✕ 를 누르면 목록에서 빠져요.</div>
+                                                <div><i class="ti ti-point me-1"></i>지운 음료를 고른 참가자의 선택과 전달 체크는 해제돼요.</div>
+                                                <div><i class="ti ti-point me-1"></i>참가자는 입장등록 때 이 목록에서 하나를 골라요. (등록 후 변경 불가)</div>
+                                                <div><i class="ti ti-point me-1"></i>바꾼 내용은 <b>음료 목록 저장</b>을 눌러야 반영돼요.</div>
+                                            </div>
+                                            <button type="button" class="btn btn-primary mt-3 w-100" id="drinkSaveBtn"><i class="ti ti-device-floppy me-1"></i>음료 목록 저장</button>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div id="drinkChips" class="d-flex flex-wrap gap-2 mt-2"></div>
-                                <small class="form-hint text-muted mt-2 d-block">추가한 음료는 눌러서 삭제합니다. 지운 음료를 고른 참가자의 선택은 해제됩니다. 참가자 입장등록 화면에서 이 목록 중 하나를 고르며, 등록 후에는 바꿀 수 없습니다.</small>
-                                <button type="button" class="btn btn-primary mt-2 px-4 w-100" id="drinkSaveBtn">음료 목록 저장</button>
                             </div>
                             {{-- 선택 현황 --}}
-                            <div class="col-12 col-lg-7" id="drinkStatus">
-                                <label class="form-label">선택 현황</label>
+                            <div class="col-12" id="drinkStatus">
+                                <label class="form-label mb-1">선택 현황</label>
+                                <div class="text-muted mb-2" style="font-size:0.85em;"><i class="ti ti-hand-finger me-1"></i>음료를 가져다준 사람을 누르면 전달 완료로 체크돼요. 다시 누르면 해제돼요.</div>
+                                <div class="row g-2">
                                 @forelse ($event->drinks as $drink)
-                                    <div class="border rounded p-2 mb-2">
+                                    <div class="col-12 col-xl-6">
+                                    <div class="border rounded p-2 h-100">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <span class="fw-bold">{{ $drink->name }}</span>
-                                            <span class="badge bg-red-lt">{{ $drink->members_count }}명</span>
+                                            @php
+                                                $drinkPeople   = $drinkMembersById->get($drink->id, collect());
+                                                $drinkServedOf = $drinkPeople->whereNotNull('drink_served_at')->count();
+                                            @endphp
+                                            <span class="d-flex gap-1">
+                                                <span class="badge bg-red-lt">{{ $drink->members_count }}명</span>
+                                                @if ($drink->members_count > 0)
+                                                    <span class="badge {{ $drinkServedOf === $drinkPeople->count() ? 'bg-teal text-white' : 'bg-orange-lt' }}">전달 {{ $drinkServedOf }}/{{ $drinkPeople->count() }}</span>
+                                                @endif
+                                            </span>
                                         </div>
                                         @if ($drinkMembersById->has($drink->id))
                                             <div class="mt-2">
-                                                @include('admin.rotation._drinkPeople', ['people' => $drinkSorted($drinkMembersById[$drink->id])])
+                                                @include('admin.rotation._drinkPeople', ['people' => $drinkSorted($drinkMembersById[$drink->id]), 'servable' => true])
                                             </div>
                                         @endif
                                     </div>
+                                    </div>
                                 @empty
-                                    <div class="text-muted py-3" style="font-size:0.9em;">등록된 음료가 없어요. 왼쪽에서 음료를 추가해 주세요.</div>
+                                    <div class="col-12 text-muted py-3" style="font-size:0.9em;">등록된 음료가 없어요. 위의 <b>음료 목록 설정</b>에서 음료를 추가해 주세요.</div>
                                 @endforelse
+                                </div>
                                 @if ($drinkNoneMembers->isNotEmpty() && $event->drinks->isNotEmpty())
-                                    <div class="border rounded p-2 bg-light">
+                                    <div class="border rounded p-2 bg-light mt-2">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <span class="fw-bold text-muted">미선택</span>
                                             <span class="badge bg-secondary-lt">{{ $drinkNoneMembers->count() }}명</span>
@@ -797,19 +868,49 @@
         var drinkList = @json($event->drinks->pluck('name')->values());
         var drinkMax  = {{ \App\Models\EventDrink::MAX_PER_EVENT }};
 
+        // 음료 이름에서 어울리는 이모지 (입장등록 화면과 같은 규칙)
+        function drinkEmoji(name){
+            if(/아메리카노|커피|라떼/.test(name)){ return /ICE/i.test(name) ? '🧊' : '☕'; }
+            if(name.indexOf('물') !== -1){ return /HOT/i.test(name) ? '♨️' : '💧'; }
+            if(/카모마일|캐모마일|케모마일|차/.test(name)){ return '🌼'; }
+            return '🥤';
+        }
+
         function renderDrinkChips(){
             var $box = $('#drinkChips').empty();
+            $('#drinkCountBadge').text(drinkList.length + '개');
             if(!drinkList.length){
-                $box.append('<span class="text-muted" style="font-size:0.9em;">추가된 음료가 없어요.</span>');
+                $box.append('<div class="drink-chip-empty">추가된 음료가 없어요.</div>');
                 return;
             }
             drinkList.forEach(function(name, i){
-                var $chip = $('<button type="button" class="btn btn-sm btn-outline-red drink-chip py-2 px-3"></button>')
-                    .attr('data-index', i)
-                    .text(name + '  ✕');
-                $box.append($chip);
+                var $card = $('<div class="drink-card"></div>');
+                $card.append($('<span class="drink-card-emoji" aria-hidden="true"></span>').text(drinkEmoji(name)));
+                $card.append($('<span class="drink-card-name"></span>').text(name));
+                $card.append(
+                    $('<button type="button" class="drink-card-del drink-chip"><i class="ti ti-x"></i></button>')
+                        .attr('data-index', i)
+                        .attr('aria-label', name + ' 삭제')
+                );
+                $box.append($card);
             });
         }
+
+        // 음료 목록 설정 접힘 상태 기억 (기본: 접힘)
+        (function(){
+            var KEY = 'rotable.eventDetail.drinkSettingOpen';
+            var el = document.getElementById('drinkSettingCollapse');
+            if(!el){ return; }
+            var open = false;
+            try { open = localStorage.getItem(KEY) === '1'; } catch(e) {}
+            if(open){
+                el.classList.add('show');
+                $('[data-bs-target="#drinkSettingCollapse"]').attr('aria-expanded', 'true');
+            }
+            function save(v){ try { localStorage.setItem(KEY, v ? '1' : '0'); } catch(e) {} }
+            el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(true); } });
+            el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(false); } });
+        })();
 
         async function addDrink(){
             var $input = $('#drinkNameInput');
@@ -848,6 +949,8 @@
                 'port'   => (int) env('VITE_REVERB_PORT', env('REVERB_PORT', 443)),
                 'scheme' => env('VITE_REVERB_SCHEME', env('REVERB_SCHEME', 'https')),
             ], JSON_HEX_TAG | JSON_HEX_AMP) !!};
+            // 전달 완료 체크 후 즉시 갱신에도 쓰므로 실시간 연결 여부와 관계없이 먼저 노출한다. (함수 선언은 호이스팅됨)
+            if($('#drinkStatus').length){ window.refreshDrinkStatus = refreshDrinkStatus; }
             if(typeof Pusher === 'undefined' || !cfg.key || !cfg.host || !$('#drinkStatus').length){ return; }
 
             var timer = null;
@@ -870,11 +973,36 @@
                 disableStats: true,
                 cluster: '',
             });
-            pusher.subscribe('event-drinks.{{ $event->id }}').bind('drink.chosen', function(){
+            var drinkChannel = pusher.subscribe('event-drinks.{{ $event->id }}');
+            var scheduleRefresh = function(){
                 clearTimeout(timer);
                 timer = setTimeout(refreshDrinkStatus, 300);
-            });
+            };
+            // 참가자 음료 선택 + 관리자 전달 완료 체크(다른 관리자 화면 포함)
+            drinkChannel.bind('drink.chosen', scheduleRefresh);
+            drinkChannel.bind('drink.served', scheduleRefresh);
         })();
+
+        // ===== 음료 전달 완료 체크/해제 =====
+        // 현황 영역은 실시간 갱신으로 통째로 바뀌므로 document 에 위임한다.
+        var drinkServedUrlTpl = "{{ route('admin.rotation.event.members.drinkServed', ['id' => $event->id, 'memberId' => '__MID__']) }}";
+        $(document).on('click', '.drink-serve-btn', function(){
+            var $btn = $(this);
+            if($btn.prop('disabled')){ return; }
+            var next = String($btn.data('served')) !== '1';
+            $btn.prop('disabled', true);
+            $.ajax({
+                url: drinkServedUrlTpl.replace('__MID__', $btn.data('member-id')),
+                type: 'PATCH',
+                data: { served: next ? 1 : 0 },
+                success: function(res){
+                    if(res?.status !== 200){ alert(res?.msg ?? '처리하지 못했습니다.'); return; }
+                    // 실시간 연결이 없어도 바로 반영되도록 현황을 다시 불러온다. (연결돼 있으면 신호로도 한 번 더 갱신)
+                    if(typeof window.refreshDrinkStatus === 'function'){ window.refreshDrinkStatus(); } else { location.reload(); }
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); },
+            }).always(function(){ $btn.prop('disabled', false); });
+        });
 
         $('#drinkSaveBtn').on('click', async function(){
             // 입력창에 적어두고 추가를 안 누른 값도 함께 담는다.

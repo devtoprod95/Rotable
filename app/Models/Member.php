@@ -100,6 +100,8 @@ class Member extends Authenticatable
         'platform',
         // 선택한 음료 (1:1 소개팅, event_drinks.id)
         'event_drink_id',
+        // 음료 전달 완료 시각 (관리자 체크, null=전달 전)
+        'drink_served_at',
         // 매칭 결과 리뷰 인증 완료 시각
         'result_reviewed_at',
     ];
@@ -121,6 +123,7 @@ class Member extends Authenticatable
             'is_smoker'  => 'boolean',
             'has_pet'    => 'boolean',
             'result_reviewed_at' => 'datetime',
+            'drink_served_at'    => 'datetime',
         ];
     }
 

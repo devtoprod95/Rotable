@@ -410,7 +410,7 @@ export default function Register() {
                                     음료 선택 🍷
                                 </span>
                                 <div className="grid grid-cols-2 gap-2.5">
-                                    {drinks.map((drink) => {
+                                    {[...drinks].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map((drink) => {
                                         const active = drink.id === data.event_drink_id;
                                         return (
                                             <button

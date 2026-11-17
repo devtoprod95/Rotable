@@ -13,6 +13,7 @@ use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\RotationTable;
 use App\Services\Rotation\EventContextService;
+use App\Services\Rotation\MemberLabelService;
 use App\Services\Rotation\RosterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -31,6 +32,7 @@ class RosterController extends RotationBaseController
         Request $request,
         protected RosterService $rosterService,
         protected EventContextService $eventContextService,
+        protected MemberLabelService $memberLabelService,
     ) {
         parent::__construct($request);
     }
@@ -108,11 +110,14 @@ class RosterController extends RotationBaseController
     {
         // 번호표로 입장등록한 회원 현황 ("성별|번호" => 등록 시각)
         $registered = $this->rosterService->registeredTickets($id);
+        // 입장등록 완료자의 회원 상세 모달용 데이터 ("성별|번호" => 회원 배열)
+        $memberDetails = $this->memberDetailsByTicket($id);
 
-        $rosters = $this->rosterService->rosterList($id)->map(function (EventRoster $r) use ($registered): array {
+        $rosters = $this->rosterService->rosterList($id)->map(function (EventRoster $r) use ($registered, $memberDetails): array {
             $regKey = $r->ticket_no !== null ? ($r->gender . '|' . (int) $r->ticket_no) : null;
 
             return [
+                'member'            => $regKey !== null ? ($memberDetails[$regKey] ?? null) : null,
                 'id'                => $r->id,
                 'name'              => $r->name,
                 'gender'            => $r->gender,
@@ -137,6 +142,36 @@ class RosterController extends RotationBaseController
             // 테이블별 성비 요약 — 체크인 명단(roster) 기준이라 입장등록 전에도 즉시 반영된다.
             'table_ratios' => $this->rosterService->tableGenderRatios($id),
         ]);
+    }
+
+    /**
+     * 행사 회원의 상세 모달용 데이터. 키는 "성별|번호표". (숫자 번호표가 아닌 회원은 명단과 연결되지 않으므로 제외)
+     * 행사 상세의 상세보기 버튼과 같은 형태(label·age, 최고관리자는 password 포함)로 만든다.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function memberDetailsByTicket(int $eventId): array
+    {
+        $labelMap   = $this->memberLabelService->labelMap($eventId);
+        $superAdmin = $this->isSuperAdmin();
+        $out        = [];
+
+        Member::where('event_id', $eventId)->get()->each(function (Member $m) use (&$out, $labelMap, $superAdmin): void {
+            if (! ctype_digit((string) $m->name)) {
+                return;
+            }
+
+            $data = $m->toArray();
+            if ($superAdmin) {
+                $data['password'] = $m->password;
+            }
+            $data['age']   = $m->birth_year ? (now()->year - $m->birth_year + 1) : null;
+            $data['label'] = $this->memberLabelService->label($labelMap, $m->gender, $m->name, $m->platform);
+
+            $out[$m->gender . '|' . (int) $m->name] = $data;
+        });
+
+        return $out;
     }
 
     /**

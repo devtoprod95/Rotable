@@ -421,13 +421,17 @@
             var ticketBtn = (inState && !r.registered)
                 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-checkin-ticket"`
                   + ` data-id="${r.id}" aria-label="${esc(nickname)} 번호표 변경"><i class="ti ti-edit me-1"></i>번호·테이블</button>` : '';
+            // 입장등록을 마친 사람만: 회원 상세정보 모달
+            var memberBtn = (r.registered && r.member)
+                ? `<button type="button" class="btn btn-sm btn-outline-azure btn-checkin-member"`
+                  + ` data-id="${r.id}" aria-label="${esc(nickname)} 회원 상세보기"><i class="ti ti-user-search me-1"></i>회원 상세보기</button>` : '';
             var delBtn = inState ? ''
                 : `<button type="button" class="btn btn-sm btn-outline-danger btn-checkin-del"`
                   + ` data-id="${r.id}" data-name="${esc(nickname)}" aria-label="${esc(nickname)} 명단에서 삭제">`
                   + `<i class="ti ti-trash me-1"></i>삭제</button>`;
 
             // 모바일 2열 버튼 줄: 보조 버튼(프로필·번호·테이블·삭제)이 홀수면 마지막 버튼을 한 줄 전체로 (혼자 반쪽 차지 방지)
-            var secondaryCount = [profBtn, ticketBtn, delBtn].filter(function(b){ return b; }).length;
+            var secondaryCount = [profBtn, memberBtn, ticketBtn, delBtn].filter(function(b){ return b; }).length;
 
             return `<div class="list-group-item checkin-row ${stateCls}"`
                 +      ` role="button" tabindex="0" data-id="${r.id}"`
@@ -438,7 +442,7 @@
                 +     `<div class="ck-status">${status}</div>`
                 +   `</div>`
                 +   `<dl class="ck-info">${info}</dl>`
-                +   `<div class="ck-actions${secondaryCount % 2 === 1 ? ' is-odd' : ''}">${toggleBtn}${profBtn}${ticketBtn}${delBtn}</div>`
+                +   `<div class="ck-actions${secondaryCount % 2 === 1 ? ' is-odd' : ''}">${toggleBtn}${profBtn}${memberBtn}${ticketBtn}${delBtn}</div>`
                 + `</div>`;
         }
 
@@ -1045,6 +1049,18 @@
             }
         });
 
+        // 회원 상세보기 (입장등록 완료자) — 행 토글로 번지지 않게 전파를 막는다.
+        $(document).on('click', '.btn-checkin-member', function(e){
+            e.stopPropagation();
+            var r = findRoster($(this).data('id'));
+            if(r && r.member){ MemberDetailModal.open(r.member); }
+        });
+        $(document).on('keydown', '.btn-checkin-member', function(e){
+            if(e.key === 'Enter' || e.key === ' ' || e.keyCode === 13 || e.keyCode === 32){
+                e.stopPropagation();
+            }
+        });
+
         // 프로필(키·년생·직업) 입력/수정
         $(document).on('click', '.btn-checkin-profile', async function(e){
             e.stopPropagation(); // 행 참석 토글로 번지지 않게
@@ -1215,6 +1231,9 @@
         load();
     });
 </script>
+
+{{-- 회원 상세정보 모달 (입장등록 완료자의 "회원 상세보기") --}}
+@include('admin.rotation._memberDetailModal', ['event' => $event, 'isSuperAdmin' => $devMode ?? false])
 
 {{-- 참가자 명단 이미지 생성 중 로딩 화면 (숨김 iframe 이 진행 문구를 알려준다) --}}
 <div id="rosterImageOverlay"

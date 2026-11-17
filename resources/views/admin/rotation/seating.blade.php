@@ -661,12 +661,14 @@
             let msg = (viewRound === 0)
                 ? '로테이션을 시작하시겠습니까?'
                 : '다음 턴으로 로테이션을 진행하시겠습니까?';
+            // 확인창을 띄우기 전 턴을 기억해, 그 사이 다른 곳에서 진행되었거나 연타되면 서버가 거부하게 한다.
+            let expectedRound = currentRound;
             if(!(await salert({text: msg}))) return;
 
             $.ajax({
                 url: rotateUrl,
                 type: 'POST',
-                data: { event_id: $('#eventSelect').val() },
+                data: { event_id: $('#eventSelect').val(), expected_round: expectedRound },
                 success: function(res){
                     // 응답(권한 있는 최신 값)으로 상태/턴 표기를 먼저 즉시 갱신한다.
                     // (뒤이은 loadData 조회가 끝나기 전에도 상단 탭바·카드 뱃지가 어긋나지 않게)

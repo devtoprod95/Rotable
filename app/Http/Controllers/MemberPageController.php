@@ -392,14 +392,6 @@ class MemberPageController extends Controller
             'body'        => ['required', 'string', 'max:1000'],
         ]);
 
-        // 최대 전송 횟수 제한 체크.
-        $used = Message::where('event_id', $me->event_id)
-            ->where('sender_id', $me->id)
-            ->count();
-        if ($used >= Message::MAX_SENDS_PER_MEMBER) {
-            return back()->with('error', '메시지는 최대 ' . Message::MAX_SENDS_PER_MEMBER . '번까지만 보낼 수 있어요.');
-        }
-
         // 수신자는 같은 행사에 참여한 이성이어야 한다. (본인에게 전송 불가)
         $oppositeGen = $me->gender === Member::GENDER_MALE
             ? Member::GENDER_FEMALE
@@ -416,12 +408,29 @@ class MemberPageController extends Controller
             return back()->with('error', '메시지를 보낼 수 없는 상대입니다.');
         }
 
-        $message = Message::create([
-            'event_id'    => $me->event_id,
-            'sender_id'   => $me->id,
-            'receiver_id' => $receiver->id,
-            'body'        => $validated['body'],
-        ]);
+        // 발신자(회원) 행을 잠근 채 횟수를 확인하고 저장한다.
+        // 연타·동시 요청이 와도 직렬화되어 최대 전송 횟수를 넘지 않는다.
+        $message = DB::transaction(function () use ($me, $receiver, $validated): ?Message {
+            Member::query()->lockForUpdate()->find($me->id);
+
+            $sentCount = Message::where('event_id', $me->event_id)
+                ->where('sender_id', $me->id)
+                ->count();
+            if ($sentCount >= Message::MAX_SENDS_PER_MEMBER) {
+                return null;
+            }
+
+            return Message::create([
+                'event_id'    => $me->event_id,
+                'sender_id'   => $me->id,
+                'receiver_id' => $receiver->id,
+                'body'        => $validated['body'],
+            ]);
+        });
+
+        if ($message === null) {
+            return back()->with('error', '메시지는 최대 ' . Message::MAX_SENDS_PER_MEMBER . '번까지만 보낼 수 있어요.');
+        }
 
         // 수신자 개인 채널로 실시간 브로드캐스트.
         broadcast(new MessageSent($message));
@@ -429,7 +438,8 @@ class MemberPageController extends Controller
         // 관리자 "메시지 조회" 화면용 행사 단위 브로드캐스트.
         broadcast(new \App\Events\EventMessageSent($message));
 
-        $remaining = max(0, Message::MAX_SENDS_PER_MEMBER - ($used + 1));
+        $used      = Message::where('event_id', $me->event_id)->where('sender_id', $me->id)->count();
+        $remaining = max(0, Message::MAX_SENDS_PER_MEMBER - $used);
 
         return back()->with('success', "전달되었습니다! 익명으로 메시지를 보냈어요. (남은 전송 횟수 {$remaining}회)");
     }
@@ -693,7 +703,10 @@ class MemberPageController extends Controller
         //  - 삭제: 기존엔 있었는데 이번에 빠진 상대만 삭제.
         //  - 추가: 이번에 새로 들어온 상대만 insert.
         // 이렇게 하면 바꾸지 않은 투표의 생성 시각이 저장 때마다 갱신되지 않는다.
+        // 투표자(회원) 행을 잠가 같은 사람의 동시 저장 요청을 직렬화한다. (합쳐서 최대 인원 초과 방지)
         DB::transaction(function () use ($me, $validTargetIds) {
+            Member::query()->lockForUpdate()->find($me->id);
+
             $existingIds = Vote::where('event_id', $me->event_id)
                 ->where('voter_id', $me->id)
                 ->pluck('target_id')

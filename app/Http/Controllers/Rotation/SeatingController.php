@@ -106,7 +106,10 @@ class SeatingController extends RotationBaseController
      */
     public function seatingRotate(SeatingEventRequest $request): JsonResponse
     {
-        return $this->respond($this->seatingService->rotateProgress($this->eventId($request)), Response::HTTP_INTERNAL_SERVER_ERROR);
+        return $this->respond($this->seatingService->rotateProgress(
+            $this->eventId($request),
+            $request->nullableInt('expected_round'),
+        ), Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**

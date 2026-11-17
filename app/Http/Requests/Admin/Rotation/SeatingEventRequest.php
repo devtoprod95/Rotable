@@ -13,7 +13,9 @@ class SeatingEventRequest extends ApiFormRequest
     public function rules(): array
     {
         return [
-            'event_id' => 'required|integer',
+            'event_id'       => 'required|integer',
+            // 로테이션 진행 시 관리자 화면이 보고 있던 현재 턴. 서버의 현재 턴과 다르면 진행하지 않는다. (선택)
+            'expected_round' => 'nullable|integer|min:0',
         ];
     }
 }

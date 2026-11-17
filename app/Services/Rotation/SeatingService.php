@@ -260,9 +260,10 @@ class SeatingService
      *
      * 최초 진행(current_round 0→1) 시 행사 상태를 '진행(S)'으로 전환한다.
      *
+     * @param  int|null  $expectedRound  화면이 보던 현재 턴(낙관적 동시성). 서버의 현재 턴과 다르면 진행하지 않는다. null 이면 검사하지 않는다.
      * @return array{isSuccess:bool, message?:string, data?:array{round_no:int, is_last:bool, max_round:int}}
      */
-    public function rotateProgress(int $eventId): array
+    public function rotateProgress(int $eventId, ?int $expectedRound = null): array
     {
         $returnMsg = $this->returnMsg;
 
@@ -278,11 +279,16 @@ class SeatingService
                 throw new Exception('배정된 좌석이 없습니다. 먼저 회원을 테이블에 배정해주세요.');
             }
 
-            [$nextRoundNo, $maxRound] = DB::transaction(function () use ($eventId, $tableCount) {
+            [$nextRoundNo, $maxRound] = DB::transaction(function () use ($eventId, $tableCount, $expectedRound) {
                 /** @var EventRound $event */
                 $event = EventRound::lockForUpdate()->find($eventId);
                 if ($event === null) {
                     throw new Exception('행사를 찾을 수 없습니다.');
+                }
+
+                // 화면이 보던 턴과 서버의 현재 턴이 다르면(이미 다른 곳에서 진행됨 · 연타) 진행하지 않는다.
+                if ($expectedRound !== null && $expectedRound !== (int) $event->current_round) {
+                    throw new Exception("이미 {$event->current_round}턴으로 진행되었습니다. 화면을 새로고침해 확인해 주세요.");
                 }
 
                 $next = (int) $event->current_round + 1;

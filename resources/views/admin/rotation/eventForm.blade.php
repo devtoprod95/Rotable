@@ -33,6 +33,15 @@
     /* 참여자 성별 탭: 터치하기 편한 높이, 데스크톱에선 폭 제한 */
     .member-gender-tabs .btn{ min-height:44px; font-weight:700; font-size:1rem; }
     @media (min-width: 768px){ .member-gender-tabs{ max-width:420px; } }
+    /* 성별 탭 + 정렬 선택: 모바일은 위아래 전체 폭, 데스크톱은 한 줄 */
+    .member-view-bar{ display:flex; flex-direction:column; gap:.5rem; }
+    .member-view-bar .member-gender-tabs{ width:100%; }
+    .member-sort-select{ min-height:44px; font-weight:600; }
+    @media (min-width: 768px){
+        .member-view-bar{ flex-direction:row; align-items:center; }
+        .member-view-bar .member-gender-tabs{ flex:0 1 420px; }
+        .member-sort-select{ flex:0 0 220px; width:220px; }
+    }
 
     /* 참여자 카드: ① 번호표·라벨·플랫폼·방문  ② 항목명:값  ③ 활동 숫자(누르면 목록)  ④ 버튼 */
     .pm-grid{ display:grid; grid-template-columns:1fr; gap:.75rem; }
@@ -357,7 +366,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <h3 class="card-title mb-0">참여자 <span class="text-secondary fs-5 fw-normal">· 번호표 순</span></h3>
+                    <h3 class="card-title mb-0">참여자 <span class="text-secondary fs-5 fw-normal" id="memberSortLabel">· 번호표 순</span></h3>
                     <div class="d-flex gap-2 flex-wrap">
                         <span class="badge bg-secondary-lt">총 {{ $event->members->count() }}명</span>
                         <span class="badge bg-blue-lt">남 {{ $maleCount }}명</span>
@@ -371,13 +380,23 @@
                         <div class="text-center text-muted py-4">참여자가 없습니다.</div>
                     @else
                         {{-- 성별 보기 탭: 모바일은 카드 폭 전체를 3등분, 데스크톱은 적당한 폭으로 크게 --}}
-                        <div class="btn-group w-100 mt-2 mb-3 member-gender-tabs" role="group" aria-label="성별 보기">
+                        <div class="mt-2 mb-3 member-view-bar">
+                        <div class="btn-group member-gender-tabs" role="group" aria-label="성별 보기">
                             <input type="radio" class="btn-check" name="memberGenderFilter" id="mgAll" value="" autocomplete="off" checked>
                             <label class="btn btn-outline-secondary" for="mgAll"><i class="ti ti-users me-1"></i>전체 {{ $event->members->count() }}</label>
                             <input type="radio" class="btn-check" name="memberGenderFilter" id="mgM" value="M" autocomplete="off">
                             <label class="btn btn-outline-blue" for="mgM">남 {{ $maleCount }}</label>
                             <input type="radio" class="btn-check" name="memberGenderFilter" id="mgF" value="F" autocomplete="off">
                             <label class="btn btn-outline-pink" for="mgF">여 {{ $femaleCount }}</label>
+                        </div>
+                        {{-- 정렬: 기본은 번호표 순(서버 정렬). 득표수 기준으로 바꿔 볼 수 있다. --}}
+                        <select class="form-select member-sort-select" id="memberSortSelect" aria-label="참여자 정렬">
+                            <option value="ticket">번호표 순</option>
+                            <option value="received_desc">받은 투표 많은 순</option>
+                            <option value="received_asc">받은 투표 적은 순</option>
+                            <option value="cast_desc">보낸 투표 많은 순</option>
+                            <option value="cast_asc">보낸 투표 적은 순</option>
+                        </select>
                         </div>
                         {{-- 참여자 카드: 모바일 1열 / 768px↑ 2열 / 1200px↑ 3열. 번호표 순(서버 정렬) --}}
                         @php
@@ -415,7 +434,8 @@
                                     ]);
                                     $visitCounts = $member->visit_counts ?? [];
                                 @endphp
-                                <div class="pm-card {{ $isFemale ? 'is-f' : 'is-m' }}" data-member-row data-gender="{{ $member->gender }}">
+                                <div class="pm-card {{ $isFemale ? 'is-f' : 'is-m' }}" data-member-row data-gender="{{ $member->gender }}"
+                                     data-order="{{ $loop->index }}" data-received="{{ (int) $member->received_votes_count }}" data-cast="{{ (int) $member->cast_votes_count }}">
                                     {{-- ① 번호표 · 라벨 · 플랫폼 · 방문 횟수 --}}
                                     <div class="pm-head">
                                         <div class="pm-ticket"><small>{{ $isFemale ? '여' : '남' }}</small><b>{{ $member->name }}</b></div>
@@ -636,6 +656,40 @@
                 $(this).toggleClass('d-none', !!g && $(this).data('gender') !== g);
             });
         });
+
+        // ===== 상세: 참여자 정렬 (번호표 / 받은·보낸 투표 많은·적은 순) =====
+        // 서버가 번호표 순으로 그려 둔 카드를 data-order(원래 순서)로 되돌릴 수 있게 하고,
+        // 득표수가 같으면 번호표 순을 유지한다. (성별 필터와 독립적으로 동작)
+        var MEMBER_SORT_LABEL = {
+            ticket: '번호표 순', received_desc: '받은 투표 많은 순', received_asc: '받은 투표 적은 순',
+            cast_desc: '보낸 투표 많은 순', cast_asc: '보낸 투표 적은 순'
+        };
+        $('#memberSortSelect').on('change', function(){
+            var mode = this.value;
+            var $grid = $('.pm-grid');
+            var cards = $grid.children('[data-member-row]').get();
+            var key = mode.indexOf('received') === 0 ? 'received' : (mode.indexOf('cast') === 0 ? 'cast' : null);
+            var dir = mode.slice(-3) === 'asc' ? 1 : -1;
+            cards.sort(function(a, b){
+                var byOrder = Number(a.dataset.order) - Number(b.dataset.order);
+                if(!key){ return byOrder; }
+                var diff = Number(a.dataset[key]) - Number(b.dataset[key]);
+                return diff !== 0 ? diff * dir : byOrder;
+            });
+            $grid.append(cards);
+            $('#memberSortLabel').text('· ' + (MEMBER_SORT_LABEL[mode] || '번호표 순'));
+            // 선택한 정렬을 쿼리파라미터(?sort=)에 남겨 새로고침·링크 공유에도 유지한다. (페이지 이동 없이 주소만 바꿈)
+            var url = new URL(window.location.href);
+            if(mode === 'ticket'){ url.searchParams.delete('sort'); } else { url.searchParams.set('sort', mode); }
+            history.replaceState(null, '', url);
+        });
+        // 주소의 ?sort= 로 정렬 복원 (알 수 없는 값이면 무시하고 기본 번호표 순)
+        (function(){
+            var saved = new URL(window.location.href).searchParams.get('sort');
+            if(saved && saved !== 'ticket' && MEMBER_SORT_LABEL[saved] && $('#memberSortSelect').length){
+                $('#memberSortSelect').val(saved).trigger('change');
+            }
+        })();
 
         // ===== 상세: 매칭 조회 모달 =====
         $('#goMatchesBtn').on('click', function(){

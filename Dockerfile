@@ -37,13 +37,25 @@ RUN apt-get update && apt-get install -y \
     zip unzip jpegoptim optipng pngquant gifsicle \
     vim git curl tzdata && \
     docker-php-ext-configure gd --with-freetype --with-jpeg && \
-    docker-php-ext-install pdo_mysql pdo_pgsql pgsql mbstring zip exif pcntl bcmath gd && \
+    docker-php-ext-install pdo_mysql pdo_pgsql pgsql mbstring zip exif pcntl bcmath gd opcache && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
     echo "date.timezone = Asia/Seoul" > /usr/local/etc/php/conf.d/timezone.ini
 
 RUN pecl install redis-6.2.0 && docker-php-ext-enable redis
+
+# OPcache(운영 이미지 전용): 컴파일한 PHP 코드를 메모리에 캐시해 요청마다 소스를 다시 해석하지 않게 한다.
+# 로컬 개발(docker-compose)은 이 이미지를 쓰지 않으므로 영향이 없다.
+# 배포 때 컨테이너가 새로 뜨므로 파일 변경 검사는 60초 간격으로만 한다.
+RUN { \
+      echo 'opcache.enable=1'; \
+      echo 'opcache.memory_consumption=128'; \
+      echo 'opcache.interned_strings_buffer=16'; \
+      echo 'opcache.max_accelerated_files=20000'; \
+      echo 'opcache.validate_timestamps=1'; \
+      echo 'opcache.revalidate_freq=60'; \
+    } > /usr/local/etc/php/conf.d/zz-opcache-prod.ini
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
@@ -71,4 +83,5 @@ RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cac
 
 EXPOSE 8080 9997
 
-CMD php artisan package:discover --ansi && supervisord -c /etc/supervisor/conf.d/supervisord.conf
+# 시작할 때 설정/이벤트 캐시를 만든다. (실패해도 기동은 막지 않는다. 라우트 캐시는 클로저 라우트가 있어 쓰지 않는다)
+CMD php artisan package:discover --ansi && (php artisan config:cache; php artisan event:cache; true) && supervisord -c /etc/supervisor/conf.d/supervisord.conf

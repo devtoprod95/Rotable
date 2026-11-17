@@ -170,4 +170,6 @@ input[type="number"] {
  * ===================================================================== */
 .eventform-btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; }
 .eventform-btn-grid .btn { width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+/* 모바일 2열에서 버튼 수가 홀수면 마지막 버튼(예: 행사 상세의 '목록')을 한 줄 전체로 — 옆이 비어 보이지 않게 */
+@media (max-width: 767.98px) { .eventform-btn-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
 @media (min-width: 768px) { .eventform-btn-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }

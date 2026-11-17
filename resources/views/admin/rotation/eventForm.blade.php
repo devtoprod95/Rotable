@@ -110,9 +110,6 @@
     @if ($isEdit)
         <div class="col-12">
             <div class="eventform-btn-grid">
-                <button type="button" id="goRegisterQrBtn" class="btn btn-outline-dark">
-                    <i class="ti ti-qrcode me-1"></i> 입장 QR
-                </button>
                 <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
                     <i class="ti ti-heart me-1"></i> 전체 매칭
                 </button>
@@ -153,49 +150,61 @@
             <div class="card-body">
                 <form id="eventForm" onsubmit="return false;">
                 @if ($isEdit)
+                    {{-- 행사 정보 수정: 모바일은 한 줄에 하나씩, PC 는 2열. 생성 화면과 같은 입력 모양 --}}
+                    @php
+                        $editStatusLabel = $statuses[$event->status] ?? $event->status;
+                        $editStatusCls   = ['P' => 'bg-yellow text-white', 'S' => 'bg-green text-white', 'V' => 'bg-pink text-white', 'X' => 'bg-dark text-white'][$event->status] ?? 'bg-secondary text-white';
+                    @endphp
                     <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label required">행사명</label>
-                            <input type="text" class="form-control" name="title"
-                                   value="{{ $isEdit ? $event->title : '' }}" placeholder="예: 로테이블 와인파티" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label required">타입</label>
-                            <select class="form-select" name="type" required>
-                                @foreach ($types as $value => $label)
-                                    <option value="{{ $value }}" {{ $isEdit && $event->type === $value ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label class="form-label required">일시</label>
-                            <input type="text" class="form-control" id="eventTimePicker" name="event_time"
-                                   value="{{ $isEdit && $event->event_time ? $event->event_time->format('Y-m-d H:i') : '' }}"
-                                   placeholder="날짜/시간 선택" required>
+                        <div class="col-12">
+                            <label class="form-label required" for="editTitle">행사명</label>
+                            <input type="text" class="form-control form-control-lg" id="editTitle" name="title"
+                                   value="{{ $event->title }}" placeholder="예: 로테이블 와인파티" maxlength="255" autocomplete="off" required>
                         </div>
 
-                        @if ($isEdit)
-                            <div class="col-md-2">
-                                <label class="form-label">상태</label>
-                                <input type="text" class="form-control" value="{{ $statuses[$event->status] ?? $event->status }}" disabled readonly>
-                                <small class="form-hint text-muted mt-2 d-block">상태는 로테이션 진행에서 관리됩니다.</small>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label required d-block">타입</label>
+                            <div class="btn-group w-100 create-type-group" role="group" aria-label="행사 타입">
+                                @foreach ($types as $value => $label)
+                                    <input type="radio" class="btn-check" name="type" id="editType{{ ucfirst($value) }}" value="{{ $value }}"
+                                           autocomplete="off" {{ $event->type === $value ? 'checked' : '' }}>
+                                    <label class="btn btn-outline-{{ $value === \App\Models\EventRound::TYPE_ONE ? 'purple' : 'red' }}" for="editType{{ ucfirst($value) }}">
+                                        <i class="ti {{ $value === \App\Models\EventRound::TYPE_ONE ? 'ti-users' : 'ti-glass-full' }} me-1"></i>{{ $label }}
+                                    </label>
+                                @endforeach
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">리뷰 인증 게이트</label>
-                                <label class="form-check form-switch mt-1">
-                                    <input class="form-check-input" type="checkbox" id="reviewGateToggle"
-                                           {{ $event->review_gate_enabled ? 'checked' : '' }}>
-                                    <span class="form-check-label" id="reviewGateLabel">
-                                        {{ $event->review_gate_enabled ? '켜짐 (결과 전 리뷰 인증 요구)' : '꺼짐' }}
-                                    </span>
-                                </label>
-                                <small class="form-hint text-muted mt-1 d-block">켜면 종료(X) 후 참가자가 매칭 결과를 보기 전 리뷰 이미지를 올려야 합니다.</small>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label required" for="eventTimePicker">일시</label>
+                            <input type="text" class="form-control form-control-lg" id="eventTimePicker" name="event_time"
+                                   value="{{ $event->event_time ? $event->event_time->format('Y-m-d H:i') : '' }}"
+                                   placeholder="날짜/시간 선택" readonly required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label d-block">상태</label>
+                            <div class="d-flex align-items-center gap-2 flex-wrap" style="min-height:48px;">
+                                <span class="badge {{ $editStatusCls }} fs-5 px-3 py-2">{{ $editStatusLabel }}</span>
+                                <span class="create-hint">로테이션 진행 화면에서 바뀌어요.</span>
                             </div>
-                        @endif
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label d-block">리뷰 인증 게이트</label>
+                            <label class="form-check form-switch create-switch mb-0">
+                                <input class="form-check-input" type="checkbox" id="reviewGateToggle" {{ $event->review_gate_enabled ? 'checked' : '' }}>
+                                <span class="form-check-label" id="reviewGateLabel">{{ $event->review_gate_enabled ? '켜짐 (결과 전 리뷰 인증 요구)' : '꺼짐' }}</span>
+                            </label>
+                            <div class="create-hint mt-1">
+                                <div>켜면 종료 후 참가자가 매칭 결과를 보기 전에</div>
+                                <div>리뷰 이미지를 올려야 해요.</div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="mt-3">
-                        <button type="button" class="btn btn-primary px-4 btn-update">수정</button>
+                    <div class="d-grid mt-3">
+                        <button type="button" class="btn btn-primary btn-lg btn-update"><i class="ti ti-device-floppy me-1"></i>수정 저장</button>
                     </div>
                 @else
                     {{-- 행사 생성: 모바일은 한 줄에 하나씩, PC 는 2열. 타입·테이블 수는 터치하기 쉬운 버튼형 --}}
@@ -779,11 +788,6 @@
             el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
         })();
 
-        // ===== 상세: 입장등록 QR 모달 =====
-        $('#goRegisterQrBtn').on('click', function(){
-            RegisterQrModal.open({{ $event->id }}, @json($event->label));
-        });
-
         // ===== 상세: 참여자 성별 보기 (전체/남/여) =====
         $('input[name="memberGenderFilter"]').on('change', function(){
             var g = $('input[name="memberGenderFilter"]:checked').val();
@@ -1075,9 +1079,9 @@
         // ===== 상세: 행사 정보 수정 =====
         $('.btn-update').click(async function(){
             let $f = $('#eventForm');
-            let title = $f.find('[name=title]').val();
+            let title = ($f.find('[name=title]').val() || '').trim();
             let time  = $f.find('[name=event_time]').val();
-            if(!title){ await salert({text: '행사명을 입력해주세요.', cancel: false}); return false; }
+            if(!title){ await salert({text: '행사명을 입력해주세요.', cancel: false}); $('#editTitle').focus(); return false; }
             if(!time){ await salert({text: '일시를 선택해주세요.', cancel: false}); return false; }
 
             if(await salert({text: '행사 정보를 수정하시겠습니까?'})){
@@ -1086,11 +1090,12 @@
                     type: 'PUT',
                     data: {
                         title: title,
-                        type: $f.find('[name=type]').val(),
+                        type: $f.find('[name=type]:checked').val(),
                         event_time: time,
                         review_gate_enabled: $('#reviewGateToggle').is(':checked') ? 1 : 0
                     },
-                    success: function(res){ alert(res?.msg); },
+                    // 상단 탭바·뱃지·음료 카드(1:1 전용) 등 타입/이름에 따라 달라지는 화면을 맞추기 위해 새로고침
+                    success: function(res){ alert(res?.msg); if(res?.status === 200){ location.reload(); } },
                     error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
                 });
             }
@@ -1163,6 +1168,5 @@
     @include('admin.rotation._votedModal')
     @include('admin.rotation._requestsModal')
     @include('admin.rotation._memberDetailModal', ['event' => $event, 'isSuperAdmin' => $isSuperAdmin ?? false])
-    @include('admin.rotation._registerQrModal')
 @endif
 @endsection

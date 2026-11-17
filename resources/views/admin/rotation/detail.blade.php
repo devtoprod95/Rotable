@@ -17,6 +17,42 @@
     .roster-ev-head .form-control-lg { background: #ffffff; border-color: #f9a8d4; color: #111827; }
     .roster-ev-head .form-control-lg:focus { border-color: #ec4899; box-shadow: 0 0 0 .2rem rgba(236, 72, 153, .2); }
 
+    /* 상단 도구 버튼: 모두 같은 높이, 화면 크기와 관계없이 같은 배치 */
+    /* 유형 줄과 버튼 줄 사이 간격 = 버튼 줄끼리 간격(.5rem) 으로 통일 */
+    .dp-type{ margin-bottom:.5rem; }
+    .dp-type .btn{ min-height:46px; font-weight:700; }
+    /* 6칸 그리드: 1줄 3개(각 2칸) / 2줄 2개(각 3칸) / 3줄 다운로드(6칸) */
+    .dp-actions{ display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:.5rem; }
+    .dp-actions > :nth-child(-n+3){ grid-column:span 2; }
+    .dp-actions > :nth-child(4), .dp-actions > :nth-child(5){ grid-column:span 3; }
+    .dp-actions > .dp-full{ grid-column:1 / -1; }
+    /* 모바일: '설정 · 명단 편집'은 글자가 넘치므로 한 줄 전체, 그 아래 저장 / 저장 목록 불러오기를 반씩 */
+    @media (max-width: 767.98px){
+        .dp-actions > :nth-child(1){ grid-column:1 / -1; }
+        .dp-actions > :nth-child(2), .dp-actions > :nth-child(3){ grid-column:span 3; }
+    }
+    /* 아주 좁은 화면: 1줄 3개가 비좁으면 글자를 조금 줄인다 */
+    @media (max-width: 420px){ .dp-actions .btn{ font-size:.8rem; padding-left:.35rem; padding-right:.35rem; } .dp-actions .btn .ti{ margin-right:.2rem !important; } }
+    .dp-actions > .btn, .dp-actions > .dropdown > .btn, .dp-actions > .btn-group{ width:100%; min-height:44px; }
+    .dp-actions .btn{ display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
+    .dp-actions > .btn-group > .btn-detail-save{ flex:1 1 auto; }
+    .dp-actions > .btn-group > .dp-split{ flex:0 0 auto; }
+    .dp-notes > div{ display:block; font-size:.86rem; line-height:1.75; color:#495057; word-break:keep-all; }
+    /* 모달 하단 버튼: 모바일은 같은 폭으로 나란히 */
+    @media (max-width: 575.98px){
+        #detailPreviewModal .modal-footer, #detailSettingsModal .modal-footer,
+        #detailSavesModal .modal-footer, #detailFeedModal .modal-footer{ flex-wrap:nowrap; gap:.5rem; }
+        #detailPreviewModal .modal-footer > *, #detailSettingsModal .modal-footer > *,
+        #detailSavesModal .modal-footer > *, #detailFeedModal .modal-footer > *{ flex:1 1 0; margin:0; }
+        #detailPreviewModal .modal-footer .dropdown > .btn{ width:100%; }
+        #detailPreviewModal .modal-footer .btn, #detailSettingsModal .modal-footer .btn,
+        #detailSavesModal .modal-footer .btn, #detailFeedModal .modal-footer .btn{ min-height:44px; }
+    }
+    /* 모바일(768px 미만): 플로팅 미리보기 버튼 숨김 — 본문·에디터를 가리고, 위 [미리보기] 버튼으로 충분 */
+    @media (max-width: 767.98px){
+        #floatingPreviewBtn{ display:none !important; }
+    }
+
     /* 참여자 명단 드래그 정렬 */
     .roster-handle{ cursor:grab; color:#94a3b8; touch-action:none; }
     .roster-handle:active{ cursor:grabbing; }
@@ -52,50 +88,52 @@
 <div class="row row-cards mt-2">
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="card-header">
                 <h3 class="card-title mb-0">
                     <i class="ti ti-sparkles text-pink me-1"></i> 상세페이지 제작
                 </h3>
-                <div class="d-flex gap-2 flex-wrap align-items-center">
-                    {{-- 유형 선택 (와인파티 / 1:1 소개팅) --}}
-                    <div class="btn-group" role="group" aria-label="샘플 유형">
-                        <input type="radio" class="btn-check" name="sampleType" id="sampleTypeSolo" value="solo" autocomplete="off" checked>
-                        <label class="btn btn-outline-pink" for="sampleTypeSolo">
-                            <i class="ti ti-users me-1"></i> 1:1 소개팅
-                        </label>
-                        <input type="radio" class="btn-check" name="sampleType" id="sampleTypeWine" value="wine" autocomplete="off">
-                        <label class="btn btn-outline-pink" for="sampleTypeWine">
-                            <i class="ti ti-glass-full me-1"></i> 와인파티
-                        </label>
-                    </div>
+            </div>
+            <div class="card-body">
+                {{-- ① 유형 선택 (1:1 소개팅 / 와인파티) — 한 줄 전체, 두 칸 같은 폭 --}}
+                <div class="btn-group w-100 dp-type" role="group" aria-label="샘플 유형">
+                    <input type="radio" class="btn-check" name="sampleType" id="sampleTypeSolo" value="solo" autocomplete="off" checked>
+                    <label class="btn btn-outline-pink" for="sampleTypeSolo">
+                        <i class="ti ti-users me-1"></i> 1:1 소개팅
+                    </label>
+                    <input type="radio" class="btn-check" name="sampleType" id="sampleTypeWine" value="wine" autocomplete="off">
+                    <label class="btn btn-outline-pink" for="sampleTypeWine">
+                        <i class="ti ti-glass-full me-1"></i> 와인파티
+                    </label>
+                </div>
 
-                    <span class="vr d-none d-md-inline"></span>
+                {{-- ② 작업 버튼 — 같은 높이. [설정·명단 편집][저장▾][저장 목록 불러오기] / [샘플 불러오기][미리보기] / [다운로드(한 줄 전체)] --}}
+                <div class="dp-actions mb-3">
+                    {{-- 1줄: 설정 · 명단 편집 / 저장(▾ 다른 이름으로 저장) / 저장 목록 불러오기 --}}
+                    <button type="button" class="btn btn-pink btn-open-settings">
+                        <i class="ti ti-adjustments me-1"></i> 설정 · 명단 편집
+                    </button>
 
-                    {{-- 저장 그룹: 저장본 선택/저장/다른 이름으로 저장 (자주 쓰므로 밖으로 노출) --}}
+                    {{-- 저장: 저장(현재 저장본 갱신/새로 저장) + ▾ 다른 이름으로 저장 --}}
                     <div class="btn-group" role="group" aria-label="저장">
                         <button type="button" class="btn btn-primary btn-detail-save">
                             <i class="ti ti-device-floppy me-1"></i> 저장
                         </button>
-                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split"
+                        <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split dp-split"
                                 data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="visually-hidden">저장 옵션</span>
                         </button>
-                        <div class="dropdown-menu">
-                            <button type="button" class="dropdown-item btn-open-saves">
-                                <i class="ti ti-list-details me-2 fs-2"></i> 저장 목록 불러오기
-                            </button>
+                        <div class="dropdown-menu dropdown-menu-end">
                             <button type="button" class="dropdown-item btn-detail-save-as">
                                 <i class="ti ti-bookmark-plus me-2 fs-2"></i> 다른 이름으로 저장
                             </button>
                         </div>
                     </div>
 
-                    <span class="vr d-none d-md-inline"></span>
-
-                    {{-- 편집 그룹: 페이지 설정·참여자 명단(통합) / 샘플 불러오기 --}}
-                    <button type="button" class="btn btn-pink btn-open-settings">
-                        <i class="ti ti-adjustments me-1"></i> 페이지 설정 · 명단 편집
+                    <button type="button" class="btn btn-outline-primary btn-open-saves">
+                        <i class="ti ti-list-details me-1"></i> 저장 목록 불러오기
                     </button>
+
+                    {{-- 2줄: 샘플 불러오기 / 미리보기 --}}
                     <div class="dropdown">
                         <button type="button" class="btn btn-outline-secondary dropdown-toggle"
                                 data-bs-toggle="dropdown" aria-expanded="false">
@@ -111,13 +149,12 @@
                         </div>
                     </div>
 
-                    <span class="vr d-none d-md-inline"></span>
-
-                    {{-- 결과 그룹: 미리보기 / 다운로드 --}}
                     <button type="button" class="btn btn-azure btn-open-preview">
                         <i class="ti ti-eye me-1"></i> 미리보기
                     </button>
-                    <div class="dropdown">
+
+                    {{-- 3줄: 다운로드 (한 줄 전체) --}}
+                    <div class="dropdown dp-full">
                         <button type="button" class="btn btn-outline-secondary dropdown-toggle"
                                 data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="ti ti-download me-1"></i> 다운로드
@@ -138,14 +175,15 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <div class="card-body">
-                <small class="form-hint text-muted d-block mb-3">
-                    <b>유형(와인파티 / 1:1 소개팅)</b>을 고른 뒤 <b>샘플 불러오기 → 1열 / 2열</b>로 기본 틀을 불러오세요.
-                    이후 HTML 에디터로 꾸미고 <b>[저장]</b> 하세요.
-                    편집 중인 저장본이 있으면 그 저장본이 갱신되고, 없으면 이름을 입력해 <b>저장 목록</b>에 새로 저장됩니다.
-                    (<b>저장 ▾ → 저장 목록 불러오기</b> 로 이전 저장본을 불러오거나, <b>다른 이름으로 저장</b>으로 새 버전을 남길 수 있어요.)
-                </small>
+
+                {{-- 사용 순서 안내: 한 행에 한 문장 --}}
+                <div class="dp-notes rounded border bg-light px-3 py-2 mb-3">
+                    <div><b>1.</b> 유형(1:1 소개팅 / 와인파티)을 고르세요.</div>
+                    <div><b>2.</b> 처음이면 <b>샘플 불러오기</b>에서 1열 / 2열 기본 틀을 불러오세요.</div>
+                    <div><b>3.</b> <b>설정 · 명단 편집</b>에서 행사·참여자 명단을 채우고, 아래 에디터로 꾸미세요.</div>
+                    <div><b>4.</b> <b>저장</b>하면 편집 중인 저장본이 갱신되고, 없으면 이름을 받아 새로 저장해요.</div>
+                    <div><b>5.</b> 이전 저장본은 <b>저장 목록 불러오기</b>, 새 버전은 <b>저장 ▾ → 다른 이름으로 저장</b>.</div>
+                </div>
                 <label class="form-label">상세페이지 작성 (HTML)</label>
                 <textarea id="detailHtmlEditor">{!! $savedSolo !!}</textarea>
             </div>
@@ -526,15 +564,37 @@
         // - 한 변 한계는 데스크톱 브라우저 실한계(16384px)에 근접한 16000px 로 둔다.
         // - 면적 한계는 세로로 긴 상세페이지에서도 배율이 과하게 깎이지 않도록 크게(약 2.5억 px²) 둔다.
         //   (1080px 폭 기준, 높이 수천 px 까지도 desired 배율을 거의 그대로 유지)
+        /**
+         * 캡처 배율 계산 — 기기별 캔버스 한계 안에서 "가장 큰" 배율을 고른다.
+         *  - 모바일 브라우저는 캔버스 면적 상한이 작다. 특히 iOS Safari 는 약 1,670만 화소(16,777,216)이며,
+         *    넘으면 빈 이미지가 나오거나 브라우저가 몰래 축소해 화질이 크게 떨어진다.
+         *  - 그래서 기기에 맞는 상한을 먼저 정하고, 그 안에서 원하는 배율(desired)에 최대한 가깝게 맞춘다.
+         *    (PC 화질과 같아지지는 않지만, 그 기기에서 낼 수 있는 최선의 해상도로 바로 그린다.)
+         */
+        function canvasLimits(){
+            var ua = navigator.userAgent || '';
+            // iPadOS 13+ 는 데스크톱(Mac) UA 를 쓰므로 터치 지원 여부로 함께 판별한다.
+            var isIOS = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+            var isMobile = isIOS || /Android|Mobile/i.test(ua);
+            if (isIOS) {
+                return { side: 16384, area: 16777216 * 0.98 };   // iOS Safari 면적 상한(여유 2%)
+            }
+            if (isMobile) {
+                return { side: 16384, area: 64 * 1000 * 1000 };  // 안드로이드: 메모리 부족을 피하는 보수적 상한
+            }
+            return { side: 16000, area: 250 * 1000 * 1000 };     // 데스크톱: 화질 우선(넉넉히)
+        }
+
         function computeSafeScale(cssWidth, cssHeight, desired){
-            var MAX_SIDE = 16000;              // 한 변 최대 안전 픽셀 (데스크톱 브라우저 실한계 근접)
-            var MAX_AREA = 250 * 1000 * 1000;  // 최대 면적(px^2) — 화질 우선(넉넉히)
+            var lim = canvasLimits();
             var w = Math.max(1, cssWidth);
             var h = Math.max(1, cssHeight);
             var s = desired || 3;
-            s = Math.min(s, MAX_SIDE / w, MAX_SIDE / h);     // 한 변 한계
-            s = Math.min(s, Math.sqrt(MAX_AREA / (w * h)));  // 면적 한계
-            return Math.max(1, s);                            // 최소 1배는 보장
+            s = Math.min(s, lim.side / w, lim.side / h);       // 한 변 한계
+            s = Math.min(s, Math.sqrt(lim.area / (w * h)));    // 면적 한계
+            // 원칙적으로 1배 이상을 보장하되, 1배조차 기기 한계를 넘으면(아주 긴 장) 한계에 맞춰 줄인다.
+            var fitAtOne = Math.min(lim.side / w, lim.side / h, Math.sqrt(lim.area / (w * h)));
+            return Math.max(Math.min(1, fitAtOne), s);
         }
 
         /* =====================================================================

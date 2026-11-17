@@ -25,10 +25,8 @@
     .ck-stat-tile.is-reg{ border-left-color:#0ca678; background:#e6f7f2; } .ck-stat-tile.is-reg .ck-stat-num{ color:#0ca678; }
     .ck-head-actions{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
     .ck-head-actions .btn{ width:100%; min-height:44px; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
-    .ck-head-actions #checkinRefreshBtn{ grid-column:1 / -1; }
     @media (min-width: 768px){
-        .ck-head-actions{ grid-template-columns:repeat(3, 1fr); }
-        .ck-head-actions #checkinRefreshBtn{ grid-column:auto; }
+        .ck-head-actions{ grid-template-columns:repeat(2, 1fr); }
     }
 
     /* 참여자 카드: ① 번호표 · 닉네임/플랫폼/테이블 · 상태  ② 항목명:값 정보  ③ 버튼 */
@@ -113,11 +111,8 @@
                     <div class="progress-bar bg-success" id="statInBar" style="width:0%"></div>
                 </div>
 
-                {{-- 바로가기 버튼: 같은 크기 (모바일 2열 + 새로고침 한 줄 / PC 3칸) --}}
+                {{-- 바로가기 버튼: 같은 크기 2칸 (입장 QR 은 위 탭바로 옮김) --}}
                 <div class="ck-head-actions mt-3">
-                    <button type="button" class="btn btn-dark" id="goRegisterQrBtn">
-                        <i class="ti ti-qrcode me-1"></i> 입장 QR
-                    </button>
                     <button type="button" class="btn btn-outline-pink" id="rosterImageBtn">
                         <i class="ti ti-photo-down me-1"></i> 참가자 명단 이미지
                     </button>
@@ -1228,10 +1223,4 @@
     </div>
 </div>
 
-@include('admin.rotation._registerQrModal')
-<script>
-    document.getElementById('goRegisterQrBtn').addEventListener('click', function () {
-        RegisterQrModal.open({{ $event->id }}, @json($event->label));
-    });
-</script>
 @endsection

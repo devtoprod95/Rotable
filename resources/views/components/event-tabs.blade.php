@@ -42,11 +42,14 @@
 <style>
     /* 탭을 "버튼"처럼 보이게 + 탭마다 고유 색.
        안 눌린 탭: 해당 색의 연한 배경·테두리·글자 / 눌린 탭: 해당 색으로 꽉 채움 */
-    .event-tabs .event-tabs__nav { display: flex; flex-wrap: wrap; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+    /* 탭 영역: 윗줄 입장 QR(가로 전체), 아랫줄 탭 3개(같은 폭). 모든 버튼 같은 높이. */
+    .event-tabs .event-tabs__nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: 0; padding: 0; list-style: none; min-width: 460px; }
+    .event-tabs .event-tabs__nav > li { display: flex; }
+    .event-tabs .event-tabs__nav > li.event-tabs__qr-row { grid-column: 1 / -1; }
     .event-tabs .event-tabs__btn {
         --tab-solid: #206bc4; --tab-soft: #e7f0fb; --tab-border: #b9d3f0; --tab-hover: #d6e6f8; --tab-dark: #1a5aa6;
-        display: inline-flex; align-items: center; gap: .4rem;
-        padding: .5rem 1rem; border-radius: 8px;
+        display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+        width: 100%; min-height: 44px; padding: .5rem 1rem; border-radius: 8px; white-space: nowrap;
         font-weight: 700; font-size: .95rem; line-height: 1.2; text-decoration: none;
         color: var(--tab-dark); background: var(--tab-soft); border: 1px solid var(--tab-border);
         transition: background .12s ease, border-color .12s ease, color .12s ease;
@@ -62,6 +65,9 @@
     .event-tabs .tab-checkin  { --tab-solid: #0ca678; --tab-soft: #e3f6ef; --tab-border: #a9e2cf; --tab-hover: #cfeee2; --tab-dark: #087f5b; }
     .event-tabs .tab-progress { --tab-solid: #ae3ec9; --tab-soft: #f5e8fa; --tab-border: #dcb4ea; --tab-hover: #ecd3f5; --tab-dark: #8a2fa1; }
     .event-tabs .event-tabs__btn .badge { font-weight: 600; }
+    /* 입장 QR 버튼: 탭과 같은 크기, 검정 */
+    .event-tabs .event-tabs__qr { cursor: pointer; color: #fff; background: #1e293b; border-color: #1e293b; }
+    .event-tabs .event-tabs__qr:hover { background: #0f172a; border-color: #0f172a; }
     .event-tabs .event-tabs__btn.is-active .badge { background: rgba(255,255,255,.22) !important; color: #fff !important; }
     /* 상태/유형 칩: 항목명(작게) + 값(굵게), 진한 배경으로 잘 보이게 */
     .event-tabs__meta { display: flex; align-items: center; gap: .4rem; }
@@ -87,13 +93,15 @@
         .event-tabs__picker { min-width: 0; max-width: none; flex: 1 1 100%; }
         .event-tabs__meta { width: 100%; }
         .event-tabs__chip { flex: 1 1 0; justify-content: center; min-height: 38px; }
-        .event-tabs .event-tabs__nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: .4rem; }
+        .event-tabs .event-tabs__nav { width: 100%; min-width: 0; gap: .4rem; }
         .event-tabs .event-tabs__btn {
             flex-direction: column; justify-content: center; text-align: center;
             width: 100%; min-height: 56px; padding: .45rem .25rem; gap: .2rem;
-            font-size: .85rem; word-break: keep-all;
+            font-size: .85rem; word-break: keep-all; white-space: normal;
         }
         .event-tabs .event-tabs__btn .badge { font-size: .7rem; padding: .2rem .4rem; }
+        /* 입장 QR 은 한 줄짜리라 아이콘·글자를 가로로, 높이는 탭과 같게 */
+        .event-tabs .event-tabs__qr { flex-direction: row; gap: .4rem; font-size: .95rem; }
     }
 </style>
 
@@ -128,6 +136,13 @@
 
             {{-- 탭 (버튼형, 아이콘 없음) --}}
             <ul class="event-tabs__nav ms-md-auto" aria-label="행사 운영 화면">
+                {{-- 입장등록 QR — 세 화면 공통. 탭 위 한 줄 전체 --}}
+                <li class="event-tabs__qr-row">
+                    <button type="button" class="event-tabs__btn event-tabs__qr" id="eventTabsQrBtn"
+                            data-event-id="{{ $event->id }}" data-event-label="{{ $event->label }}" aria-label="입장등록 QR 보기">
+                        <i class="ti ti-qrcode"></i> 입장 QR
+                    </button>
+                </li>
                 @foreach ($tabDefs as $key => $tab)
                     <li>
                         <a class="event-tabs__btn tab-{{ $key }} {{ $activeKey === $key ? 'is-active' : '' }}"
@@ -155,7 +170,18 @@
     </div>
 </div>
 
+@include('admin.rotation._registerQrModal')
+
 <script>
+    // 입장 QR 버튼
+    (function(){
+        var btn = document.getElementById('eventTabsQrBtn');
+        if(!btn){ return; }
+        btn.addEventListener('click', function(){
+            if(window.RegisterQrModal){ RegisterQrModal.open(btn.dataset.eventId, btn.dataset.eventLabel || ''); }
+        });
+    })();
+
     // 행사 선택 → 지금 보던 탭 그대로 다른 행사로 이동
     (function(){
         var tabUrlTpl = @json($tabUrl($activeKey, '__ID__'));

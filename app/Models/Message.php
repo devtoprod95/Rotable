@@ -22,6 +22,9 @@ class Message extends Model
     /** 한 회원이 보낼 수 있는 최대 메시지 수 */
     public const MAX_SENDS_PER_MEMBER = 5;
 
+    /** 1:1 소개팅 "어필" — 종료 뒤 전체에서 보낼 수 있는 횟수 */
+    public const NOTE_MAX_SENDS = 1;
+
     /** @var list<string> */
     protected $fillable = [
         'event_id',

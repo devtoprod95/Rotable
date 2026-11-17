@@ -79,6 +79,11 @@ Route::middleware('auth:web')->group(function () {
     Route::get('/chats', [MemberPageController::class, 'chats'])->name('chats');
     Route::post('/chats/messages', [MemberPageController::class, 'sendMessage'])->name('chats.messages.send');
     Route::post('/chats/messages/read', [MemberPageController::class, 'markMessagesRead'])->name('chats.messages.read');
+    // 어필 — 1:1 소개팅 전용, 매칭 결과(종료) 뒤 매칭되지 않은 이성에게 1회, 익명 아님
+    Route::get('/notes', [MemberPageController::class, 'notes'])->name('notes');
+    Route::post('/notes', [MemberPageController::class, 'sendNote'])
+        ->middleware('throttle:10,1')
+        ->name('notes.send');
     Route::get('/votes', [MemberPageController::class, 'votes'])->name('votes');
     Route::post('/votes', [MemberPageController::class, 'saveVotes'])
         ->middleware('throttle:20,1')

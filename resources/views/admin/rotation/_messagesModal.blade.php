@@ -30,10 +30,10 @@
     #messagesModal .mm-head .mm-no{ margin-left:auto; color:#adb5bd; font-size:.75rem; }
     #messagesModal .mm-bubble{ margin-top:.5rem; padding:.6rem .75rem; border-radius:12px; background:#f4f7ff; color:#212529;
         white-space:pre-wrap; word-break:break-word; line-height:1.6; font-size:.95rem; }
-    /* 말풍선 색: 보낸 사람 기준 — 남→여 파랑 / 여→남 분홍 / 관리자 보라 (왼쪽 띠로도 구분) */
+    /* 말풍선 색: 보낸 사람 기준 — 남→여 파랑 / 여→남 분홍 / 관리자 노랑 (왼쪽 띠로도 구분) */
     #messagesModal .mm-card.from-m .mm-bubble{ background:#e7f1ff; border-left:4px solid #4a8fe7; }
     #messagesModal .mm-card.from-f .mm-bubble{ background:#ffeef4; border-left:4px solid #e8709a; }
-    #messagesModal .mm-card.is-admin .mm-bubble{ background:#f3eefc; border-left:4px solid #8e6bd8; }
+    #messagesModal .mm-card.is-admin .mm-bubble{ background:#fff6d6; border-left:4px solid #f0b400; }
     #messagesModal .mm-foot{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.35rem; margin-top:.5rem; font-size:.8rem; color:#868e96; }
     #messagesModal .mm-empty{ text-align:center; color:#868e96; padding:2.5rem 0; }
     /* 모바일: 보내기 영역이 길어 목록을 밀어내지 않도록 접을 수 있게 */
@@ -224,7 +224,7 @@
         }
         function fromHtml(d){
             return d.is_admin
-                ? '<span class="badge bg-purple-lt">관리자' + (d.admin_name ? ' (' + esc(d.admin_name) + ')' : '') + '</span>'
+                ? '<span class="badge bg-yellow-lt">관리자' + (d.admin_name ? ' (' + esc(d.admin_name) + ')' : '') + '</span>'
                 : nameWithGender(d.sender ? d.sender.name : null, d.sender ? d.sender.gender : null, d.sender ? d.sender.label : null);
         }
         function card(d, isNew){

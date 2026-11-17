@@ -679,6 +679,176 @@ class MemberPageController extends Controller
     }
 
     /**
+     * 어필 — 1:1 소개팅 전용. 탭은 늘 보이지만 이용은 매칭 결과(종료 X) 뒤에만 가능하다.
+     * 매칭 결과(종료 X) 뒤에 "서로 매칭되지 않은 이성"에게 딱 한 번 보내는 메시지.
+     *
+     * 기존 메시지 기능(messages 테이블/읽음/실시간)을 그대로 쓰되 두 가지가 다르다.
+     *  - 익명이 아니다. 받는 사람에게 보낸 사람(번호표)이 보인다.
+     *  - 전체에서 1통만 보낼 수 있다. (Message::NOTE_MAX_SENDS)
+     * 1:1 소개팅은 진행·매칭 중에 메시지 기능을 쓰지 않으므로, 1:1 행사의 회원 메시지는 모두 "어필"로 본다.
+     * 와인파티는 이 화면에 들어올 수 없다. (홈으로 보낸다)
+     */
+    public function notes(): InertiaResponse|RedirectResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me    = Auth::guard('web')->user();
+        $event = $this->currentEvent($me);
+
+        // 와인파티(또는 행사 없음)는 이 화면이 없다. 1:1 은 탭이 늘 보이므로, 종료 전에는 "이용 불가" 안내만 보여준다.
+        if ($event === null || ! $event->isOneToOne()) {
+            return redirect()->route('home');
+        }
+
+        // 나에게 온 메시지 — 회원의 어필(보낸 사람 번호표 공개)과 관리자가 보낸 메시지(관리자로 표시).
+        // 1:1 은 다른 메시지함이 없으므로 관리자 메시지도 여기서 보여준다. (종료 전에도 볼 수 있다)
+        $received = Message::query()
+            ->with('sender:id,name,gender')
+            ->where('receiver_id', $me->id)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (Message $m) => [
+                'id'            => $m->id,
+                'body'          => $m->body,
+                'is_read'       => $m->read_at !== null,
+                'sent_at'       => $m->created_at?->format('Y/n/j H:i'),
+                'is_admin'      => $m->sender_type === Message::SENDER_ADMIN,
+                'sender_name'   => $m->sender?->name,
+                'sender_gender' => $m->sender?->gender,
+            ])
+            ->values();
+
+        if ($event->status !== EventRound::STATUS_CLOSED) {
+            return Inertia::render('Notes', ['available' => false, 'received' => $received]);
+        }
+
+        $oppositeGen = $me->gender === Member::GENDER_MALE ? Member::GENDER_FEMALE : Member::GENDER_MALE;
+
+        // 내가 보낸 어필 (최대 1통)
+        $sent = Message::query()
+            ->with('receiver:id,name')
+            ->where('sender_id', $me->id)
+            ->where('sender_type', Message::SENDER_MEMBER)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(fn (Message $m) => [
+                'id'            => $m->id,
+                'body'          => $m->body,
+                'is_read'       => $m->read_at !== null,
+                'sent_at'       => $m->created_at?->format('Y/n/j H:i'),
+                'receiver_name' => $m->receiver?->name,
+            ])
+            ->values();
+
+        $partners = Member::query()
+            ->where('event_id', $me->event_id)
+            ->where('gender', $oppositeGen)
+            ->whereNotIn('id', $this->mutualMatchIds($me))
+            ->get()
+            ->sortBy(fn (Member $m): array => [
+                ctype_digit((string) $m->name) ? 0 : 1,
+                ctype_digit((string) $m->name) ? (int) $m->name : 0,
+                (string) $m->name,
+            ])
+            ->map(fn (Member $m): array => $this->transformMember($m, null))
+            ->values();
+
+        $used = $sent->count();
+
+        return Inertia::render('Notes', [
+            'available'     => true,
+            'received'      => $received,
+            'sent'          => $sent,
+            'partners'      => $partners,
+            'partnerGender' => $oppositeGen,
+            'sendLimit'     => [
+                'max'       => Message::NOTE_MAX_SENDS,
+                'used'      => $used,
+                'remaining' => max(0, Message::NOTE_MAX_SENDS - $used),
+            ],
+        ]);
+    }
+
+    /**
+     * 어필 보내기. 1:1 소개팅이 종료(X)된 뒤, 상호 매칭되지 않은 이성에게 전체 1통만.
+     */
+    public function sendNote(Request $request): RedirectResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me    = Auth::guard('web')->user();
+        $event = EventRound::find($me->event_id);
+
+        if ($event === null || ! $event->isOneToOne() || $event->status !== EventRound::STATUS_CLOSED) {
+            return back()->with('error', '지금은 어필을 보낼 수 없어요.');
+        }
+
+        $validated = $request->validate([
+            'receiver_id' => ['required', 'integer'],
+            'body'        => ['required', 'string', 'max:1000'],
+        ]);
+
+        $oppositeGen = $me->gender === Member::GENDER_MALE ? Member::GENDER_FEMALE : Member::GENDER_MALE;
+
+        // 받는 사람: 같은 행사의 이성이면서, 나와 서로 선택하지 않은(매칭되지 않은) 사람.
+        $receiver = Member::query()
+            ->where('id', $validated['receiver_id'])
+            ->where('event_id', $me->event_id)
+            ->where('gender', $oppositeGen)
+            ->whereNotIn('id', $this->mutualMatchIds($me))
+            ->first();
+
+        if ($receiver === null) {
+            return back()->with('error', '어필을 보낼 수 없는 상대입니다.');
+        }
+
+        // 보낸 회원 행을 잠근 채 횟수를 확인하고 저장한다. (연타·동시 요청에도 1통을 넘지 않게)
+        $message = DB::transaction(function () use ($me, $receiver, $validated): ?Message {
+            Member::query()->lockForUpdate()->find($me->id);
+
+            $sentCount = Message::where('event_id', $me->event_id)
+                ->where('sender_id', $me->id)
+                ->where('sender_type', Message::SENDER_MEMBER)
+                ->count();
+            if ($sentCount >= Message::NOTE_MAX_SENDS) {
+                return null;
+            }
+
+            return Message::create([
+                'event_id'    => $me->event_id,
+                'sender_id'   => $me->id,
+                'receiver_id' => $receiver->id,
+                'body'        => $validated['body'],
+            ]);
+        });
+
+        if ($message === null) {
+            return back()->with('error', '어필은 한 번만 보낼 수 있어요.');
+        }
+
+        broadcast(new MessageSent($message));
+        broadcast(new \App\Events\EventMessageSent($message));
+
+        return back()->with('success', '어필을 전달했어요!');
+    }
+
+    /**
+     * 나와 서로 선택한(상호 매칭된) 상대 id 목록.
+     *
+     * @return list<int>
+     */
+    private function mutualMatchIds(Member $me): array
+    {
+        $iVoted = Vote::query()->where('event_id', $me->event_id)->where('voter_id', $me->id)->pluck('target_id');
+
+        return Vote::query()
+            ->where('event_id', $me->event_id)
+            ->where('target_id', $me->id)
+            ->whereIn('voter_id', $iVoted)
+            ->pluck('voter_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
      * 투표 저장(수정). 투표중(V) 단계에서만 허용하며, 전달받은 대상 목록으로 차집합 반영한다.
      * - 최대 3명까지만 허용.
      * - 같은 행사의 이성만 지목 가능.

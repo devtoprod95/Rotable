@@ -36,10 +36,14 @@ export default function AppLayout({
         // 매칭 시작(S→V)·종료(→X): 더 이상 진행중(S)이 아니므로 게임을 닫는다.
         const closeGames = () => {
             // nav 의 게임 탭 노출 조건(gameTabVisible)을 최신화.
-            router.reload({ only: ["gameTabVisible"] });
+            router.reload({ only: ["gameTabVisible", "noteTabVisible"] });
             // 게임 관련 화면에 있으면 즉시 홈으로 이동.
             if (window.location.pathname.startsWith("/games")) {
                 router.visit("/home");
+            }
+            // 어필 화면에 있으면(종료되면 열린다) 화면 데이터를 다시 받는다.
+            if (window.location.pathname.startsWith("/notes")) {
+                router.reload();
             }
         };
 
@@ -47,7 +51,11 @@ export default function AppLayout({
         channel.listen(".event.closed", closeGames);
         // 로테이션 진행(P→S 포함)으로 상태가 바뀌면 탭 노출 조건만 갱신.
         channel.listen(".rotation.updated", () => {
-            router.reload({ only: ["gameTabVisible"] });
+            router.reload({ only: ["gameTabVisible", "noteTabVisible"] });
+            // 종료를 되돌리면(X → 진행) 어필 화면이 다시 잠겨야 하므로 화면 데이터를 다시 받는다.
+            if (window.location.pathname.startsWith("/notes")) {
+                router.reload();
+            }
         });
 
         return () => {
@@ -261,27 +269,31 @@ const ONE_TO_ONE_NAV_ITEMS = [
     { href: "/votes", label: "매칭 결과", icon: VoteIcon },
 ];
 
+// 어필 탭. 1:1 소개팅이면 늘 보이고, 이용은 종료(X) 뒤에만 가능하다. (매칭되지 않은 이성에게 1회, 번호표 공개)
+const NOTE_NAV_ITEM = { href: "/notes", label: "어필", icon: ChatIcon };
+
 /**
  * 하단 nav 항목을 구성한다.
  * - 1:1: 고정 2개.
  * - 와인파티: 기본 4개 + (게임 탭 노출 조건 충족 시) 게임 탭.
  */
-function navItemsFor(eventType, gameTabVisible) {
+function navItemsFor(eventType, gameTabVisible, noteTabVisible) {
     if (eventType === "one") {
-        return ONE_TO_ONE_NAV_ITEMS;
+        return noteTabVisible ? [...ONE_TO_ONE_NAV_ITEMS, NOTE_NAV_ITEM] : ONE_TO_ONE_NAV_ITEMS;
     }
     return gameTabVisible ? [...WINE_NAV_ITEMS, GAME_NAV_ITEM] : WINE_NAV_ITEMS;
 }
 
 function BottomNav() {
     const { url, props } = usePage();
-    const navItems = navItemsFor(props.eventType, props.gameTabVisible);
+    const navItems = navItemsFor(props.eventType, props.gameTabVisible, props.noteTabVisible);
     const sharedUnread = props.unreadCount ?? 0;
     const memberId = props.auth?.user?.id ?? null;
 
     // 서버에서 내려온 안읽음 수를 기준으로, 소켓 수신 시 실시간 증가시킨다.
     const [unreadCount, setUnreadCount] = useState(sharedUnread);
-    const onChatsPage = url.startsWith("/chats");
+    // 메시지함(/chats)과 어필(/notes)은 같은 메시지 데이터를 쓰므로 안읽음 뱃지를 함께 다룬다.
+    const onChatsPage = url.startsWith("/chats") || url.startsWith("/notes");
 
     // 페이지 이동(Inertia)으로 shared prop 이 갱신되면 동기화.
     useEffect(() => {
@@ -350,7 +362,7 @@ function BottomNav() {
                         const active = url.startsWith(item.href);
                         const Icon = item.icon;
                         const badge =
-                            item.href === "/chats"
+                            item.href === "/chats" || item.href === "/notes"
                                 ? unreadCount
                                 : item.href === "/requests"
                                   ? replyIds.size

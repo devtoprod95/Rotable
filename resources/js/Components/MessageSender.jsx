@@ -64,7 +64,7 @@ function PartnerRow({ member, tone, onSelect, onDetail, disabled }) {
 }
 
 /** 메시지 전달 모달 (세로 정중앙, 익명 안내 포함) */
-export function SendModal({ target, tone, remaining, onClose, onSent }) {
+export function SendModal({ target, tone, remaining, onClose, onSent, endpoint = '/chats/messages', only = ['received', 'sent', 'sendLimit', 'flash'], anonymous = true, title = '메시지 전달' }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         receiver_id: target?.id ?? '',
         body: '',
@@ -85,11 +85,11 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
 
     function submit(e) {
         e.preventDefault();
-        post('/chats/messages', {
+        post(endpoint, {
             // SPA 부분 갱신: 전체 페이지 재요청/깜빡임 없이 필요한 prop 만 교체한다.
             preserveScroll: true,
             preserveState: true,
-            only: ['received', 'sent', 'sendLimit', 'flash'],
+            only,
             onSuccess: () => {
                 reset('body');
                 setConfirming(false);
@@ -110,7 +110,7 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-extrabold">메시지 전달</h2>
+                    <h2 className="text-lg font-extrabold">{title}</h2>
                     <button
                         type="button"
                         onClick={onClose}
@@ -127,11 +127,15 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
                     <span className="text-xs text-gray-400">님에게</span>
                 </div>
 
-                {/* 익명 전송 안내 */}
+                {/* 전송 안내 (익명 여부에 따라 문구가 다르다) */}
                 <div className="mt-3 flex items-start gap-2 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs leading-relaxed text-primary-700">
-                    <span className="text-sm">🙈</span>
+                    <span className="text-sm">{anonymous ? '🙈' : '💌'}</span>
                     <span>
-                        메시지는 <b>익명</b>으로 전달돼요. 상대방에게 내 이름/프로필은 보이지 않아요.
+                        {anonymous ? (
+                            <>메시지는 <b>익명</b>으로 전달돼요. 상대방에게 내 이름/프로필은 보이지 않아요.</>
+                        ) : (
+                            <>어필에는 <b>내 번호표가 함께 보여요</b>.</>
+                        )}
                         {typeof remaining === 'number' && (
                             <>
                                 <br />
@@ -212,7 +216,7 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
                                 disabled={processing}
                                 className="flex-[2] rounded-full bg-primary py-3 text-sm font-bold text-white transition hover:bg-primary-600 disabled:opacity-60"
                             >
-                                {processing ? '전달 중…' : '익명으로 전달하기'}
+                                {processing ? '전달 중…' : (anonymous ? '익명으로 전달하기' : '전달하기')}
                             </button>
                         </div>
                     </form>
@@ -227,7 +231,21 @@ export function SendModal({ target, tone, remaining, onClose, onSent }) {
  * 메시지 보내기 영역 (이성 회원 리스트 + 전달 모달).
  * Home(기록)과 Chats(메시지함)에서 공통으로 사용한다.
  */
-export default function MessageSender({ partners = [], partnerGender, sendLimit, canSend = true, onSent }) {
+export default function MessageSender({
+    partners = [],
+    partnerGender,
+    sendLimit,
+    canSend = true,
+    onSent,
+    // 아래는 기본값이 기존 "익명 메시지" 동작이다. 어필(1:1)처럼 다른 용도는 값을 바꿔 쓴다.
+    endpoint = '/chats/messages',
+    only = ['received', 'sent', 'sendLimit', 'flash'],
+    anonymous = true,
+    heading = '메시지 보내기',
+    description = '마음에 드는 상대에게 익명으로 메시지를 전달해보세요.',
+    remainingLabel = '남은 전송 횟수',
+    limitText = null,
+}) {
     const tone = partnerGender === 'F' ? 'female' : 'male';
     const [target, setTarget] = useState(null);
     // 상대 프로필 상세 모달 대상 (null 이면 닫힘)
@@ -240,7 +258,7 @@ export default function MessageSender({ partners = [], partnerGender, sendLimit,
     if (!canSend) {
         return (
             <section>
-                <h2 className="text-lg font-extrabold">메시지 보내기</h2>
+                <h2 className="text-lg font-extrabold">{heading}</h2>
                 <div className="mt-3 flex min-h-[280px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-12 text-center">
                     <span className="text-4xl">🔒</span>
                     <p className="text-base font-bold text-secondary-700">지금은 메시지를 보낼 수 없어요</p>
@@ -256,7 +274,7 @@ export default function MessageSender({ partners = [], partnerGender, sendLimit,
         <section>
             <div>
                 <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-lg font-extrabold">메시지 보내기</h2>
+                    <h2 className="text-lg font-extrabold">{heading}</h2>
                     {sendLimit && (
                         <span
                             className={
@@ -264,18 +282,18 @@ export default function MessageSender({ partners = [], partnerGender, sendLimit,
                                 (limitReached ? 'bg-gray-100 text-gray-400' : 'bg-primary/10 text-primary')
                             }
                         >
-                            남은 전송 횟수 {remaining}/{sendLimit.max}회
+                            {remainingLabel} {remaining}/{sendLimit.max}회
                         </span>
                     )}
                 </div>
                 <p className="mt-1.5 text-sm text-gray-500">
-                    마음에 드는 상대에게 익명으로 메시지를 전달해보세요.
+                    {description}
                 </p>
             </div>
 
             {limitReached && (
                 <div className="mt-3 rounded-xl border border-dashed border-gray-200 bg-gray-50 p-3 text-center text-xs font-medium text-gray-500">
-                    전송 가능한 횟수({sendLimit.max}회)를 모두 사용했어요.
+                    {limitText ?? `전송 가능한 횟수(${sendLimit.max}회)를 모두 사용했어요.`}
                 </div>
             )}
 
@@ -304,6 +322,10 @@ export default function MessageSender({ partners = [], partnerGender, sendLimit,
                 remaining={remaining}
                 onClose={() => setTarget(null)}
                 onSent={onSent}
+                endpoint={endpoint}
+                only={only}
+                anonymous={anonymous}
+                title={anonymous ? '메시지 전달' : heading}
             />
 
             {/* 상대 프로필 상세 모달 (메시지 리스트는 턴/테이블 맥락이 없으므로 context 생략) */}

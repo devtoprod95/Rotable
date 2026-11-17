@@ -53,6 +53,9 @@ class HandleInertiaRequests extends Middleware
                 \App\Models\EventRound::STATUS_STARTED,
             ], true);
 
+        // 어필 탭 노출 조건: 1:1 소개팅이면 항상 보인다. (이용은 종료(X) 뒤에만 가능 — 화면에서 안내)
+        $noteTabVisible = $event !== null && $event->type === \App\Models\EventRound::TYPE_ONE;
+
         return [
             ...parent::share($request),
             'auth' => [
@@ -70,6 +73,8 @@ class HandleInertiaRequests extends Middleware
             'eventType' => $event?->type,
             // 프론트 nav 분기용 - 게임 탭을 보여줄지 여부. (서버에서 판정)
             'gameTabVisible' => $gameTabVisible,
+            // 프론트 nav 분기용 - 어필 탭(1:1)을 보여줄지 여부.
+            'noteTabVisible' => $noteTabVisible,
             // 하단 nav 메시지함 뱃지용 - 나에게 온 안읽은 메시지 개수.
             'unreadCount' => fn () => $member
                 ? \App\Models\Message::where('receiver_id', $member->id)->whereNull('read_at')->count()

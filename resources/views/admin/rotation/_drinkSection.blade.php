@@ -2,6 +2,9 @@
      필요한 값: $event (drinks[withCount members] · members 로드), $memberTableNos (회원 id => 기준 테이블 번호) --}}
         @if ($event->isOneToOne())
             @php
+                // 음료별 현황 카드는 가나다(이름) 순. DB 정렬 규칙(콜레이션)에 기대지 않고 PHP 에서 한 번 더 정렬한다.
+                // (한글 음절은 유니코드 순서가 가나다 순과 같다)
+                $drinksByName     = $event->drinks->sortBy(fn ($d) => $d->name, SORT_STRING)->values();
                 $drinkNoneMembers = $event->members->whereNull('event_drink_id');
                 $drinkMembersById = $event->members->whereNotNull('event_drink_id')->groupBy('event_drink_id');
                 // 음료 전달 현황: 음료를 고른 사람 중 전달 완료/대기 인원
@@ -93,7 +96,7 @@
                                 <label class="form-label mb-1">선택 현황</label>
                                 <div class="text-muted mb-2" style="font-size:0.85em;"><i class="ti ti-hand-finger me-1"></i>음료를 가져다준 사람을 누르면 전달 완료로 체크돼요. 다시 누르면 해제돼요.</div>
                                 <div class="row g-2">
-                                @forelse ($event->drinks as $drink)
+                                @forelse ($drinksByName as $drink)
                                     <div class="col-12 col-xl-6">
                                     <div class="border rounded p-2 h-100">
                                         <div class="d-flex align-items-center justify-content-between">

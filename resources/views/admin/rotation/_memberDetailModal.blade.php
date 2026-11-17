@@ -28,11 +28,8 @@
     /* Tabler 의 .alert 는 display:flex 라 자식 div 가 가로(열)로 늘어선다 → block 으로 바꿔 한 행에 한 문장 */
     #memberDetailModal .member-edit-notes{ display:block !important; font-size:.92rem; line-height:1.7; }
     #memberDetailModal .member-edit-hint{ font-size:.88rem; line-height:1.65; color:#495057; }
-    /* 모바일: 우측 하단 "요청" 플로팅 버튼(.ar-fab)이 모달 하단 버튼을 가리지 않게 모달이 열려 있는 동안 숨기고,
-       하단 버튼은 홈 인디케이터(safe area)만큼 띄운다. */
+    /* 모바일: 하단 버튼은 홈 인디케이터(safe area)만큼 띄운다. (요청 플로팅 버튼은 모바일에서 전역으로 숨김) */
     @media (max-width: 767.98px){
-        body.member-detail-open .ar-fab,
-        body.member-detail-open .ar-panel{ display:none !important; }
         #memberDetailModal .modal-footer{ padding-bottom:calc(.75rem + env(safe-area-inset-bottom)); }
     }
 </style>
@@ -368,11 +365,6 @@
             }).always(function(){ $btn.prop('disabled', false); });
         }
         $(function(){
-            var el = document.getElementById('memberDetailModal');
-            if(el){
-                el.addEventListener('show.bs.modal', function(e){ if(e.target === el){ document.body.classList.add('member-detail-open'); } });
-                el.addEventListener('hidden.bs.modal', function(e){ if(e.target === el){ document.body.classList.remove('member-detail-open'); } });
-            }
             $('#memberDetail-editBtn').on('click', startEdit);
             $('#memberDetail-cancelBtn').on('click', function(){ setMode(false); });
             $('#memberDetail-saveBtn').on('click', save);

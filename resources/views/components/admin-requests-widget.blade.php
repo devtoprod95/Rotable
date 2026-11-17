@@ -38,6 +38,11 @@
         box-shadow: 0 12px 40px rgba(0,0,0,.25);
     }
     .ar-panel.show { display: flex; }
+    /* 모바일(768px 미만)에서는 플로팅 버튼/패널을 숨긴다. 화면 하단 버튼·모달을 가리기 때문.
+       요청 확인은 행사 상세 · 로테이션 진행의 [요청] 버튼(요청 모달)으로 한다. */
+    @media (max-width: 767.98px) {
+        .ar-fab, .ar-panel { display: none !important; }
+    }
     .ar-panel-head { padding: 16px 18px; border-bottom: 1px solid #e9ecef; }
     .ar-panel-body { overflow-y: auto; padding: 14px; flex: 1; }
     .ar-item { border: 1px solid #e9ecef; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }

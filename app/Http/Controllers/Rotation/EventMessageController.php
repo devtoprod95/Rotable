@@ -21,7 +21,7 @@ class EventMessageController extends RotationBaseController
     }
 
     /**
-     * 행사 메시지 목록 (Tabulator ajax).
+     * 행사 메시지 목록 (메시지 조회 모달 — page/size 페이지 단위 조회).
      */
     public function eventMessageList(int $id): JsonResponse
     {

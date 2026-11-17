@@ -2,6 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import MessageSender from '@/Components/MessageSender';
+import Placeholder from '@/Components/Placeholder';
 import useRealtimeChat from '@/useRealtimeChat';
 
 /** 받은 어필 한 건 (보낸 사람 번호표를 보여 준다) */
@@ -108,23 +109,27 @@ export default function Notes() {
     // 매칭이 종료되기 전에는 이용할 수 없다. (탭은 늘 보이고, 종료되면 이 화면이 자동으로 다시 열린다)
     if (!available) {
         return (
-            <AppLayout>
+            <AppLayout center>
                 <Head title="Rotable" />
-                <div className="min-h-full bg-gray-50 px-4 py-5">
-                    <h1 className="text-xl font-extrabold">어필 💌</h1>
-                    <div className="mt-4 flex min-h-[320px] flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-12 text-center">
-                        <span className="text-4xl">🔒</span>
-                        <p className="text-base font-bold text-secondary-700">아직 어필할 수 없어요</p>
-                        <p className="text-xs leading-relaxed text-gray-500">
-                            어필은 <b>매칭이 종료된 뒤</b>에 이용할 수 있어요.
-                            <br />
-                            매칭 결과를 확인한 뒤, 이어지지 않은 상대에게 마음을 전해보세요.
-                        </p>
-                    </div>
+                <div className="flex w-full flex-col bg-gray-50 p-4">
+                    {/* 매칭 결과 화면의 "아직 열리지 않음" 안내와 같은 모양으로, 화면 정중앙에 둔다. */}
+                    <Placeholder
+                        icon="🔒"
+                        title="아직 어필할 수 없어요"
+                        desc={
+                            <>
+                                어필은 <b>매칭이 종료된 뒤</b>에 이용할 수 있어요.
+                                <br />
+                                매칭 결과를 확인한 뒤,
+                                <br />
+                                이어지지 않은 상대에게 마음을 전해보세요.
+                            </>
+                        }
+                    />
 
                     {/* 관리자가 보낸 메시지는 종료 전에도 볼 수 있다 */}
                     {received.length > 0 && (
-                        <div className="mt-5">
+                        <div className="mt-6">
                             <h2 className="text-base font-extrabold">받은 메시지</h2>
                             <div className="mt-2 space-y-2.5">
                                 {received.map((n) => (

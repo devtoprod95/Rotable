@@ -68,6 +68,7 @@
         .checkin-row .ck-actions{ display:grid; grid-template-columns:1fr 1fr; }
         .checkin-row .ck-actions .btn{ width:100%; min-height:42px; margin-left:0; }
         .checkin-row .ck-actions .btn-checkin-toggle{ grid-column:1 / -1; }
+        .checkin-row .ck-actions.is-odd .btn:last-child{ grid-column:1 / -1; }
     }
 </style>
 
@@ -411,7 +412,8 @@
             if(times.length){ info += `<div><dt>시각</dt><dd>${times.join(' · ')}</dd></div>`; }
 
             // ③ 버튼: 체크인/취소(주요) · 프로필 · 번호·테이블(체크인 후, 입장등록 전) · 삭제(미도착일 때만)
-            var toggleBtn = inState
+            // 입장등록을 마친 사람은 체크인 취소가 막혀 있으므로(서버 거부) 버튼을 보이지 않는다.
+            var toggleBtn = (inState && r.registered) ? '' : inState
                 ? `<button type="button" class="btn btn-sm btn-outline-warning btn-checkin-toggle" data-id="${r.id}"`
                   + ` aria-label="${esc(nickname)} 체크인 취소"><i class="ti ti-arrow-back-up me-1"></i>체크인 취소</button>`
                 : `<button type="button" class="btn btn-sm btn-success btn-checkin-toggle" data-id="${r.id}"`
@@ -426,6 +428,9 @@
                   + ` data-id="${r.id}" data-name="${esc(nickname)}" aria-label="${esc(nickname)} 명단에서 삭제">`
                   + `<i class="ti ti-trash me-1"></i>삭제</button>`;
 
+            // 모바일 2열 버튼 줄: 보조 버튼(프로필·번호·테이블·삭제)이 홀수면 마지막 버튼을 한 줄 전체로 (혼자 반쪽 차지 방지)
+            var secondaryCount = [profBtn, ticketBtn, delBtn].filter(function(b){ return b; }).length;
+
             return `<div class="list-group-item checkin-row ${stateCls}"`
                 +      ` role="button" tabindex="0" data-id="${r.id}"`
                 +      ` aria-pressed="${inState ? 'true' : 'false'}"`
@@ -435,7 +440,7 @@
                 +     `<div class="ck-status">${status}</div>`
                 +   `</div>`
                 +   `<dl class="ck-info">${info}</dl>`
-                +   `<div class="ck-actions">${toggleBtn}${profBtn}${ticketBtn}${delBtn}</div>`
+                +   `<div class="ck-actions${secondaryCount % 2 === 1 ? ' is-odd' : ''}">${toggleBtn}${profBtn}${ticketBtn}${delBtn}</div>`
                 + `</div>`;
         }
 

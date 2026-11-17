@@ -270,7 +270,7 @@ class MatchService
     {
         // 이 회원(memberId)을 지목한 투표들.
         $votes = Vote::query()
-            ->with(['voter:id,name,gender,platform,phone,birth_year,job,height'])
+            ->with(['voter:id,name,gender,platform,phone,birth_year,job,height,region'])
             ->where('event_id', $eventId)
             ->where('target_id', $memberId)
             ->orderByDesc('id')
@@ -302,6 +302,7 @@ class MatchService
                 'birth_year' => $birthYear,
                 'age'        => $birthYear ? ($currentYear - (int) $birthYear + 1) : null,
                 'height'     => $voter?->height,
+                'region'     => $voter?->region,
                 'is_mutual'  => in_array((int) $vote->voter_id, $myTargets, true),
                 'voted_at'   => $vote->created_at?->toIso8601String(),
             ];
@@ -328,7 +329,7 @@ class MatchService
     {
         // 이 회원(memberId)이 지목한 투표들.
         $votes = Vote::query()
-            ->with(['target:id,name,gender,platform,phone,birth_year,job,height'])
+            ->with(['target:id,name,gender,platform,phone,birth_year,job,height,region'])
             ->where('event_id', $eventId)
             ->where('voter_id', $memberId)
             ->orderByDesc('id')
@@ -360,6 +361,7 @@ class MatchService
                 'birth_year' => $birthYear,
                 'age'        => $birthYear ? ($currentYear - (int) $birthYear + 1) : null,
                 'height'     => $target?->height,
+                'region'     => $target?->region,
                 'is_mutual'  => in_array((int) $vote->target_id, $votersOfMe, true),
                 'voted_at'   => $vote->created_at?->toIso8601String(),
             ];

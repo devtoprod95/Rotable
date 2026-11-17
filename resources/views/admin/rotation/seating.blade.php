@@ -15,6 +15,24 @@
     /* 열린 셀렉트를 품은 카드가 형제 카드 위로 오도록 */
     .card:has(.choices.is-open) { position: relative; z-index: 1080; }
 
+    /* 테이블 카드의 사람 칸: 큰 "N호" + 아래 닉네임(줄바꿈 허용, 말줄임 없음) + 년생·직업 */
+    .seat-person { display:flex; align-items:flex-start; gap:.45rem; padding:.4rem .5rem; border-radius:10px; margin-bottom:.35rem; }
+    .seat-person.is-m { background:#e7f1ff; } .seat-person.is-f { background:#ffeef4; }
+    .seat-person .seat-no { flex:0 0 auto; min-width:2.6rem; text-align:center; font-weight:800; font-size:1.1rem; line-height:1.2; border-radius:8px; padding:.15rem .25rem; color:#fff; }
+    .seat-person.is-m .seat-no { background:#206bc4; } .seat-person.is-f .seat-no { background:#d6336c; }
+    .seat-person .seat-meta { flex:1 1 auto; min-width:0; line-height:1.3; }
+    .seat-person .seat-nick { display:block; font-weight:700; font-size:.82rem; color:#343a40; overflow-wrap:anywhere; }
+    .seat-person .seat-info { display:block; font-size:.74rem; color:#6c757d; overflow-wrap:anywhere; }
+    .seat-col-head { display:flex; align-items:center; justify-content:center; gap:.3rem; margin-bottom:.4rem; font-weight:700; font-size:.85rem; }
+    /* PC(992px↑): 칸이 좁아 닉네임이 단어마다 줄바꿈돼 들쭉날쭉해 보이므로 한 줄로 두고 넘치면 말줄임.
+       번호(N호)는 왼쪽 배지로 따로 있어 잘리지 않는다. 전체 내용은 마우스를 올리면(title) 보인다. */
+    @media (min-width: 992px) {
+        .seat-person { align-items:center; padding:.3rem .45rem; margin-bottom:.3rem; }
+        .seat-person .seat-no { font-size:1rem; min-width:2.4rem; }
+        .seat-person .seat-nick, .seat-person .seat-info { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    }
+    .seat-table-no { font-size:1.15rem; font-weight:800; }
+
     /* 칩 제거(x) 버튼: 클릭 영역을 넓히고 hover 시 배경 피드백 */
     .seat-chips .chip-remove { transition: background-color .12s ease; cursor: pointer; }
     .seat-chips .chip-remove:hover { background-color: rgba(214, 57, 57, 0.15); }
@@ -242,6 +260,7 @@
         let isOneToOne = false;  // 1:1 로테이션 행사 여부 — 마지막 턴 '매칭 종료' 버튼/문구 분기
 
         // 성별 색상 구분: 남성=파랑(blue), 여성=핑크(pink)
+        function escHtml(v){ return $('<div>').text(v == null ? '' : v).html(); }
         function genderBadgeClass(g){ return g === 'F' ? 'bg-pink-lt' : 'bg-blue-lt'; }
         function genderLabel(g){ return g === 'F' ? '여' : '남'; }
 
@@ -496,36 +515,41 @@
                 var females = t.members.filter(function(m){ return m.gender === 'F'; });
                 var maleN = males.length, femaleN = females.length;
 
-                // 칩 1개 HTML
+                // 사람 1명 칸: 큰 "N호" · 닉네임(플랫폼) · 년생·직업. 라벨은 말줄임하지 않고 줄바꿈한다.
                 function chip(m){
                     let info = [];
                     if(m.birth_year){ info.push(String(m.birth_year).slice(-2) + '년생'); }
                     if(m.job){ info.push(m.job); }
-                    let infoText = info.length
-                        ? ` <span style="font-weight:400;opacity:0.7;font-size:0.82em;">${info.join(' · ')}</span>`
-                        : '';
+                    // 라벨 `닉네임(플랫폼)_N호` → 닉네임 부분만 (번호는 왼쪽 큰 숫자로 따로 보여준다)
+                    let label = String(m.label || '');
+                    let nick  = label.replace(/_?\s*\d+호$/, '').trim();
+                    if(nick === label || nick === ''){ nick = ''; }
                     let removeBtn = isBaseView
-                        ? `<a href="#" class="chip-remove d-inline-flex align-items-center justify-content-center text-danger"
-                                   data-seating-id="${m.seating_id}" title="제거"
-                                   style="width:1.3rem;height:1.3rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:0.9rem;line-height:1;"></i></a>`
+                        ? `<a href="#" class="chip-remove d-inline-flex align-items-center justify-content-center text-danger flex-shrink-0"
+                                   data-seating-id="${m.seating_id}" title="제거" aria-label="${escHtml(m.name)}호 자리에서 빼기"
+                                   style="width:1.6rem;height:1.6rem;border-radius:50%;text-decoration:none;"><i class="ti ti-x" style="font-size:1rem;line-height:1;"></i></a>`
                         : '';
-                    return `<span class="badge ${genderBadgeClass(m.gender)} mb-1 d-inline-flex align-items-center gap-1 py-1 ps-2 pe-1" style="max-width:100%;">
-                                <span class="text-truncate">${m.label || (m.name + "호")}${infoText}</span>
+                    let tip = [m.label || (m.name + '호')].concat(info).join(' · ');
+                    return `<div class="seat-person ${m.gender === 'F' ? 'is-f' : 'is-m'}" title="${escHtml(tip)}">
+                                <span class="seat-no">${escHtml(m.name)}<small style="font-size:.7em;font-weight:700;">호</small></span>
+                                <span class="seat-meta">
+                                    ${nick ? `<span class="seat-nick">${escHtml(nick)}</span>` : ''}
+                                    ${info.length ? `<span class="seat-info">${escHtml(info.join(' · '))}</span>` : ''}
+                                </span>
                                 ${removeBtn}
-                            </span>`;
+                            </div>`;
                 }
 
                 // 한 컬럼(남 또는 여) HTML — 헤더(성별·인원) + 칩 세로 나열
                 function genderColumn(label, badgeCls, list){
-                    var chipsHtml = list.length
-                        ? list.map(chip).join('')
-                        : '<span class="text-muted" style="font-size:0.85em;">없음</span>';
+                    var sorted = list.slice().sort(function(a, b){ return (parseInt(a.name, 10) || 0) - (parseInt(b.name, 10) || 0); });
+                    var chipsHtml = sorted.length
+                        ? sorted.map(chip).join('')
+                        : '<div class="text-muted text-center" style="font-size:0.85em;">없음</div>';
                     return `
                         <div class="col-6">
-                            <div class="d-flex align-items-center justify-content-center gap-1 mb-2">
-                                <span class="badge ${badgeCls}">${label} ${list.length}</span>
-                            </div>
-                            <div class="d-flex flex-column align-items-stretch gap-0 seat-chips">${chipsHtml}</div>
+                            <div class="seat-col-head"><span class="badge ${badgeCls}">${label}</span><span>${list.length}명</span></div>
+                            <div class="seat-chips">${chipsHtml}</div>
                         </div>`;
                 }
 
@@ -539,11 +563,11 @@
                                 + `<span class="badge bg-pink-lt ms-1">여 ${femaleN}</span>`;
 
                 let card = `
-                    <div class="col-md-4 col-sm-6">
+                    <div class="col-12 col-md-6 col-xl-4">
                         <div class="card h-100">
                             <div class="card-header py-2 d-flex align-items-center flex-wrap gap-1">
-                                <strong>${t.table_no}번 테이블</strong>
-                                <span class="text-muted ms-1">(${t.members.length}명)</span>
+                                <span class="seat-table-no">${t.table_no}번 테이블</span>
+                                <span class="text-muted ms-1">${t.members.length}명</span>
                                 <span class="ms-auto">${ratioBadges}</span>
                             </div>
                             <div class="card-body py-2">

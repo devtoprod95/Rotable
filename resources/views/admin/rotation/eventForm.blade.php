@@ -34,29 +34,33 @@
     .member-gender-tabs .btn{ min-height:44px; font-weight:700; font-size:1rem; }
     @media (min-width: 768px){ .member-gender-tabs{ max-width:420px; } }
 
-    /* 참여자 표: 모바일에서는 가로 스크롤 대신 '카드형'으로 세로 재배치한다.
-       각 td 의 data-label 을 왼쪽 항목명으로 보여줘, 좁은 화면에서도 스크롤 없이 읽힌다. */
-    @media (max-width: 767.98px){
-        .members-table thead{ display:none; }
-        .members-table, .members-table tbody, .members-table tr, .members-table td{ display:block; width:100%; }
-        .members-table tr{
-            border:1px solid #e6e8eb; border-radius:12px;
-            padding:10px 12px; margin-bottom:12px; background:#fff;
-            box-shadow:0 1px 3px rgba(0,0,0,.05);
-        }
-        .members-table td{
-            border:0 !important; padding:4px 0 !important; text-align:left !important;
-            display:flex; gap:10px; align-items:flex-start;
-        }
-        .members-table td::before{
-            content: attr(data-label);
-            flex:0 0 84px; color:#8a92a0; font-weight:700; font-size:0.82rem;
-        }
-        /* 회원 정보 셀은 라벨 없이 넓게(카드 제목처럼) */
-        .members-table td.m-headcell{ display:block; border-bottom:1px solid #f1f3f5 !important; padding-bottom:8px !important; margin-bottom:4px; }
-        .members-table td.m-headcell::before{ display:none; }
-        .members-table td .d-flex.flex-column{ align-items:flex-start !important; }
-    }
+    /* 참여자 카드: ① 번호표·라벨·플랫폼·방문  ② 항목명:값  ③ 활동 숫자(누르면 목록)  ④ 버튼 */
+    .pm-grid{ display:grid; grid-template-columns:1fr; gap:.75rem; }
+    @media (min-width: 768px){ .pm-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+    @media (min-width: 1200px){ .pm-grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+    .pm-card{ display:flex; flex-direction:column; border:1px solid #e6e8eb; border-radius:14px; background:#fff; padding:.8rem .9rem; box-shadow:0 1px 3px rgba(0,0,0,.05); border-top:4px solid #206bc4; }
+    .pm-card.is-f{ border-top-color:#d6336c; }
+    .pm-head{ display:flex; align-items:flex-start; gap:.65rem; }
+    .pm-ticket{ flex:0 0 auto; width:52px; height:52px; border-radius:12px; color:#fff; background:#206bc4; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.05; }
+    .pm-card.is-f .pm-ticket{ background:#d6336c; }
+    .pm-ticket small{ font-size:.7rem; font-weight:700; opacity:.85; }
+    .pm-ticket b{ font-size:1.25rem; font-weight:800; }
+    .pm-who{ flex:1 1 auto; min-width:0; }
+    .pm-name{ font-weight:800; font-size:1rem; line-height:1.3; overflow-wrap:anywhere; }
+    .pm-info{ margin:.65rem 0 0; padding:.5rem .65rem; background:#f8f9fa; border-radius:10px; }
+    .pm-info > div{ display:flex; gap:.5rem; font-size:.86rem; line-height:1.6; }
+    .pm-info dt{ flex:0 0 52px; color:#868e96; font-weight:700; margin:0; }
+    .pm-info dd{ flex:1 1 auto; margin:0; color:#343a40; overflow-wrap:anywhere; }
+    .pm-stats{ display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:.35rem; margin-top:.6rem; }
+    .pm-stat{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.05rem; min-height:52px; padding:.3rem .2rem;
+        border:1px solid #d6e4f5; border-radius:10px; background:#f3f8ff; color:#1d4ed8; cursor:pointer; }
+    .pm-stat.is-pink{ border-color:#f6cfdc; background:#fff3f7; color:#c2255c; }
+    .pm-stat.is-yellow{ border-color:#f5e3a3; background:#fffbea; color:#9a6b00; }
+    .pm-stat:disabled{ border-color:#eceef1; background:#fafafa; color:#adb5bd; cursor:default; }
+    .pm-stat-label{ font-size:.7rem; font-weight:700; white-space:nowrap; }
+    .pm-stat-val{ font-size:1.15rem; font-weight:800; line-height:1.1; }
+    .pm-actions{ display:flex; gap:.4rem; margin-top:.6rem; }
+    .pm-actions .btn{ flex:1 1 0; min-height:40px; }
 
     /* 음료 목록 설정 (접기/펼치기) */
     .drink-setting-head{ cursor:pointer; user-select:none; min-height:48px; }
@@ -82,11 +86,6 @@
     .drink-serve-btn.is-served .drink-serve-check{ color:#fff; }
     .drink-serve-btn:disabled{ opacity:.6; }
 
-    /* 참여자 카드의 상세보기/만남 이력 버튼: 모바일에서 같은 폭으로 나란히, 터치하기 편한 높이 */
-    @media (max-width: 767.98px){
-        .members-table .member-action-btns{ width:100%; }
-        .members-table .member-action-btns .btn{ flex:1 1 0; min-height:40px; display:inline-flex; align-items:center; justify-content:center; }
-    }
 
     /* 테이블 관리 표: 엑셀(격자) 느낌 제거 — 세로 격자선 없이 일반 테이블처럼. (모바일 접기 동작은 유지) */
     #table-table.tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
@@ -531,200 +530,110 @@
                             <input type="radio" class="btn-check" name="memberGenderFilter" id="mgF" value="F" autocomplete="off">
                             <label class="btn btn-outline-pink" for="mgF">여 {{ $femaleCount }}</label>
                         </div>
-                        <div class="table-responsive">
-                            <table class="table table-vcenter card-table members-table">
-                                <thead>
-                                    <tr>
-                                        <th class="w-1">No</th>
-                                        <th style="width: 120px;">회원 정보</th>
-                                        <th class="text-center">방문 횟수</th>
-                                        <th>직업 / 키 / MBTI</th>
-                                        <th>지역 / 흡연</th>
-                                        <th class="text-center">투표<br>(보낸/받은)</th>
-                                        <th class="text-center">보낸<br>메시지</th>
-                                        <th class="text-center">보낸<br>요청수</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach ($event->members as $i => $member)
-                                        <tr data-member-row data-gender="{{ $member->gender }}">
-                                            <td data-label="No" class="d-none d-md-table-cell member-no">{{ $i + 1 }}</td>
-                                            <td class="m-headcell">
-                                                @php
-                                                    $memberData = $member->toArray();
-                                                    if ($isSuperAdmin) {
-                                                        $memberData['password'] = $member->password;
-                                                    }
-                                                    $memberData['age'] = $member->birth_year ? (now()->year - $member->birth_year + 1) : null;
-                                                    // 관리자 표기 라벨(`닉네임(플랫폼)_N호`) — 모달 제목/상세에서 그대로 쓴다.
-                                                    $memberLabel = $memberLabels[$member->id] ?? ($member->name . '호');
-                                                    $memberData['label'] = $memberLabel;
-                                                @endphp
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span class="fw-bold">{{ $memberLabel }}</span>
-                                                    @if ($member->gender === 'F')
-                                                        <span class="badge bg-pink-lt">여</span>
-                                                    @else
-                                                        <span class="badge bg-blue-lt">남</span>
+                        {{-- 참여자 카드: 모바일 1열 / 768px↑ 2열 / 1200px↑ 3열. 번호표 순(서버 정렬) --}}
+                        @php
+                            $platformLabels   = [\App\Models\Member::PLATFORM_MUNTO => '문토', \App\Models\Member::PLATFORM_FRIP => '프립'];
+                            $platformBadgeCls = [\App\Models\Member::PLATFORM_MUNTO => 'bg-orange-lt', \App\Models\Member::PLATFORM_FRIP => 'bg-cyan-lt'];
+                            $typeLabels       = \App\Models\EventRound::typeOptions();
+                            $typeBadgeCls     = [\App\Models\EventRound::TYPE_WINE => 'bg-red-lt', \App\Models\EventRound::TYPE_ONE => 'bg-purple-lt'];
+                        @endphp
+                        <div class="pm-grid">
+                            @foreach ($event->members as $member)
+                                @php
+                                    $memberData = $member->toArray();
+                                    if ($isSuperAdmin) {
+                                        $memberData['password'] = $member->password;
+                                    }
+                                    $memberData['age'] = $member->birth_year ? (now()->year - $member->birth_year + 1) : null;
+                                    // 관리자 표기 라벨(`닉네임(플랫폼)_N호`) — 모달 제목/상세에서 그대로 쓴다.
+                                    $memberLabel = $memberLabels[$member->id] ?? ($member->name . '호');
+                                    $memberData['label'] = $memberLabel;
+                                    $isFemale    = $member->gender === 'F';
+                                    $phoneRaw    = preg_replace('/\D+/', '', (string) $member->phone);
+                                    $phoneShown  = strlen($phoneRaw) === 11 ? preg_replace('/(\d{3})(\d{4})(\d{4})/', '$1-$2-$3', $phoneRaw) : $member->phone;
+                                    $profile     = array_filter([
+                                        $member->birth_year ? ($member->birth_year % 100 < 10 ? '0' : '') . ($member->birth_year % 100) . '년생 (' . (now()->year - $member->birth_year + 1) . '세)' : null,
+                                        $member->job,
+                                        $member->height ? $member->height . 'cm' : null,
+                                        $member->mbti,
+                                    ]);
+                                    $lifestyle   = array_filter([
+                                        $member->drink_capacity ? '🍶 ' . $member->drink_capacity : null,
+                                        $member->drink_frequency ? '🍻 ' . $member->drink_frequency : null,
+                                        is_null($member->has_pet) ? null : ('🐾 ' . ($member->has_pet ? '애완동물 있음' : '애완동물 없음')),
+                                        $member->friend_meet_frequency ? '👫 ' . $member->friend_meet_frequency : null,
+                                    ]);
+                                    $visitCounts = $member->visit_counts ?? [];
+                                @endphp
+                                <div class="pm-card {{ $isFemale ? 'is-f' : 'is-m' }}" data-member-row data-gender="{{ $member->gender }}">
+                                    {{-- ① 번호표 · 라벨 · 플랫폼 · 방문 횟수 --}}
+                                    <div class="pm-head">
+                                        <div class="pm-ticket"><small>{{ $isFemale ? '여' : '남' }}</small><b>{{ $member->name }}</b></div>
+                                        <div class="pm-who">
+                                            <div class="pm-name">{{ $memberLabel }}</div>
+                                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                                <span class="badge {{ $platformBadgeCls[$member->platform] ?? 'bg-secondary-lt' }}">{{ $platformLabels[$member->platform] ?? ($member->platform ?: '-') }}</span>
+                                                @foreach ($typeLabels as $typeKey => $typeLabel)
+                                                    @if (! empty($visitCounts[$typeKey]))
+                                                        <span class="badge {{ $typeBadgeCls[$typeKey] ?? 'bg-azure-lt' }}">{{ $typeLabel }} {{ $visitCounts[$typeKey] }}회</span>
                                                     @endif
-                                                </div>
-                                                {{-- 상세보기 / 만남 이력: 모바일에선 한 줄에 같은 폭으로 나란히 --}}
-                                                <div class="member-action-btns d-flex gap-2 mt-1">
-                                                    <button type="button"
-                                                            class="btn btn-sm btn-outline-azure py-1 px-3 btn-member-detail"
-                                                            data-member='@json($memberData)'>
-                                                        상세보기
-                                                    </button>
-                                                    @if ($isSuperAdmin && $member->phone)
-                                                        <a href="{{ route('admin.rotation.history.index', ['phone' => $member->phone]) }}"
-                                                           target="_blank" rel="noopener"
-                                                           class="btn btn-sm btn-outline-teal py-1 px-3">
-                                                            만남 이력
-                                                        </a>
-                                                    @endif
-                                                </div>
-                                                <div class="fw-bold" style="font-size: 0.85em;">
-                                                    {{ $member->phone ?? '-' }}
-                                                </div>
-                                                @php
-                                                    $platformLabels = [
-                                                        \App\Models\Member::PLATFORM_MUNTO => '문토',
-                                                        \App\Models\Member::PLATFORM_FRIP  => '프립',
-                                                    ];
-                                                    $platformBadgeCls = [
-                                                        \App\Models\Member::PLATFORM_MUNTO => 'bg-orange-lt',
-                                                        \App\Models\Member::PLATFORM_FRIP  => 'bg-cyan-lt',
-                                                    ];
-                                                @endphp
-                                                <div style="font-size: 0.85em;">
-                                                    <span class="badge {{ $platformBadgeCls[$member->platform] ?? 'bg-secondary-lt' }}">
-                                                        {{ $platformLabels[$member->platform] ?? $member->platform }}
-                                                    </span>
-                                                </div>
-                                                <div class="text-muted" style="font-size: 0.85em;">
-                                                    @if ($member->birth_year)
-                                                        {{ $member->birth_year }}년생 · {{ now()->year - $member->birth_year + 1 }}세
-                                                    @else
-                                                        -
-                                                    @endif
-                                                </div>
-                                                @if ($isSuperAdmin)
-                                                    <div style="font-size: 0.85em; margin-top: 2px;">
-                                                        <span class="text-red fw-bold font-monospace" style="user-select: all; cursor: text;">{{ $member->password ?? '-' }}</span>
-                                                    </div>
-                                                @endif
-                                            </td>
-                                            <td class="text-center" data-label="방문 횟수">
-                                                @php
-                                                    $visitCounts = $member->visit_counts ?? [];
-                                                    $typeLabels  = \App\Models\EventRound::typeOptions();
-                                                    // 유형별 뱃지 색상
-                                                    $typeBadgeCls = [
-                                                        \App\Models\EventRound::TYPE_WINE => 'bg-red-lt',
-                                                        \App\Models\EventRound::TYPE_ONE  => 'bg-purple-lt',
-                                                    ];
-                                                @endphp
-                                                @if (!empty($visitCounts))
-                                                    <div class="d-flex flex-column align-items-center gap-1">
-                                                        @foreach ($typeLabels as $typeKey => $typeLabel)
-                                                            @if (!empty($visitCounts[$typeKey]))
-                                                                <span class="badge {{ $typeBadgeCls[$typeKey] ?? 'bg-azure-lt' }}">{{ $typeLabel }} {{ $visitCounts[$typeKey] }}회</span>
-                                                            @endif
-                                                        @endforeach
-                                                    </div>
-                                                @else
-                                                    <span class="text-muted">-</span>
-                                                @endif
-                                            </td>
-                                            <td data-label="직업/키/MBTI">
-                                                <div>{{ $member->job ?? '-' }}</div>
-                                                <div class="text-muted" style="font-size: 0.85em;">
-                                                    {{ $member->height ? $member->height . 'cm' : '-' }}
-                                                    @if ($member->mbti)
-                                                        · {{ $member->mbti }}
-                                                    @endif
-                                                </div>
-                                            </td>
-                                            <td data-label="지역/흡연">
-                                                <div>{{ $member->region ?? '-' }}</div>
-                                                <div style="font-size: 0.85em;">
-                                                    @if (is_null($member->is_smoker))
-                                                        <span class="text-muted">-</span>
-                                                    @elseif ($member->is_smoker)
-                                                        <span class="badge bg-red-lt">흡연</span>
-                                                    @else
-                                                        <span class="badge bg-green-lt">비흡연</span>
-                                                    @endif
-                                                </div>
-                                                {{-- 생활 습관 (주량 / 음주 횟수 / 애완동물 / 친구 약속) --}}
-                                                <div class="text-muted" style="font-size: 0.8em;">
-                                                    @if ($member->drink_capacity || $member->drink_frequency)
-                                                        🍶 {{ $member->drink_capacity ?? '-' }} · 🍻 {{ $member->drink_frequency ?? '-' }}
-                                                    @endif
-                                                </div>
-                                                <div class="text-muted" style="font-size: 0.8em;">
-                                                    @if (! is_null($member->has_pet))
-                                                        🐾 {{ $member->has_pet ? '애완동물 있음' : '애완동물 없음' }}
-                                                    @endif
-                                                    @if ($member->friend_meet_frequency)
-                                                        · 👫 {{ $member->friend_meet_frequency }}
-                                                    @endif
-                                                </div>
-                                            </td>
-                                            <td class="text-center" data-label="투표(보낸/받은)">
-                                                <div class="d-flex flex-column align-items-center gap-1">
-                                                    {{-- 보낸 투표: 이 회원이 선택한 상대 (VotedModal) --}}
-                                                    @if ($member->cast_votes_count > 0)
-                                                        <button type="button"
-                                                                class="btn btn-sm btn-outline-blue btn-voted"
-                                                                data-member-id="{{ $member->id }}"
-                                                                data-member-label="{{ $memberLabel }}">
-                                                            보낸 {{ $member->cast_votes_count }}표
-                                                        </button>
-                                                    @else
-                                                        <span class="text-muted" style="font-size:0.85em;">보낸 0표</span>
-                                                    @endif
-                                                    {{-- 받은 투표: 이 회원을 선택한 사람 (VotersModal) --}}
-                                                    @if ($member->received_votes_count > 0)
-                                                        <button type="button"
-                                                                class="btn btn-sm btn-outline-pink btn-voters"
-                                                                data-member-id="{{ $member->id }}"
-                                                                data-member-label="{{ $memberLabel }}">
-                                                            받은 {{ $member->received_votes_count }}표
-                                                        </button>
-                                                    @else
-                                                        <span class="text-muted" style="font-size:0.85em;">받은 0표</span>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                            <td class="text-center" data-label="보낸 메시지">
-                                                @if ($member->sent_messages_count > 0)
-                                                    <button type="button"
-                                                            class="btn btn-outline-primary btn-sent-messages"
-                                                            data-member-id="{{ $member->id }}"
-                                                            data-member-label="{{ $memberLabel }}">
-                                                        {{ $member->sent_messages_count }}건
-                                                    </button>
-                                                @else
-                                                    <span class="text-muted">0건</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center" data-label="보낸 요청수">
-                                                @if ($member->admin_requests_count > 0)
-                                                    <button type="button"
-                                                            class="btn btn-outline-yellow btn-sent-requests"
-                                                            data-member-id="{{ $member->id }}"
-                                                            data-member-label="{{ $memberLabel }}">
-                                                        {{ $member->admin_requests_count }}건
-                                                    </button>
-                                                @else
-                                                    <span class="text-muted">0건</span>
-                                                @endif
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- ② 정보: 항목명 : 값 --}}
+                                    <dl class="pm-info">
+                                        <div><dt>프로필</dt><dd>{{ $profile ? implode(' · ', $profile) : '-' }}</dd></div>
+                                        <div><dt>지역</dt><dd>{{ $member->region ?: '-' }}
+                                            @if (! is_null($member->is_smoker))
+                                                <span class="badge {{ $member->is_smoker ? 'bg-red-lt' : 'bg-green-lt' }} ms-1">{{ $member->is_smoker ? '흡연' : '비흡연' }}</span>
+                                            @endif
+                                        </dd></div>
+                                        @if ($lifestyle)
+                                            <div><dt>생활</dt><dd>{{ implode(' · ', $lifestyle) }}</dd></div>
+                                        @endif
+                                        <div><dt>핸드폰</dt><dd>
+                                            @if ($phoneRaw)
+                                                <a href="tel:{{ $phoneRaw }}" class="text-reset fw-semibold">{{ $phoneShown }}</a>
+                                            @else
+                                                -
+                                            @endif
+                                        </dd></div>
+                                        @if ($isSuperAdmin)
+                                            <div><dt>비밀번호</dt><dd><span class="text-red fw-bold font-monospace" style="user-select:all; cursor:text;">{{ $member->password ?? '-' }}</span></dd></div>
+                                        @endif
+                                    </dl>
+
+                                    {{-- ③ 활동: 누르면 해당 목록 모달 (0건은 비활성) --}}
+                                    <div class="pm-stats">
+                                        <button type="button" class="pm-stat btn-voted" data-member-id="{{ $member->id }}" data-member-label="{{ $memberLabel }}" @disabled($member->cast_votes_count < 1)>
+                                            <span class="pm-stat-label">보낸 투표</span><span class="pm-stat-val">{{ $member->cast_votes_count }}</span>
+                                        </button>
+                                        <button type="button" class="pm-stat is-pink btn-voters" data-member-id="{{ $member->id }}" data-member-label="{{ $memberLabel }}" @disabled($member->received_votes_count < 1)>
+                                            <span class="pm-stat-label">받은 투표</span><span class="pm-stat-val">{{ $member->received_votes_count }}</span>
+                                        </button>
+                                        <button type="button" class="pm-stat btn-sent-messages" data-member-id="{{ $member->id }}" data-member-label="{{ $memberLabel }}" @disabled($member->sent_messages_count < 1)>
+                                            <span class="pm-stat-label">메시지</span><span class="pm-stat-val">{{ $member->sent_messages_count }}</span>
+                                        </button>
+                                        <button type="button" class="pm-stat is-yellow btn-sent-requests" data-member-id="{{ $member->id }}" data-member-label="{{ $memberLabel }}" @disabled($member->admin_requests_count < 1)>
+                                            <span class="pm-stat-label">요청</span><span class="pm-stat-val">{{ $member->admin_requests_count }}</span>
+                                        </button>
+                                    </div>
+
+                                    {{-- ④ 버튼 --}}
+                                    <div class="pm-actions">
+                                        <button type="button" class="btn btn-outline-azure btn-member-detail" data-member='@json($memberData)'>
+                                            <i class="ti ti-id me-1"></i>상세보기 · 수정
+                                        </button>
+                                        @if ($isSuperAdmin && $member->phone)
+                                            <a href="{{ route('admin.rotation.history.index', ['phone' => $member->phone]) }}" target="_blank" rel="noopener" class="btn btn-outline-teal">
+                                                <i class="ti ti-history me-1"></i>만남 이력
+                                            </a>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                     @endif
                 </div>
@@ -875,14 +784,11 @@
             RegisterQrModal.open({{ $event->id }}, @json($event->label));
         });
 
-        // ===== 상세: 참여자 성별 보기 (전체/남/여) — 표시 중인 행만 No 를 다시 매긴다. =====
+        // ===== 상세: 참여자 성별 보기 (전체/남/여) =====
         $('input[name="memberGenderFilter"]').on('change', function(){
             var g = $('input[name="memberGenderFilter"]:checked').val();
-            var n = 0;
-            $('.members-table tr[data-member-row]').each(function(){
-                var show = !g || $(this).data('gender') === g;
-                $(this).toggle(show);
-                if(show){ $(this).find('.member-no').text(++n); }
+            $('.pm-grid [data-member-row]').each(function(){
+                $(this).toggleClass('d-none', !!g && $(this).data('gender') !== g);
             });
         });
 

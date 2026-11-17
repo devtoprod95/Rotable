@@ -4,10 +4,38 @@
 
 @section('content')
 <style>
-    /* 행사별 신원 표: 간격을 좁게 (한눈에 많은 행사·정보 비교) */
-    .me-by-event td, .me-by-event th { padding: 4px 8px; font-size: 0.82rem; white-space: nowrap; }
-    .me-by-event .fw-bold { font-size: 0.85rem; }
-    .me-by-event .text-muted { white-space: normal; }
+    /* 만남 이력 기본 조회 — 표 대신 카드. 모바일 1열 / 768px↑ 2열 / 1200px↑ 3열 */
+    .hs-grid{ display:grid; grid-template-columns:1fr; gap:.75rem; }
+    @media (min-width: 768px){ .hs-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+    @media (min-width: 1200px){ .hs-grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+    .hs-card{ display:flex; flex-direction:column; border:1px solid #e6e8eb; border-radius:14px; background:#fff; padding:.8rem .9rem; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+    .hs-card.is-m{ border-top:4px solid #206bc4; } .hs-card.is-f{ border-top:4px solid #d6336c; }
+    .hs-card.is-mutual{ box-shadow:0 0 0 2px rgba(214,51,108,.25); }
+    .hs-head{ display:flex; align-items:flex-start; gap:.65rem; }
+    .hs-ticket{ flex:0 0 auto; width:50px; height:50px; border-radius:12px; color:#fff; background:#206bc4; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.05; }
+    .hs-card.is-f .hs-ticket{ background:#d6336c; }
+    .hs-ticket small{ font-size:.68rem; font-weight:700; opacity:.85; } .hs-ticket b{ font-size:1.2rem; font-weight:800; }
+    .hs-who{ flex:1 1 auto; min-width:0; }
+    .hs-name{ font-weight:800; line-height:1.3; overflow-wrap:anywhere; }
+    .hs-info{ margin:.6rem 0 0; padding:.5rem .65rem; background:#f8f9fa; border-radius:10px; }
+    .hs-info > div{ display:flex; gap:.5rem; font-size:.86rem; line-height:1.6; }
+    .hs-info dt{ flex:0 0 48px; color:#868e96; font-weight:700; margin:0; }
+    .hs-info dd{ flex:1 1 auto; margin:0; color:#343a40; overflow-wrap:anywhere; }
+    .hs-actions{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.4rem; margin-top:.6rem; }
+    .hs-actions .btn{ min-height:40px; padding-left:.35rem; padding-right:.35rem; white-space:nowrap; }
+    .hs-empty{ grid-column:1 / -1; text-align:center; color:#868e96; padding:2.5rem 0; }
+    /* 본인 행사별 신원 카드 */
+    .hs-me{ border:1px solid #e6e8eb; border-radius:12px; padding:.65rem .8rem; background:#fff; }
+    .hs-me-title{ font-weight:800; overflow-wrap:anywhere; }
+    .hs-me-id{ display:flex; flex-wrap:wrap; gap:.3rem; margin-top:.35rem; }
+    .hs-me-spec{ font-size:.84rem; color:#495057; margin-top:.35rem; line-height:1.55; overflow-wrap:anywhere; }
+    /* 결과 필터 줄: 모바일은 한 줄씩 전체 폭 */
+    .hs-filters{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; }
+    @media (max-width: 767.98px){
+        .hs-filters > *{ flex:1 1 100%; width:100% !important; }
+        .hs-filters .hs-filter-btns{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+        .hs-filters .hs-filter-btns .btn{ width:100%; min-height:40px; }
+    }
 </style>
 <div class="row row-cards mt-2">
 
@@ -18,20 +46,17 @@
                 <h3 class="card-title mb-0"><i class="ti ti-user-search me-1"></i> 만남 이력 기본 조회</h3>
             </div>
             <div class="card-body">
-                <small class="form-hint text-muted d-block mb-3">
-                    전화번호를 입력하면, 그 사람이 <b>같은 행사에 함께 참여했던 모든 상대</b>를 보여줍니다. (전화번호 정확히 일치)
-                </small>
-                <div class="d-flex gap-2 align-items-end flex-wrap">
-                    <div style="min-width: 260px;">
-                        <label class="form-label">전화번호</label>
-                        <input type="text" class="form-control" id="phoneInput" placeholder="예: 01012345678"
-                               onkeydown="if(event.keyCode===13){ event.preventDefault(); $('#btnSearch').click(); }">
-                    </div>
-                    <div>
-                        <button type="button" class="btn btn-primary px-4" id="btnSearch">
-                            <i class="ti ti-search me-1"></i> 검색
-                        </button>
-                    </div>
+                <div class="text-muted mb-3" style="font-size:.9rem; line-height:1.7;">
+                    <div>전화번호를 입력하면 그 사람이 <b>같은 행사에 함께 참여했던 모든 상대</b>를 보여줘요.</div>
+                    <div>전화번호가 정확히 일치해야 해요. (하이픈은 넣어도 돼요)</div>
+                </div>
+                <label class="form-label" for="phoneInput">전화번호</label>
+                <div class="input-group input-group-lg">
+                    <input type="tel" class="form-control" id="phoneInput" placeholder="예: 01012345678" inputmode="numeric" autocomplete="off"
+                           onkeydown="if(event.keyCode===13){ event.preventDefault(); $('#btnSearch').click(); }">
+                    <button type="button" class="btn btn-primary px-4" id="btnSearch">
+                        <i class="ti ti-search me-1"></i> 검색
+                    </button>
                 </div>
             </div>
         </div>
@@ -55,39 +80,28 @@
     {{-- 결과 --}}
     <div class="col-12 d-none" id="resultCard">
         <div class="card">
-            <div class="card-header d-flex align-items-center gap-2 flex-wrap">
-                <h3 class="card-title mb-0 me-2"><i class="ti ti-users-group me-1"></i> 함께 참여한 상대</h3>
-                <select class="form-select form-select-sm" id="genderFilter" style="width: 110px;">
-                    <option value="opposite" selected>이성만</option>
-                    <option value="same">동성만</option>
-                </select>
-                <select class="form-select form-select-sm" id="eventFilter" style="min-width: 220px; width: auto;"></select>
-                <span class="badge bg-secondary-lt" id="partnerCount"></span>
-                <div class="d-flex gap-2 ms-auto">
-                    {{-- 선택된 행사에서 "본인"의 매칭 조회 (내가 투표/매칭한 상대) --}}
-                    <button type="button" class="btn btn-sm btn-outline-pink d-none" id="meVotedBtn">
-                        <i class="ti ti-heart me-1"></i> 내 매칭 조회
-                    </button>
-                    {{-- 선택된 행사에서 "본인"이 관리자에게 보낸 요청 (있을 때만) --}}
-                    <button type="button" class="btn btn-sm btn-outline-yellow d-none" id="myRequestBtn">
-                        <i class="ti ti-hand-stop me-1"></i> 보낸 요청 <span id="myRequestCount">0</span>건
-                    </button>
-                </div>
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h3 class="card-title mb-0"><i class="ti ti-users-group me-1"></i> 함께 참여한 상대 <span class="badge bg-secondary-lt ms-1" id="partnerCount"></span></h3>
             </div>
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table">
-                    <thead>
-                        <tr>
-                            <th>상대</th>
-                            <th class="text-center" style="width:150px;">방문 횟수</th>
-                            <th class="text-center" style="width:140px;">관계</th>
-                            <th class="text-center" style="width:120px;">매칭 조회</th>
-                            <th class="text-center" style="width:130px;">메시지</th>
-                            <th class="text-center" style="width:120px;">만남 이력</th>
-                        </tr>
-                    </thead>
-                    <tbody id="partnerTbody"></tbody>
-                </table>
+            <div class="card-body">
+                <div class="hs-filters mb-3">
+                    <select class="form-select" id="eventFilter" style="min-width:240px; width:auto;" aria-label="행사 선택"></select>
+                    <select class="form-select" id="genderFilter" style="width:120px;" aria-label="성별 보기">
+                        <option value="opposite" selected>이성만</option>
+                        <option value="same">동성만</option>
+                    </select>
+                    <div class="hs-filter-btns d-flex gap-2 ms-md-auto">
+                        {{-- 선택된 행사에서 "본인"의 매칭 조회 (내가 투표/매칭한 상대) --}}
+                        <button type="button" class="btn btn-outline-pink d-none" id="meVotedBtn">
+                            <i class="ti ti-heart me-1"></i> 내 매칭 조회
+                        </button>
+                        {{-- 선택된 행사에서 "본인"이 관리자에게 보낸 요청 (있을 때만) --}}
+                        <button type="button" class="btn btn-outline-yellow d-none" id="myRequestBtn">
+                            <i class="ti ti-hand-stop me-1"></i> 보낸 요청 <span id="myRequestCount">0</span>건
+                        </button>
+                    </div>
+                </div>
+                <div class="hs-grid" id="partnerList" aria-live="polite"></div>
             </div>
         </div>
     </div>
@@ -110,128 +124,71 @@
 
         function esc(v){ return $('<div>').text(v == null ? '' : v).html(); }
 
-        function genderBadge(g){
-            if(g === 'F'){ return '<span class="badge bg-pink-lt">여</span>'; }
-            if(g === 'M'){ return '<span class="badge bg-blue-lt">남</span>'; }
-            return '';
+        // 본인이 참여한 "행사별 신원" 카드. 행사마다 플랫폼·닉네임·번호표가 다를 수 있어 행사 단위로 보여준다.
+        //  list: [{ event:{title,type,type_label,event_time,...}, person:{platform_label,nickname,ticket,gender,...} }]
+        function ticketOf(p){
+            if(p.ticket != null && p.ticket !== ''){ return String(p.ticket); }
+            var m = /_([0-9]+)호\s*$/.exec(p.label || '');
+            return m ? m[1] : '';
         }
-
-        function platformBadge(v){
-            if(v === 'frip'){ return '<span class="badge bg-cyan-lt">프립</span>'; }
-            if(v === 'munto'){ return '<span class="badge bg-orange-lt">문토</span>'; }
-            return '';
-        }
-
-        function specLine(p){
+        function profileOf(p){
             var s = [];
-            if(p.age){ s.push(p.age + '세'); }
-            else if(p.birth_year){ s.push(p.birth_year + '년생'); }
+            if(p.birth_year){ s.push(String(p.birth_year).slice(-2) + '년생' + (p.age ? ' (' + p.age + '세)' : '')); }
+            else if(p.age){ s.push(p.age + '세'); }
             if(p.job){ s.push(esc(p.job)); }
             if(p.height){ s.push(p.height + 'cm'); }
             if(p.mbti){ s.push(esc(p.mbti)); }
-            if(p.region){ s.push(esc(p.region)); }
-            if(p.is_smoker === true){ s.push('흡연'); }
-            else if(p.is_smoker === false){ s.push('비흡연'); }
-            if(p.drink_capacity){ s.push('🍶' + esc(p.drink_capacity)); }
-            if(p.drink_frequency){ s.push('🍻' + esc(p.drink_frequency)); }
-            if(p.has_pet === true){ s.push('🐾있음'); } else if(p.has_pet === false){ s.push('🐾없음'); }
-            if(p.friend_meet_frequency){ s.push('👫' + esc(p.friend_meet_frequency)); }
             return s.join(' · ');
         }
-
-        function eventCell(e){
-            if(!e){ return '-'; }
-            var t = e.event_time ? new Date(e.event_time).toLocaleString('ko-KR') : '-';
-            return `<div class="fw-bold">${esc(e.title) || '-'}</div>`
-                 + `<div class="mt-1"><span class="badge bg-azure-lt">${esc(e.type_label) || ''}</span> `
-                 + `<span class="badge bg-secondary-lt">${esc(e.status_label) || ''}</span></div>`
-                 + `<div class="text-muted" style="font-size:0.85em;">${t}</div>`;
+        function lifestyleOf(p){
+            var s = [];
+            if(p.drink_capacity){ s.push('🍶 ' + esc(p.drink_capacity)); }
+            if(p.drink_frequency){ s.push('🍻 ' + esc(p.drink_frequency)); }
+            if(p.has_pet === true){ s.push('🐾 애완동물 있음'); } else if(p.has_pet === false){ s.push('🐾 애완동물 없음'); }
+            if(p.friend_meet_frequency){ s.push('👫 ' + esc(p.friend_meet_frequency)); }
+            return s.join(' · ');
+        }
+        function smokeBadge(p){
+            if(p.is_smoker === true){ return ' <span class="badge bg-red-lt">흡연</span>'; }
+            if(p.is_smoker === false){ return ' <span class="badge bg-green-lt">비흡연</span>'; }
+            return '';
+        }
+        function phoneHtml(v){
+            var raw = String(v || '').replace(/\D+/g, '');
+            if(!raw){ return '-'; }
+            var shown = raw.length === 11 ? raw.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : raw;
+            return '<a href="tel:' + raw + '" class="text-reset fw-semibold">' + esc(shown) + '</a>';
+        }
+        function platformName(code, fallback){
+            if(code === 'frip'){ return '프립'; }
+            if(code === 'munto'){ return '문토'; }
+            return fallback || '';
         }
 
-        function personCell(p, platform){
-            if(!p){ return '-'; }
-            var spec = specLine(p);
-            // 플랫폼명(한글): 행사별 platform 인자가 오면 그 코드로, 없으면 payload 의 platform_label.
-            var pfName;
-            if(platform !== undefined && platform !== null){
-                pfName = (platform === 'frip' ? '프립' : (platform === 'munto' ? '문토' : '-'));
-            } else {
-                pfName = p.platform_label ? esc(p.platform_label) : '-';
-            }
-            // 번호표: p.ticket 우선, 없으면 label 끝 "_N호".
-            var ticketNo = (p.ticket != null && p.ticket !== '') ? (esc(p.ticket) + '호') : '';
-            if(!ticketNo){ var mTicket = /_([0-9]+호)\s*$/.exec(p.label || ''); if(mTicket){ ticketNo = mTicket[1]; } }
-            var nickName   = p.nickname ? esc(p.nickname) : '-';
-            var genderName = p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '-');
-
-            function line(label, value){
-                return `<div style="font-size:0.85em;"><span class="text-muted">${label}:</span> <b>${value}</b></div>`;
-            }
-
-            return line('플랫폼', pfName)
-                 + line('닉네임', nickName)
-                 + line('번호표', ticketNo || '-')
-                 + line('성별', genderName)
-                 + line('전화번호', esc(p.phone || '-'))
-                 + (spec ? line('프로필', esc(spec)) : '');
-        }
-
-        // 본인이 참여한 "행사별 신원" 표. 행사마다 플랫폼·닉네임·번호표가 다를 수 있어 행사 단위로 보여준다.
-        //  list: [{ event:{title,type_label,event_time,...}, person:{platform_label,nickname,ticket,gender,...} }]
         function renderMeByEvent(list){
             if(!list || !list.length){ return ''; }
-
-            function platName(p){ return p.platform_label ? esc(p.platform_label) : '-'; }
-            function nickName(p){ return p.nickname ? esc(p.nickname) : '-'; }
-            function ticketName(p){
-                if(p.ticket != null && p.ticket !== ''){ return esc(p.ticket) + '호'; }
-                var mTicket = /_([0-9]+호)\s*$/.exec(p.label || '');
-                return mTicket ? mTicket[1] : '-';
-            }
-            function genderName(p){ return p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '-'); }
-            function ageName(p){
-                if(p.birth_year && p.age){ return p.birth_year + '년생<br><span class="text-muted">(' + p.age + '세)</span>'; }
-                if(p.birth_year){ return p.birth_year + '년생'; }
-                return p.age ? (p.age + '세') : '-';
-            }
-            function txt(v){ return (v === null || v === undefined || v === '') ? '-' : esc(v); }
-            function heightName(p){ return p.height ? (p.height + 'cm') : '-'; }
-            function smokeName(p){ return p.is_smoker === true ? '흡연' : (p.is_smoker === false ? '비흡연' : '-'); }
-
-            var rows = list.map(function(it){
+            var cards = list.map(function(it){
                 var e = it.event || {}, p = it.person || {};
                 var t = e.event_time ? new Date(e.event_time).toLocaleDateString('ko-KR') : '';
                 var typeCls = (VISIT_TYPE_BADGE && VISIT_TYPE_BADGE[e.type]) ? VISIT_TYPE_BADGE[e.type] : 'bg-azure-lt';
-                var evLabel = `<div class="fw-bold">${esc(e.title) || '행사'}</div>`
-                            + `<div class="text-muted" style="font-size:0.8em;">`
-                            + `<span class="badge ${typeCls}">${esc(e.type_label) || ''}</span> ${t}</div>`;
-                return `<tr>`
-                     + `<td>${evLabel}</td>`
-                     + `<td>${platName(p)}</td>`
-                     + `<td>${nickName(p)}</td>`
-                     + `<td class="text-center">${ticketName(p)}</td>`
-                     + `<td class="text-center">${genderName(p)}</td>`
-                     + `<td class="text-center">${ageName(p)}</td>`
-                     + `<td>${txt(p.job)}</td>`
-                     + `<td class="text-center">${heightName(p)}</td>`
-                     + `<td class="text-center">${txt(p.mbti)}</td>`
-                     + `<td>${txt(p.region)}</td>`
-                     + `<td class="text-center">${smokeName(p)}</td>`
-                     + `</tr>`;
+                var ticket = ticketOf(p);
+                var gender = p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '');
+                var pf = p.platform_label ? '<span class="badge bg-secondary-lt">' + esc(p.platform_label) + '</span>' : '';
+                var prof = profileOf(p);
+                var extra = [prof, p.region ? esc(p.region) : ''].filter(Boolean).join(' · ');
+                return '<div class="hs-me">'
+                     +   '<div class="d-flex align-items-center flex-wrap gap-1"><span class="hs-me-title">' + (esc(e.title) || '행사') + '</span>'
+                     +     '<span class="badge ' + typeCls + '">' + (esc(e.type_label) || '') + '</span>'
+                     +     '<span class="text-muted small ms-auto">' + esc(t) + '</span></div>'
+                     +   '<div class="hs-me-id">' + pf
+                     +     (p.nickname ? '<span class="badge bg-azure-lt">' + esc(p.nickname) + '</span>' : '')
+                     +     ((gender || ticket) ? '<span class="badge ' + (p.gender === 'F' ? 'bg-pink' : 'bg-blue') + ' text-white">' + gender + ' ' + (ticket ? esc(ticket) + '호' : '') + '</span>' : '')
+                     +   '</div>'
+                     +   (extra ? '<div class="hs-me-spec">' + extra + smokeBadge(p) + '</div>' : '')
+                     + '</div>';
             }).join('');
-
-            return `<div class="table-responsive"><table class="table table-sm table-vcenter mb-0 me-by-event">`
-                 + `<thead><tr>`
-                     + `<th>행사</th><th>플랫폼</th><th>닉네임</th>`
-                     + `<th class="text-center">번호표</th>`
-                     + `<th class="text-center">성별</th>`
-                     + `<th class="text-center">나이</th>`
-                     + `<th>직업</th>`
-                     + `<th class="text-center">키</th>`
-                     + `<th class="text-center">MBTI</th>`
-                     + `<th>지역</th>`
-                     + `<th class="text-center">흡연</th>`
-                 + `</tr></thead><tbody>${rows}</tbody></table></div>`;
+            return '<div class="text-muted fw-bold small mb-2">행사별 신원 <span class="fw-normal">· 행사마다 플랫폼·닉네임·번호표가 다를 수 있어요</span></div>'
+                 + '<div class="hs-grid">' + cards + '</div>';
         }
 
         // 방문 횟수 컬럼 셀: 행사 유형별 누적 방문 횟수. (예: 와인파티 3회 · 1:1 2회)
@@ -241,16 +198,6 @@
             '{{ \App\Models\EventRound::TYPE_WINE }}': 'bg-red-lt',
             '{{ \App\Models\EventRound::TYPE_ONE }}': 'bg-purple-lt',
         };
-        function visitCell(counts){
-            if(!counts || typeof counts !== 'object'){ return '<span class="text-muted">-</span>'; }
-            var badges = Object.keys(VISIT_TYPE_LABEL)
-                .filter(function(k){ return counts[k] && counts[k] > 0; })
-                .map(function(k){
-                    var cls = VISIT_TYPE_BADGE[k] || 'bg-azure-lt';
-                    return `<span class="badge ${cls} mb-1">${esc(VISIT_TYPE_LABEL[k])} ${counts[k]}회</span>`;
-                });
-            return badges.length ? `<div class="d-flex flex-column align-items-center">${badges.join('')}</div>` : '<span class="text-muted">-</span>';
-        }
 
         // 본인 요약: 참여 행사 횟수를 유형별 뱃지로 (예: 와인파티 3회 · 1:1 2회)
         function eventsBadges(countsByType, total){
@@ -310,7 +257,7 @@
             updateMyRequestBtn(evtId);
 
             if(!partners.length){
-                $('#partnerTbody').html('<tr><td colspan="7" class="text-center text-muted py-4">조건에 맞는 상대가 없습니다.</td></tr>');
+                $('#partnerList').html('<div class="hs-empty">조건에 맞는 상대가 없습니다.</div>');
                 return;
             }
 
@@ -319,29 +266,40 @@
                 var p = r.partner || {};
                 var detailUrl = detailBase + '?phoneA=' + encodeURIComponent(myPhone) + '&phoneB=' + encodeURIComponent(p.phone || '');
                 var label = esc(p.label || (p.name ? p.name + '호' : ''));
+                var ticket = ticketOf(p);
+                var isF = p.gender === 'F';
+                var pf = platformName(r.event_platform, p.platform_label ? esc(p.platform_label) : '');
+                var visits = Object.keys(VISIT_TYPE_LABEL)
+                    .filter(function(k){ return r.visit_counts && r.visit_counts[k] > 0; })
+                    .map(function(k){ return '<span class="badge ' + (VISIT_TYPE_BADGE[k] || 'bg-azure-lt') + '">' + esc(VISIT_TYPE_LABEL[k]) + ' ' + r.visit_counts[k] + '회</span>'; })
+                    .join('');
+                var prof = profileOf(p), life = lifestyleOf(p);
 
-                // 나와 그 상대가 주고받은 메시지가 있을 때만 버튼 노출. (양방향 대화)
-                var msgCell = (r.message_count > 0)
-                    ? `<button type="button" class="btn btn-sm btn-outline-primary btn-ptn-msg" `
-                      + `data-event-id="${r.event_id}" data-my-id="${r.my_member_id}" data-member-id="${r.partner_member_id}" data-label="${label}">`
-                      + `<i class="ti ti-messages me-1"></i>${r.message_count}건</button>`
-                    : '<span class="text-muted">-</span>';
+                var msgBtn = (r.message_count > 0)
+                    ? '<button type="button" class="btn btn-outline-primary btn-ptn-msg" data-event-id="' + r.event_id + '" data-my-id="' + r.my_member_id
+                      + '" data-member-id="' + r.partner_member_id + '" data-label="' + label + '"><i class="ti ti-messages me-1"></i>메시지 ' + r.message_count + '</button>'
+                    : '<button type="button" class="btn btn-outline-secondary" disabled><i class="ti ti-messages me-1"></i>메시지 0</button>';
+                var votedBtn = '<button type="button" class="btn btn-outline-pink btn-ptn-voted" data-event-id="' + r.event_id
+                      + '" data-member-id="' + r.partner_member_id + '" data-label="' + label + '"><i class="ti ti-heart me-1"></i>매칭 조회</button>';
+                var detailBtn = '<a href="' + detailUrl + '" target="_blank" rel="noopener" class="btn btn-outline-primary"><i class="ti ti-external-link me-1"></i>상세 이력</a>';
 
-                // 그 상대가 이 행사에서 투표/매칭한 상대 보기.
-                var votedCell = `<button type="button" class="btn btn-sm btn-outline-pink btn-ptn-voted" `
-                      + `data-event-id="${r.event_id}" data-member-id="${r.partner_member_id}" data-label="${label}">`
-                      + `<i class="ti ti-heart me-1"></i>매칭 조회</button>`;
-
-                return `<tr>`
-                     + `<td>${personCell(p, r.event_platform)}</td>`
-                     + `<td class="text-center align-middle">${visitCell(r.visit_counts)}</td>`
-                     + `<td class="text-center align-middle">${relationCell(r)}</td>`
-                     + `<td class="text-center align-middle">${votedCell}</td>`
-                     + `<td class="text-center align-middle">${msgCell}</td>`
-                     + `<td class="text-center align-middle"><a href="${detailUrl}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary">상세이력<i class="ti ti-external-link ms-1"></i></a></td>`
-                     + `</tr>`;
+                return '<div class="hs-card ' + (isF ? 'is-f' : 'is-m') + (r.is_mutual ? ' is-mutual' : '') + '">'
+                     +   '<div class="hs-head">'
+                     +     '<div class="hs-ticket"><small>' + (isF ? '여' : '남') + '</small><b>' + (ticket ? esc(ticket) : '-') + '</b></div>'
+                     +     '<div class="hs-who"><div class="hs-name">' + (p.nickname ? esc(p.nickname) : label) + '</div>'
+                     +       '<div class="d-flex flex-wrap gap-1 mt-1">' + (pf ? '<span class="badge bg-secondary-lt">' + pf + '</span>' : '') + visits + '</div></div>'
+                     +     '<div class="flex-shrink-0">' + relationCell(r) + '</div>'
+                     +   '</div>'
+                     +   '<dl class="hs-info">'
+                     +     '<div><dt>프로필</dt><dd>' + (prof || '-') + '</dd></div>'
+                     +     '<div><dt>지역</dt><dd>' + (p.region ? esc(p.region) : '-') + smokeBadge(p) + '</dd></div>'
+                     +     (life ? '<div><dt>생활</dt><dd>' + life + '</dd></div>' : '')
+                     +     '<div><dt>핸드폰</dt><dd>' + phoneHtml(p.phone) + '</dd></div>'
+                     +   '</dl>'
+                     +   '<div class="hs-actions">' + votedBtn + msgBtn + detailBtn + '</div>'
+                     + '</div>';
             }).join('');
-            $('#partnerTbody').html(html);
+            $('#partnerList').html(html);
         }
 
         // 선택된 행사 기준으로 "내가 보낸 요청" 버튼을 갱신한다. (요청 0건이면 숨김)
@@ -384,7 +342,7 @@
             if(!(res.partners || []).length){
                 $('#partnerCount').text('총 0명');
                 fillEventFilter(res.events);
-                $('#partnerTbody').html('');
+                $('#partnerList').html('');
                 $('#emptyText').text('함께 참여한 상대가 없습니다.');
                 $('#emptyCard').removeClass('d-none');
                 return;
@@ -397,11 +355,11 @@
 
         // 실제 검색 수행 (pushUrl=true 면 주소창에 ?phone= 를 남겨 뒤로가기 지원)
         function doSearch(phone, pushUrl){
-            phone = (phone || '').trim();
+            phone = (phone || '').replace(/\D+/g, '');
             if(!phone){ salert({text:'전화번호를 입력해주세요.', cancel:false}); return; }
 
             $('#phoneInput').val(phone);
-            $('#partnerTbody').html('');
+            $('#partnerList').html('');
 
             if(pushUrl){
                 history.pushState({ phone: phone }, '', pageUrl + '?phone=' + encodeURIComponent(phone));

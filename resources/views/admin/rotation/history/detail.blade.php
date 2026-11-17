@@ -8,7 +8,7 @@
     .cmp-table { width: 100%; max-width: 720px; margin: 0 auto; border-collapse: separate; border-spacing: 0; }
     .cmp-table td, .cmp-table th { padding: 7px 12px; vertical-align: middle; }
     /* 항목을 '왼쪽'에 두고 A | B 값을 나란히 (좌→우로 자연스럽게 읽히게) */
-    .cmp-table .cmp-label { width: 110px; white-space: nowrap; text-align: left; color: #6b7280; font-size: 0.82rem; background: #f8fafc; font-weight: 700; }
+    .cmp-table .cmp-label { width: 110px; white-space: normal; text-align: left; color: #6b7280; font-size: 0.82rem; background: #f8fafc; font-weight: 700; }
     .cmp-table .cmp-a { text-align: left; background: #f2f7ff; }
     .cmp-table .cmp-b { text-align: left; background: #fff2f7; }
     .cmp-table tr + tr td { border-top: 1px solid #eef1f5; }
@@ -25,7 +25,7 @@
     .chat-row.b .chat-bubble { background: #ffe6f0; color: #9c1f54; border-top-right-radius: 4px; }
 
     /* 유형 배지: 와인파티/1:1 을 색으로 구분 */
-    .badge-type-wine { background: #fdeee3; color: #c2410c; }
+    .badge-type-wine { background: #ffe3e3; color: #c92a2a; }
     .badge-type-one  { background: #e9e4fb; color: #5b21b6; }
     .badge-type-etc  { background: #eef1f5; color: #4b5563; }
 
@@ -82,6 +82,57 @@
     .meet-nick-pf { color:#8a92a0; font-weight:600; font-size:0.75rem; }
     .meet-nick-at { color:#8a92a0; font-size:0.75rem; margin-right:4px; }
     .meet-nick-ev { display:inline-block; background:#eef4ff; border:1px solid #dbe7ff; border-radius:8px; padding:1px 8px; margin:2px 2px; font-size:0.78rem; font-weight:700; color:#2563eb; }
+
+    /* ===== 가로 스크롤 방지 =====
+       - 비교 표: 고정 레이아웃 + 긴 값(닉네임·사용 행사·직업)을 칸 안에서 줄바꿈
+       - 칩/뱃지: 한 줄 고정(nowrap/inline-block)이던 것들이 화면 폭을 넘지 않게 */
+    .cmp-table{ table-layout:fixed; }
+    .cmp-table td, .cmp-table th{ overflow-wrap:anywhere; word-break:break-word; }
+    .meet-nick-badge, .meet-nick-ev{ max-width:100%; white-space:normal; overflow-wrap:anywhere; }
+    .meet-vote-chip{ flex-wrap:wrap; max-width:100%; }
+    .meet-vote-chip > span{ min-width:0; overflow-wrap:anywhere; }
+    .meet-stat{ min-width:0; }
+    .meet-id-card{ min-width:0; }
+    .chat-bubble{ overflow-wrap:anywhere; }
+    #meetingList .card, #summaryCard .card{ max-width:100%; }
+
+    /* ===== 반응형 ===== */
+    /* 검색: PC 는 A ⇄ B [조회] 한 줄, 모바일은 위아래로 전체 폭 */
+    .hd-search{ display:flex; align-items:flex-end; gap:.75rem; flex-wrap:wrap; }
+    .hd-search-field{ flex:1 1 220px; min-width:0; }
+    .hd-search-swap{ padding-bottom:.85rem; color:#adb5bd; font-size:1.2rem; }
+    @media (max-width: 767.98px){
+        .hd-search{ flex-direction:column; align-items:stretch; gap:.5rem; }
+        .hd-search-field{ flex:1 1 auto; }
+        .hd-search-swap{ display:none; }
+        .hd-search-btn{ width:100%; }
+    }
+    /* 관계 통계: 모바일 2×2, PC 4칸 */
+    @media (max-width: 767.98px){
+        .meet-stats{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+        .meet-stat{ max-width:none; padding:10px 6px; }
+        .meet-stat__num{ font-size:1.5rem; }
+    }
+    /* 비교 표: 모바일은 항목 칸을 좁히고 글자를 줄여 A·B 값 칸을 넓게 */
+    @media (max-width: 575.98px){
+        .cmp-table td, .cmp-table th{ padding:6px 7px; font-size:.82rem; }
+        .cmp-table .cmp-label{ width:64px; white-space:normal; font-size:.74rem; }
+        .cmp-head td{ font-size:.85rem; }
+        .meet-nick-item{ font-size:.8rem; }
+    }
+    /* 투표 방향 칩 / 매칭 버튼: 모바일은 한 줄씩 전체 폭 */
+    @media (max-width: 767.98px){
+        .meet-vote-row{ flex-direction:column; align-items:stretch; gap:8px; }
+        .meet-vote-chip{ justify-content:space-between; }
+        .meet-match-btns{ flex-direction:column; align-items:stretch !important; }
+        .meet-match-btns .btn{ width:100%; min-height:42px; }
+        .chat-bubble{ max-width:88%; }
+        .chat-wrap{ max-height:none; }
+    }
+    /* 행사 카드 머리: 날짜가 좁은 화면에서 다음 줄로 */
+    .meet-ev-time{ font-size:.9rem; color:#868e96; margin-left:auto; }
+    @media (max-width: 575.98px){ .meet-ev-time{ flex-basis:100%; margin-left:0; } }
+    .meet-phone a{ color:inherit; text-decoration:none; font-weight:700; }
 </style>
 
 <div class="row row-cards mt-2">
@@ -89,27 +140,31 @@
     {{-- 검색 입력 --}}
     <div class="col-12">
         <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0"><i class="ti ti-arrows-left-right me-1"></i> 두 사람의 만남 이력</h3>
+            </div>
             <div class="card-body">
-                <div class="d-flex gap-2 align-items-end flex-wrap">
-                    <div style="min-width: 200px;">
-                        <label class="form-label mb-1"><span class="badge bg-blue-lt">A</span> 전화번호</label>
-                        <input type="text" class="form-control" id="phoneA" value="{{ $initialPhoneA }}" placeholder="예: 01011112222"
+                <div class="text-muted mb-3" style="font-size:.9rem; line-height:1.7;">
+                    <div>두 사람의 전화번호를 넣으면 <b>같은 행사에 함께 참여한 이력</b>을 보여줘요.</div>
+                    <div>하이픈은 넣어도 돼요.</div>
+                </div>
+                <div class="hd-search">
+                    <div class="hd-search-field">
+                        <label class="form-label mb-1" for="phoneA"><span class="badge bg-blue-lt">A</span> 전화번호</label>
+                        <input type="tel" class="form-control form-control-lg" id="phoneA" value="{{ $initialPhoneA }}" placeholder="예: 01011112222"
+                               inputmode="numeric" autocomplete="off"
                                onkeydown="if(event.keyCode===13){ event.preventDefault(); $('#btnLoad').click(); }">
                     </div>
-                    <div class="pb-2"><i class="ti ti-arrows-left-right text-muted"></i></div>
-                    <div style="min-width: 200px;">
-                        <label class="form-label mb-1"><span class="badge bg-pink-lt">B</span> 전화번호</label>
-                        <input type="text" class="form-control" id="phoneB" value="{{ $initialPhoneB }}" placeholder="예: 01033334444"
+                    <div class="hd-search-swap" aria-hidden="true"><i class="ti ti-arrows-left-right"></i></div>
+                    <div class="hd-search-field">
+                        <label class="form-label mb-1" for="phoneB"><span class="badge bg-pink-lt">B</span> 전화번호</label>
+                        <input type="tel" class="form-control form-control-lg" id="phoneB" value="{{ $initialPhoneB }}" placeholder="예: 01033334444"
+                               inputmode="numeric" autocomplete="off"
                                onkeydown="if(event.keyCode===13){ event.preventDefault(); $('#btnLoad').click(); }">
                     </div>
-                    <div>
-                        <button type="button" class="btn btn-primary px-4" id="btnLoad">
-                            <i class="ti ti-search me-1"></i> 이력 조회
-                        </button>
-                    </div>
-                    <div class="ms-auto text-muted align-self-center" style="font-size:0.85em;">
-                        같은 행사에 함께 참여한 이력을 보여줍니다.
-                    </div>
+                    <button type="button" class="btn btn-primary btn-lg px-4 hd-search-btn" id="btnLoad">
+                        <i class="ti ti-search me-1"></i> 이력 조회
+                    </button>
                 </div>
             </div>
         </div>
@@ -129,10 +184,10 @@
                 {{-- 관계 종합(통계 카드) + 고정 프로필 비교 표 --}}
                 <div id="summaryCompare"></div>
                 <div id="genderNote" class="d-none mt-3 text-center text-warning" style="font-size:0.85rem;"></div>
-                <div class="mt-3 text-center text-muted" style="font-size:0.8rem;">
-                    <i class="ti ti-info-circle me-1"></i>
-                    전화번호로 묶은 결과예요. <b>닉네임·번호표·플랫폼·직업</b> 등은 <b>행사마다 다를 수 있어</b>,
-                    각 행사 카드의 <b>프로필 비교</b>에서 그 행사 기준으로 보여드려요.
+                <div class="mt-3 text-center text-muted" style="font-size:0.82rem; line-height:1.7;">
+                    <div><i class="ti ti-info-circle me-1"></i>전화번호로 묶은 결과예요.</div>
+                    <div><b>닉네임·번호표·플랫폼·직업</b> 등은 행사마다 다를 수 있어요.</div>
+                    <div>각 행사 카드의 <b>프로필 비교</b>에서 그 행사 기준으로 보여드려요.</div>
                 </div>
             </div>
         </div>
@@ -160,6 +215,14 @@
         function esc(v){ return $('<div>').text(v == null ? '' : v).html(); }
         // 관리자 표기 라벨(`닉네임(플랫폼)_N호`). 서버 label 이 없으면 `N호`, 이름도 없으면 fb.
         function nm(p, fb){ return (p && (p.label || (p.name ? p.name + '호' : ''))) || fb; }
+
+        // 01012345678 → 010-1234-5678 (누르면 전화)
+        function phoneLink(v){
+            var raw = String(v || '').replace(/\D+/g, '');
+            if(!raw){ return '-'; }
+            var shown = raw.length === 11 ? raw.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3') : raw;
+            return '<a href="tel:' + raw + '">' + esc(shown) + '</a>';
+        }
 
         function genderBadge(g){
             if(g === 'F'){ return '<span class="badge bg-pink-lt">여</span>'; }
@@ -194,7 +257,7 @@
                 return mTicket ? mTicket[1] : '-';
             }
             if(key === 'gender'){ return p.gender === 'F' ? '여' : (p.gender === 'M' ? '남' : '-'); }
-            if(key === 'phone'){ return p.phone ? esc(p.phone) : '-'; }
+            if(key === 'phone'){ return p.phone ? '<span class="meet-phone">' + phoneLink(p.phone) + '</span>' : '-'; }
             if(key === 'height'){ return p.height ? p.height + 'cm' : '-'; }
             if(key === 'smoke'){
                 if(p.is_smoker === true){ return '흡연'; }
@@ -253,7 +316,7 @@
                 if(p.birth_year){ return p.birth_year + '년생'; }
                 return p.age ? (p.age + '세') : '-';
             }
-            function phone(p){ return p.phone ? esc(p.phone) : '<span class="text-muted">-</span>'; }
+            function phone(p){ return p.phone ? '<span class="meet-phone">' + phoneLink(p.phone) + '</span>' : '<span class="text-muted">-</span>'; }
 
             // 여태 사용한 '플랫폼 닉네임' 목록 — 각 닉네임을 "어느 행사에서 썼는지" 함께 보여준다.
             //  - (닉네임+플랫폼) 조합별로 묶고, 그 조합을 쓴 행사명들을 함께 나열한다.
@@ -389,21 +452,21 @@
             var t = e.event_time ? new Date(e.event_time).toLocaleString('ko-KR') : '-';
             return `<div class="d-flex align-items-center flex-wrap gap-2">`
                  + `<i class="ti ti-calendar-event text-primary"></i>`
-                 + `<span class="fw-bold fs-3">${esc(e.title) || '-'}</span>`
+                 + `<span class="fw-bold fs-3 text-break">${esc(e.title) || '-'}</span>`
                  + typeBadge(e.type, e.type_label)
                  + `<span class="badge bg-secondary-lt">${esc(e.status_label) || ''}</span>`
-                 + `<span class="text-muted ms-auto" style="font-size:0.9rem;">${t}</span>`
+                 + `<span class="meet-ev-time">${t}</span>`
                  + `</div>`;
         }
 
         // 각자가 그 행사에서 투표/매칭한 상대 목록을 여는 버튼 (매칭 결과 섹션 바로 아래)
         function matchButtons(m, a, b){
             var aName = esc(nm(a,'A')), bName = esc(nm(b,'B'));
-            return `<div class="d-flex align-items-center justify-content-center gap-2 flex-wrap mt-3">`
-                 + `<button type="button" class="btn btn-sm btn-outline-pink btn-voted" `
+            return `<div class="d-flex align-items-center justify-content-center gap-2 flex-wrap mt-3 meet-match-btns">`
+                 + `<button type="button" class="btn btn-outline-pink btn-voted" `
                      + `data-event-id="${m.event_id}" data-member-id="${m.a_member_id}" data-label="${aName}">`
                      + `<i class="ti ti-list-details me-1"></i>${aName} 이(가) 고른 상대 보기</button>`
-                 + `<button type="button" class="btn btn-sm btn-outline-pink btn-voted" `
+                 + `<button type="button" class="btn btn-outline-pink btn-voted" `
                      + `data-event-id="${m.event_id}" data-member-id="${m.b_member_id}" data-label="${bName}">`
                      + `<i class="ti ti-list-details me-1"></i>${bName} 이(가) 고른 상대 보기</button>`
                  + `</div>`;
@@ -506,7 +569,10 @@
         }
 
         $('#btnLoad').on('click', function(){
-            runSearch(($('#phoneA').val() || '').trim(), ($('#phoneB').val() || '').trim(), true);
+            var a = ($('#phoneA').val() || '').replace(/\D+/g, '');
+            var b = ($('#phoneB').val() || '').replace(/\D+/g, '');
+            $('#phoneA').val(a); $('#phoneB').val(b);
+            runSearch(a, b, true);
         });
 
         // 뒤로/앞으로 가기: 주소의 phoneA/phoneB 로 입력창을 다시 채우고 조회한다.

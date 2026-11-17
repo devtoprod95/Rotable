@@ -17,35 +17,25 @@
 @endphp
 
 <style>
-    /* requestsModal: 엑셀(격자) 느낌 제거 + 모바일 카드화 */
-    #requestsModal .tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
-    #requestsModal .tabulator .tabulator-header { background: #f6f8fb; border-bottom: 1px solid #e9ecf1; }
-    #requestsModal .tabulator .tabulator-header .tabulator-col { background: transparent; border-right: none; font-weight: 700; color: #495057; }
-    #requestsModal .tabulator .tabulator-row .tabulator-cell { border-right: none; padding: 12px 14px; }
-    #requestsModal .tabulator .tabulator-row { border-bottom: 1px solid #f0f2f6; }
-    #requestsModal .tabulator .tabulator-row.tabulator-row-even { background: #fcfcfd; }
-    #requestsModal .tabulator .tabulator-row:hover { background: #f3f7ff; }
-    @media (max-width: 767.98px) {
-        #requestsModal .tabulator .tabulator-header { display: none; }
-        #requestsModal .tabulator { border: none; }
-        #requestsModal .tabulator .tabulator-tableholder { overflow-x: hidden !important; }
-        #requestsModal .tabulator .tabulator-row {
-            display: block; width: 100% !important; border: 1px solid #e9ecf1; border-radius: 12px;
-            background: #fff !important; box-shadow: 0 1px 3px rgba(20,30,60,.05); margin-bottom: 12px; padding: 6px 4px;
-        }
-        #requestsModal .tabulator .tabulator-row .tabulator-cell {
-            display: flex !important; width: 100% !important; white-space: normal !important; height: auto !important;
-            border: none !important; padding: 7px 12px !important; text-align: left !important;
-        }
-        #requestsModal .tabulator .tabulator-row .tabulator-cell::before {
-            content: attr(data-mlabel); flex: 0 0 72px; color: #8a92a0; font-weight: 700; font-size: 0.82rem;
-        }
-        /* 요청 내용은 라벨 아래로 넓게 (가장 중요) */
-        #requestsModal .tabulator .tabulator-row .tabulator-cell[tabulator-field="body"] {
-            flex-direction: column; background: #f4f7ff; border-radius: 10px; margin: 2px 8px; padding: 10px 12px !important;
-        }
-        #requestsModal .tabulator .tabulator-row .tabulator-cell[tabulator-field="body"]::before { flex: none; margin-bottom: 4px; }
-    }
+    /* 회원 요청 — 표(라이브러리) 대신 카드 목록. 모바일 1열 / 992px↑ 2열.
+       카드: ① 회원·테이블·상태(확인 버튼)  ② 요청 내용(말풍선)  ③ 관리자 답장 + 답장 버튼  ④ 요청 시각 */
+    #requestsModal .rq-list{ display:grid; grid-template-columns:1fr; gap:.6rem; }
+    @media (min-width: 992px){ #requestsModal .rq-list{ grid-template-columns:1fr 1fr; } }
+    #requestsModal .rq-card{ border:1px solid #e9ecf1; border-radius:14px; background:#fff; padding:.75rem .85rem; box-shadow:0 1px 3px rgba(20,30,60,.05); }
+    #requestsModal .rq-card.is-unread{ border-color:#f4c94a; box-shadow:0 0 0 2px rgba(244,201,74,.25); }
+    #requestsModal .rq-head{ display:flex; align-items:center; flex-wrap:wrap; gap:.35rem; }
+    #requestsModal .rq-name{ font-weight:800; overflow-wrap:anywhere; }
+    #requestsModal .rq-status{ margin-left:auto; }
+    #requestsModal .rq-body{ margin-top:.5rem; padding:.6rem .75rem; border-radius:12px; background:#fff8e1; border-left:4px solid #f4b400;
+        white-space:pre-wrap; word-break:break-word; line-height:1.6; font-size:.95rem; color:#212529; }
+    #requestsModal .rq-reply{ margin-top:.5rem; padding:.55rem .75rem; border-radius:12px; background:#f1f5f9; border-left:4px solid #94a3b8; }
+    #requestsModal .rq-reply-meta{ font-size:.76rem; color:#64748b; font-weight:700; margin-bottom:.15rem; }
+    #requestsModal .rq-reply-text{ white-space:pre-wrap; word-break:break-word; line-height:1.6; font-size:.92rem; }
+    #requestsModal .rq-foot{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.4rem; margin-top:.55rem; }
+    #requestsModal .rq-time{ font-size:.78rem; color:#868e96; }
+    #requestsModal .rq-foot .btn{ min-height:36px; }
+    #requestsModal .rq-empty{ grid-column:1 / -1; text-align:center; color:#868e96; padding:2.5rem 0; }
+    @media (max-width: 575.98px){ #requestsModal .rq-foot .btn{ flex:1 1 auto; } }
 </style>
 
 <div class="modal fade" id="requestsModal" tabindex="-1" aria-hidden="true">
@@ -93,11 +83,17 @@
                     </div>
                 </form>
 
-                <div class="d-flex align-items-center mb-2">
+                <div class="d-flex align-items-center gap-2 mb-2">
                     <span id="rm-pageCount" class="badge bg-secondary-lt"></span>
+                    <span class="text-muted small">최신순 · 미확인은 노란 테두리</span>
                 </div>
 
-                <div id="rm-table"></div>
+                <div id="rm-list" class="rq-list" aria-live="polite"></div>
+                <div class="text-center mt-3">
+                    <button type="button" class="btn btn-outline-secondary d-none" id="rm-moreBtn" onclick="RequestsModal.more()">
+                        <i class="ti ti-chevron-down me-1"></i>더 보기
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -110,7 +106,6 @@
         var readAllUrl = @json($reqReadAllUrl);
         var reverbCfg = @json($rmReverb);
 
-        var table = null;
         var currentEventId = null;
         var currentMemberId = null;
         var modalEl = null;
@@ -134,7 +129,7 @@
             };
         }
 
-        function reload(){ if(table){ table.setData(listUrl, filters()); } }
+        function reload(){ loadList(true); }
 
         // 실시간 연결 상태 뱃지 토글 (위젯과 동일 패턴).
         function setLive(state){
@@ -191,91 +186,81 @@
             });
         }
 
-        function buildTable(){
-            table = new Tabulator("#rm-table", {
-                ajaxURL: listUrl,
-                ajaxParams: filters,
-                layout: "fitColumns",
-                height: "55vh",
-                resizableColumns: false,
-                initialSort: [{column: "id", dir: "desc"}],
-                rowFormatter: function(row){
-                    var labels = { id: 'No', member: '회원', table_no: '테이블', body: '요청 내용', reply_body: '답장', created_at: '요청 시각', read_at: '상태' };
-                    row.getCells().forEach(function(cell){
-                        var f = cell.getField();
-                        if(f && labels[f]){ cell.getElement().setAttribute('data-mlabel', labels[f]); }
-                    });
-                },
-                columns: [
-                    { title: "No", field: "id", width: 70, hozAlign: "center" },
-                    { title: "회원", field: "member", width: 150, headerSort: false,
-                        formatter: function(cell){
-                            var m = cell.getRow().getData().member;
-                            var name = m ? $('<div>').text(m.label || (m.name + '호')).html() : '알 수 없음';
-                            return `<span class="fw-bold">${name}</span> ${m ? genderBadge(m.gender) : ''}`;
-                        }
-                    },
-                    { title: "테이블", field: "table_no", width: 100, hozAlign: "center",
-                        formatter: function(cell){
-                            var v = cell.getValue();
-                            return (v != null) ? `<span class="badge bg-blue-lt">${v}번</span>` : '<span class="text-muted">미배정</span>';
-                        }
-                    },
-                    { title: "요청 내용", field: "body", minWidth: 240,
-                        formatter: function(cell){
-                            return '<div style="white-space:pre-wrap;word-break:break-word;line-height:1.6;padding:6px 0;">'
-                                + $('<div>').text(cell.getValue() || '').html() + '</div>';
-                        },
-                        variableHeight: true
-                    },
-                    { title: "답장", field: "reply_body", minWidth: 200, headerSort: false, variableHeight: true,
-                        formatter: function(cell){
-                            var data = cell.getRow().getData();
-                            var wrap = document.createElement('div');
-                            wrap.style.padding = '6px 0';
-                            if(data.reply_body){
-                                var when = data.reply_edited_at
-                                    ? new Date(data.reply_edited_at).toLocaleString('ko-KR') + ' (수정됨)'
-                                    : (data.replied_at ? new Date(data.replied_at).toLocaleString('ko-KR') : '');
-                                var meta = [data.replied_by || '', when].filter(Boolean).join(' · ');
-                                $(wrap).append(
-                                    $('<div>').css({ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6 }).text(data.reply_body),
-                                    $('<div>').addClass('text-muted').css('font-size', '0.8em').text(meta)
-                                );
-                            }
-                            var $btn = $('<button type="button">').addClass('btn btn-sm btn-outline-warning mt-1')
-                                .html('<i class="ti ti-message-reply me-1"></i>' + (data.reply_body ? '답장 수정' : '답장'))
-                                .on('click', function(){
-                                    if(window.AdminRequestsWidget){ window.AdminRequestsWidget.openReply(data, function(){ reload(); }); }
-                                });
-                            $(wrap).append($btn);
-                            return wrap;
-                        }
-                    },
-                    { title: "요청 시각", field: "created_at", width: 120, hozAlign: "center",
-                        formatter: function(cell){
-                            if(!cell.getValue()){ return '-'; }
-                            var s = new Date(cell.getValue()).toLocaleString('ko-KR');
-                            return s.replace(/\s(오전|오후)/, '<br>$1');
-                        }
-                    },
-                    { title: "상태", field: "read_at", width: 100, hozAlign: "center", headerSort: false,
-                        formatter: function(cell){
-                            var data = cell.getRow().getData();
-                            if(cell.getValue()){ return '<span class="badge bg-green-lt">확인됨</span>'; }
-                            var $btn = $("<button>").addClass("btn btn-sm btn-outline-primary w-100").text("확인")
-                                .on("click", function(){ fn_read(data.id); });
-                            return $btn.get(0);
-                        }
-                    },
-                ],
-                ajaxResponse: function(url, params, response){
-                    var total = response.total ?? (response.data ? response.data.length : 0);
-                    $('#rm-pageCount').text('총 ' + total + '건');
-                    return response;
-                },
-            });
+        // ===== 목록 (표 라이브러리 없이 카드로 직접 렌더) =====
+        var PAGE_SIZE = 50;
+        var items = [];
+        var total = 0, page = 0, lastPage = 0, loadingList = false;
+
+        function esc(v){ return $('<div>').text(v == null ? '' : v).html(); }
+        function fmt(v){
+            if(!v){ return ''; }
+            var d = new Date(v);
+            if(isNaN(d.getTime())){ return ''; }
+            var p = function(n){ return (n < 10 ? '0' : '') + n; };
+            return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
         }
+        function card(d){
+            var m = d.member;
+            var name = m ? esc(m.label || (m.name + '호')) : '알 수 없음';
+            var table = (d.table_no != null)
+                ? '<span class="badge bg-azure-lt"><i class="ti ti-armchair me-1"></i>' + esc(d.table_no) + '번 테이블</span>'
+                : '<span class="badge bg-secondary-lt">테이블 미배정</span>';
+            var status = d.read_at
+                ? '<span class="badge bg-green-lt rq-status"><i class="ti ti-check me-1"></i>확인됨</span>'
+                : '<span class="badge bg-yellow-lt rq-status"><i class="ti ti-bell me-1"></i>미확인</span>';
+            var reply = '';
+            if(d.reply_body){
+                var when = d.reply_edited_at ? fmt(d.reply_edited_at) + ' (수정됨)' : fmt(d.replied_at);
+                var meta = ['관리자 답장', d.replied_by || '', when].filter(Boolean).join(' · ');
+                reply = '<div class="rq-reply"><div class="rq-reply-meta"><i class="ti ti-message-reply me-1"></i>' + esc(meta) + '</div>'
+                      + '<div class="rq-reply-text">' + esc(d.reply_body) + '</div></div>';
+            }
+            var readBtn = d.read_at ? ''
+                : '<button type="button" class="btn btn-sm btn-primary rq-read-btn" data-id="' + d.id + '"><i class="ti ti-check me-1"></i>확인</button>';
+            var replyBtn = '<button type="button" class="btn btn-sm btn-outline-warning rq-reply-btn" data-id="' + d.id + '">'
+                         + '<i class="ti ti-message-reply me-1"></i>' + (d.reply_body ? '답장 수정' : '답장') + '</button>';
+            return '<div class="rq-card' + (d.read_at ? '' : ' is-unread') + '" data-id="' + d.id + '">'
+                 +   '<div class="rq-head"><span class="rq-name">' + name + '</span>' + (m ? genderBadge(m.gender) : '') + table + status + '</div>'
+                 +   '<div class="rq-body">' + esc(d.body || '') + '</div>'
+                 +   reply
+                 +   '<div class="rq-foot"><span class="rq-time"><i class="ti ti-clock me-1"></i>' + esc(fmt(d.created_at)) + ' · #' + d.id + '</span>'
+                 +     '<span class="d-flex gap-2 flex-grow-1 flex-sm-grow-0 justify-content-end">' + replyBtn + readBtn + '</span></div>'
+                 + '</div>';
+        }
+        function renderList(){
+            var $l = $('#rm-list');
+            $l.html(items.length ? items.map(card).join('') : '<div class="rq-empty">요청이 없어요.</div>');
+            $('#rm-pageCount').text('총 ' + total + '건');
+            $('#rm-moreBtn').toggleClass('d-none', page >= lastPage);
+        }
+        function loadList(reset){
+            if(!currentEventId || loadingList){ return; }
+            loadingList = true;
+            var nextPage = reset ? 1 : page + 1;
+            if(reset && !items.length){ $('#rm-list').html('<div class="rq-empty">불러오는 중…</div>'); }
+            // 화면 안에 "불러오는 중"을 보여주므로 전역 로딩 팝업(ajaxSetup beforeSend/complete)은 끈다.
+            $.ajax({
+                url: listUrl, type: 'GET', data: $.extend({ page: nextPage, size: PAGE_SIZE }, filters()),
+                beforeSend: $.noop, complete: $.noop,
+            }).done(function(res){
+                var rows = (res && res.data) ? res.data : [];
+                items = reset ? rows : items.concat(rows.filter(function(r){ return !items.some(function(x){ return x.id === r.id; }); }));
+                total = res?.total ?? items.length;
+                page = res?.current_page ?? nextPage;
+                lastPage = res?.last_page ?? page;
+                renderList();
+            }).fail(function(){
+                if(reset){ $('#rm-list').html('<div class="rq-empty text-danger">불러오지 못했어요.</div>'); }
+            }).always(function(){ loadingList = false; });
+        }
+
+        // 카드 버튼 (목록이 다시 그려지므로 위임)
+        $(document).on('click', '#requestsModal .rq-read-btn', function(){ fn_read($(this).data('id')); });
+        $(document).on('click', '#requestsModal .rq-reply-btn', function(){
+            var id = $(this).data('id');
+            var data = items.find(function(x){ return String(x.id) === String(id); });
+            if(data && window.AdminRequestsWidget){ window.AdminRequestsWidget.openReply(data, function(){ reload(); }); }
+        });
 
         $(document).on('click', '#rm-readAll', async function(){
             if(await salert({text: '미확인 요청을 모두 확인 처리하시겠습니까?'})){
@@ -294,6 +279,7 @@
 
         return {
             search: function(){ reload(); },
+            more: function(){ loadList(false); },
             open: function(eventId, eventLabel, options){
                 if(!eventId){ return; }
                 var opts = options || {};
@@ -302,6 +288,8 @@
                 $('#rm-eventLabel').text(eventLabel || '');
                 $('#rm-titleText').text(currentMemberId ? '보낸 요청' : '회원 요청');
                 $('#rm-searchForm')[0].reset();
+                items = []; total = 0; page = 0; lastPage = 0;
+                $('#rm-list').empty(); $('#rm-pageCount').text(''); $('#rm-moreBtn').addClass('d-none');
 
                 if(!modalEl){
                     modalEl = document.getElementById('requestsModal');
@@ -315,13 +303,7 @@
                     // 모달이 완전히 표시된 뒤에 테이블을 생성/갱신한다. (숨김 상태 생성 시 레이아웃 null 에러 방지)
                     var onShown = function(){
                         isOpen = true;
-                        if(!table){
-                            buildTable(); // 생성 시 ajaxParams(filters)로 자동 로드되므로 reload 불필요
-                        } else {
-                            reload();     // 재오픈: 현재 필터로 다시 로드
-                        }
-                        var el = document.getElementById('rm-table');
-                        if(table && el && el.offsetParent !== null){ try { table.redraw(true); } catch(e){} }
+                        reload();
                     };
                     modalEl.addEventListener('shown.bs.modal', onShown);
                     modalEl.addEventListener('shown.coreui.modal', onShown);
@@ -335,12 +317,8 @@
                 initRealtime();   // 최초 1회 Reverb 연결
 
                 // 이미 열려 있으면 shown 이 재발생하지 않으므로 보이는 경우 즉시 갱신.
-                var elNow = document.getElementById('rm-table');
-                if(elNow && elNow.offsetParent !== null){
-                    if(!table){ buildTable(); } // 생성 시 자동 로드
-                    else { reload(); }
-                    try { table.redraw(true); } catch(e){}
-                }
+                var elNow = document.getElementById('rm-list');
+                if(elNow && elNow.offsetParent !== null){ reload(); }
             },
             // 플로팅 위젯에서 읽음 처리 시, 모달이 열려 있으면 동기화.
             reloadIfOpen: function(){ if(isOpen){ reload(); } },

@@ -135,17 +135,23 @@
                         @endforeach
                     </div>
 
-                    {{-- 행사별 참여 인원 (총/남/여/플랫폼별) — 스냅샷 시점 기준. 모바일은 가로 스크롤 --}}
-                    @php $eventCounts = $visitSnapshot->event_counts ?? null; @endphp
+                    {{-- 행사 타입별 참여 인원 (1:1 소개팅 / 와인파티) — 스냅샷 시점 기준. 모바일은 가로 스크롤 --}}
+                    @php
+                        $typeCounts   = $visitSnapshot->type_counts ?? null;
+                        $typeBadgeCls = [
+                            \App\Models\EventRound::TYPE_ONE  => 'bg-purple-lt',
+                            \App\Models\EventRound::TYPE_WINE => 'bg-red-lt',
+                        ];
+                    @endphp
                     <div class="mt-3">
-                        <div class="text-muted mb-1" style="font-size:0.9em;">행사별 참여 인원</div>
-                        @if (! empty($eventCounts))
-                            <div class="table-responsive border rounded" style="max-height: 320px; overflow:auto;">
-                                <table class="table table-sm table-vcenter text-center mb-0" style="min-width:560px;">
-                                    <thead class="sticky-top bg-white">
+                        <div class="text-muted mb-1" style="font-size:0.9em;">행사 타입별 참여 인원</div>
+                        @if (! empty($typeCounts))
+                            <div class="table-responsive border rounded">
+                                <table class="table table-sm table-vcenter text-center mb-0" style="min-width:520px;">
+                                    <thead class="bg-white">
                                         <tr>
-                                            <th class="text-start">행사</th>
-                                            <th>일시</th>
+                                            <th class="text-start">타입</th>
+                                            <th>행사 수</th>
                                             <th>총</th>
                                             <th><span class="badge bg-blue-lt">남</span></th>
                                             <th><span class="badge bg-pink-lt">여</span></th>
@@ -155,15 +161,16 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach ($eventCounts as $ec)
+                                        @foreach (\App\Models\EventRound::typeOptions() as $typeKey => $typeLabel)
+                                            @php $tc = $typeCounts[$typeKey] ?? ['events' => 0, 'total' => 0, 'male' => 0, 'female' => 0, 'platform_counts' => []]; @endphp
                                             <tr>
-                                                <td class="text-start fw-bold">{{ $ec['title'] }}</td>
-                                                <td class="text-muted">{{ $ec['date'] }}</td>
-                                                <td class="fw-bold">{{ number_format($ec['total']) }}</td>
-                                                <td>{{ number_format($ec['male']) }}</td>
-                                                <td>{{ number_format($ec['female']) }}</td>
+                                                <td class="text-start"><span class="badge {{ $typeBadgeCls[$typeKey] ?? 'bg-azure-lt' }}">{{ $typeLabel }}</span></td>
+                                                <td>{{ number_format($tc['events'] ?? 0) }}회</td>
+                                                <td class="fw-bold">{{ number_format($tc['total'] ?? 0) }}</td>
+                                                <td>{{ number_format($tc['male'] ?? 0) }}</td>
+                                                <td>{{ number_format($tc['female'] ?? 0) }}</td>
                                                 @foreach (\App\Models\Member::platformOptions() as $opt)
-                                                    <td>{{ number_format($ec['platform_counts'][$opt['id']] ?? 0) }}</td>
+                                                    <td>{{ number_format($tc['platform_counts'][$opt['id']] ?? 0) }}</td>
                                                 @endforeach
                                             </tr>
                                         @endforeach
@@ -171,7 +178,7 @@
                                 </table>
                             </div>
                         @else
-                            <div class="text-muted" style="font-size:0.9em;">이 스냅샷에는 행사별 기록이 없어요. 다음 자정 스냅샷부터 기록됩니다.</div>
+                            <div class="text-muted" style="font-size:0.9em;">이 스냅샷에는 타입별 기록이 없어요. 다음 자정 스냅샷부터 기록됩니다.</div>
                         @endif
                     </div>
 

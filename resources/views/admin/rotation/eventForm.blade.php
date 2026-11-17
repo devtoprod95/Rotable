@@ -7,17 +7,28 @@
 
 @section('title', $isEdit ? '행사 상세' : '행사 생성')
 
-{{-- 행사 상세/생성은 메뉴에 없는 하위 화면이라, 브레드크럼 마지막에 실제 화면명을 명시한다.
-     (그대로 두면 부모 메뉴인 '행사 목록'이 현재 페이지처럼 표기됨) --}}
-@section('breadcrumbCurrent', $isEdit ? '행사 상세' : '행사 생성')
+{{-- 행사 상세는 메뉴(행사 운영 > 행사 상세)에 있어 브레드크럼이 자동으로 맞는다.
+     행사 생성은 메뉴에 없는 하위 화면이라 '행사 목록' 뒤에 실제 화면명을 덧붙인다. --}}
+@unless ($isEdit)
+    @section('breadcrumbCurrent', '행사 생성')
+@endunless
 
 @section('content')
 
 <style>
-    /* 행사 상세 바로가기 버튼: 모두 같은 크기. 모바일 2열 / 데스크톱 자동 다열 */
-    .eventform-btn-grid{ display:grid; grid-template-columns:repeat(2, 1fr); gap:.5rem; }
-    .eventform-btn-grid .btn{ width:100%; min-height:44px; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
-    @media (min-width: 768px){ .eventform-btn-grid{ grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); } }
+    /* 행사 생성 폼 */
+    .create-type-group .btn{ min-height:48px; font-weight:700; }
+    .create-stepper .btn{ min-width:52px; }
+    .create-stepper input::-webkit-outer-spin-button,
+    .create-stepper input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+    .create-stepper input[type=number]{ -moz-appearance:textfield; }
+    .create-switch{ min-height:48px; display:flex; align-items:center; gap:.5rem; padding-left:2.5rem; }
+    .create-hint > div, .create-notes > div{ display:block; word-break:keep-all; }
+    .create-hint{ font-size:.85rem; line-height:1.6; color:#495057; }
+    .create-notes{ font-size:.9rem; line-height:1.75; color:#343a40; }
+    #eventTimePicker[readonly]{ background-color:#fff; cursor:pointer; }
+
+    /* 행사 상세 바로가기 버튼(.eventform-btn-grid) 스타일은 public/css/custom.css 공통 규칙 (로테이션 진행과 공유) */
 
     /* 참여자 성별 탭: 터치하기 편한 높이, 데스크톱에선 폭 제한 */
     .member-gender-tabs .btn{ min-height:44px; font-weight:700; font-size:1rem; }
@@ -133,15 +144,16 @@
                 </div>
             @else
                 <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                    <h3 class="card-title mb-0">행사 생성</h3>
-                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary">
+                    <h3 class="card-title mb-0"><i class="ti ti-calendar-plus me-1"></i>행사 생성</h3>
+                    <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-sm btn-outline-secondary">
                         <i class="ti ti-list me-1"></i> 목록
                     </a>
                 </div>
             @endif
             <div @if ($isEdit) class="collapse show" id="eventInfoCollapse" @endif>
             <div class="card-body">
-                <form id="eventForm">
+                <form id="eventForm" onsubmit="return false;">
+                @if ($isEdit)
                     <div class="row g-3">
                         <div class="col-md-4">
                             <label class="form-label required">행사명</label>
@@ -180,30 +192,78 @@
                                 </label>
                                 <small class="form-hint text-muted mt-1 d-block">켜면 종료(X) 후 참가자가 매칭 결과를 보기 전 리뷰 이미지를 올려야 합니다.</small>
                             </div>
-                        @else
-                            <div class="col-md-2">
-                                <label class="form-label">테이블 수</label>
-                                <input type="number" min="0" max="100" class="form-control" name="table_count" placeholder="0">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">리뷰 인증 게이트</label>
-                                <label class="form-check form-switch mt-1">
-                                    <input class="form-check-input" type="checkbox" checked id="reviewGateToggle">
-                                    <span class="form-check-label" id="reviewGateLabel">켜짐 (결과 전 리뷰 인증 요구)</span>
-                                </label>
-                                <small class="form-hint text-muted mt-1 d-block">켜면 종료(X) 후 참가자가 매칭 결과를 보기 전 리뷰 이미지를 올려야 합니다.</small>
-                            </div>
                         @endif
                     </div>
 
                     <div class="mt-3">
-                        @if ($isEdit)
-                            <button type="button" class="btn btn-primary px-4 btn-update">수정</button>
-                        @else
-                            <button type="button" class="btn btn-success px-4 btn-create">생성</button>
-                            <small class="form-hint text-muted mt-2 d-block">※ 생성 시 상태는 자동으로 '대기'로 설정되며, 테이블 수를 입력하면 테이블과 0턴이 함께 생성됩니다. 1:1 소개팅은 기본 음료 목록이 함께 채워집니다.</small>
-                        @endif
+                        <button type="button" class="btn btn-primary px-4 btn-update">수정</button>
                     </div>
+                @else
+                    {{-- 행사 생성: 모바일은 한 줄에 하나씩, PC 는 2열. 타입·테이블 수는 터치하기 쉬운 버튼형 --}}
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label required" for="createTitle">행사명</label>
+                            <input type="text" class="form-control form-control-lg" id="createTitle" name="title"
+                                   placeholder="예: 로테이블 1:1 소개팅" maxlength="255" autocomplete="off" required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label required d-block">타입</label>
+                            <div class="btn-group w-100 create-type-group" role="group" aria-label="행사 타입">
+                                @foreach ($types as $value => $label)
+                                    <input type="radio" class="btn-check" name="type" id="createType{{ ucfirst($value) }}" value="{{ $value }}"
+                                           autocomplete="off" {{ $loop->first ? 'checked' : '' }}>
+                                    <label class="btn btn-outline-{{ $value === \App\Models\EventRound::TYPE_ONE ? 'purple' : 'red' }}" for="createType{{ ucfirst($value) }}">
+                                        <i class="ti {{ $value === \App\Models\EventRound::TYPE_ONE ? 'ti-users' : 'ti-glass-full' }} me-1"></i>{{ $label }}
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label required" for="eventTimePicker">일시</label>
+                            <input type="text" class="form-control form-control-lg" id="eventTimePicker" name="event_time"
+                                   placeholder="날짜/시간 선택" readonly required>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="createTableCount">테이블 수</label>
+                            <div class="input-group create-stepper">
+                                <button type="button" class="btn btn-outline-secondary" data-step="-1" aria-label="테이블 수 줄이기"><i class="ti ti-minus"></i></button>
+                                <input type="number" class="form-control form-control-lg text-center" id="createTableCount" name="table_count"
+                                       min="0" max="100" value="0" inputmode="numeric">
+                                <button type="button" class="btn btn-outline-secondary" data-step="1" aria-label="테이블 수 늘리기"><i class="ti ti-plus"></i></button>
+                            </div>
+                            <div class="create-hint mt-1">
+                                <div>테이블을 함께 만들어요. (0이면 나중에 행사 상세에서 추가)</div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label d-block">리뷰 인증 게이트</label>
+                            <label class="form-check form-switch create-switch mb-0">
+                                <input class="form-check-input" type="checkbox" checked id="reviewGateToggle">
+                                <span class="form-check-label" id="reviewGateLabel">켜짐 (결과 전 리뷰 인증 요구)</span>
+                            </label>
+                            <div class="create-hint mt-1">
+                                <div>켜면 종료 후 참가자가 매칭 결과를 보기 전에</div>
+                                <div>리뷰 이미지를 올려야 해요.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- 생성 안내: 한 행에 한 문장. 1:1 안내는 1:1을 골랐을 때만 --}}
+                    <div class="create-notes rounded border bg-light p-3 mt-3">
+                        <div><i class="ti ti-point me-1"></i>생성하면 상태는 <b>대기</b>로 시작해요.</div>
+                        <div><i class="ti ti-point me-1"></i>테이블 수를 입력하면 테이블이 함께 만들어져요.</div>
+                        <div class="create-note-one"><i class="ti ti-point me-1"></i>1:1 소개팅은 기본 음료 {{ count(\App\Models\EventDrink::DEFAULT_NAMES) }}종이 함께 등록돼요.</div>
+                    </div>
+
+                    <div class="d-grid d-md-flex justify-content-md-end gap-2 mt-3">
+                        <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary btn-lg order-2 order-md-1">취소</a>
+                        <button type="button" class="btn btn-success btn-lg px-5 btn-create order-1 order-md-2"><i class="ti ti-plus me-1"></i>행사 생성</button>
+                    </div>
+                @endif
                 </form>
             </div>
             </div>
@@ -735,23 +795,54 @@
             $('#reviewGateLabel').text(this.checked ? '켜짐 (결과 전 리뷰 인증 요구)' : '꺼짐');
         });
 
+        // ===== 생성: 타입에 따라 1:1 안내 표시 =====
+        function createType(){ return $('#eventForm [name=type]:checked').val(); }
+        function syncCreateType(){
+            $('.create-note-one').toggle(createType() === '{{ \App\Models\EventRound::TYPE_ONE }}');
+        }
+        $('#eventForm [name=type]').on('change', syncCreateType);
+        syncCreateType();
+
+        // ===== 생성: 테이블 수 -/+ (0~100) =====
+        function clampTableCount(v){
+            v = parseInt(v, 10);
+            if(isNaN(v) || v < 0){ v = 0; }
+            if(v > 100){ v = 100; }
+            return v;
+        }
+        $('.create-stepper [data-step]').on('click', function(){
+            var $in = $('#createTableCount');
+            $in.val(clampTableCount((parseInt($in.val(), 10) || 0) + parseInt($(this).data('step'), 10)));
+        });
+        $('#createTableCount').on('change blur', function(){ $(this).val(clampTableCount($(this).val())); });
+
         // ===== 생성 =====
         $('.btn-create').click(async function(){
             let $f = $('#eventForm');
-            let title = $f.find('[name=title]').val();
+            let title = ($f.find('[name=title]').val() || '').trim();
             let time  = $f.find('[name=event_time]').val();
-            if(!title){ await salert({text: '행사명을 입력해주세요.', cancel: false}); return false; }
+            if(!title){ await salert({text: '행사명을 입력해주세요.', cancel: false}); $('#createTitle').focus(); return false; }
             if(!time){ await salert({text: '일시를 선택해주세요.', cancel: false}); return false; }
 
-            if(await salert({text: '행사를 생성하시겠습니까?'})){
+            let tableCount = clampTableCount($('#createTableCount').val());
+            let typeLabel  = $f.find('[name=type]:checked').next('label').text().trim();
+            let esc = function(v){ return $('<div>').text(v).html(); };
+            let html = '<div class="text-start">'
+                + '<div><b>' + esc(title) + '</b></div>'
+                + '<div>' + esc(typeLabel) + ' · ' + esc(time) + '</div>'
+                + '<div>테이블 ' + tableCount + '개</div>'
+                + '</div><div class="mt-2">이대로 생성할까요?</div>';
+
+            if(await salert({html: html, icon: 'question'})){
+                let $btn = $(this).prop('disabled', true);
                 $.ajax({
                     url: "{{ route('admin.rotation.event.store') }}",
                     type: 'POST',
                     data: {
                         title: title,
-                        type: $f.find('[name=type]').val(),
+                        type: createType(),
                         event_time: time,
-                        table_count: $f.find('[name=table_count]').val() || 0,
+                        table_count: tableCount,
                         review_gate_enabled: $('#reviewGateToggle').is(':checked') ? 1 : 0
                     },
                     success: function(res){
@@ -759,7 +850,7 @@
                         if(res?.status === 200){ location.href = "{{ route('admin.rotation.event.index') }}"; }
                     },
                     error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
-                });
+                }).always(function(){ $btn.prop('disabled', false); });
             }
         });
         @else

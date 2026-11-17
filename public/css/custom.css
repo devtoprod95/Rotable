@@ -163,3 +163,11 @@ input[type="number"] {
 @media (prefers-reduced-motion: reduce) {
     .modal.fade .modal-dialog, .modal-backdrop.fade, .modal.fade { transition: none; }
 }
+
+/* =====================================================================
+ * 행사 운영 화면(행사 상세 · 로테이션 진행) 바로가기 버튼 줄
+ *  - 모두 같은 크기(높이 44px). 모바일 2열 / 768px↑ 자동 다열(버튼 최소 150px)
+ * ===================================================================== */
+.eventform-btn-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+.eventform-btn-grid .btn { width: 100%; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+@media (min-width: 768px) { .eventform-btn-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }

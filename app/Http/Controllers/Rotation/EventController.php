@@ -12,10 +12,12 @@ use App\Http\Requests\Admin\Rotation\IdsRequest;
 use App\Models\EventRound;
 use App\Models\EventVisitSnapshot;
 use App\Models\Member;
+use App\Services\Rotation\EventContextService;
 use App\Services\Rotation\MemberLabelService;
 use App\Services\Rotation\MemberProfileService;
 use App\Services\Rotation\RotationService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
@@ -30,6 +32,7 @@ class EventController extends RotationBaseController
         protected RotationService $rotationService,
         protected MemberLabelService $memberLabelService,
         protected MemberProfileService $memberProfileService,
+        protected EventContextService $eventContextService,
     ) {
         parent::__construct($request);
     }
@@ -86,6 +89,21 @@ class EventController extends RotationBaseController
     public function eventDelete(IdsRequest $request): JsonResponse
     {
         return $this->respond($this->rotationService->eventDelete($request->validated('ids')), Response::HTTP_INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * 사이드바 "행사 상세" 진입점. 지금 운영할 행사(진행 중 > 가까운 예정 > 최근)의 상세로 보낸다.
+     * 행사가 하나도 없으면 행사 생성 화면으로 보낸다. (행사는 상세 화면 상단 탭바에서 바꿀 수 있다.)
+     */
+    public function eventDetailCurrent(): RedirectResponse
+    {
+        $eventId = $this->eventContextService->currentEventId();
+
+        if ($eventId === null) {
+            return redirect()->route('admin.rotation.event.create');
+        }
+
+        return redirect()->route('admin.rotation.event.detail', ['id' => $eventId]);
     }
 
     /**

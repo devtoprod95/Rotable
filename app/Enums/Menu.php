@@ -24,14 +24,18 @@ enum Menu: string
                 'name'     => '행사',
                 'icon'     => 'calendar-event',
                 'pattern'  => 'admin.rotation*',
-                // 시간 순서: 행사 만들기 → 당일 운영(체크인 → 로테이션 진행) → 홍보 → 안내 → 분석·도구
+                // 시간 순서: 행사 운영(목록 → 상세 → 체크인 → 로테이션 진행) → 홍보 → 안내 → 분석·도구
                 'children' => [
-                    ['name' => '행사 목록', 'route' => 'admin.rotation.event.index', 'pattern' => 'admin.rotation.event*'],
                     [
-                        'name'     => '당일 운영',
-                        'pattern'  => ['admin.rotation.event.checkin*', 'admin.rotation.checkin*', 'admin.rotation.seating*'],
+                        // 행사 목록 → 행사 상세 → 체크인 → 로테이션 진행 (행사 하나를 만들고 당일 운영하는 흐름)
+                        'name'     => '행사 운영',
+                        'pattern'  => ['admin.rotation.event*', 'admin.rotation.checkin*', 'admin.rotation.seating*'],
                         'children' => [
-                            // 가장 가까운 진행 예정 행사의 체크인으로 바로 이동한다. (행사는 화면 상단 탭바에서 바꾼다.)
+                            // 목록/생성만. (상세·체크인 등 event.* 하위 화면은 아래 메뉴가 각각 맡는다)
+                            ['name' => '행사 목록', 'route' => 'admin.rotation.event.index', 'pattern' => ['admin.rotation.event.index*', 'admin.rotation.event.create*']],
+                            // 지금 운영할 행사(진행 중 > 가까운 예정 > 최근)의 상세로 바로 이동한다. (행사는 화면 상단 탭바에서 바꾼다.)
+                            ['name' => '행사 상세', 'route' => 'admin.rotation.event.detail.current', 'pattern' => 'admin.rotation.event.detail*'],
+                            // 가장 가까운 진행 예정 행사의 체크인으로 바로 이동한다.
                             ['name' => '체크인', 'route' => 'admin.rotation.checkin.current', 'pattern' => ['admin.rotation.event.checkin*', 'admin.rotation.checkin*']],
                             ['name' => '로테이션 진행', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
                         ],

@@ -29,13 +29,7 @@
         .seating-sub-actions .btn { flex: 1 1 100%; }
     }
 
-    /* 상단 결과조회 버튼: 데스크톱은 한 줄, 모바일은 2열 그리드로 가지런히 */
-    .seating-result-grid { display: flex; gap: .5rem; flex-wrap: wrap; }
-    @media (max-width: 767.98px){
-        .card-header .seating-actions { width: 100%; }
-        .seating-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; width: 100%; }
-        .seating-result-grid .btn { width: 100%; }
-    }
+    /* 결과 보기 버튼 줄(.eventform-btn-grid)은 public/css/custom.css 공통 규칙 — 행사 상세와 같은 크기/배치 */
 </style>
 
 {{-- 행사 운영 공용 탭바: 행사 선택 + [행사 정보][체크인][로테이션 진행] --}}
@@ -44,30 +38,30 @@
 </div>
 
 <div class="row row-cards">
+    {{-- 결과 보기 버튼 (진행 중 참고용) — 행사 상세와 같은 크기·배치 --}}
+    <div class="col-12">
+        <div class="eventform-btn-grid">
+            <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
+                <i class="ti ti-heart me-1"></i> 전체 매칭
+            </button>
+            <button type="button" id="goMatchedBtn" class="btn btn-outline-pink">
+                <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
+            </button>
+            <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
+                <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
+            </button>
+            <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow">
+                <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
+            </button>
+        </div>
+    </div>
+
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
                     <h3 class="card-title mb-0">로테이션 진행</h3>
                     <span class="badge d-none" id="eventStatusBadge"></span>
-                </div>
-                {{-- 결과 조회(보조): 진행 중 참고용. 모바일에선 2열 그리드로 정렬 --}}
-                <div class="d-flex align-items-center gap-2 seating-actions">
-                    <span class="text-secondary small d-none d-lg-inline">결과 보기</span>
-                    <div class="seating-result-grid">
-                        <button type="button" id="goMatchesBtn" class="btn btn-sm btn-outline-pink">
-                            <i class="ti ti-heart me-1"></i> 전체 매칭
-                        </button>
-                        <button type="button" id="goMatchedBtn" class="btn btn-sm btn-outline-pink">
-                            <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
-                        </button>
-                        <button type="button" id="goMessagesBtn" class="btn btn-sm btn-outline-primary">
-                            <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
-                        </button>
-                        <button type="button" id="goRequestsBtn" class="btn btn-sm btn-outline-yellow">
-                            <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
-                        </button>
-                    </div>
                 </div>
             </div>
             <div class="card-body">
@@ -208,11 +202,8 @@
         //  - 숨은 행사 선택(#eventTabsSelect)의 선택된 옵션 라벨 접두 [상태]
         function syncEventTabsStatus(status){
             if(status && STATUS_LABEL[status]){
-                let cls = STATUS_BADGE[status] || 'bg-secondary-lt';
-                $('#eventTabsStatusBadge')
-                    .removeClass(STATUS_BADGE_CLASSES)
-                    .addClass(cls)
-                    .text(STATUS_LABEL[status]);
+                // 탭바 상태 칩: 색은 data-status(CSS), 글자는 안쪽 <b>만 바꾼다. (항목명 '상태'는 유지)
+                $('#eventTabsStatusBadge').attr('data-status', status).find('b').text(STATUS_LABEL[status]);
             }
 
             // 턴 뱃지: 종료(X)면 '종료', 매칭중(V)면 '매칭중'(턴 수 대신 상태 표기),

@@ -48,6 +48,8 @@ Route::middleware('role')->group(function () {
                 Route::get('/create', [EventController::class, 'eventCreate'])->name('create');
                 Route::post('/store', [EventController::class, 'eventStore'])->name('store');
                 Route::delete('/delete', [EventController::class, 'eventDelete'])->name('delete');
+                // 사이드바 "행사 상세" 진입점 — 지금 운영할 행사의 상세 화면으로 이동한다.
+                Route::get('/current', [EventController::class, 'eventDetailCurrent'])->name('detail.current');
                 Route::get('/{id}', [EventController::class, 'eventDetail'])->whereNumber('id')->name('detail');
                 Route::put('/{id}', [EventController::class, 'eventUpdate'])->whereNumber('id')->name('update');
                 // 음료 선택지 설정 (1:1 소개팅)

@@ -109,67 +109,69 @@ class VisitStatService
             'total_male'      => $totalMale,
             'total_female'    => $totalFemale,
             'platform_counts' => $platformCounts,
-            'event_counts'    => $this->aggregateByEvent($until),
+            'type_counts'     => $this->aggregateByType($until),
         ], $buckets, $this->aggregateNoShow($until));
     }
 
     /**
-     * 행사별 참여 인원 — 총/남/여/신청 플랫폼별. (참여 = 회원 레코드 1건, 총 방문 집계와 같은 단위·컷오프)
+     * 행사 타입별(1:1 소개팅 / 와인파티) 참여 인원 — 행사 수/총/남/여/신청 플랫폼별.
+     * (참여 = 회원 레코드 1건, 총 방문 집계와 같은 단위·컷오프. 삭제된 회원도 포함해 재집계해도 같은 값)
      *
-     * 최신 행사일 순. 참여자가 없는 행사는 제외한다. 삭제된 회원도 포함해 재집계해도 값이 같다(멱등).
+     * 모든 타입(EventRound::typeOptions() 순서)을 0 으로라도 채워 돌려준다.
      *
-     * @return list<array{event_id:int,title:string,date:string,type:string,total:int,male:int,female:int,platform_counts:array<string,int>}>
+     * @return array<string, array{events:int,total:int,male:int,female:int,platform_counts:array<string,int>}>
      */
-    private function aggregateByEvent(?CarbonInterface $until = null): array
+    private function aggregateByType(?CarbonInterface $until = null): array
     {
-        $base = Member::query()->withTrashed();
+        $platformKeys = array_column(Member::platformOptions(), 'id');
+
+        $out = [];
+        foreach (array_keys(EventRound::typeOptions()) as $type) {
+            $out[$type] = [
+                'events' => 0, 'total' => 0, 'male' => 0, 'female' => 0,
+                'platform_counts' => array_fill_keys($platformKeys, 0),
+            ];
+        }
+
+        $base = Member::query()->withTrashed()
+            ->join('event_rounds', 'event_rounds.id', '=', 'members.event_id');
         if ($until !== null) {
             $base->where('members.created_at', '<', $until);
         }
 
-        $rows = $base
-            ->selectRaw('members.event_id as event_id, members.gender as gender, members.platform as platform, COUNT(*) as cnt')
-            ->groupBy('members.event_id', 'members.gender', 'members.platform')
+        $rows = (clone $base)
+            ->selectRaw('event_rounds.type as type, members.gender as gender, members.platform as platform, COUNT(*) as cnt')
+            ->groupBy('event_rounds.type', 'members.gender', 'members.platform')
             ->get();
 
-        $platformKeys = array_column(Member::platformOptions(), 'id');
-        $byEvent      = [];
         foreach ($rows as $row) {
-            $eid = (int) $row->event_id;
-            if (! isset($byEvent[$eid])) {
-                $byEvent[$eid] = [
-                    'total' => 0, 'male' => 0, 'female' => 0,
-                    'platform_counts' => array_fill_keys($platformKeys, 0),
-                ];
+            $type = (string) $row->type;
+            if (! isset($out[$type])) {
+                continue; // 알 수 없는 타입은 제외
             }
             $cnt      = (int) $row->cnt;
             $platform = $row->platform ?? Member::PLATFORM_MUNTO; // null 은 기본(문토)로 귀속
-            $byEvent[$eid]['total'] += $cnt;
+            $out[$type]['total'] += $cnt;
             if ($row->gender === Member::GENDER_MALE) {
-                $byEvent[$eid]['male'] += $cnt;
+                $out[$type]['male'] += $cnt;
             } elseif ($row->gender === Member::GENDER_FEMALE) {
-                $byEvent[$eid]['female'] += $cnt;
+                $out[$type]['female'] += $cnt;
             }
-            $byEvent[$eid]['platform_counts'][$platform] = ($byEvent[$eid]['platform_counts'][$platform] ?? 0) + $cnt;
+            $out[$type]['platform_counts'][$platform] = ($out[$type]['platform_counts'][$platform] ?? 0) + $cnt;
         }
 
-        if (empty($byEvent)) {
-            return [];
+        // 타입별 행사 수 (참여자가 1명 이상인 행사)
+        $eventRows = (clone $base)
+            ->selectRaw('event_rounds.type as type, COUNT(DISTINCT members.event_id) as cnt')
+            ->groupBy('event_rounds.type')
+            ->get();
+        foreach ($eventRows as $row) {
+            if (isset($out[(string) $row->type])) {
+                $out[(string) $row->type]['events'] = (int) $row->cnt;
+            }
         }
 
-        return EventRound::query()
-            ->whereIn('id', array_keys($byEvent))
-            ->orderByDesc('event_time')
-            ->orderByDesc('id')
-            ->get(['id', 'title', 'type', 'event_time'])
-            ->map(fn (EventRound $e): array => [
-                'event_id' => (int) $e->id,
-                'title'    => (string) $e->title,
-                'date'     => $e->event_time?->format('Y.m.d') ?? '',
-                'type'     => (string) $e->type,
-            ] + $byEvent[(int) $e->id])
-            ->values()
-            ->all();
+        return $out;
     }
 
     /**

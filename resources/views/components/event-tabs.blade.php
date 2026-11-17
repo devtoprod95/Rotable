@@ -17,10 +17,7 @@
 
     $statusLabel = \App\Models\EventRound::statusOptions();
     $typeLabel   = \App\Models\EventRound::typeOptions();
-    // 상태 뱃지 색: 대기=노랑, 진행=초록, 매칭중=분홍, 종료=검정
-    $statusCls   = ['P' => 'bg-yellow-lt', 'S' => 'bg-green-lt', 'V' => 'bg-pink-lt', 'X' => 'bg-dark text-white'];
-    // 유형 뱃지 색: 와인파티=주황, 1:1=보라 (만남 이력 화면과 동일)
-    $typeCls     = ['wine' => 'tab-type-wine', 'one' => 'tab-type-one'];
+    // 상태/유형 칩 색은 아래 CSS 의 data-status / data-type 으로 정한다.
 
     $weekdays = ['일', '월', '화', '수', '목', '금', '토'];
     $fmtDate  = fn ($d) => $d ? ($d->format('n.j') . '(' . $weekdays[$d->dayOfWeek] . ') ' . $d->format('H:i')) : '일정 미정';
@@ -66,13 +63,30 @@
     .event-tabs .tab-progress { --tab-solid: #ae3ec9; --tab-soft: #f5e8fa; --tab-border: #dcb4ea; --tab-hover: #ecd3f5; --tab-dark: #8a2fa1; }
     .event-tabs .event-tabs__btn .badge { font-weight: 600; }
     .event-tabs .event-tabs__btn.is-active .badge { background: rgba(255,255,255,.22) !important; color: #fff !important; }
-    .tab-type-wine { background: #fdeee3; color: #c2410c; }
-    .tab-type-one  { background: #e9e4fb; color: #5b21b6; }
+    /* 상태/유형 칩: 항목명(작게) + 값(굵게), 진한 배경으로 잘 보이게 */
+    .event-tabs__meta { display: flex; align-items: center; gap: .4rem; }
+    .event-tabs__chip {
+        display: inline-flex; align-items: center; gap: .4rem;
+        min-height: 34px; padding: .3rem .75rem; border-radius: 999px;
+        font-size: .9rem; line-height: 1.2; color: #fff; background: #667382; white-space: nowrap;
+    }
+    .event-tabs__chip b { font-weight: 800; }
+    .event-tabs__chip-label { font-size: .72rem; font-weight: 700; opacity: .85; padding-right: .4rem; border-right: 1px solid rgba(255,255,255,.45); }
+    /* 상태: 대기=주황 / 진행=초록 / 매칭중=분홍 / 종료=검정 */
+    .event-tabs__status[data-status="P"] { background: #f59f00; }
+    .event-tabs__status[data-status="S"] { background: #2fb344; }
+    .event-tabs__status[data-status="V"] { background: #d6336c; }
+    .event-tabs__status[data-status="X"] { background: #1e293b; }
+    /* 유형: 1:1=보라 / 와인파티=주황빛 빨강 */
+    .event-tabs__type[data-type="one"]  { background: #7048e8; }
+    .event-tabs__type[data-type="wine"] { background: #e8590c; }
     .event-tabs__picker { min-width: 260px; max-width: 440px; flex: 1 1 280px; }
 
     /* 모바일: 행사 선택은 한 줄 전체, 탭 3개는 같은 폭으로 꽉 채우고 라벨 아래에 배지를 쌓는다. */
     @media (max-width: 767.98px) {
         .event-tabs__picker { min-width: 0; max-width: none; flex: 1 1 100%; }
+        .event-tabs__meta { width: 100%; }
+        .event-tabs__chip { flex: 1 1 0; justify-content: center; min-height: 38px; }
         .event-tabs .event-tabs__nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; gap: .4rem; }
         .event-tabs .event-tabs__btn {
             flex-direction: column; justify-content: center; text-align: center;
@@ -99,12 +113,17 @@
                 </select>
             </div>
 
-            {{-- 현재 행사 상태/유형 --}}
-            <div class="d-flex align-items-center gap-1">
-                <span class="badge {{ $statusCls[$event->status] ?? 'bg-secondary-lt' }}"
-                      id="eventTabsStatusBadge"
-                      data-event-id="{{ $event->id }}">{{ $statusLabel[$event->status] ?? $event->status }}</span>
-                <span class="badge {{ $typeCls[$event->type] ?? 'bg-azure-lt' }}">{{ $typeLabel[$event->type] ?? $event->type }}</span>
+            {{-- 현재 행사 상태/유형 — 항목명 + 진한 색 칩. (로테이션 진행 화면은 data-status 와 안쪽 <b> 글자만 실시간 갱신) --}}
+            <div class="event-tabs__meta">
+                <span class="event-tabs__chip event-tabs__status" id="eventTabsStatusBadge"
+                      data-event-id="{{ $event->id }}" data-status="{{ $event->status }}">
+                    <span class="event-tabs__chip-label">상태</span>
+                    <b>{{ $statusLabel[$event->status] ?? $event->status }}</b>
+                </span>
+                <span class="event-tabs__chip event-tabs__type" data-type="{{ $event->type }}">
+                    <span class="event-tabs__chip-label">유형</span>
+                    <b>{{ $typeLabel[$event->type] ?? $event->type }}</b>
+                </span>
             </div>
 
             {{-- 탭 (버튼형, 아이콘 없음) --}}

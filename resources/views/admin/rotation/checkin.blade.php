@@ -10,29 +10,64 @@
     .checkin-row:focus-visible{ outline:3px solid #3b82f6; outline-offset:-3px; }
     .checkin-in{ background:#ecfdf5 !important; border-left:4px solid #34d399; }
     .checkin-out{ background:#ffffff; border-left:4px solid transparent; }
-    .checkin-stat{ margin:0; }
 
-    /* 현황 통계: 모바일은 4등분 그리드로 꽉 차게, md↑ 에선 콤팩트하게 우측 정렬 */
-    /* 참여자 행: 1줄(번호·닉네임 + 상태) / 2줄(테이블·플랫폼·등록 뱃지) / 3줄(시각) / 4줄(액션 버튼) */
-    .checkin-row{ display:flex; flex-wrap:wrap; align-items:center; gap:.4rem .5rem; }
-    .checkin-row .ck-main{ flex:1 1 0; min-width:0; display:flex; align-items:center; flex-wrap:wrap; gap:.25rem .4rem; }
-    .checkin-row .ck-name{ font-weight:700; font-size:1.05rem; overflow-wrap:anywhere; }
-    .checkin-row .ck-status{ flex:0 0 auto; }
-    .checkin-row .ck-meta{ flex:1 0 100%; display:flex; flex-wrap:wrap; align-items:center; gap:.3rem; }
-    .checkin-row .ck-times{ flex:1 0 100%; display:flex; flex-wrap:wrap; gap:0 .75rem; }
-    .checkin-row .ck-actions{ flex:1 0 100%; display:flex; gap:.5rem; }
+    /* 상단 현황 */
+    .ck-head .ck-updated{ white-space:nowrap; }
+    .ck-stats{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.5rem; }
+    @media (min-width: 768px){ .ck-stats{ grid-template-columns:repeat(4, minmax(0, 1fr)); } }
+    .ck-stat-tile{ border-radius:12px; padding:.6rem .75rem; background:#f8f9fa; border-left:4px solid #adb5bd; }
+    .ck-stat-tile .ck-stat-name{ font-size:.8rem; font-weight:700; color:#495057; }
+    .ck-stat-tile .ck-stat-num{ font-size:1.9rem; font-weight:800; line-height:1.15; }
+    .ck-stat-tile .ck-stat-desc{ font-size:.75rem; color:#868e96; }
+    .ck-stat-tile.is-total{ border-left-color:#495057; }
+    .ck-stat-tile.is-in{ border-left-color:#2fb344; background:#ebf9ee; } .ck-stat-tile.is-in .ck-stat-num{ color:#2fb344; }
+    .ck-stat-tile.is-out{ border-left-color:#adb5bd; } .ck-stat-tile.is-out .ck-stat-num{ color:#6c757d; }
+    .ck-stat-tile.is-reg{ border-left-color:#0ca678; background:#e6f7f2; } .ck-stat-tile.is-reg .ck-stat-num{ color:#0ca678; }
+    .ck-head-actions{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; }
+    .ck-head-actions .btn{ width:100%; min-height:44px; display:inline-flex; align-items:center; justify-content:center; white-space:nowrap; }
+    .ck-head-actions #checkinRefreshBtn{ grid-column:1 / -1; }
     @media (min-width: 768px){
-        .w-md-auto{ width:auto !important; }
-        .flex-md-grow-0{ flex-grow:0 !important; }
-        .checkin-stat .card-body{ min-width:92px; }
-        .h1-md{ font-size:2.5rem; }
+        .ck-head-actions{ grid-template-columns:repeat(3, 1fr); }
+        .ck-head-actions #checkinRefreshBtn{ grid-column:auto; }
     }
+
+    /* 참여자 카드: ① 번호표 · 닉네임/플랫폼/테이블 · 상태  ② 항목명:값 정보  ③ 버튼 */
+    .checkin-row{ display:block; padding:.85rem 1rem; }
+    .checkin-row .ck-top{ display:flex; align-items:center; gap:.75rem; }
+    .checkin-row .ck-ticket{ flex:0 0 auto; width:60px; min-height:52px; border-radius:12px; display:flex; flex-direction:column;
+        align-items:center; justify-content:center; line-height:1.1; text-align:center; }
+    .checkin-row .ck-ticket .ck-ticket-g{ font-size:.72rem; font-weight:700; opacity:.85; }
+    .checkin-row .ck-ticket .ck-ticket-no{ font-size:1.35rem; font-weight:800; }
+    .checkin-row .ck-ticket.is-m{ background:#206bc4; color:#fff; }
+    .checkin-row .ck-ticket.is-f{ background:#d6336c; color:#fff; }
+    .checkin-row .ck-ticket.is-none{ background:#f1f3f5; color:#868e96; font-size:.75rem; font-weight:700; }
+    .checkin-row .ck-ident{ flex:1 1 auto; min-width:0; }
+    .checkin-row .ck-name{ font-weight:800; font-size:1.08rem; overflow-wrap:anywhere; line-height:1.3; }
+    .checkin-row .ck-sub{ display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.2rem; }
+    .checkin-row .ck-status{ flex:0 0 auto; text-align:right; }
+    .checkin-row .ck-pill{ display:inline-flex; align-items:center; gap:.25rem; border-radius:999px; padding:.3rem .65rem; font-size:.8rem; font-weight:700; white-space:nowrap; }
+    .checkin-row .ck-pill.is-out{ background:#f1f3f5; color:#495057; }
+    .checkin-row .ck-pill.is-wait{ background:#fff3bf; color:#8a6d00; }
+    .checkin-row .ck-pill.is-done{ background:#0ca678; color:#fff; }
+    .checkin-row .ck-info{ margin:.6rem 0 0; padding:.5rem .65rem; background:rgba(0,0,0,.025); border-radius:10px; }
+    .checkin-row .ck-info > div{ display:flex; gap:.5rem; font-size:.86rem; line-height:1.55; }
+    .checkin-row .ck-info dt{ flex:0 0 58px; color:#868e96; font-weight:700; margin:0; }
+    .checkin-row .ck-info dd{ flex:1 1 auto; margin:0; color:#343a40; overflow-wrap:anywhere; }
+    .checkin-row .ck-actions{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.6rem; }
+    .checkin-row .ck-actions .btn{ min-height:38px; }
+    .checkin-row .ck-actions .btn-checkin-del{ margin-left:auto; }
+    /* 남/여 목록 머리: 현황 숫자를 항목명과 함께 3칸으로 */
+    .ck-col-stats{ display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:.4rem; width:100%; }
+    .ck-col-stats > div{ background:rgba(255,255,255,.75); border-radius:10px; padding:.35rem .25rem; text-align:center; }
+    .ck-col-stats .ck-stat-label{ font-size:.72rem; color:#495057; font-weight:700; }
+    .ck-col-stats .ck-stat-val{ font-size:1.15rem; font-weight:800; line-height:1.2; }
+
     @media (max-width: 767.98px){
-        /* 모바일: 숫자 적당히, 카드 패딩 축소 */
-        .checkin-stat .card-body{ padding:.4rem .25rem !important; }
+        /* 모바일: 숫자 적당히, 카드 패딩 축소, 버튼은 2열 같은 폭(체크인/취소는 한 줄 전체) */
         .checkin-row{ padding-left:.75rem; padding-right:.75rem; }
-        .checkin-row .ck-actions .btn{ flex:1 1 0; min-height:40px; }
-        .checkin-row .fs-3{ font-size:1.05rem !important; }
+        .checkin-row .ck-actions{ display:grid; grid-template-columns:1fr 1fr; }
+        .checkin-row .ck-actions .btn{ width:100%; min-height:42px; margin-left:0; }
+        .checkin-row .ck-actions .btn-checkin-toggle{ grid-column:1 / -1; }
     }
 </style>
 
@@ -41,49 +76,53 @@
 </div>
 
 <div class="row row-cards">
-    {{-- 상단: 행사명 + 현황 --}}
+    {{-- 상단: 현황 · 바로가기 버튼 (행사명·타입·일시는 위 탭바에 있으므로 여기서는 보여주지 않는다) --}}
     <div class="col-12">
-        <div class="card">
-            <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-3">
-                <div class="w-100 w-md-auto">
-                    <div class="text-secondary small">체크인</div>
-                    <h2 class="mb-0">{{ $event->title }}</h2>
-                    <div class="text-secondary small mt-1">
-                        {{ $event->event_time ? $event->event_time->format('Y-m-d H:i') : '' }}
+        <div class="card ck-head">
+            {{-- 영역 이름 + 마지막 갱신 시각 (다른 카드와 같은 헤더 형식) --}}
+            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <h3 class="card-title mb-0"><i class="ti ti-chart-bar me-1"></i> 체크인 현황</h3>
+                <span class="text-secondary small ck-updated" id="lastUpdated" aria-live="polite"></span>
+            </div>
+            <div class="card-body">
+                {{-- 현황: 항목명 · 큰 숫자 · 보조 설명 (모바일 2×2 / PC 4칸) --}}
+                <div class="ck-stats" aria-live="polite">
+                    <div class="ck-stat-tile is-total">
+                        <div class="ck-stat-name">신청 명단</div>
+                        <div class="ck-stat-num" id="statTotal">0</div>
+                        <div class="ck-stat-desc">체크인 명단 전체</div>
                     </div>
-                    <div class="d-flex flex-column flex-md-row gap-2 mt-3">
-                        <button type="button" class="btn btn-lg btn-dark px-4" id="goRegisterQrBtn">
-                            <i class="ti ti-qrcode fs-2 me-2"></i> 입장 QR
-                        </button>
-                        <button type="button" class="btn btn-lg btn-outline-pink px-4" id="rosterImageBtn">
-                            <i class="ti ti-photo-down fs-2 me-2"></i> 참가자 명단 이미지
-                        </button>
+                    <div class="ck-stat-tile is-in">
+                        <div class="ck-stat-name">참석</div>
+                        <div class="ck-stat-num" id="statIn">0</div>
+                        <div class="ck-stat-desc">참석률 <span id="statInRate">0</span>%</div>
                     </div>
-                    <div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center gap-2 mt-2">
-                        <button type="button" class="btn btn-lg btn-outline-primary px-4" id="checkinRefreshBtn">
-                            <i class="ti ti-refresh me-1"></i><span>새로고침</span>
-                        </button>
-                        <span class="text-secondary small text-center text-md-start" id="lastUpdated" aria-live="polite"></span>
+                    <div class="ck-stat-tile is-out">
+                        <div class="ck-stat-name">미도착</div>
+                        <div class="ck-stat-num" id="statOut">0</div>
+                        <div class="ck-stat-desc">아직 체크인 전</div>
+                    </div>
+                    <div class="ck-stat-tile is-reg">
+                        <div class="ck-stat-name">입장등록</div>
+                        <div class="ck-stat-num" id="statReg">0</div>
+                        <div class="ck-stat-desc">참석 중 <span id="statRegWait">0</span>명 대기</div>
                     </div>
                 </div>
-                {{-- 현황 통계: 모바일에선 4등분 그리드로 꽉 차게, 데스크톱에선 카드 나열 --}}
-                <div class="row g-2 w-100 w-md-auto flex-grow-1 flex-md-grow-0" aria-live="polite">
-                    <div class="col-3"><div class="card checkin-stat"><div class="card-body p-2 text-center">
-                        <div class="text-secondary small">전체</div>
-                        <div class="h2 h1-md mb-0" id="statTotal">0</div>
-                    </div></div></div>
-                    <div class="col-3"><div class="card checkin-stat"><div class="card-body p-2 text-center">
-                        <div class="text-success small">참석</div>
-                        <div class="h2 h1-md mb-0 text-success" id="statIn">0</div>
-                    </div></div></div>
-                    <div class="col-3"><div class="card checkin-stat"><div class="card-body p-2 text-center">
-                        <div class="text-secondary small">미도착</div>
-                        <div class="h2 h1-md mb-0 text-secondary" id="statOut">0</div>
-                    </div></div></div>
-                    <div class="col-3"><div class="card checkin-stat"><div class="card-body p-2 text-center">
-                        <div class="text-teal small">입장등록</div>
-                        <div class="h2 h1-md mb-0 text-teal" id="statReg">0</div>
-                    </div></div></div>
+                <div class="progress progress-sm mt-2" role="progressbar" aria-label="참석 진행률">
+                    <div class="progress-bar bg-success" id="statInBar" style="width:0%"></div>
+                </div>
+
+                {{-- 바로가기 버튼: 같은 크기 (모바일 2열 + 새로고침 한 줄 / PC 3칸) --}}
+                <div class="ck-head-actions mt-3">
+                    <button type="button" class="btn btn-dark" id="goRegisterQrBtn">
+                        <i class="ti ti-qrcode me-1"></i> 입장 QR
+                    </button>
+                    <button type="button" class="btn btn-outline-pink" id="rosterImageBtn">
+                        <i class="ti ti-photo-down me-1"></i> 참가자 명단 이미지
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" id="checkinRefreshBtn">
+                        <i class="ti ti-refresh me-1"></i><span>새로고침</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -127,12 +166,12 @@
                 {{-- 상세페이지 명단 자동 채움용 프로필 (필수 입력) --}}
                 <div class="row g-2 align-items-end mt-1">
                     <div class="col-4 col-md-2">
-                        <label for="addHeight" class="form-label mb-1 required">키 <span class="text-secondary small">(cm)</span></label>
-                        <input type="text" id="addHeight" class="form-control" placeholder="175" maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
-                    </div>
-                    <div class="col-4 col-md-2">
                         <label for="addBirthYear" class="form-label mb-1 required">년생</label>
                         <input type="text" id="addBirthYear" class="form-control" placeholder="97" maxlength="4" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <label for="addHeight" class="form-label mb-1 required">키 <span class="text-secondary small">(cm)</span></label>
+                        <input type="text" id="addHeight" class="form-control" placeholder="175" maxlength="3" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
                     </div>
                     <div class="col-4 col-md-3">
                         <label for="addJob" class="form-label mb-1 required">직업</label>
@@ -146,7 +185,7 @@
                         <i class="ti ti-info-circle me-1"></i>필수 입력 · 상세페이지 참여자 명단을 자동으로 채울 때 사용돼요. (년생은 2자리로 입력 가능)
                     </div>
                 </div>
-                {{-- 추가 버튼은 모든 입력(닉네임·플랫폼·성별·키·년생·직업) 아래에 둔다 --}}
+                {{-- 추가 버튼은 모든 입력(닉네임·플랫폼·성별·년생·키·직업) 아래에 둔다 --}}
                 <div class="row g-2 mt-2">
                     <div class="col-12">
                         <button type="button" class="btn btn-primary w-100" id="checkinAddBtn">
@@ -160,8 +199,10 @@
     </div>
 
     <div class="col-12">
-        <div id="checkinSearchHint" class="form-hint">
-            미도착인 사람을 탭하면 <b>번호표 입력창</b>이 떠요. 직접 입력하면 그 번호로, <b>비워두면 자동 배정</b>됩니다.
+        <div id="checkinSearchHint" class="rounded border bg-white px-3 py-2" style="font-size:.88rem; line-height:1.7; color:#495057;">
+            <div><i class="ti ti-hand-finger me-1"></i>카드나 <b>체크인</b> 버튼을 누르면 번호표 입력창이 떠요.</div>
+            <div><i class="ti ti-point me-1"></i>번호를 입력하면 그 번호로, <b>비워두면 자동 배정</b>돼요.</div>
+            <div><i class="ti ti-point me-1"></i>상태: <b>미도착</b> → <b>입장등록 대기</b>(체크인 완료) → <b>입장등록 완료</b></div>
         </div>
     </div>
 
@@ -171,12 +212,12 @@
             {{-- 남 --}}
             <div class="col-12 col-lg-6">
                 <div class="card">
-                    <div class="card-header bg-blue-lt d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <h3 class="card-title mb-0">남</h3>
-                        <div class="d-flex flex-wrap gap-1">
-                            <span class="badge bg-blue text-white">참석 <span id="maleIn">0</span></span>
-                            <span class="badge bg-teal text-white">등록 <span id="maleReg">0</span></span>
-                            <span class="badge bg-secondary-lt">전체 <span id="maleTotal">0</span></span>
+                    <div class="card-header bg-blue-lt flex-column align-items-stretch gap-2">
+                        <h3 class="card-title mb-0">👨 남 <span class="text-secondary fw-normal fs-5">· 명단 <span id="maleTotal">0</span>명</span></h3>
+                        <div class="ck-col-stats">
+                            <div><div class="ck-stat-label">참석</div><div class="ck-stat-val text-blue"><span id="maleIn">0</span></div></div>
+                            <div><div class="ck-stat-label">입장등록</div><div class="ck-stat-val text-teal"><span id="maleReg">0</span></div></div>
+                            <div><div class="ck-stat-label">미도착</div><div class="ck-stat-val text-secondary"><span id="maleOut">0</span></div></div>
                         </div>
                     </div>
                     <div class="list-group list-group-flush" id="maleList" aria-label="남성 참가자 체크인 목록"></div>
@@ -186,12 +227,12 @@
             {{-- 여 --}}
             <div class="col-12 col-lg-6">
                 <div class="card">
-                    <div class="card-header bg-pink-lt d-flex align-items-center justify-content-between flex-wrap gap-2">
-                        <h3 class="card-title mb-0">여</h3>
-                        <div class="d-flex flex-wrap gap-1">
-                            <span class="badge bg-pink text-white">참석 <span id="femaleIn">0</span></span>
-                            <span class="badge bg-teal text-white">등록 <span id="femaleReg">0</span></span>
-                            <span class="badge bg-secondary-lt">전체 <span id="femaleTotal">0</span></span>
+                    <div class="card-header bg-pink-lt flex-column align-items-stretch gap-2">
+                        <h3 class="card-title mb-0">👩 여 <span class="text-secondary fw-normal fs-5">· 명단 <span id="femaleTotal">0</span>명</span></h3>
+                        <div class="ck-col-stats">
+                            <div><div class="ck-stat-label">참석</div><div class="ck-stat-val text-pink"><span id="femaleIn">0</span></div></div>
+                            <div><div class="ck-stat-label">입장등록</div><div class="ck-stat-val text-teal"><span id="femaleReg">0</span></div></div>
+                            <div><div class="ck-stat-label">미도착</div><div class="ck-stat-val text-secondary"><span id="femaleOut">0</span></div></div>
                         </div>
                     </div>
                     <div class="list-group list-group-flush" id="femaleList" aria-label="여성 참가자 체크인 목록"></div>
@@ -300,10 +341,15 @@
             var total = rosters.length;
             var inCnt = rosters.filter(function(r){ return r.checked_in; }).length;
             var regCnt = rosters.filter(function(r){ return r.registered; }).length;
+            var rate = total > 0 ? Math.round(inCnt * 100 / total) : 0;
             $('#statTotal').text(total);
             $('#statIn').text(inCnt);
             $('#statOut').text(total - inCnt);
             $('#statReg').text(regCnt);
+            $('#statInRate').text(rate);
+            $('#statInBar').css('width', rate + '%');
+            // 입장등록 대기 = 참석했지만 아직 입장등록 전
+            $('#statRegWait').text(rosters.filter(function(r){ return r.checked_in && !r.registered; }).length);
         }
 
         // 정렬: ① 미도착(아직 체크인 안 한 사람) 먼저 → ② 번호표 있는 사람 먼저(번호 순) → ③ 닉네임 순
@@ -320,87 +366,84 @@
             return (a.name || '').localeCompare(b.name || '', 'ko');
         }
 
-        // 리스트 한 행 (list-group-item). 탭하면 체크인(번호표 입력/자동) 또는 취소, 우측에 번호 변경·삭제.
+        // 참여자 카드 1장. 행 전체를 탭하면 체크인(번호표 입력/자동) 또는 취소, 아래 버튼으로 프로필/번호·테이블/삭제.
+        function hhmm(v){ return v ? String(v).slice(-5) : ''; }
         function row(r){
             var inState = r.checked_in;
             var stateCls = inState ? 'checkin-in' : 'checkin-out';
-            var badge = inState
-                ? '<span class="badge bg-success text-white"><i class="ti ti-check me-1"></i>참석</span>'
-                : '<span class="badge bg-secondary-lt">미도착</span>';
-            // 입장등록 여부: 체크인(번호표 배정)된 사람만 의미가 있다. 가입했으면 완료, 아직이면 대기.
-            var regBadge = '';
-            if(inState){
-                regBadge = r.registered
-                    ? '<span class="badge bg-teal text-white"><i class="ti ti-user-check me-1"></i>입장등록 완료</span>'
-                    : '<span class="badge bg-yellow-lt"><i class="ti ti-hourglass me-1"></i>입장등록 대기</span>';
-            }
-            var when = (inState && r.checked_in_at)
-                ? `<div class="text-secondary small">${esc(r.checked_in_at)} 참석</div>` : '';
-            var regWhen = (r.registered && r.registered_at)
-                ? `<div class="text-secondary small">${esc(r.registered_at)} 입장등록</div>` : '';
             var nickname = r.name || '닉네임 없음';
             var name = r.name ? esc(r.name) : '<span class="text-secondary">닉네임 없음</span>';
             var pfLabel = PLATFORM_LABEL[r.platform] || r.platform || '';
             var pf = pfLabel
                 ? `<span class="badge ${PLATFORM_BADGE[r.platform] || 'bg-secondary-lt'}">${esc(pfLabel)}</span>` : '';
-            var toneCls = r.gender === 'F' ? 'bg-pink' : 'bg-blue';
+
+            // ① 번호표 박스 (성별 색)
             var ticket = r.ticket_no
-                ? `<span class="badge ${toneCls} text-white fs-3">${genderText(r.gender)} ${r.ticket_no}번</span>` : '';
-            // 체크인된 사람의 지정 테이블 (미지정이면 경고 뱃지 → 참가자 입장등록이 막히므로 눈에 띄게)
+                ? `<div class="ck-ticket ${r.gender === 'F' ? 'is-f' : 'is-m'}" aria-label="${genderText(r.gender)} ${r.ticket_no}번">`
+                  + `<span class="ck-ticket-g">${genderText(r.gender)}</span><span class="ck-ticket-no">${r.ticket_no}</span></div>`
+                : `<div class="ck-ticket is-none">번호<br>미배정</div>`;
+
+            // 테이블 (체크인한 사람만. 미지정이면 입장등록이 막히므로 경고)
             var tableBadge = '';
             if(inState){
                 tableBadge = r.rotation_table_id
                     ? `<span class="badge bg-azure-lt"><i class="ti ti-armchair me-1"></i>${tableNoById(r.rotation_table_id)}번 테이블</span>`
                     : `<span class="badge bg-red-lt"><i class="ti ti-alert-triangle me-1"></i>테이블 미지정</span>`;
             }
-            // 입장등록을 마친 사람은 번호 변경 버튼을 보이지 않게 한다. (삭제는 아래에서 체크인 여부로 판단)
+
+            // 상태: 미도착 → 참석(입장등록 대기) → 입장등록 완료
+            var status = !inState
+                ? '<span class="ck-pill is-out"><i class="ti ti-clock"></i>미도착</span>'
+                : (r.registered
+                    ? '<span class="ck-pill is-done"><i class="ti ti-user-check"></i>입장등록 완료</span>'
+                    : '<span class="ck-pill is-wait"><i class="ti ti-hourglass"></i>입장등록 대기</span>');
+
+            // ② 정보: 항목명 : 값
+            var prof = [];
+            if(r.birth_year){ prof.push(String(r.birth_year).slice(-2) + '년생'); }
+            if(r.height){ prof.push(r.height + 'cm'); }
+            if(r.job){ prof.push(esc(r.job)); }
+            var info = `<div><dt>프로필</dt><dd>${prof.length ? prof.join(' · ') : '<span class="text-danger">미입력</span>'}</dd></div>`;
+            if(r.merit){ info += `<div><dt>장점</dt><dd>${esc(r.merit)}</dd></div>`; }
+            var times = [];
+            if(inState && r.checked_in_at){ times.push('체크인 ' + esc(hhmm(r.checked_in_at))); }
+            if(r.registered && r.registered_at){ times.push('입장등록 ' + esc(hhmm(r.registered_at))); }
+            if(times.length){ info += `<div><dt>시각</dt><dd>${times.join(' · ')}</dd></div>`; }
+
+            // ③ 버튼: 체크인/취소(주요) · 프로필 · 번호·테이블(체크인 후, 입장등록 전) · 삭제(미도착일 때만)
+            var toggleBtn = inState
+                ? `<button type="button" class="btn btn-sm btn-outline-warning btn-checkin-toggle" data-id="${r.id}"`
+                  + ` aria-label="${esc(nickname)} 체크인 취소"><i class="ti ti-arrow-back-up me-1"></i>체크인 취소</button>`
+                : `<button type="button" class="btn btn-sm btn-success btn-checkin-toggle" data-id="${r.id}"`
+                  + ` aria-label="${esc(nickname)} 체크인"><i class="ti ti-check me-1"></i>체크인</button>`;
+            var profBtn = `<button type="button" class="btn btn-sm btn-outline-secondary btn-checkin-profile"`
+                  + ` data-id="${r.id}" aria-label="${esc(nickname)} 프로필 입력·수정"><i class="ti ti-id me-1"></i>프로필</button>`;
             var ticketBtn = (inState && !r.registered)
                 ? `<button type="button" class="btn btn-sm btn-outline-primary btn-checkin-ticket"`
-                  + ` data-id="${r.id}" aria-label="${esc(nickname)} 번호표 변경">`
-                  + `<i class="ti ti-edit me-1"></i>번호·테이블 변경</button>` : '';
-            // 체크인 이후(참석·입장등록)는 삭제 불가 → 미도착일 때만 삭제 버튼 노출
+                  + ` data-id="${r.id}" aria-label="${esc(nickname)} 번호표 변경"><i class="ti ti-edit me-1"></i>번호·테이블</button>` : '';
             var delBtn = inState ? ''
                 : `<button type="button" class="btn btn-sm btn-outline-danger btn-checkin-del"`
-                  + ` data-id="${r.id}" data-name="${esc(nickname)}"`
-                  + ` aria-label="${esc(nickname)} 명단에서 삭제">`
+                  + ` data-id="${r.id}" data-name="${esc(nickname)}" aria-label="${esc(nickname)} 명단에서 삭제">`
                   + `<i class="ti ti-trash me-1"></i>삭제</button>`;
-
-            var times = (when || regWhen) ? `<div class="ck-times">${when}${regWhen}</div>` : '';
-            // 상세페이지 명단용 프로필 (키·년생·직업) 요약 + 입력/수정 버튼
-            var profParts = [];
-            if(r.height){ profParts.push(r.height + 'cm'); }
-            if(r.birth_year){ profParts.push(String(r.birth_year).slice(-2) + '년생'); }
-            if(r.job){ profParts.push(esc(r.job)); }
-            if(r.merit){ profParts.push('장점: ' + esc(r.merit)); }
-            var profile = profParts.length
-                ? `<span class="badge bg-green-lt"><i class="ti ti-id me-1"></i>${profParts.join(' · ')}</span>`
-                : `<span class="badge bg-secondary-lt">프로필 미입력</span>`;
-            var profBtn = `<button type="button" class="btn btn-sm btn-outline-secondary btn-checkin-profile"`
-                  + ` data-id="${r.id}" aria-label="${esc(nickname)} 프로필 입력·수정">`
-                  + `<i class="ti ti-id me-1"></i>프로필</button>`;
-            // 모바일 전용: 행 전체 탭 대신 눈에 보이는 체크인/취소 버튼 (데스크톱은 행 클릭 그대로)
-            var toggleBtn = inState
-                ? `<button type="button" class="btn btn-sm btn-outline-warning btn-checkin-toggle d-md-none" data-id="${r.id}"`
-                  + ` aria-label="${esc(nickname)} 체크인 취소"><i class="ti ti-x me-1"></i>체크인 취소</button>`
-                : `<button type="button" class="btn btn-sm btn-success btn-checkin-toggle d-md-none" data-id="${r.id}"`
-                  + ` aria-label="${esc(nickname)} 체크인"><i class="ti ti-check me-1"></i>체크인</button>`;
-            var actions = `<div class="ck-actions">${toggleBtn}${profBtn}${ticketBtn}${delBtn}</div>`;
 
             return `<div class="list-group-item checkin-row ${stateCls}"`
                 +      ` role="button" tabindex="0" data-id="${r.id}"`
                 +      ` aria-pressed="${inState ? 'true' : 'false'}"`
                 +      ` aria-label="${esc(nickname)} ${esc(pfLabel)} ${inState ? '참석됨, 탭하면 취소' : '미도착, 탭하면 체크인'}">`
-                +   `<div class="ck-main">${ticket}<span class="ck-name">${name}</span></div>`
-                +   `<div class="ck-status">${badge}</div>`
-                +   `<div class="ck-meta">${tableBadge}${pf}${regBadge}${profile}</div>`
-                +   times
-                +   actions
+                +   `<div class="ck-top">${ticket}`
+                +     `<div class="ck-ident"><div class="ck-name">${name}</div><div class="ck-sub">${pf}${tableBadge}</div></div>`
+                +     `<div class="ck-status">${status}</div>`
+                +   `</div>`
+                +   `<dl class="ck-info">${info}</dl>`
+                +   `<div class="ck-actions">${toggleBtn}${profBtn}${ticketBtn}${delBtn}</div>`
                 + `</div>`;
         }
 
         function fillColumn(listSel, emptySel, inSel, totalSel, regSel, rows){
             var inCnt = rows.filter(function(r){ return r.checked_in; }).length;
             var regCnt = rows.filter(function(r){ return r.registered; }).length;
+            // 미도착 칸: "#maleIn" → "#maleOut"
+            $(inSel.replace(/In$/, 'Out')).text(rows.length - inCnt);
             $(inSel).text(inCnt);
             $(regSel).text(regCnt);
             $(totalSel).text(rows.length);
@@ -957,8 +1000,8 @@
             var job       = ($('#addJob').val() || '').trim();
             var merit     = ($('#addMerit').val() || '').trim();
             if(!name){ await salert({text: '닉네임을 입력해주세요.', cancel: false}); return; }
-            if(!height){ await salert({text: '키를 입력해주세요.', cancel: false}); $('#addHeight').focus(); return; }
             if(!birthYear){ await salert({text: '년생을 입력해주세요. (예: 97)', cancel: false}); $('#addBirthYear').focus(); return; }
+            if(!height){ await salert({text: '키를 입력해주세요.', cancel: false}); $('#addHeight').focus(); return; }
             if(!job){ await salert({text: '직업을 입력해주세요.', cancel: false}); $('#addJob').focus(); return; }
             if(!merit){ await salert({text: '장점을 입력해주세요.', cancel: false}); $('#addMerit').focus(); return; }
             $.ajax({

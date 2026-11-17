@@ -39,9 +39,11 @@ class HandleInertiaRequests extends Middleware
         $member = $request->user('web');
 
         // nav 분기용 행사 정보(타입/상태)를 한 번만 조회한다.
+        // 전체 컬럼을 한 번만 읽어 요청 속성에 두고, 컨트롤러가 같은 요청 안에서 다시 조회하지 않게 재사용한다.
         $event = $member
-            ? \App\Models\EventRound::whereKey($member->event_id)->first(['title', 'type', 'status'])
+            ? \App\Models\EventRound::find($member->event_id)
             : null;
+        $request->attributes->set('member_event', $event);
 
         // 게임 탭 노출 조건: 와인파티(wine) && 대기(P)·진행중(S).
         $gameTabVisible = $event !== null

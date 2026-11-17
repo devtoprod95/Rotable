@@ -23,11 +23,10 @@
         <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
         <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}">
 
-        {{-- 웹폰트: preconnect 후 <link> 로 병렬 로딩 (CSS @import 직렬 로딩 방지). 둘 다 font-display: swap. --}}
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        {{-- 웹폰트: Pretendard 는 CDN 을 <link> 로 병렬 로딩 (CSS @import 직렬 로딩 방지). font-display: swap. --}}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap">
+        {{-- 로고 폰트(Lilita One)는 우리 서버에서 직접 내려준다. (외부 연결 2개 절약) @font-face 는 app.css --}}
+        <link rel="preload" href="/fonts/lilita-one-latin.woff2" as="font" type="font/woff2" crossorigin>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>

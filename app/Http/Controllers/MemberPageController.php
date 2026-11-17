@@ -53,7 +53,7 @@ class MemberPageController extends Controller
         $me = Auth::guard('web')->user();
 
         // 로테이션 상태/제목은 행사(event_rounds) 단위로 관리한다.
-        $event       = EventRound::find($me->event_id);
+        $event       = $this->currentEvent($me);
         $eventStatus = $event?->status ?? EventRound::STATUS_PENDING;
         $eventTitle  = $event?->title;
 
@@ -204,6 +204,19 @@ class MemberPageController extends Controller
     }
 
     /**
+     * 현재 요청에서 이미 조회한 내 행사를 재사용한다. (공통 props 단계에서 한 번 읽어 둠)
+     * 없으면 직접 조회한다. 읽기 화면 전용 — 상태를 바꾸는 저장 로직에서는 항상 새로 조회한다.
+     */
+    private function currentEvent(Member $me): ?EventRound
+    {
+        $shared = request()->attributes->get('member_event');
+
+        return $shared instanceof EventRound && $shared->id === $me->event_id
+            ? $shared
+            : EventRound::find($me->event_id);
+    }
+
+    /**
      * 기록 노출용 회원 정보 (members 전체 컬럼 + 공통 추가 프로필).
      *
      * @return array<string, mixed>
@@ -297,7 +310,7 @@ class MemberPageController extends Controller
 
         // 현재 턴 기준 각 회원의 테이블 번호. (상세 모달 "현재 테이블" 표기용)
         // 호출한 쪽이 이미 알고 있으면 재사용하고, 아니면 여기서 조회한다. (행사는 한 번만 조회)
-        $event ??= EventRound::find($me->event_id);
+        $event ??= $this->currentEvent($me);
         $currentTableNoByMember ??= $this->currentTableNoMap($me->event_id, $event);
 
         $partners = Member::query()
@@ -513,7 +526,7 @@ class MemberPageController extends Controller
         /** @var \App\Models\Member $me */
         $me = Auth::guard('web')->user();
 
-        $event  = EventRound::find($me->event_id);
+        $event  = $this->currentEvent($me);
         $status = $event?->status ?? EventRound::STATUS_PENDING;
 
         $isOneToOne = $event !== null && $event->isOneToOne();

@@ -1,5 +1,15 @@
-/* 웹폰트(Lilita One · Pretendard)는 CSS @import 가 아니라 app.blade.php 의 <link> 로 불러온다.
+/* Pretendard 는 CSS @import 가 아니라 app.blade.php 의 <link> 로 불러온다.
    (@import 는 CSS 를 받은 뒤에야 폰트 CSS 를 발견해 직렬로 로딩되어 첫 화면이 늦어진다) */
+
+/* 브랜드 로고 폰트 Lilita One (SIL OFL) — 로고 글자(영문)만 쓰므로 라틴 서브셋 하나만 자체 호스팅한다. */
+@font-face {
+    font-family: 'Lilita One';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('/fonts/lilita-one-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -62,5 +72,53 @@ body {
     textarea,
     select {
         font-size: 16px;
+    }
+}
+
+/*
+ * 앱 같은 터치 감각.
+ *  - 탭 시 회색 하이라이트 제거, 더블탭 확대 지연(300ms) 제거(touch-action: manipulation).
+ *  - 가장자리 당김(overscroll)으로 화면이 튕기거나 새로고침되는 것을 막는다.
+ */
+html {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+}
+
+a,
+button,
+[role='button'],
+label,
+select,
+summary {
+    touch-action: manipulation;
+}
+
+/*
+ * 화면 전환(View Transition): 상단 header / 하단 nav 는 고정 요소라 전환 중에도 그대로 두고,
+ * 본문만 짧게 페이드한다. (지원하지 않는 브라우저는 그냥 즉시 전환)
+ */
+.vt-header {
+    view-transition-name: app-header;
+}
+
+.vt-nav {
+    view-transition-name: app-nav;
+}
+
+::view-transition-group(app-header),
+::view-transition-group(app-nav) {
+    animation-duration: 0s;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation-duration: 120ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation: none;
     }
 }

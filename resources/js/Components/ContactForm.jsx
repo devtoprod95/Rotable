@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import TextField from '@/Components/TextField';
+import LoadingOverlay from '@/Components/LoadingOverlay';
 
 /** CSRF 토큰 (meta 태그에서) */
 function csrfToken() {
@@ -104,6 +105,7 @@ export default function ContactForm() {
 
     return (
         <form onSubmit={submit} autoComplete="off" className="mt-6 flex flex-col gap-4 text-left">
+            <LoadingOverlay show={sending} message="문의 보내는 중…" />
             <TextField
                 label="이름 (선택)"
                 value={name}

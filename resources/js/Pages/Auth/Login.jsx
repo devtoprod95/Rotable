@@ -4,6 +4,7 @@ import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
 import AuthErrorModal from '@/Components/AuthErrorModal';
+import LoadingOverlay from '@/Components/LoadingOverlay';
 
 /**
  * 개발 편의용 자동 입력 값. (production 이 아닐 때만 사용)
@@ -46,6 +47,7 @@ export default function Login() {
 
     return (
         <AppLayout bottomNav={false} headerAction={false}>
+            <LoadingOverlay show={processing} message="입장 중…" />
             <Head title="Rotable" />
             <div className="flex flex-1 flex-col bg-secondary-50 p-6">
                 <div className="m-auto w-full max-w-md rounded-3xl border border-secondary-100 bg-white p-8 shadow-2xl shadow-black/5 sm:p-10">

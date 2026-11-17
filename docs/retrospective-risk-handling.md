@@ -84,6 +84,7 @@
   - 마감 후 운영진 텔레그램 리포트는 `SendCloseVotingReportJob`(Queue, `tries=3`, `backoff=10s`)으로 분리 → 외부 API 지연/실패가 **마감 자체를 막지 않음**.
 - **남은 위험**: `closeVoting` 에는 락과 "이미 종료면 무시" 가드가 없다. 두 경로가 겹치면 상태는 같지만 **리포트가 두 번 발송**될 수 있다. 이는 `openVoting` 도 동일.
 - **후속 과제**: 락 + 이미 목표 상태면 no-op 반환, Job 에 `ShouldBeUnique`(행사 ID 기준).
+- ✅ **보완 완료 (2026-11-17)**: `openVoting`/`closeVoting` 이 트랜잭션 + `lockForUpdate()` 후 상태를 확인한다. 이미 매칭중/종료면 "이미 …" 메시지로 거부하고 브로드캐스트·리포트를 보내지 않는다. `SendCloseVotingReportJob` 에 `ShouldBeUnique`(행사 ID 기준) 적용.
 
 ### 2-6. 입장등록 경합과 반쪽 데이터
 
@@ -92,6 +93,8 @@
 - **후속 과제**
   - `members` 에 `UNIQUE(event_id, gender, name)` 추가(기존 데이터 중복 점검 선행).
   - 두 insert 를 `DB::transaction` 으로 묶기.
+- ✅ **보완 완료 (2026-11-17)**: `MemberAuthController::register` 에서 `Member` + `RotationSeat` 생성을 한 `DB::transaction` 으로 묶음. 로그인·세션 재생성·음료 브로드캐스트는 트랜잭션 밖(커밋 이후).
+- ✅ **보완 완료 (2026-11-17)**: 마이그레이션 `2026_11_17_140000_add_unique_ticket_to_members_table` 추가 — `UNIQUE(event_id, gender, name)` (`members.name` 이 번호표). 적용 전 기존 데이터 중복 점검 결과 0건. **DB 반영(`php artisan migrate`)은 배포 시 별도 실행 필요.** 소프트 삭제된 회원의 번호표도 유니크 대상에 포함된다(기존 `UNIQUE(event_id, phone)` 과 동일).
 
 ### 2-7. 메시지 전송 횟수(1인 5회) 제한 우회
 
@@ -199,9 +202,9 @@
 
 | 우선순위 | 과제 | 담당 영역 | 비고 |
 |---|---|---|---|
-| P1 | `closeVoting`/`openVoting` 에 락 + "이미 목표 상태면 no-op", 리포트 Job `ShouldBeUnique` | SeatingService, Job | 리포트 중복 제거 |
-| P1 | 입장등록에서 `Member` + `RotationSeat` 생성을 한 트랜잭션으로 | MemberAuthController | 반쪽 데이터 방지 |
-| P1 | `members` 에 `UNIQUE(event_id, gender, name)` 추가 | Migration | 적용 전 기존 중복 데이터 점검 |
+| P1 ✅ | `closeVoting`/`openVoting` 에 락 + "이미 목표 상태면 no-op", 리포트 Job `ShouldBeUnique` | SeatingService, Job | 리포트 중복 제거 — 완료(2026-11-17) |
+| P1 ✅ | 입장등록에서 `Member` + `RotationSeat` 생성을 한 트랜잭션으로 | MemberAuthController | 반쪽 데이터 방지 — 완료(2026-11-17) |
+| P1 ✅ | `members` 에 `UNIQUE(event_id, gender, name)` 추가 | Migration | 중복 점검 0건, 마이그레이션 작성 완료(2026-11-17) — DB 반영은 배포 시 `migrate` 필요 |
 | P2 | 메시지 5회·투표 3명 제한 원자화 | MemberPageController | 락 후 재확인 / 조건부 UPDATE |
 | P2 | 로테이션 진행에 `expected_round` 도입 | SeatingService, 관리자 UI | 연타·경합 시 멱등화 |
 | P2 | WebSocket 재연결·탭 복귀 시 전체 재조회 | 프론트 레이아웃 | 이벤트 유실 보정 |

@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Services\Rotation\SeatingService;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 
@@ -12,7 +13,7 @@ use Illuminate\Foundation\Queue\Queueable;
  * 모델 대신 식별자(eventId)만 들고 있다가 큐 처리 시점에 최신 데이터를 조회해 집계한다.
  * 전송 실패가 본래의 마감 처리 흐름을 막지 않도록, 리포트 전송은 이 Job 으로 분리했다.
  */
-class SendCloseVotingReportJob implements ShouldQueue
+class SendCloseVotingReportJob implements ShouldBeUnique, ShouldQueue
 {
     use Queueable;
 
@@ -30,6 +31,14 @@ class SendCloseVotingReportJob implements ShouldQueue
         public int $eventId,
         public string $trigger = 'manual',
     ) {
+    }
+
+    /**
+     * 같은 행사의 리포트가 큐에 이미 있으면 중복 적재하지 않는다.
+     */
+    public function uniqueId(): string
+    {
+        return (string) $this->eventId;
     }
 
     public function handle(SeatingService $seatingService): void

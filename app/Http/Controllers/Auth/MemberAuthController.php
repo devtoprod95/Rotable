@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -230,47 +231,52 @@ class MemberAuthController extends Controller
             ])->withInput();
         }
 
-        $member = Member::create([
-            'event_id'   => $validated['event_id'],
-            'phone'      => $validated['phone'],
-            // 번호표는 숫자로 정규화해 저장한다. ("03" → "3") — 체크인 명단의 번호와 같은 형태로 맞춘다.
-            'name'       => (string) (int) $validated['name'],
-            'password'   => $validated['password'],
-            'gender'     => $validated['gender'],
-            'birth_year' => $validated['birth_year'],
-            'job'        => $validated['job'],
-            'height'     => $validated['height'],
-            'mbti'       => strtoupper($validated['mbti']),
-            'region'     => $validated['region'],
-            'is_smoker'  => $validated['is_smoker'],
-            // 추가 프로필 (공통)
-            'ideal_type' => $validated['ideal_type'],
-            'merit'      => $validated['merit'],
-            'hobby'      => $validated['hobby'],
-            'tmi'        => $validated['tmi'],
-            // 생활 습관
-            'drink_capacity'        => $validated['drink_capacity'],
-            'drink_frequency'       => $validated['drink_frequency'],
-            'has_pet'               => $validated['has_pet'],
-            'friend_meet_frequency' => $validated['friend_meet_frequency'],
-            // 선택한 음료 (1:1 소개팅만, 그 외는 null)
-            'event_drink_id' => $drinkRequired ? (int) $validated['event_drink_id'] : null,
-            // 신청 플랫폼: 사용자가 고르지 않고, 연결 키(행사·성별·번호표)로 찾은 체크인 명단의 값을 쓴다.
-            'platform'   => app(RosterService::class)->platformForTicket(
-                (int) $validated['event_id'],
-                (string) $validated['gender'],
-                (int) $validated['name'],
-            ),
-        ]);
+        // 회원과 기준 좌석은 한 트랜잭션으로 만든다. (좌석 생성 실패 시 좌석 없는 회원이 남지 않도록)
+        $member = DB::transaction(function () use ($validated, $drinkRequired, $assignedTableId): Member {
+            $member = Member::create([
+                'event_id'   => $validated['event_id'],
+                'phone'      => $validated['phone'],
+                // 번호표는 숫자로 정규화해 저장한다. ("03" → "3") — 체크인 명단의 번호와 같은 형태로 맞춘다.
+                'name'       => (string) (int) $validated['name'],
+                'password'   => $validated['password'],
+                'gender'     => $validated['gender'],
+                'birth_year' => $validated['birth_year'],
+                'job'        => $validated['job'],
+                'height'     => $validated['height'],
+                'mbti'       => strtoupper($validated['mbti']),
+                'region'     => $validated['region'],
+                'is_smoker'  => $validated['is_smoker'],
+                // 추가 프로필 (공통)
+                'ideal_type' => $validated['ideal_type'],
+                'merit'      => $validated['merit'],
+                'hobby'      => $validated['hobby'],
+                'tmi'        => $validated['tmi'],
+                // 생활 습관
+                'drink_capacity'        => $validated['drink_capacity'],
+                'drink_frequency'       => $validated['drink_frequency'],
+                'has_pet'               => $validated['has_pet'],
+                'friend_meet_frequency' => $validated['friend_meet_frequency'],
+                // 선택한 음료 (1:1 소개팅만, 그 외는 null)
+                'event_drink_id' => $drinkRequired ? (int) $validated['event_drink_id'] : null,
+                // 신청 플랫폼: 사용자가 고르지 않고, 연결 키(행사·성별·번호표)로 찾은 체크인 명단의 값을 쓴다.
+                'platform'   => app(RosterService::class)->platformForTicket(
+                    (int) $validated['event_id'],
+                    (string) $validated['gender'],
+                    (int) $validated['name'],
+                ),
+            ]);
 
-        // 체크인 때 관리자가 지정한 테이블로 기준(홈) 좌석을 생성한다.
-        // 새 좌석 모델은 current_round 공식으로 턴 자리를 계산하므로,
-        // 로테이션이 이미 시작된(S/V) 뒤 중간 입장이어도 이 좌석이 현재 턴부터 자동 반영된다.
-        RotationSeat::create([
-            'event_id'          => $validated['event_id'],
-            'member_id'         => $member->id,
-            'rotation_table_id' => $assignedTableId,
-        ]);
+            // 체크인 때 관리자가 지정한 테이블로 기준(홈) 좌석을 생성한다.
+            // 새 좌석 모델은 current_round 공식으로 턴 자리를 계산하므로,
+            // 로테이션이 이미 시작된(S/V) 뒤 중간 입장이어도 이 좌석이 현재 턴부터 자동 반영된다.
+            RotationSeat::create([
+                'event_id'          => $validated['event_id'],
+                'member_id'         => $member->id,
+                'rotation_table_id' => $assignedTableId,
+            ]);
+
+            return $member;
+        });
 
         Auth::guard('web')->login($member);
         $request->session()->regenerate();

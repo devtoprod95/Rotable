@@ -476,14 +476,24 @@ class SeatingService
         $returnMsg = $this->returnMsg;
 
         try {
-            $event = EventRound::find($eventId);
-            if (!$event) {
-                throw new Exception('행사를 찾을 수 없습니다.');
-            }
+            // 행사 행을 잠근 채 상태를 확인·전환한다. (더블클릭·동시 요청 시 시작 시각 재기록 방지)
+            $event = DB::transaction(function () use ($eventId): EventRound {
+                /** @var EventRound|null $locked */
+                $locked = EventRound::lockForUpdate()->find($eventId);
+                if ($locked === null) {
+                    throw new Exception('행사를 찾을 수 없습니다.');
+                }
 
-            $event->status           = EventRound::STATUS_VOTING;
-            $event->voting_opened_at = now();
-            $event->save();
+                if ($locked->status === EventRound::STATUS_VOTING) {
+                    throw new Exception('이미 매칭이 진행 중입니다.');
+                }
+
+                $locked->status           = EventRound::STATUS_VOTING;
+                $locked->voting_opened_at = now();
+                $locked->save();
+
+                return $locked;
+            });
 
             // 참가자 화면을 실시간으로 갱신하여 '매칭하기' 탭을 바로 노출. 와인파티·1:1 공통.
             broadcast(new \App\Events\EventVotingOpened($event->id));
@@ -554,13 +564,24 @@ class SeatingService
         $returnMsg = $this->returnMsg;
 
         try {
-            $event = EventRound::find($eventId);
-            if (!$event) {
-                throw new Exception('행사를 찾을 수 없습니다.');
-            }
+            // 행사 행을 잠근 채 상태를 확인·전환한다.
+            // 수동 마감과 자동 마감(9시)이 겹쳐도 한 번만 처리되어 브로드캐스트·리포트가 중복되지 않는다.
+            $event = DB::transaction(function () use ($eventId): EventRound {
+                /** @var EventRound|null $locked */
+                $locked = EventRound::lockForUpdate()->find($eventId);
+                if ($locked === null) {
+                    throw new Exception('행사를 찾을 수 없습니다.');
+                }
 
-            $event->status = EventRound::STATUS_CLOSED;
-            $event->save();
+                if ($locked->status === EventRound::STATUS_CLOSED) {
+                    throw new Exception('이미 종료된 행사입니다.');
+                }
+
+                $locked->status = EventRound::STATUS_CLOSED;
+                $locked->save();
+
+                return $locked;
+            });
 
             // 참가자 화면을 실시간으로 갱신하여 매칭 결과를 바로 노출. 와인파티·1:1 공통.
             broadcast(new EventClosed($event->id));

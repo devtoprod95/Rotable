@@ -316,7 +316,7 @@
                                                        placeholder="음료 이름 입력 후 추가" enterkeyhint="done" autocomplete="off">
                                                 <button type="button" class="btn btn-primary" id="drinkAddBtn"><i class="ti ti-plus me-1"></i>추가</button>
                                             </div>
-                                            <div class="text-muted mt-1" style="font-size:0.82em;">최대 {{ \App\Models\EventDrink::MAX_PER_EVENT }}개</div>
+                                            <div class="text-muted mt-1" style="font-size:0.82em;">최대 {{ \App\Models\EventDrink::MAX_PER_EVENT }}개 · 가나다 순으로 보여요</div>
                                             <div id="drinkChips" class="drink-chip-grid mt-2"></div>
                                             <div class="drink-setting-notes mt-2">
                                                 <div><i class="ti ti-point me-1"></i>음료 카드의 ✕ 를 누르면 목록에서 빠져요.</div>
@@ -324,7 +324,18 @@
                                                 <div><i class="ti ti-point me-1"></i>참가자는 입장등록 때 이 목록에서 하나를 골라요. (등록 후 변경 불가)</div>
                                                 <div><i class="ti ti-point me-1"></i>바꾼 내용은 <b>음료 목록 저장</b>을 눌러야 반영돼요.</div>
                                             </div>
-                                            <button type="button" class="btn btn-primary mt-3 w-100" id="drinkSaveBtn"><i class="ti ti-device-floppy me-1"></i>음료 목록 저장</button>
+                                            {{-- 하단 버튼: 모바일은 위아래, PC 는 같은 폭으로 나란히 --}}
+                                            <div class="row g-2 mt-2">
+                                                <div class="col-12 col-md-6">
+                                                    <button type="button" class="btn btn-outline-primary w-100" id="drinkDefaultBtn"
+                                                            title="{{ implode(', ', \App\Models\EventDrink::DEFAULT_NAMES) }}">
+                                                        <i class="ti ti-sparkles me-1"></i>기본 음료 추가 ({{ count(\App\Models\EventDrink::DEFAULT_NAMES) }}종)
+                                                    </button>
+                                                </div>
+                                                <div class="col-12 col-md-6">
+                                                    <button type="button" class="btn btn-primary w-100" id="drinkSaveBtn"><i class="ti ti-device-floppy me-1"></i>음료 목록 저장</button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -876,7 +887,13 @@
             return '🥤';
         }
 
+        // 음료 목록은 가나다 순으로 보여준다. (서버도 이름순으로 내려준다)
+        function sortDrinkList(){
+            drinkList.sort(function(a, b){ return a.localeCompare(b, 'ko'); });
+        }
+
         function renderDrinkChips(){
+            sortDrinkList();
             var $box = $('#drinkChips').empty();
             $('#drinkCountBadge').text(drinkList.length + '개');
             if(!drinkList.length){
@@ -1004,24 +1021,53 @@
             }).always(function(){ $btn.prop('disabled', false); });
         });
 
+        // 음료 목록을 서버에 저장한다. (저장 후 새로고침해 현황까지 서버 값으로 다시 그린다)
+        function saveDrinkList(drinks){
+            $.ajax({
+                url: "{{ route('admin.rotation.event.drinks.save', $event->id) }}",
+                type: 'PUT',
+                data: { drinks: drinks },
+                success: function(res){
+                    alert(res?.msg);
+                    if(res?.status === 200){ location.reload(); }
+                },
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+            });
+        }
+
         $('#drinkSaveBtn').on('click', async function(){
             // 입력창에 적어두고 추가를 안 누른 값도 함께 담는다.
             var pending = $('#drinkNameInput').val().trim();
             if(pending && drinkList.indexOf(pending) === -1 && drinkList.length < drinkMax){ drinkList.push(pending); }
-            var drinks = drinkList.slice();
 
             if(await salert({text: '음료 목록을 저장하시겠습니까? 목록에서 빠진 음료의 선택은 해제됩니다.'})){
-                $.ajax({
-                    url: "{{ route('admin.rotation.event.drinks.save', $event->id) }}",
-                    type: 'PUT',
-                    data: { drinks: drinks },
-                    success: function(res){
-                        alert(res?.msg);
-                        if(res?.status === 200){ location.reload(); }
-                    },
-                    error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
-                });
+                saveDrinkList(drinkList.slice());
             }
+        });
+
+        // 기본 음료(EventDrink::DEFAULT_NAMES) 한꺼번에 추가 + 저장.
+        //  - 이미 있는 음료는 건너뛰고, 기존 목록 뒤에 순서대로 붙인다. (기존 음료·참가자 선택은 그대로)
+        //  - 최대 개수를 넘으면 들어갈 수 있는 만큼만 넣는다.
+        var DEFAULT_DRINKS = @json(\App\Models\EventDrink::DEFAULT_NAMES);
+        $('#drinkDefaultBtn').on('click', async function(){
+            var missing = DEFAULT_DRINKS.filter(function(n){ return drinkList.indexOf(n) === -1; });
+            if(!missing.length){
+                await salert({text: '기본 음료가 이미 모두 목록에 있어요.', cancel: false});
+                return;
+            }
+            var room = drinkMax - drinkList.length;
+            if(room <= 0){
+                await salert({text: '음료는 최대 ' + drinkMax + '개까지 등록할 수 있어요. 먼저 음료를 지워 주세요.', cancel: false});
+                return;
+            }
+            var adding = missing.slice(0, room);
+            var esc = function(v){ return $('<div>').text(v).html(); };
+            var html = '<div>기본 음료 <b>' + adding.length + '개</b>를 추가하고 저장할까요?</div>'
+                + '<div class="mt-2">' + adding.map(esc).join('<br>') + '</div>'
+                + (adding.length < missing.length ? '<div class="mt-2 text-muted">최대 개수 때문에 ' + (missing.length - adding.length) + '개는 넣지 못해요.</div>' : '');
+            if(!(await salert({html: html, icon: 'question'}))){ return; }
+
+            saveDrinkList(drinkList.concat(adding));
         });
 
         // ===== 상세: 리뷰 인증 게이트 토글 라벨 동기화 =====

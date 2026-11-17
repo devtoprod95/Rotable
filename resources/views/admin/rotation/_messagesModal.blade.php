@@ -38,8 +38,6 @@
     #messagesModal .mm-empty{ text-align:center; color:#868e96; padding:2.5rem 0; }
     /* 모바일: 보내기 영역이 길어 목록을 밀어내지 않도록 접을 수 있게 */
     #messagesModal .mm-send-head{ cursor:pointer; user-select:none; }
-    #messagesModal .mm-send-head .ti-chevron-down{ transition:transform .15s ease; }
-    #messagesModal .mm-send-head[aria-expanded="false"] .ti-chevron-down{ transform:rotate(-90deg); }
 </style>
 
 <div class="modal fade" id="messagesModal" tabindex="-1" aria-hidden="true">
@@ -62,7 +60,7 @@
                 <div class="card card-body bg-light border-0 mb-3 p-3" id="mm-sendBox">
                     <div class="fw-bold mm-send-head d-flex align-items-center gap-1" role="button" tabindex="0"
                          data-bs-toggle="collapse" data-bs-target="#mm-sendCollapse" aria-expanded="false" aria-controls="mm-sendCollapse">
-                        <i class="ti ti-chevron-down"></i><i class="ti ti-send me-1"></i>관리자 메시지 보내기 <span class="text-muted small fw-normal ms-1">탭하여 펼치기</span>
+                        <i class="ti ti-send me-1"></i>관리자 메시지 보내기 <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i>
                     </div>
                     <div class="text-muted small">참가자에게는 익명으로 표시돼요.</div>
                     <div class="collapse" id="mm-sendCollapse">

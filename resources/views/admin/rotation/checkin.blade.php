@@ -124,12 +124,15 @@
         </div>
     </div>
 
+    {{-- 음료 선택 (1:1 소개팅) — 입장 전 설정하는 값이라 현황 바로 아래에 둔다. 카드 전체 접기/펼치기 가능 --}}
+    @include('admin.rotation._drinkSection')
+
     {{-- 명단 추가 (한 명씩 입력) --}}
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2" role="button" tabindex="0"
                  data-bs-toggle="collapse" data-bs-target="#addRosterCollapse" aria-expanded="true" aria-controls="addRosterCollapse" style="cursor:pointer;">
-                <h3 class="card-title mb-0"><i class="ti ti-user-plus me-1"></i> 체크인 명단 추가 <span class="text-secondary small fw-normal ms-1">탭하여 접기/펼치기</span></h3>
+                <h3 class="card-title mb-0 d-flex align-items-center gap-1"><i class="ti ti-user-plus me-1"></i> 체크인 명단 추가 <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i></h3>
                 <span class="badge bg-azure-lt"><i class="ti ti-info-circle me-1"></i> 전화번호 없이 닉네임·플랫폼·성별만 관리해요</span>
             </div>
             <div class="collapse show" id="addRosterCollapse">
@@ -244,7 +247,7 @@
         <div class="card">
             <div class="card-header py-2" role="button" tabindex="0" data-bs-toggle="collapse" data-bs-target="#devToolsCollapse"
                  aria-expanded="false" aria-controls="devToolsCollapse" style="cursor:pointer;">
-                <h3 class="card-title mb-0"><i class="ti ti-tool me-1"></i> 개발 도구 <span class="text-secondary small fw-normal ms-1">탭하여 펼치기</span></h3>
+                <h3 class="card-title mb-0 d-flex align-items-center gap-1"><i class="ti ti-tool me-1"></i> 개발 도구 <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i></h3>
             </div>
             <div class="collapse" id="devToolsCollapse">
                 <div class="card-body d-flex flex-column flex-md-row flex-md-wrap gap-2">

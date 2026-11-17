@@ -173,3 +173,7 @@ input[type="number"] {
 /* 모바일 2열에서 버튼 수가 홀수면 마지막 버튼(예: 행사 상세의 '목록')을 한 줄 전체로 — 옆이 비어 보이지 않게 */
 @media (max-width: 767.98px) { .eventform-btn-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; } }
 @media (min-width: 768px) { .eventform-btn-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }
+
+/* 접기/펼치기 화살표 (모든 접이식 영역 공통): 제목 바로 옆에 두고, 접힌 상태는 ▼(펼치기), 펼친 상태는 ▲(접기) */
+.ck-chevron { font-size: 1.35rem; line-height: 1; color: #6c757d; flex: 0 0 auto; transition: transform .15s ease; }
+[data-bs-toggle="collapse"][aria-expanded="true"] .ck-chevron { transform: rotate(180deg); }

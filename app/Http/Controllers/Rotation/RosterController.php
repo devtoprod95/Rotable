@@ -58,8 +58,20 @@ class RosterController extends RotationBaseController
         $event = EventRound::find($id);
         abort_if($event === null, 404);
 
+        // 1:1 소개팅은 체크인 화면에서 음료 선택지/선택 현황도 다룬다. (음료별 선택 인원수 포함)
+        $memberTableNos = [];
+        if ($event->isOneToOne()) {
+            $event->load([
+                'drinks'  => fn ($q) => $q->withCount('members'),
+                'members' => fn ($q) => $q->select(['id', 'event_id', 'name', 'gender', 'event_drink_id', 'drink_served_at']),
+            ]);
+            $memberTableNos = $this->memberTableNosFor($event);
+        }
+
         return view('admin.rotation.checkin', [
             'event'           => $event,
+            // 1:1 음료 현황 표기용 — 회원 id => 기준(입장등록 때 배정된) 테이블 번호
+            'memberTableNos'  => $memberTableNos,
             'platformOptions' => Member::platformOptions(),
             // 체크인 때 테이블 지정용 — 이 행사의 테이블 목록 (번호 오름차순)
             'tables'          => RotationTable::where('event_id', $id)->orderBy('table_no')->get(['id', 'table_no']),
@@ -68,6 +80,25 @@ class RosterController extends RotationBaseController
             // 더미 데이터 버튼(명단 추가/체크인/입장등록)은 최고관리자 + 운영(production)이 아닐 때만 노출
             'dummyMode'       => $this->canUseDummyTools(),
         ]);
+    }
+
+    /**
+     * 회원별 기준(홈) 테이블 번호 맵(회원 id => 테이블 번호). 입장등록 때 배정된 자리이며 로테이션으로 바뀌지 않는다.
+     * 기준 좌석이 없으면 키가 없다.
+     *
+     * @return array<int, int>
+     */
+    private function memberTableNosFor(EventRound $event): array
+    {
+        $out = [];
+        foreach ($event->rotationSeats()->with('table:id,table_no')->get() as $seat) {
+            $home = $seat->table?->table_no;
+            if ($home !== null && $seat->member_id !== null) {
+                $out[$seat->member_id] = (int) $home;
+            }
+        }
+
+        return $out;
     }
 
     /**

@@ -23,6 +23,13 @@
         <link rel="icon" type="image/png" href="{{ asset('images/logo.png') }}">
         <link rel="apple-touch-icon" href="{{ asset('images/logo.png') }}">
 
+        {{-- 웹폰트: preconnect 후 <link> 로 병렬 로딩 (CSS @import 직렬 로딩 방지). 둘 다 font-display: swap. --}}
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css">
+
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
 
         @viteReactRefresh

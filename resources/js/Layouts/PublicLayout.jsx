@@ -15,8 +15,11 @@ export default function PublicLayout({ children }) {
                         <div className="flex h-header items-center justify-between rounded-b-3xl border-b-2 border-primary-200 bg-white/95 px-4 pt-[env(safe-area-inset-top)] shadow-[0_4px_16px_-6px_rgba(207,47,76,0.25)] backdrop-blur">
                             <Link href="/public/games" className="flex items-center gap-2">
                                 <img
-                                    src="/images/logo.png"
+                                    src="/images/logo-sm.png"
                                     alt="Rotable"
+                                    width="36"
+                                    height="36"
+                                    decoding="async"
                                     className="h-9 w-9 object-contain"
                                 />
                                 <span className="font-logo text-xl leading-none tracking-wide text-black translate-y-[1px]">

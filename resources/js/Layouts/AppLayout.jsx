@@ -154,8 +154,11 @@ export default function AppLayout({
                         <div className="flex h-header items-center justify-between rounded-b-3xl border-b-2 border-primary-200 bg-white/95 px-4 pt-[env(safe-area-inset-top)] shadow-[0_4px_16px_-6px_rgba(207,47,76,0.25)] backdrop-blur">
                             <Link href="/" className="flex items-center gap-2">
                                 <img
-                                    src="/images/logo.png"
+                                    src="/images/logo-sm.png"
                                     alt="Rotable"
+                                    width="36"
+                                    height="36"
+                                    decoding="async"
                                     className="h-9 w-9 object-contain"
                                 />
                                 <span className="flex flex-col leading-none">
@@ -356,6 +359,9 @@ function BottomNav() {
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                // 터치/클릭이 시작되는 순간(손가락을 떼기 전) 요청을 먼저 보내 전환을 빠르게 한다.
+                                // click 모드는 결과를 캐시에 남기지 않고 곧바로 쓰므로, 턴·매칭 상태가 낡을 일이 없다.
+                                prefetch="click"
                                 // 이미 active 인 탭을 다시 누르면 아무 동작도 하지 않는다.
                                 onClick={(e) => {
                                     if (active) {

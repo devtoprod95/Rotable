@@ -223,7 +223,7 @@ export default function Register() {
                 <div className="m-auto w-full max-w-md rounded-3xl border border-secondary-100 bg-white p-8 shadow-2xl shadow-black/5 sm:p-10">
                     <div className="flex items-center justify-center gap-3">
                         <Link href="/" className="flex items-center gap-2">
-                            <img src="/images/logo.png" alt="Rotable" className="h-11 w-11 object-contain" />
+                            <img src="/images/logo-sm.png" alt="Rotable" width="44" height="44" decoding="async" className="h-11 w-11 object-contain" />
                             <span className="font-logo text-3xl leading-none tracking-wide text-black translate-y-[2px]">Rotable</span>
                         </Link>
                         <span className="h-7 w-px bg-secondary-200"></span>

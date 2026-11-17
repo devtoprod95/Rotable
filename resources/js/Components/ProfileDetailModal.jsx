@@ -1,5 +1,10 @@
 import useBodyScrollLock from '@/useBodyScrollLock';
 
+/** 다중 선택 값(배열)을 "A, B" 문구로. 비어 있으면 null. */
+function listText(list) {
+    return Array.isArray(list) && list.length > 0 ? list.join(', ') : null;
+}
+
 function birthYearText(birthYear) {
     if (!birthYear) return null;
     return `${String(birthYear).slice(-2)}년생`;
@@ -19,26 +24,31 @@ export default function ProfileDetailModal({ member, tone, onClose }) {
 
     if (!member) return null;
 
+    // 기본 스펙 칩: 출생연도·직업·키는 체크인 명단에서 온 값(입장등록 폼에는 없음)이라 맨 앞에 두고,
+    // 나머지는 입장등록 폼의 순서(지역/거주지 → MBTI)를 따른다.
     const specs = [
         birthYearText(member.birth_year),
         member.job,
         member.height ? `${member.height}cm` : null,
-        member.mbti,
         member.region,
-        member.is_smoker ? '흡연' : '비흡연',
+        member.mbti,
     ].filter(Boolean);
 
-    // 추가 정보 항목 (값이 있을 때만 노출) — 입장등록 폼과 동일한 순서
+    // 추가 정보 항목 (값이 있을 때만 노출) — 입장등록 폼과 같은 순서:
+    // 종교 → 주량 → 평균 음주 횟수 → 친구 약속 빈도 → 애완동물 → 이상형 → 외적/내적 조건 → 나의 장점 → 취미 → TMI → 흡연
     const extras = [
+        { icon: '🙏', label: '종교', value: member.religion },
+        { icon: '🍶', label: '주량', value: member.drink_capacity },
+        { icon: '🍻', label: '평균 음주 횟수', value: member.drink_frequency },
+        { icon: '👫', label: '친구 약속 빈도', value: member.friend_meet_frequency },
+        { icon: '🐾', label: '애완동물', value: member.has_pet == null ? null : (member.has_pet ? '있어요' : '없어요') },
         { icon: '💘', label: '이상형', value: member.ideal_type },
+        { icon: '👀', label: '이상형 · 외적 조건', value: listText(member.outer_preference) },
+        { icon: '💞', label: '이상형 · 내적 조건', value: listText(member.inner_preference) },
         { icon: '✨', label: '나의 장점', value: member.merit },
         { icon: '🎯', label: '취미 / 요즘 빠진 것', value: member.hobby },
         { icon: '💡', label: 'TMI', value: member.tmi },
-        // 생활 습관 — 입장등록 폼과 같은 항목 (값이 있을 때만 노출)
-        { icon: '🍶', label: '주량', value: member.drink_capacity },
-        { icon: '🍻', label: '평균 음주 횟수', value: member.drink_frequency },
-        { icon: '🐾', label: '애완동물', value: member.has_pet == null ? null : (member.has_pet ? '있어요' : '없어요') },
-        { icon: '👫', label: '친구 약속 빈도', value: member.friend_meet_frequency },
+        { icon: '🚬', label: '흡연 여부', value: member.is_smoker == null ? null : (member.is_smoker ? '흡연' : '비흡연') },
     ].filter((e) => e.value);
 
     const headCls = tone === 'female' ? 'bg-rose-50' : 'bg-sky-100';

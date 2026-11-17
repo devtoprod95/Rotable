@@ -35,6 +35,7 @@ class MemberProfileService
         'phone', 'region', 'job', 'height', 'birth_year',
         'merit', 'ideal_type', 'hobby', 'tmi',
         'drink_capacity', 'drink_frequency', 'friend_meet_frequency',
+        'religion',
     ];
 
     public function __construct(protected RosterService $rosterService)
@@ -66,6 +67,14 @@ class MemberProfileService
                 foreach (self::PLAIN_FIELDS as $field) {
                     if (array_key_exists($field, $data)) {
                         $member->{$field} = $data[$field];
+                    }
+                }
+
+                // 다중 선택(이상형 외적/내적 조건): 선택지 목록 순서로 정렬해 저장. 비우면 null.
+                foreach (['outer_preference' => Member::outerPreferenceOptions(), 'inner_preference' => Member::innerPreferenceOptions()] as $field => $options) {
+                    if (array_key_exists($field, $data)) {
+                        $sorted = Member::sortByOptions(is_array($data[$field]) ? $data[$field] : null, $options);
+                        $member->{$field} = $sorted !== [] ? $sorted : null;
                     }
                 }
 

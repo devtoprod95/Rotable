@@ -14,6 +14,9 @@
         'drinkCapacity'       => \App\Models\Member::drinkCapacityOptions(),
         'drinkFrequency'      => \App\Models\Member::drinkFrequencyOptions(),
         'friendMeetFrequency' => \App\Models\Member::friendMeetFrequencyOptions(),
+        'religion'            => \App\Models\Member::religionOptions(),
+        'outerPreference'     => \App\Models\Member::outerPreferenceOptions(),
+        'innerPreference'     => \App\Models\Member::innerPreferenceOptions(),
     ];
     $memberEditDrinks = ($event ?? null) && $event->isOneToOne()
         ? $event->drinks->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values()
@@ -145,6 +148,9 @@
                     <div class="col-6"><label class="form-label mb-1">주량</label><select class="form-select" name="drink_capacity"></select></div>
                     <div class="col-6"><label class="form-label mb-1">평균 음주 횟수</label><select class="form-select" name="drink_frequency"></select></div>
                     <div class="col-6"><label class="form-label mb-1">친구 약속 빈도</label><select class="form-select" name="friend_meet_frequency"></select></div>
+                    <div class="col-6"><label class="form-label mb-1">종교</label><select class="form-select" name="religion"></select></div>
+                    <div class="col-12"><label class="form-label mb-1">외적 조건 <span class="text-muted small">(여러 개 선택 가능)</span></label><div class="d-flex flex-wrap gap-3" id="md-outer-pref"></div></div>
+                    <div class="col-12"><label class="form-label mb-1">내적 조건 <span class="text-muted small">(여러 개 선택 가능)</span></label><div class="d-flex flex-wrap gap-3" id="md-inner-pref"></div></div>
                     <div class="col-6">
                         <label class="form-label mb-1">애완동물</label>
                         <select class="form-select" name="has_pet">
@@ -274,6 +280,9 @@
             basic += gridItem('평균 음주 횟수', esc(d.drink_frequency) || '-');
             basic += gridItem('애완동물', (d.has_pet === true || d.has_pet === 1) ? '있음' : ((d.has_pet === false || d.has_pet === 0) ? '없음' : '-'));
             basic += gridItem('친구 약속 빈도', esc(d.friend_meet_frequency) || '-');
+            basic += gridItem('종교', esc(d.religion) || '-');
+            basic += gridItem('외적 조건', esc(listText(d.outer_preference)) || '-');
+            basic += gridItem('내적 조건', esc(listText(d.inner_preference)) || '-');
             basic += gridItem('흡연 여부', smokerBadge(d.is_smoker));
             basic += gridItem('신청 플랫폼', platformBadge(d.platform));
             $('#memberDetail-basic').html(basic);
@@ -292,6 +301,23 @@
             $sel.empty().append($('<option>').val('').text('미입력'));
             (values || []).forEach(function(v){ $sel.append($('<option>').val(v).text(v)); });
             $sel.val(current == null ? '' : current);
+        }
+        // 다중 선택 값(배열)을 "A, B" 문구로
+        function listText(v){ return Array.isArray(v) ? v.join(', ') : ''; }
+        // 다중 선택 체크박스 채우기. (name 을 주지 않아 form 직렬화와 섞이지 않게 하고, 저장 때 따로 모은다)
+        // '상관없음'은 다른 항목과 함께 고를 수 없다.
+        function fillChecks($box, values, current){
+            var cur = Array.isArray(current) ? current : [];
+            $box.empty();
+            (values || []).forEach(function(v){
+                var $l = $('<label class="form-check mb-0"></label>');
+                var $i = $('<input type="checkbox" class="form-check-input md-pref-check">').val(v).prop('checked', cur.indexOf(v) !== -1);
+                $l.append($i).append($('<span class="form-check-label"></span>').text(v));
+                $box.append($l);
+            });
+        }
+        function readChecks($box){
+            return $box.find('.md-pref-check:checked').map(function(){ return this.value; }).get();
         }
         function boolVal(v){
             if(v === true || v === 1 || v === '1'){ return '1'; }
@@ -325,6 +351,9 @@
             fillSelect($f.find('[name=drink_capacity]'), OPTIONS.drinkCapacity, d.drink_capacity);
             fillSelect($f.find('[name=drink_frequency]'), OPTIONS.drinkFrequency, d.drink_frequency);
             fillSelect($f.find('[name=friend_meet_frequency]'), OPTIONS.friendMeetFrequency, d.friend_meet_frequency);
+            fillSelect($f.find('[name=religion]'), OPTIONS.religion, d.religion);
+            fillChecks($('#md-outer-pref'), OPTIONS.outerPreference, d.outer_preference);
+            fillChecks($('#md-inner-pref'), OPTIONS.innerPreference, d.inner_preference);
             var $drink = $f.find('[name=event_drink_id]');
             if($drink.length){
                 $drink.empty().append($('<option>').val('').text('미선택'));
@@ -350,6 +379,14 @@
             var data = {};
             $f.serializeArray().forEach(function(x){ data[x.name] = x.value; });
             data.phone = phone;
+            // 다중 선택: 비우면 빈 값으로 보내 지운다. (배열 키는 jQuery 가 outer_preference[] 로 직렬화)
+            var outer = readChecks($('#md-outer-pref')), inner = readChecks($('#md-inner-pref'));
+            var ANY = '상관없음';
+            if((outer.length > 1 && outer.indexOf(ANY) !== -1) || (inner.length > 1 && inner.indexOf(ANY) !== -1)){
+                alert('상관없음은 다른 항목과 함께 고를 수 없습니다.'); return;
+            }
+            data.outer_preference = outer.length ? outer : '';
+            data.inner_preference = inner.length ? inner : '';
 
             var $btn = $('#memberDetail-saveBtn').prop('disabled', true);
             $.ajax({
@@ -365,6 +402,13 @@
             }).always(function(){ $btn.prop('disabled', false); });
         }
         $(function(){
+            // '상관없음'을 고르면 같은 묶음의 나머지를 해제하고, 다른 항목을 고르면 '상관없음'을 해제한다.
+            $(document).on('change', '.md-pref-check', function(){
+                var $box = $(this).closest('.d-flex');
+                if(!this.checked){ return; }
+                if(this.value === '상관없음'){ $box.find('.md-pref-check').not(this).prop('checked', false); }
+                else { $box.find('.md-pref-check[value="상관없음"]').prop('checked', false); }
+            });
             $('#memberDetail-editBtn').on('click', startEdit);
             $('#memberDetail-cancelBtn').on('click', function(){ setMode(false); });
             $('#memberDetail-saveBtn').on('click', save);

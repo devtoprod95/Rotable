@@ -89,6 +89,9 @@ class MemberAuthController extends Controller
                 'drinkCapacity'       => Member::drinkCapacityOptions(),
                 'drinkFrequency'      => Member::drinkFrequencyOptions(),
                 'friendMeetFrequency' => Member::friendMeetFrequencyOptions(),
+                'religion'            => Member::religionOptions(),
+                'outerPreference'     => Member::outerPreferenceOptions(),
+                'innerPreference'     => Member::innerPreferenceOptions(),
             ],
             'event'       => $unavailable === null ? ['id' => $event->id, 'label' => $event->label, 'status' => $event->status] : null,
             // 1:1 소개팅은 입장등록에서 음료를 고른다. (와인파티/등록 불가 시 빈 목록)
@@ -179,6 +182,12 @@ class MemberAuthController extends Controller
             'drink_frequency'       => ['required', Rule::in(Member::drinkFrequencyOptions())],
             'has_pet'               => ['required', 'boolean'],
             'friend_meet_frequency' => ['required', Rule::in(Member::friendMeetFrequencyOptions())],
+            // 종교 · 이상형 조건 — 정해진 선택지만 허용
+            'religion'              => ['required', Rule::in(Member::religionOptions())],
+            'outer_preference'      => ['required', 'array', 'min:1', Member::exclusiveAnyRule()],
+            'outer_preference.*'    => ['distinct', Rule::in(Member::outerPreferenceOptions())],
+            'inner_preference'      => ['required', 'array', 'min:1', Member::exclusiveAnyRule()],
+            'inner_preference.*'    => ['distinct', Rule::in(Member::innerPreferenceOptions())],
         ];
 
         $validated = $request->validate($rules, [
@@ -216,6 +225,14 @@ class MemberAuthController extends Controller
             'has_pet.required'               => '애완동물 여부를 선택해주세요.',
             'friend_meet_frequency.required' => '친구 약속 빈도를 선택해주세요.',
             'friend_meet_frequency.in'       => '친구 약속 빈도 선택이 올바르지 않습니다.',
+            'religion.required'              => '종교를 선택해주세요.',
+            'religion.in'                    => '종교 선택이 올바르지 않습니다.',
+            'outer_preference.required'      => '외적 조건을 선택해주세요.',
+            'outer_preference.min'           => '외적 조건을 선택해주세요.',
+            'outer_preference.*.in'          => '외적 조건 선택이 올바르지 않습니다.',
+            'inner_preference.required'      => '내적 조건을 선택해주세요.',
+            'inner_preference.min'           => '내적 조건을 선택해주세요.',
+            'inner_preference.*.in'          => '내적 조건 선택이 올바르지 않습니다.',
         ]);
 
         // 기준(홈) 테이블은 참가자가 고르지 않고, 체크인 때 관리자가 지정한 값(roster)을 따른다.
@@ -256,6 +273,11 @@ class MemberAuthController extends Controller
                 'drink_frequency'       => $validated['drink_frequency'],
                 'has_pet'               => $validated['has_pet'],
                 'friend_meet_frequency' => $validated['friend_meet_frequency'],
+                // 종교 · 이상형 조건
+                'religion'              => $validated['religion'],
+                // 고른 순서와 무관하게 선택지 목록 순서로 저장한다.
+                'outer_preference'      => Member::sortByOptions($validated['outer_preference'], Member::outerPreferenceOptions()),
+                'inner_preference'      => Member::sortByOptions($validated['inner_preference'], Member::innerPreferenceOptions()),
                 // 선택한 음료 (1:1 소개팅만, 그 외는 null)
                 'event_drink_id' => $drinkRequired ? (int) $validated['event_drink_id'] : null,
                 // 신청 플랫폼: 사용자가 고르지 않고, 연결 키(행사·성별·번호표)로 찾은 체크인 명단의 값을 쓴다.

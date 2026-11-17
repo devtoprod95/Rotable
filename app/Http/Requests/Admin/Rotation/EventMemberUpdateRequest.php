@@ -52,6 +52,11 @@ class EventMemberUpdateRequest extends ApiFormRequest
             'drink_frequency'       => ['nullable', Rule::in(Member::drinkFrequencyOptions())],
             'has_pet'               => 'nullable|boolean',
             'friend_meet_frequency' => ['nullable', Rule::in(Member::friendMeetFrequencyOptions())],
+            'religion'              => ['nullable', Rule::in(Member::religionOptions())],
+            'outer_preference'      => ['nullable', 'array', Member::exclusiveAnyRule()],
+            'outer_preference.*'    => ['distinct', Rule::in(Member::outerPreferenceOptions())],
+            'inner_preference'      => ['nullable', 'array', Member::exclusiveAnyRule()],
+            'inner_preference.*'    => ['distinct', Rule::in(Member::innerPreferenceOptions())],
 
             'ideal_type' => 'nullable|string|max:100',
             'merit'      => 'nullable|string|max:100',
@@ -89,6 +94,9 @@ class EventMemberUpdateRequest extends ApiFormRequest
             'drink_capacity.in'       => '주량 선택이 올바르지 않습니다.',
             'drink_frequency.in'      => '평균 음주 횟수 선택이 올바르지 않습니다.',
             'friend_meet_frequency.in' => '친구 약속 빈도 선택이 올바르지 않습니다.',
+            'religion.in'             => '종교 선택이 올바르지 않습니다.',
+            'outer_preference.*.in'   => '외적 조건 선택이 올바르지 않습니다.',
+            'inner_preference.*.in'   => '내적 조건 선택이 올바르지 않습니다.',
             'event_drink_id.exists'   => '선택한 음료가 올바르지 않습니다.',
         ];
     }

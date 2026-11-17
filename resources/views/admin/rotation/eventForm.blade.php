@@ -411,6 +411,7 @@
                                         $member->drink_frequency ? '🍻 ' . $member->drink_frequency : null,
                                         is_null($member->has_pet) ? null : ('🐾 ' . ($member->has_pet ? '애완동물 있음' : '애완동물 없음')),
                                         $member->friend_meet_frequency ? '👫 ' . $member->friend_meet_frequency : null,
+                                        $member->religion ? '🙏 ' . $member->religion : null,
                                     ]);
                                     $visitCounts = $member->visit_counts ?? [];
                                 @endphp

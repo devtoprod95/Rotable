@@ -1,3 +1,9 @@
+// 선택지에 tone 이 있으면 선택됐을 때 그 색으로 표시한다. (예: 성별 남=파랑, 여=분홍)
+const SELECTED_TONE = {
+    male: 'border-sky-400 bg-sky-50 font-semibold text-sky-600',
+    female: 'border-rose-400 bg-rose-50 font-semibold text-rose-600',
+};
+
 export default function RadioField({ label, value, onChange, options = [], error }) {
     return (
         <div className="flex flex-col gap-1.5">
@@ -12,7 +18,7 @@ export default function RadioField({ label, value, onChange, options = [], error
                             className={
                                 'relative flex flex-1 cursor-pointer items-center justify-center rounded-lg border px-3.5 py-3 text-base transition ' +
                                 (selected
-                                    ? 'border-primary bg-primary-50 font-semibold text-primary'
+                                    ? (SELECTED_TONE[opt.tone] ?? 'border-primary bg-primary-50 font-semibold text-primary')
                                     : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400')
                             }
                         >

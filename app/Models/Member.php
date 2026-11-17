@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -73,6 +74,64 @@ class Member extends Authenticatable
         return ['한 달에 1번 이하', '한 달에 2~3번', '주 1번', '주 2번 이상'];
     }
 
+    /** 이상형 조건의 "상관없음" — 다른 항목과 함께 고를 수 없다. */
+    public const PREFERENCE_ANY = '상관없음';
+
+    /**
+     * 다중 선택 항목 검증용: '상관없음'은 다른 항목과 함께 고를 수 없다.
+     */
+    public static function exclusiveAnyRule(): \Closure
+    {
+        return function (string $attribute, mixed $value, \Closure $fail): void {
+            if (is_array($value) && count($value) > 1 && in_array(self::PREFERENCE_ANY, $value, true)) {
+                $fail('상관없음은 다른 항목과 함께 고를 수 없습니다.');
+            }
+        };
+    }
+
+    /**
+     * 다중 선택 값을 선택지 목록의 순서대로 정렬한다. (고른 순서와 무관하게 누구에게나 같은 순서로 보이게)
+     * 목록에 없는 값은 버린다.
+     *
+     * @param  list<string>|null  $values
+     * @param  list<string>       $options  기준 순서(선택지 목록)
+     * @return list<string>
+     */
+    public static function sortByOptions(?array $values, array $options): array
+    {
+        return array_values(array_filter($options, fn (string $option): bool => in_array($option, $values ?? [], true)));
+    }
+
+    /**
+     * 종교 선택지.
+     *
+     * @return list<string>
+     */
+    public static function religionOptions(): array
+    {
+        return ['무교', '기독교', '천주교', '불교', '기타'];
+    }
+
+    /**
+     * 이상형 외적 조건 선택지. (다중 선택, '상관없음'은 단독 선택)
+     *
+     * @return list<string>
+     */
+    public static function outerPreferenceOptions(): array
+    {
+        return ['얼굴', '몸매', '스타일', self::PREFERENCE_ANY];
+    }
+
+    /**
+     * 이상형 내적 조건 선택지. (다중 선택, '상관없음'은 단독 선택)
+     *
+     * @return list<string>
+     */
+    public static function innerPreferenceOptions(): array
+    {
+        return ['성격', '가치관', '유머 감각', '배려심', '대화 코드', '생활 습관', '성실함', '경제관념', self::PREFERENCE_ANY];
+    }
+
     /** @var list<string> */
     protected $fillable = [
         'event_id',
@@ -96,6 +155,10 @@ class Member extends Authenticatable
         'drink_frequency',
         'has_pet',
         'friend_meet_frequency',
+        // 종교 / 이상형 조건(외적·내적)
+        'religion',
+        'outer_preference',
+        'inner_preference',
         // 신청 플랫폼 (문토/프립)
         'platform',
         // 선택한 음료 (1:1 소개팅, event_drinks.id)
@@ -115,6 +178,43 @@ class Member extends Authenticatable
      *
      * @return array<string, string>
      */
+    /**
+     * 이상형 외적 조건 — 다중 선택 문구 배열(JSON).
+     * 저장할 때도, 읽을 때도 선택지 목록 순서로 정렬해 고른 순서와 무관하게 늘 같은 순서로 보인다.
+     *
+     * @return Attribute<list<string>|null, list<string>|null>
+     */
+    protected function outerPreference(): Attribute
+    {
+        return $this->sortedListAttribute(self::outerPreferenceOptions());
+    }
+
+    /**
+     * 이상형 내적 조건 — 다중 선택 문구 배열(JSON). (외적 조건과 같은 방식)
+     *
+     * @return Attribute<list<string>|null, list<string>|null>
+     */
+    protected function innerPreference(): Attribute
+    {
+        return $this->sortedListAttribute(self::innerPreferenceOptions());
+    }
+
+    /**
+     * @param  list<string>  $options  기준 순서(선택지 목록)
+     * @return Attribute<list<string>|null, list<string>|null>
+     */
+    private function sortedListAttribute(array $options): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value): ?array => $value === null
+                ? null
+                : self::sortByOptions(json_decode($value, true) ?: [], $options),
+            set: fn (?array $value): ?string => $value === null
+                ? null
+                : json_encode(self::sortByOptions($value, $options), JSON_UNESCAPED_UNICODE),
+        );
+    }
+
     protected function casts(): array
     {
         return [

@@ -245,6 +245,10 @@ class MemberPageController extends Controller
             'drink_frequency'       => $member->drink_frequency,
             'has_pet'               => $member->has_pet,
             'friend_meet_frequency' => $member->friend_meet_frequency,
+            // 종교 · 이상형 조건
+            'religion'              => $member->religion,
+            'outer_preference'      => $member->outer_preference,
+            'inner_preference'      => $member->inner_preference,
         ];
     }
 

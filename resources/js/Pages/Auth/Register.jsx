@@ -4,12 +4,13 @@ import AppLayout from '@/Layouts/AppLayout';
 import TextField from '@/Components/TextField';
 import SelectField from '@/Components/SelectField';
 import RadioField from '@/Components/RadioField';
+import MultiChoiceField from '@/Components/MultiChoiceField';
 import AuthErrorModal from '@/Components/AuthErrorModal';
 import LoadingOverlay from '@/Components/LoadingOverlay';
 
 const GENDER_OPTIONS = [
-    { id: 'M', label: '남' },
-    { id: 'F', label: '여' },
+    { id: 'M', label: '남', tone: 'male' },
+    { id: 'F', label: '여', tone: 'female' },
 ];
 
 const PET_OPTIONS = [
@@ -43,9 +44,10 @@ function drinkEmoji(name) {
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
+// 알파벳(오름차순) 순서. 셀렉트박스에 그대로 노출된다.
 const MBTI_OPTIONS = [
-    'ISTJ', 'ISFJ', 'INFJ', 'INTJ', 'ISTP', 'ISFP', 'INFP', 'INTP',
-    'ESTP', 'ESFP', 'ENFP', 'ENTP', 'ESTJ', 'ESFJ', 'ENFJ', 'ENTJ',
+    'ENFJ', 'ENFP', 'ENTJ', 'ENTP', 'ESFJ', 'ESFP', 'ESTJ', 'ESTP',
+    'INFJ', 'INFP', 'INTJ', 'INTP', 'ISFJ', 'ISFP', 'ISTJ', 'ISTP',
 ];
 const REGION_SAMPLES = ['강남구', '서초구', '송파구', '마포구', '용산구', '성동구', '분당구', '수원시', '인천 연수구', '부산 해운대구'];
 const MERIT_SAMPLES = ['잘 웃고 리액션이 좋아요', '배려심이 깊어요', '성실하고 꾸준해요', '유머감각이 있어요', '긍정적이에요', '경청을 잘해요'];
@@ -79,6 +81,9 @@ function buildAutofill(lifestyle = {}, drinks = []) {
         drink_frequency: pick(lifestyle.drinkFrequency ?? ['']),
         has_pet: pick(['0', '1']),
         friend_meet_frequency: pick(lifestyle.friendMeetFrequency ?? ['']),
+        religion: pick(lifestyle.religion ?? ['']),
+        outer_preference: [pick(lifestyle.outerPreference ?? [''])],
+        inner_preference: [pick(lifestyle.innerPreference ?? [''])],
     };
 }
 
@@ -143,6 +148,10 @@ export default function Register() {
         drink_frequency: '',
         has_pet: '',
         friend_meet_frequency: '',
+        // 종교 · 이상형 조건(외적/내적)
+        religion: '',
+        outer_preference: [],
+        inner_preference: [],
         // 선택한 음료 (1:1 소개팅만 사용)
         event_drink_id: '',
     });
@@ -179,6 +188,9 @@ export default function Register() {
             { key: 'drink_capacity',    empty: !data.drink_capacity,    message: '주량을 선택해주세요.' },
             { key: 'drink_frequency',   empty: !data.drink_frequency,   message: '평균 음주 횟수를 선택해주세요.' },
             { key: 'friend_meet_frequency', empty: !data.friend_meet_frequency, message: '친구 약속 빈도를 선택해주세요.' },
+            { key: 'religion',          empty: !data.religion,          message: '종교를 선택해주세요.' },
+            { key: 'outer_preference',  empty: data.outer_preference.length === 0,  message: '외적 조건을 선택해주세요.' },
+            { key: 'inner_preference',  empty: data.inner_preference.length === 0,  message: '내적 조건을 선택해주세요.' },
             { key: 'has_pet',           empty: data.has_pet === '' || data.has_pet === null || data.has_pet === undefined, message: '애완동물 여부를 선택해주세요.' },
             { key: 'is_smoker',         empty: data.is_smoker === '' || data.is_smoker === null || data.is_smoker === undefined, message: '흡연 여부를 선택해주세요.' },
             { key: 'event_drink_id',    empty: drinks.length > 0 && !data.event_drink_id, message: '음료를 선택해주세요.' },
@@ -330,12 +342,21 @@ export default function Register() {
                             placeholder="예: 강남구"
                             error={errors.region}
                         />
-                        <TextField
+                        <SelectField
                             label="MBTI"
                             value={data.mbti}
-                            onChange={(v) => setData('mbti', v.toUpperCase())}
-                            placeholder="예: ENFP"
+                            onChange={(v) => setData('mbti', v)}
+                            options={toOptions(MBTI_OPTIONS)}
+                            placeholder="MBTI를 선택해주세요"
                             error={errors.mbti}
+                        />
+                        <SelectField
+                            label="종교"
+                            value={data.religion}
+                            onChange={(v) => setData('religion', v)}
+                            options={toOptions(lifestyleOptions.religion)}
+                            placeholder="종교를 선택해주세요"
+                            error={errors.religion}
                         />
                         <SelectField
                             label="주량"
@@ -374,6 +395,24 @@ export default function Register() {
                             onChange={(v) => setData('ideal_type', v)}
                             placeholder="예: 유머러스하고 다정한 사람"
                             error={errors.ideal_type}
+                        />
+                        <MultiChoiceField
+                            label="이상형 · 외적 조건"
+                            hint="(여러 개 선택 가능)"
+                            value={data.outer_preference}
+                            onChange={(v) => setData('outer_preference', v)}
+                            options={toOptions(lifestyleOptions.outerPreference)}
+                            exclusiveId="상관없음"
+                            error={errors.outer_preference ?? errors['outer_preference.0']}
+                        />
+                        <MultiChoiceField
+                            label="이상형 · 내적 조건"
+                            hint="(여러 개 선택 가능)"
+                            value={data.inner_preference}
+                            onChange={(v) => setData('inner_preference', v)}
+                            options={toOptions(lifestyleOptions.innerPreference)}
+                            exclusiveId="상관없음"
+                            error={errors.inner_preference ?? errors['inner_preference.0']}
                         />
                         <TextField
                             label="나의 장점"

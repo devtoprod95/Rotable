@@ -103,6 +103,9 @@ class MemberFactory extends Factory
             'drink_frequency'       => $this->faker->randomElement(Member::drinkFrequencyOptions()),
             'has_pet'               => $this->faker->boolean(),
             'friend_meet_frequency' => $this->faker->randomElement(Member::friendMeetFrequencyOptions()),
+            'religion'              => $this->faker->randomElement(Member::religionOptions()),
+            'outer_preference'      => [$this->faker->randomElement(Member::outerPreferenceOptions())],
+            'inner_preference'      => [$this->faker->randomElement(Member::innerPreferenceOptions())],
         ];
     }
 

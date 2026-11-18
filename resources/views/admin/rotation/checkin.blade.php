@@ -1181,8 +1181,38 @@
                     +   '<option value="half">30대 초반 / 중반 / 후반</option>'
                     +   '<option value="year">97년생</option>'
                     + '</select>'
-                    + '<label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:.9rem;font-weight:700;color:#374151;cursor:pointer;">'
-                    +   '<input type="checkbox" id="swal-ri-recruit" checked style="width:18px;height:18px;"> 모집중 자리 넣기 (남/여 줄 수 맞춤, 최대 2자리)</label>',
+                    + '<div style="text-align:left;font-size:.85rem;color:#475569;font-weight:700;margin:14px 0 4px;">모집중 자리</div>'
+                    + '<div id="swal-ri-recruit-msg" style="text-align:left;font-size:.84rem;color:#64748b;line-height:1.5;margin-bottom:4px;"></div>'
+                    + '<div id="swal-ri-recruit-box" style="text-align:left;">'
+                    +   '<label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.92rem;font-weight:700;color:#374151;cursor:pointer;"><input type="radio" name="swal-ri-extra" value="0" style="width:18px;height:18px;"> 추가 안 함</label>'
+                    +   '<label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.92rem;font-weight:700;color:#374151;cursor:pointer;"><input type="radio" name="swal-ri-extra" value="1" style="width:18px;height:18px;"> 모집중 1자리 추가</label>'
+                    +   '<label style="display:flex;align-items:center;gap:8px;margin:6px 0;font-size:.92rem;font-weight:700;color:#374151;cursor:pointer;"><input type="radio" name="swal-ri-extra" value="2" checked style="width:18px;height:18px;"> 모집중 2자리 추가</label>'
+                    + '</div>',
+                didOpen: function(){
+                    // 대상(전체/참석자만)·2열 선택에 따라 모집중 선택 가능 여부와 안내 문구를 바꾼다.
+                    //  - 남/여 중 많은 쪽이 10명 미만: 10줄까지 자동으로 채우므로 선택 불가(안내만)
+                    //  - 10명 이상: 추가 안 함 / 1자리 / 2자리 선택
+                    var MIN_ROWS = 10;
+                    function refresh(){
+                        var onlyIn = document.getElementById('swal-ri-scope').value === 'in';
+                        var list = rosters.filter(function(r){ return !onlyIn || r.checked_in; });
+                        var m = list.filter(function(r){ return r.gender !== 'F'; }).length;
+                        var f = list.filter(function(r){ return r.gender === 'F'; }).length;
+                        var hasEvent2 = document.getElementById('swal-ri-event2').value !== '';
+                        var enough = Math.max(m, f) >= MIN_ROWS;
+                        var enable = enough || hasEvent2;   // 2열이면 다른 행사 인원을 알 수 없어 선택은 열어 둔다.
+                        var msg = '남 ' + m + '명 · 여 ' + f + '명 — ' + (enough
+                            ? '10명 이상이라 모집중 자리를 추가할지 고를 수 있어요.'
+                            : '10명 미만이라 <b>10줄까지 모집중으로 자동으로 채워져요.</b>');
+                        if (hasEvent2) { msg += '<br>함께 넣는 행사도 각각 10명 미만이면 10줄까지 자동으로 채워져요.'; }
+                        document.getElementById('swal-ri-recruit-msg').innerHTML = msg;
+                        document.querySelectorAll('input[name="swal-ri-extra"]').forEach(function(el){ el.disabled = !enable; });
+                        document.getElementById('swal-ri-recruit-box').style.opacity = enable ? '1' : '.45';
+                    }
+                    document.getElementById('swal-ri-scope').addEventListener('change', refresh);
+                    document.getElementById('swal-ri-event2').addEventListener('change', refresh);
+                    refresh();
+                },
                 showCancelButton: true,
                 reverseButtons: true,
                 confirmButtonText: '이미지 다운로드',
@@ -1192,7 +1222,7 @@
                         scope: document.getElementById('swal-ri-scope').value,
                         event2: document.getElementById('swal-ri-event2').value,
                         ageType: document.getElementById('swal-ri-age').value,
-                        recruit: document.getElementById('swal-ri-recruit').checked
+                        recruitExtra: (document.querySelector('input[name="swal-ri-extra"]:checked') || { value: '2' }).value
                     };
                 }
             });
@@ -1202,7 +1232,7 @@
                 + '&rosterEvent={{ $event->id }}'
                 + '&scope=' + encodeURIComponent(pick.value.scope)
                 + '&ageType=' + encodeURIComponent(pick.value.ageType)
-                + '&recruit=' + (pick.value.recruit ? '1' : '0')
+                + '&recruitExtra=' + encodeURIComponent(pick.value.recruitExtra)
                 + (pick.value.event2 ? '&rosterEvent2=' + encodeURIComponent(pick.value.event2) : '');
 
             // 화면 이동 없이 처리: 상세페이지 제작 화면을 "숨김 iframe"으로 불러 명단 반영·이미지 생성·다운로드를 맡기고,

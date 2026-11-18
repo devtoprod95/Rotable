@@ -1540,9 +1540,35 @@
 
         // 불러온 체크인 명단(data)으로 한 행사 카드($card)의 행사명·날짜·남/여 표를 채운다.
         //  - 남/여 각각 나이 어린 순 → 키 큰 순으로 정렬해 넣는다.
-        //  - 모집중 자리(withRecruit): "많은 쪽 인원 + 최대 2자리"를 목표 줄 수로 잡고, 양쪽을 그 줄 수에 맞춰 모집중으로 채운다.
-        //    (남 6 / 여 4 → 목표 8줄: 남 +2, 여 +4 — 남/여 줄이 항상 같은 높이로 맞는다.)
-        function fillRosterCard($card, data, ageType, withRecruit){
+        //  - 모집중 자리: 남/여 중 많은 쪽이 10명 미만이면 <b>양쪽 모두 10줄</b>까지 모집중으로 자동 채운다.
+        //    10명 이상이면 "많은 쪽 인원 + recruitExtra(0~2)자리"를 목표 줄 수로 잡고 양쪽을 그 줄 수에 맞춘다.
+        //    (남 12 / 여 9, recruitExtra 1 → 목표 13줄: 남 +1, 여 +4 — 남/여 줄이 항상 같은 높이로 맞는다.)
+        var ROSTER_MIN_ROWS = 10;
+
+        // 모집중 추가 여부 선택. 남/여 중 많은 쪽이 10명 미만이면 묻지 않고 0을 돌려준다(10줄까지 자동으로 채워짐).
+        // 10명 이상이면 "추가 안 함 / 1자리 / 2자리" 중 고르게 한다. 취소하면 null.
+        async function askRecruitExtra(maleN, femaleN){
+            if (Math.max(maleN, femaleN) < ROSTER_MIN_ROWS) { return 0; }
+            var radio = function(v, label, checked){
+                return '<label style="display:flex;align-items:center;gap:8px;margin:8px 0;font-size:.95rem;font-weight:700;color:#374151;cursor:pointer;">'
+                     + '<input type="radio" name="swal-recruit-extra" value="' + v + '"' + (checked ? ' checked' : '') + ' style="width:18px;height:18px;"> ' + label + '</label>';
+            };
+            var r = await Swal.fire({
+                title: '모집중 자리 추가',
+                html: '<div style="text-align:left;font-size:.88rem;color:#475569;margin-bottom:6px;">남 ' + maleN + '명 · 여 ' + femaleN + '명 — 10명 이상이라 직접 고를 수 있어요.<br>남/여 줄 수는 항상 같게 맞춰져요.</div>'
+                    + '<div style="text-align:left;">' + radio(0, '추가 안 함', false) + radio(1, '모집중 1자리 추가', false) + radio(2, '모집중 2자리 추가', true) + '</div>',
+                showCancelButton: true,
+                reverseButtons: true,
+                confirmButtonText: '적용',
+                cancelButtonText: '취소',
+                preConfirm: function(){
+                    var el = document.querySelector('input[name="swal-recruit-extra"]:checked');
+                    return el ? parseInt(el.value, 10) : 0;
+                }
+            });
+            return r.isConfirmed ? r.value : null;
+        }
+        function fillRosterCard($card, data, ageType, recruitExtra){
             $card.find('.roster-ev-title').val(data.title || '');
             var dateEl = $card.find('.roster-ev-date').get(0);
             if (dateEl && dateEl._flatpickr && data.date) {
@@ -1567,8 +1593,9 @@
             }
 
             var sets = { male: sortedPeople(data.males), female: sortedPeople(data.females) };
-            var RECRUIT_MAX = 2;
-            var target = withRecruit === false ? 0 : Math.max(sets.male.length, sets.female.length) + RECRUIT_MAX;
+            var maxCount = Math.max(sets.male.length, sets.female.length);
+            var extra    = Math.max(0, Math.min(2, parseInt(recruitExtra, 10) || 0));
+            var target   = maxCount < ROSTER_MIN_ROWS ? ROSTER_MIN_ROWS : maxCount + extra;
 
             ['male', 'female'].forEach(function(g){
                 var $rows = $card.find('[data-gender="' + g + '"] .roster-rows').empty();
@@ -1599,16 +1626,14 @@
             var pick = await Swal.fire({
                 title: '체크인 명단 불러오기',
                 html: '<div style="text-align:left;font-size:.85rem;color:#475569;margin-bottom:6px;">'
-                    + '선택한 행사의 체크인 명단으로 이 카드의 남/여 명단을 <b>덮어씁니다.</b><br>(나이 → 키 순 정렬 · 모집중 자리는 남/여 줄 수를 맞춰 최대 2자리 추가)</div>'
+                    + '선택한 행사의 체크인 명단으로 이 카드의 남/여 명단을 <b>덮어씁니다.</b><br>(나이 → 키 순 정렬 · 남/여가 10명 미만이면 10줄까지 모집중 자동 채움)</div>'
                     + '<select id="swal-roster-event" class="swal2-select" style="width:100%;margin:0;">' + opts + '</select>'
                     + '<div style="text-align:left;font-size:.85rem;color:#475569;font-weight:700;margin:12px 0 4px;">나이 표기</div>'
                     + '<select id="swal-roster-age" class="swal2-select" style="width:100%;margin:0;">'
                     +   '<option value="decade" selected>30대 (기본)</option>'
                     +   '<option value="half">30대 초반 / 중반 / 후반</option>'
                     +   '<option value="year">97년생</option>'
-                    + '</select>'
-                    + '<label style="display:flex;align-items:center;gap:8px;margin-top:14px;font-size:.9rem;font-weight:700;color:#374151;cursor:pointer;">'
-                    +   '<input type="checkbox" id="swal-roster-recruit" checked style="width:18px;height:18px;"> 모집중 자리 넣기 (남/여 줄 수 맞춤, 최대 2자리)</label>',
+                    + '</select>',
                 showCancelButton: true,
                 reverseButtons: true,
                 confirmButtonText: '불러오기',
@@ -1616,8 +1641,7 @@
                 preConfirm: function(){
                     return {
                         eventId: document.getElementById('swal-roster-event').value,
-                        ageType: document.getElementById('swal-roster-age').value,
-                        recruit: document.getElementById('swal-roster-recruit').checked
+                        ageType: document.getElementById('swal-roster-age').value
                     };
                 }
             });
@@ -1631,7 +1655,11 @@
                 return;
             }
 
-            fillRosterCard($card, data, pick.value.ageType, pick.value.recruit);
+            // 남/여 중 많은 쪽이 10명 미만이면 10줄까지 자동으로 채우고, 10명 이상이면 모집중 추가 여부를 묻는다.
+            var recruitExtra = await askRecruitExtra((data.males || []).length, (data.females || []).length);
+            if (recruitExtra === null) { return; }
+
+            fillRosterCard($card, data, pick.value.ageType, recruitExtra);
             await salert({text: '체크인 명단을 불러왔어요. 나이 → 키 순으로 정렬했고, 모집중 자리를 남/여 줄 수에 맞춰 넣었어요.', cancel: false});
         });
 
@@ -3077,7 +3105,10 @@
             var eventId2 = parseInt(q.get('rosterEvent2'), 10) || 0;   // 2열(두 행사) 모드
             var scope   = q.get('scope') === 'in' ? 'in' : 'all';
             var ageType = ['decade', 'half', 'year'].indexOf(q.get('ageType')) >= 0 ? q.get('ageType') : 'decade';
-            var withRecruit = q.get('recruit') !== '0';
+            // 10명 이상일 때 추가할 모집중 자리 수(0~2). 옛 주소(recruit=0/1)도 받아 준다. 10명 미만이면 항상 10줄까지 채운다.
+            var recruitExtra = q.get('recruitExtra') !== null
+                ? Math.max(0, Math.min(2, parseInt(q.get('recruitExtra'), 10) || 0))
+                : (q.get('recruit') === '0' ? 0 : 2);
 
             showExportOverlay('참가자 명단 준비 중…');
             try {
@@ -3099,7 +3130,7 @@
                 if (eventId2) { datas.push(await $.getJSON(peopleUrl(eventId2))); }
                 // 두 행사는 날짜가 이른 쪽을 왼쪽에 둔다. (날짜 문구가 "2026.11.07(토) 19:30" 형식이라 문자열 비교로 충분)
                 if (datas.length === 2 && String(datas[1].date || '') < String(datas[0].date || '')) { datas.reverse(); }
-                datas.forEach(function(d, i){ fillRosterCard($cards.eq(i), d, ageType, withRecruit); });
+                datas.forEach(function(d, i){ fillRosterCard($cards.eq(i), d, ageType, recruitExtra); });
                 // 파일명: 현재 행사 정보 — "행사명_날짜" (두 행사면 "A + B" 로 이어 붙임). 저장본 제목은 쓰지 않는다.
                 downloadNameOverride = datas.map(function(d){
                     var day = String(d.date || '').split('(')[0].trim();

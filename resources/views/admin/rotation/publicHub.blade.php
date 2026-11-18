@@ -132,18 +132,6 @@
                         </div>
                     </div>
 
-                    {{-- 예외 상황 대처 --}}
-                    <div class="col-12 col-sm-6 col-lg-4">
-                        <a href="{{ route('admin.rotation.guide.exception') }}" target="_blank" rel="noopener" class="pub-card">
-                            <div class="pub-card__ico">🧯</div>
-                            <div class="pub-card__title">예외 상황 대처</div>
-                            <div class="pub-card__desc">
-                                현장에서 생기는 돌발 상황별 처리 방법 설명서.
-                            </div>
-                            <span class="pub-card__go text-teal">열기 <i class="ti ti-external-link"></i></span>
-                        </a>
-                    </div>
-
                     {{-- QR 코드 설정 --}}
                     <div class="col-12 col-sm-6 col-lg-4">
                         <a href="{{ route('admin.rotation.qr.index') }}" target="_blank" rel="noopener" class="pub-card">

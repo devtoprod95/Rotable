@@ -37,6 +37,11 @@ Route::middleware('role')->group(function () {
 
         Route::prefix("erd")->name('erd.')->group(base_path("routes/erd.php"));
 
+        // 관리자 사용 설명서 — 서비스 순서도·로직·기능별 사용법 (예전 헤더 모달을 페이지로 이동)
+        Route::get('/manual', [GuideController::class, 'manual'])->name('manual');
+        // 핵심 요약 — 앱(참가자) 기능·입장등록·음료 선택까지 순서대로 자세히 풀어 쓴 한 장짜리 순서도
+        Route::get('/manual/summary', [GuideController::class, 'manualSummary'])->name('manual.summary');
+
         // 로테이션 소개팅 관리 (행사 목록 / 당일 운영[체크인·로테이션 진행] / 홍보 / 안내 / 분석·도구)
         Route::prefix('rotation')->name('rotation.')->group(function () {
             // 사이드바 "체크인" 진입점 — 지금 운영할 행사의 체크인 화면으로 이동한다.
@@ -145,8 +150,6 @@ Route::middleware('role')->group(function () {
                 // 호스트 발표 멘트 편집 — 유형별 대본을 섹션 단위로 편집/저장(DB)
                 Route::get('/script', [GuideController::class, 'scriptIndex'])->name('script');
                 Route::post('/script', [GuideController::class, 'scriptSave'])->name('script.save');
-                // 예외 상황 대처 설명서 (별도 페이지)
-                Route::get('/exception', [GuideController::class, 'guideException'])->name('exception');
             });
 
             // 공개 페이지 모음 — 공개 게임/안내 슬라이드/호스트 멘트 등 외부 공유용 링크를 한 곳에 모아 보여준다.

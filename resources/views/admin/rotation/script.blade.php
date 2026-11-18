@@ -31,8 +31,8 @@
             <div class="card-body">
                 {{-- 유형 토글 --}}
                 <div class="btn-group mb-3" role="group" id="scriptType">
-                    <button type="button" class="btn btn-outline-pink {{ $type === 'wine' ? 'active' : '' }}" data-type="wine">🍷 와인파티</button>
                     <button type="button" class="btn btn-outline-pink {{ $type === 'solo' ? 'active' : '' }}" data-type="solo">💗 1:1 소개팅</button>
+                    <button type="button" class="btn btn-outline-pink {{ $type === 'wine' ? 'active' : '' }}" data-type="wine">🍷 와인파티</button>
                 </div>
 
                 <div class="row g-2 align-items-end mb-3">

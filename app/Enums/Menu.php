@@ -8,6 +8,7 @@ enum Menu: string
 {
     case Dashboard = 'dashboard';
     case Rotation  = 'rotation';
+    case Manual    = 'manual';
     case Admin     = 'admin';
     case Settings  = 'settings';
 
@@ -56,7 +57,6 @@ enum Menu: string
                             ['name' => '안내 슬라이드', 'route' => 'admin.rotation.guide.index', 'pattern' => 'admin.rotation.guide.index*'],
                             ['name' => '채팅방 공지', 'route' => 'admin.rotation.guide.notice', 'pattern' => 'admin.rotation.guide.notice*'],
                             ['name' => '발표 멘트 편집', 'route' => 'admin.rotation.guide.script', 'pattern' => 'admin.rotation.guide.script*'],
-                            ['name' => '예외 상황 대처', 'route' => 'admin.rotation.guide.exception', 'pattern' => 'admin.rotation.guide.exception*'],
                         ],
                     ],
                     ['name' => '공개 페이지', 'route' => 'admin.rotation.public-hub', 'pattern' => 'admin.rotation.public-hub*'],
@@ -70,6 +70,15 @@ enum Menu: string
                             ['name' => 'N빵 계산기', 'route' => 'admin.rotation.split.index', 'pattern' => 'admin.rotation.split*'],
                         ],
                     ],
+                ],
+            ],
+            self::Manual->value => [
+                'name'     => '사용 설명서',
+                'icon'     => 'book',
+                'pattern'  => 'admin.manual*',
+                'children' => [
+                    ['name' => '핵심 요약 (순서도)', 'route' => 'admin.manual.summary', 'pattern' => 'admin.manual.summary*'],
+                    ['name' => '전체 사용 설명서', 'route' => 'admin.manual', 'pattern' => 'admin.manual'],
                 ],
             ],
             self::Admin->value => [

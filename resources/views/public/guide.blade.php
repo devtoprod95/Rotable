@@ -35,16 +35,39 @@
             font-weight: 800; font-size: clamp(1.1rem, 2.4vw, 1.5rem); color: #fff;
         }
         .public-brand img { height: 1.6em; width: auto; }
+        .public-event { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: .9rem; font-weight: 600; color: #c7cae6; }
+        .public-event select { max-width: 260px; }
     </style>
 </head>
 <body>
     <div class="public-wrap">
         <div class="public-brand">
             <img src="{{ asset('images/logo.png') }}" alt="ROTABLE"> 로테이블 참가자 안내
+            {{-- 입장등록 QR 이 연결될 행사 선택 --}}
+            @if (! empty($events) && $events->count() > 0)
+                <label class="public-event">
+                    <i class="ti ti-qrcode"></i> 행사
+                    <select class="form-select form-select-sm" id="publicGuideEvent">
+                        @foreach ($events as $ev)
+                            <option value="{{ $ev->id }}" {{ (int) $eventId === (int) $ev->id ? 'selected' : '' }}>{{ $ev->label }}</option>
+                        @endforeach
+                    </select>
+                </label>
+            @endif
         </div>
 
         {{-- 공유 슬라이드 덱 (관리자 페이지와 동일 partial) --}}
-        @include('admin.rotation._guideDeck', ['initialType' => $initialType])
+        @include('admin.rotation._guideDeck', ['initialType' => $initialType, 'registerUrl' => $registerUrl ?? null])
     </div>
+    {{-- 입장등록 QR 이미지 생성 (전역: QRCode) --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        // 행사를 바꾸면 같은 주소에 eventId 만 바꿔 다시 연다. (슬라이드 QR 이 그 행사로 다시 만들어진다)
+        $('#publicGuideEvent').on('change', function () {
+            var url = new URL(window.location.href);
+            url.searchParams.set('eventId', this.value);
+            window.location.href = url.toString();
+        });
+    </script>
 </body>
 </html>

@@ -13,7 +13,7 @@ use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 /**
- * 안내 — 참가자 안내 슬라이드 · 채팅방 공지/당일 안내 멘트 · 호스트 발표 멘트 · 예외 상황 대처 · 공개 페이지 모음.
+ * 안내 — 참가자 안내 슬라이드 · 채팅방 공지/당일 안내 멘트 · 호스트 발표 멘트 · 공개 페이지 모음.
  * (안내 슬라이드·발표 멘트는 비인증 공개 페이지도 함께 제공한다)
  */
 class GuideController extends RotationBaseController
@@ -30,19 +30,42 @@ class GuideController extends RotationBaseController
     /**
      * 참가자 안내 슬라이드 화면 (관리자).
      *
-     * @param  string|null  $type  'wine'(와인파티) | 'solo'(1:1). 그 외 값이면 와인으로 시작.
+     * @param  string|null  $type  'wine'(와인파티) | 'solo'(1:1). 그 외 값이면 1:1 로 시작.
      */
     public function guideIndex(?string $type = null): View
     {
-        return view('admin.rotation.guide', ['initialType' => $this->slideType($type)]);
+        // 슬라이드의 입장등록 QR 이 가리킬 행사 — ?eventId= 로 고르고, 없으면 가장 최신 행사. (목록은 최신순)
+        $events  = $this->eventContextService->selectableEvents();
+        $eventId = (int) $this->request->input('eventId');
+        $event   = $events->firstWhere('id', $eventId) ?? $events->first();
+
+        return view('admin.rotation.guide', [
+            'initialType' => $this->slideType($type),
+            'events'      => $events,
+            'eventId'     => $event?->id,
+            'registerUrl' => $event ? route('register', ['eventId' => $event->id]) : null,
+        ]);
     }
 
     /**
      * 참가자 안내 슬라이드 — 외부 공개용(비인증). 관리자 페이지와 동일한 덱(partial)을 쓴다.
+     * 입장등록 QR 은 ?eventId= 로 지정한 행사로 연결하고, 없으면 가장 최신 행사로 연결한다.
      */
     public function guidePublic(?string $type = null): View
     {
-        return view('public.guide', ['initialType' => $this->slideType($type)]);
+        // 공개 페이지라 종료(X)된 행사는 선택지에서 뺀다.
+        $events  = $this->eventContextService->selectableEvents()
+            ->where('status', '!=', EventRound::STATUS_CLOSED)
+            ->values();
+        $eventId = (int) $this->request->input('eventId');
+        $event   = $events->firstWhere('id', $eventId) ?? $events->first();
+
+        return view('public.guide', [
+            'initialType' => $this->slideType($type),
+            'events'      => $events,
+            'eventId'     => $event?->id,
+            'registerUrl' => $event ? route('register', ['eventId' => $event->id]) : null,
+        ]);
     }
 
     /**
@@ -71,11 +94,19 @@ class GuideController extends RotationBaseController
     }
 
     /**
-     * 예외 상황 대처 설명서 — 현장 돌발 상황별 처리 방법.
+     * 관리자 사용 설명서 — 서비스 순서도, 상태 전이, 로테이션/매칭 로직, 화면별 사용법.
      */
-    public function guideException(): View
+    public function manual(): View
     {
-        return view('admin.rotation.guideException');
+        return view('admin.rotation.manual');
+    }
+
+    /**
+     * 핵심 요약 — 참가자 앱 기능, 입장등록(음료 선택 포함), 1:1 음료 전달까지 순서대로 풀어 쓴 순서도.
+     */
+    public function manualSummary(): View
+    {
+        return view('admin.rotation.manualSummary');
     }
 
     /**
@@ -131,6 +162,6 @@ class GuideController extends RotationBaseController
      */
     private function slideType(?string $type): string
     {
-        return $type === 'solo' ? 'solo' : 'wine';
+        return $type === 'wine' ? 'wine' : 'solo';
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -28,7 +29,20 @@ class EventScript extends Model
 
     /** @var array<string, string> */
     protected $casts = [
-        'sections' => 'array',
         'saved_at' => 'datetime',
     ];
+
+    /**
+     * 섹션 구조는 한글이 \uXXXX 로 깨져 저장되지 않도록 유니코드 그대로 JSON 으로 저장한다.
+     * (이미 이스케이프되어 저장된 기존 값도 그대로 읽힌다.)
+     *
+     * @return Attribute<array|null, array|null>
+     */
+    protected function sections(): Attribute
+    {
+        return Attribute::make(
+            get: fn (?string $value) => $value === null ? null : json_decode($value, true),
+            set: fn (?array $value) => $value === null ? null : json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        );
+    }
 }

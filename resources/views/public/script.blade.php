@@ -92,10 +92,10 @@
         <div class="doc-sub">안내 슬라이드를 보며 순서대로 읽어 주세요.</div>
 
         <div class="type-toggle">
-            <a href="{{ route('public.script', ['type' => 'wine']) }}"
-               class="{{ $type === 'wine' ? 'active' : '' }}">🍷 와인파티</a>
             <a href="{{ route('public.script', ['type' => 'solo']) }}"
                class="{{ $type === 'solo' ? 'active' : '' }}">💗 1:1 소개팅</a>
+            <a href="{{ route('public.script', ['type' => 'wine']) }}"
+               class="{{ $type === 'wine' ? 'active' : '' }}">🍷 와인파티</a>
         </div>
 
         @foreach ($script['sections'] as $section)

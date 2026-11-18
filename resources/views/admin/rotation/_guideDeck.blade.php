@@ -5,11 +5,11 @@
       (관리자 레이아웃 layouts.app 에는 포함, 공개 페이지는 CDN 으로 직접 로드)
 
     옵션 변수:
-    - $initialType : 'wine' | 'solo' (기본 'wine') — 최초로 보여줄 타입
+    - $initialType : 'wine' | 'solo' (기본 'solo') — 최초로 보여줄 타입
     - $showToolbar : bool (기본 true) — 상단 타입 토글/전체화면 버튼 표시 여부
 --}}
 @php
-    $initialType = ($initialType ?? 'wine') === 'solo' ? 'solo' : 'wine';
+    $initialType = ($initialType ?? 'solo') === 'wine' ? 'wine' : 'solo';
     $showToolbar = $showToolbar ?? true;
 @endphp
 
@@ -17,11 +17,11 @@
     <div class="guide-toolbar d-flex align-items-center flex-wrap gap-2">
         {{-- 소개팅 타입 토글 (와인파티 / 1:1 소개팅) --}}
         <div class="btn-group" role="group" id="typeToggle">
-            <button type="button" class="btn btn-sm {{ $initialType === 'wine' ? 'btn-pink active' : 'btn-outline-pink' }}" data-type="wine">
-                <i class="ti ti-glass-cocktail me-1"></i> 와인파티
-            </button>
             <button type="button" class="btn btn-sm {{ $initialType === 'solo' ? 'btn-pink active' : 'btn-outline-pink' }}" data-type="solo">
                 <i class="ti ti-users-group me-1"></i> 1:1 소개팅
+            </button>
+            <button type="button" class="btn btn-sm {{ $initialType === 'wine' ? 'btn-pink active' : 'btn-outline-pink' }}" data-type="wine">
+                <i class="ti ti-glass-cocktail me-1"></i> 와인파티
             </button>
         </div>
 
@@ -204,6 +204,22 @@
         /* ---------------------------------------------------------------
          | 슬라이드 조각 빌더 — 각 슬라이드를 HTML 문자열로 만든다.
          * ------------------------------------------------------------- */
+        // 입장등록 QR: 선택한 행사의 입장등록 주소(/register/{행사id})로 QR 을 그려 이미지로 쓴다.
+        // 행사가 없거나 QR 모듈을 못 불러오면 기존 고정 이미지로 대신한다.
+        var REGISTER_URL = @json($registerUrl ?? null);
+        var FALLBACK_QR  = '{{ asset('images/qr_입장등록.png') }}';
+        function registerQrMedia() {
+            var src = FALLBACK_QR;
+            if (REGISTER_URL && typeof QRCode !== 'undefined') {
+                try {
+                    var holder = document.createElement('div');
+                    new QRCode(holder, { text: REGISTER_URL, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M });
+                    var canvas = holder.querySelector('canvas');
+                    if (canvas) { src = canvas.toDataURL('image/png'); }
+                } catch (e) { /* 실패 시 고정 이미지 */ }
+            }
+            return { src: src, caption: '📷 QR을 찍고 입장등록부터 해주세요!' };
+        }
         function slideCover(badge, badgeCls, title, lead, media) {
             // media: (선택) { src, caption } — 리드 문구 아래에 이미지(QR 등)를 크게 보여준다.
             var mediaHtml = media && media.src
@@ -358,7 +374,7 @@
                 slideCover('ROTABLE · 로테이블', 'bg-pink-lt text-pink',
                     '로테이블에 오신 걸 환영합니다 🍷',
                     '좋은 인연은 서두르지 않아도, 반드시 찾아와요.<br>오늘 이 자리에서 당신의 소중한 인연이 시작되길, 진심으로 응원할게요 🤍',
-                    { src: '{{ asset('images/qr_입장등록.png') }}', caption: '📷 QR을 찍고 입장등록부터 해주세요!' }),
+                    registerQrMedia()),
 
                 slideFlow('1. 서비스 이용안내', 'bg-blue-lt text-blue', '오늘은 이렇게 흘러가요', [
                     { icon: '🎫', title: '입장 & 번호표', desc: '도착하시면 나만의 번호표를 받고, 안내해 드리는 테이블에 편하게 앉으시면 돼요.' },
@@ -392,7 +408,7 @@
                 slideCover('ROTABLE · 로테이블', 'bg-pink-lt text-pink',
                     '로테이블에 오신 걸 환영합니다 💗',
                     '한 사람 한 사람, 마음을 다해 마주해 보세요.<br>오늘의 만남이 당신의 소중한 인연으로 이어지길, 진심으로 응원할게요 🤍',
-                    { src: '{{ asset('images/qr_입장등록.png') }}', caption: '📷 QR을 찍고 입장등록부터 해주세요!' }),
+                    registerQrMedia()),
 
                 slideFlow('1. 서비스 이용안내', 'bg-blue-lt text-blue', '오늘은 이렇게 흘러가요', [
                     { icon: '🎫', title: '입장 & 번호표', desc: '도착하시면 나만의 번호표를 받고, 안내해 드리는 자리에 편하게 앉으시면 돼요.' },
@@ -432,10 +448,10 @@
         var $dots  = $('#guideDots');
         var current = 0;
         var slides = [];
-        var currentType = ($stage.data('initial-type') === 'solo') ? 'solo' : 'wine';
+        var currentType = ($stage.data('initial-type') === 'wine') ? 'wine' : 'solo';
 
         function buildType(type) {
-            currentType = (type === 'solo') ? 'solo' : 'wine';
+            currentType = (type === 'wine') ? 'wine' : 'solo';
             slides = SLIDES[currentType];
             current = 0;
 

@@ -2,6 +2,7 @@ import { Link, router, usePage } from "@inertiajs/react";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import useRealtimeChat from "@/useRealtimeChat";
 import NavigationLoader from "@/Components/NavigationLoader";
+import ConfirmModal from "@/Components/ConfirmModal";
 import echo from "@/echo";
 
 /**
@@ -169,16 +170,12 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
         };
     }, [eventId]);
 
-    // 헤더의 "~님" 버튼을 2번 연속 터치하면 로그아웃되는 숨김 제스처.
-    const logoutTapRef = useRef({ count: 0, timer: null });
-    const handleNameTap = () => {
-        const s = logoutTapRef.current;
-        s.count += 1;
-        if (s.count >= 2) {
-            s.count = 0;
-            router.post("/logout");
-            return;
-        }
+    // 헤더의 로그아웃 버튼. 실수로 누르는 것을 막기 위해 공통 확인 모달로 한 번 확인한다.
+    const [logoutOpen, setLogoutOpen] = useState(false);
+    const handleLogout = () => setLogoutOpen(true);
+    const confirmLogout = () => {
+        setLogoutOpen(false);
+        router.post("/logout");
     };
 
     // 페이지(라우트)가 바뀌면 항상 최상단으로 되돌린다. (body 가 스크롤 컨테이너)
@@ -192,6 +189,15 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
             {/* 모바일 프레임. 뷰포트 높이를 고정하지 않고 body(페이지)가 스크롤되게 둔다.
                 header/nav 는 position:fixed 로 뷰포트에 고정 → 모바일 Chrome 주소창/툴바 변화와 무관하게 항상 고정. */}
             <div className="relative mx-auto flex min-h-screen w-full max-w-[480px] flex-col bg-gray-50 shadow-xl">
+                <ConfirmModal
+                    open={logoutOpen}
+                    icon="👋"
+                    title="로그아웃 할까요?"
+                    confirmText="로그아웃"
+                    cancelText="취소"
+                    onConfirm={confirmLogout}
+                    onClose={() => setLogoutOpen(false)}
+                />
                 <FlashToast />
                 <NavigationLoader />
 
@@ -235,10 +241,10 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                                                 ? "border-rose-200 bg-rose-50 text-rose-600"
                                                 : "border-sky-200 bg-sky-50 text-sky-600";
                                             return (
-                                                <button
-                                                    onClick={handleNameTap}
+                                                <div className="flex items-center gap-1.5">
+                                                <div
                                                     className={
-                                                        "flex items-center gap-1.5 rounded-full border px-3 py-1 shadow-sm transition hover:shadow active:scale-95 " +
+                                                        "flex items-center gap-1.5 rounded-full border px-3 py-1 shadow-sm " +
                                                         toneCls
                                                     }
                                                 >
@@ -253,7 +259,31 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                                                             님
                                                         </span>
                                                     </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleLogout}
+                                                    title="로그아웃"
+                                                    aria-label="로그아웃"
+                                                    className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 shadow-sm transition hover:text-primary hover:shadow active:scale-95"
+                                                >
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="2"
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        className="h-4 w-4"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                                        <path d="M16 17l5-5-5-5" />
+                                                        <path d="M21 12H9" />
+                                                    </svg>
                                                 </button>
+                                                </div>
                                             );
                                         })()
                                     ) : (

@@ -165,6 +165,8 @@ class Member extends Authenticatable
         'event_drink_id',
         // 음료 전달 완료 시각 (관리자 체크, null=전달 전)
         'drink_served_at',
+        // 회원이 직접 입장한 마지막 시각 (관리자 대리 로그인 제외)
+        'last_login_at',
         // 매칭 결과 리뷰 인증 완료 시각
         'result_reviewed_at',
     ];
@@ -229,6 +231,7 @@ class Member extends Authenticatable
             'has_pet'    => 'boolean',
             'result_reviewed_at' => 'datetime',
             'drink_served_at'    => 'datetime',
+            'last_login_at'      => 'datetime',
         ];
     }
 

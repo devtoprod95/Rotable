@@ -22,6 +22,7 @@
         ? $event->drinks->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values()
         : collect();
     $memberUpdateUrlTemplate = route('admin.rotation.event.members.update', ['id' => $event->id, 'memberId' => '__MID__']);
+    $memberImpersonateUrlTemplate = route('admin.rotation.event.members.impersonate', ['id' => $event->id, 'memberId' => '__MID__']);
 @endphp
 <style>
     /* 수정 폼 안내문구: 한 줄씩, 작은 화면에서도 읽히는 크기/색 */
@@ -191,6 +192,7 @@
         var bsModal = null;
         var current = null;   // 지금 보고 있는 회원 데이터
         var UPDATE_URL_TPL = {!! json_encode($memberUpdateUrlTemplate, JSON_UNESCAPED_SLASHES) !!};
+        var IMPERSONATE_URL_TPL = {!! json_encode($memberImpersonateUrlTemplate, JSON_UNESCAPED_SLASHES) !!};
         var OPTIONS = {!! json_encode($lifestyleOptions, JSON_UNESCAPED_UNICODE) !!};
         var DRINKS  = {!! json_encode($memberEditDrinks, JSON_UNESCAPED_UNICODE) !!};
 
@@ -285,6 +287,7 @@
             basic += gridItem('내적 조건', esc(listText(d.inner_preference)) || '-');
             basic += gridItem('흡연 여부', smokerBadge(d.is_smoker));
             basic += gridItem('신청 플랫폼', platformBadge(d.platform));
+            basic += gridItem('마지막 로그인', d.last_login_at ? esc(d.last_login_at) : '기록 없음');
             $('#memberDetail-basic').html(basic);
 
             // 자기소개
@@ -402,6 +405,18 @@
             }).always(function(){ $btn.prop('disabled', false); });
         }
         $(function(){
+            // 관리자가 해당 회원으로 로그인: POST 폼을 새 탭으로 제출한다. (회원 로그인은 덮어쓰고, 관리자 로그인은 유지)
+            $(document).on('click', '.btn-member-login', function(e){
+                e.stopPropagation();
+                var memberId = $(this).data('memberId');
+                if(!memberId){ return; }
+                var $form = $('<form method="POST" target="_blank" class="d-none"></form>')
+                    .attr('action', IMPERSONATE_URL_TPL.replace('__MID__', memberId))
+                    .append($('<input type="hidden" name="_token">').val($('meta[name="csrf-token"]').attr('content')));
+                $('body').append($form);
+                $form.trigger('submit');
+                $form.remove();
+            });
             // '상관없음'을 고르면 같은 묶음의 나머지를 해제하고, 다른 항목을 고르면 '상관없음'을 해제한다.
             $(document).on('change', '.md-pref-check', function(){
                 var $box = $(this).closest('.d-flex');

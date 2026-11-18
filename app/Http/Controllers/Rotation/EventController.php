@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 /**
@@ -149,6 +150,23 @@ class EventController extends RotationBaseController
             $this->memberProfileService->update($id, $memberId, $request->validated(), $this->isSuperAdmin()),
             Response::HTTP_INTERNAL_SERVER_ERROR,
         );
+    }
+
+    /**
+     * 관리자가 해당 회원으로 바로 로그인한다. (회원 화면 확인/현장 지원용)
+     * 회원(web) guard 만 건드리므로 관리자 로그인은 유지되고, 이미 다른 회원으로 로그인돼 있으면 덮어쓴다.
+     */
+    public function eventMemberImpersonate(Request $request, int $id, int $memberId): RedirectResponse
+    {
+        $member = Member::where('event_id', $id)->find($memberId);
+        abort_if($member === null, 404);
+
+        Auth::guard('web')->login($member);
+        $request->session()->regenerate();
+        // 관리자 대리 로그인 표시 — 이 세션에서는 메시지/답장 읽음 처리를 하지 않는다.
+        $request->session()->put('admin_impersonating', true);
+
+        return redirect()->route('home');
     }
 
     /**

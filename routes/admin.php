@@ -80,6 +80,8 @@ Route::middleware('role')->group(function () {
                 // 음료 전달 완료 체크/해제 (1:1)
                 Route::patch('/{id}/members/{memberId}/drink-served', [EventController::class, 'eventMemberDrinkServed'])->whereNumber('id')->whereNumber('memberId')->name('members.drinkServed');
                 Route::put('/{id}/members/{memberId}', [EventController::class, 'eventMemberUpdate'])->whereNumber('id')->whereNumber('memberId')->name('members.update');
+                // 관리자가 해당 회원으로 바로 로그인 (새 탭으로 회원 홈 이동, 기존 회원 로그인은 덮어씀)
+                Route::post('/{id}/members/{memberId}/impersonate', [EventController::class, 'eventMemberImpersonate'])->whereNumber('id')->whereNumber('memberId')->name('members.impersonate');
                 Route::get('/{id}/members/{memberId}/voters/list', [MatchController::class, 'eventMemberVoterList'])->whereNumber('id')->whereNumber('memberId')->name('members.voters.list');
                 Route::get('/{id}/members/{memberId}/voted/list', [MatchController::class, 'eventMemberVotedList'])->whereNumber('id')->whereNumber('memberId')->name('members.voted.list');
             });

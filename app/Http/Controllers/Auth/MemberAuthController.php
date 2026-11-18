@@ -301,7 +301,9 @@ class MemberAuthController extends Controller
         });
 
         Auth::guard('web')->login($member);
+        $member->forceFill(['last_login_at' => now()])->saveQuietly();
         $request->session()->regenerate();
+        $request->session()->forget('admin_impersonating');
 
         // 음료를 골랐다면 관리자 로테이션 진행 화면에 실시간으로 알린다.
         if ($member->event_drink_id !== null) {
@@ -364,7 +366,9 @@ class MemberAuthController extends Controller
         }
 
         Auth::guard('web')->login($member);
+        $member->forceFill(['last_login_at' => now()])->saveQuietly();
         $request->session()->regenerate();
+        $request->session()->forget('admin_impersonating');
 
         return redirect()->intended(route('home'));
     }
@@ -378,6 +382,7 @@ class MemberAuthController extends Controller
         // session()->invalidate()는 세션 전체를 날려 admin guard 로그인까지 풀리므로 사용하지 않는다.
         Auth::guard('web')->logout();
         $request->session()->regenerate();
+        $request->session()->forget('admin_impersonating');
 
         return redirect()->route('landing');
     }

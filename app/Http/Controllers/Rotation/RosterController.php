@@ -165,8 +165,9 @@ class RosterController extends RotationBaseController
             if ($superAdmin) {
                 $data['password'] = $m->password;
             }
-            $data['age']   = $m->birth_year ? (now()->year - $m->birth_year + 1) : null;
-            $data['label'] = $this->memberLabelService->label($labelMap, $m->gender, $m->name, $m->platform);
+            $data['age']           = $m->birth_year ? (now()->year - $m->birth_year + 1) : null;
+            $data['last_login_at'] = $m->last_login_at?->format('Y-m-d H:i');
+            $data['label']         = $this->memberLabelService->label($labelMap, $m->gender, $m->name, $m->platform);
 
             $out[$m->gender . '|' . (int) $m->name] = $data;
         });

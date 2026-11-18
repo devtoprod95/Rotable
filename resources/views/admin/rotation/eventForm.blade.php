@@ -44,7 +44,7 @@
     }
 
     /* 참여자 카드: ① 번호표·라벨·플랫폼·방문  ② 항목명:값  ③ 활동 숫자(누르면 목록)  ④ 버튼 */
-    .pm-grid{ display:grid; grid-template-columns:1fr; gap:.75rem; }
+    .pm-grid{ display:grid; grid-template-columns:minmax(0, 1fr); gap:.75rem; }
     @media (min-width: 768px){ .pm-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
     @media (min-width: 1200px){ .pm-grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
     .pm-card{ display:flex; flex-direction:column; border:1px solid #e6e8eb; border-radius:14px; background:#fff; padding:.8rem .9rem; box-shadow:0 1px 3px rgba(0,0,0,.05); border-top:4px solid #206bc4; }
@@ -68,8 +68,8 @@
     .pm-stat:disabled{ border-color:#eceef1; background:#fafafa; color:#adb5bd; cursor:default; }
     .pm-stat-label{ font-size:.7rem; font-weight:700; white-space:nowrap; }
     .pm-stat-val{ font-size:1.15rem; font-weight:800; line-height:1.1; }
-    .pm-actions{ display:flex; gap:.4rem; margin-top:.6rem; }
-    .pm-actions .btn{ flex:1 1 0; min-height:40px; }
+    .pm-actions{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.6rem; }
+    .pm-actions .btn{ flex:1 1 calc(50% - .4rem); min-height:40px; white-space:normal; }
 
 
 
@@ -412,7 +412,8 @@
                                     if ($isSuperAdmin) {
                                         $memberData['password'] = $member->password;
                                     }
-                                    $memberData['age'] = $member->birth_year ? (now()->year - $member->birth_year + 1) : null;
+                                    $memberData['age']           = $member->birth_year ? (now()->year - $member->birth_year + 1) : null;
+                                    $memberData['last_login_at'] = $member->last_login_at?->format('Y-m-d H:i');
                                     // 관리자 표기 라벨(`닉네임(플랫폼)_N호`) — 모달 제목/상세에서 그대로 쓴다.
                                     $memberLabel = $memberLabels[$member->id] ?? ($member->name . '호');
                                     $memberData['label'] = $memberLabel;
@@ -470,6 +471,7 @@
                                                 -
                                             @endif
                                         </dd></div>
+                                        <div><dt>접속</dt><dd>마지막 로그인 {{ $member->last_login_at?->format('m/d H:i') ?? '기록 없음' }}</dd></div>
                                         @if ($isSuperAdmin)
                                             <div><dt>비밀번호</dt><dd><span class="text-red fw-bold font-monospace" style="user-select:all; cursor:text;">{{ $member->password ?? '-' }}</span></dd></div>
                                         @endif
@@ -495,6 +497,9 @@
                                     <div class="pm-actions">
                                         <button type="button" class="btn btn-outline-azure btn-member-detail" data-member='@json($memberData)'>
                                             <i class="ti ti-id me-1"></i>상세보기 · 수정
+                                        </button>
+                                        <button type="button" class="btn btn-outline-orange btn-member-login" data-member-id="{{ $member->id }}">
+                                            <i class="ti ti-login-2 me-1"></i>회원으로 로그인
                                         </button>
                                         @if ($isSuperAdmin && $member->phone)
                                             <a href="{{ route('admin.rotation.history.index', ['phone' => $member->phone]) }}" target="_blank" rel="noopener" class="btn btn-outline-teal">

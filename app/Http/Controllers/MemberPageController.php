@@ -480,6 +480,10 @@ class MemberPageController extends Controller
         /** @var \App\Models\Member $me */
         $me = Auth::guard('web')->user();
 
+        if ($request->session()->get('admin_impersonating') === true) {
+            return back();
+        }
+
         $validated = $request->validate([
             'message_ids'   => ['sometimes', 'array'],
             'message_ids.*' => ['integer'],
@@ -993,7 +997,7 @@ class MemberPageController extends Controller
         $newReplyIds = $requests
             ->filter(fn (\App\Models\AdminRequest $req) => $req->hasReply() && $req->reply_read_at === null)
             ->pluck('id');
-        if ($newReplyIds->isNotEmpty()) {
+        if ($newReplyIds->isNotEmpty() && ! request()->session()->get('admin_impersonating')) {
             \App\Models\AdminRequest::whereIn('id', $newReplyIds)->update(['reply_read_at' => now()]);
         }
 

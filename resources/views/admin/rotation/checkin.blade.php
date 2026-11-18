@@ -408,6 +408,9 @@
             if(inState && r.checked_in_at){ times.push('체크인 ' + esc(hhmm(r.checked_in_at))); }
             if(r.registered && r.registered_at){ times.push('입장등록 ' + esc(hhmm(r.registered_at))); }
             if(times.length){ info += `<div><dt>시각</dt><dd>${times.join(' · ')}</dd></div>`; }
+            if(r.registered && r.member){
+                info += `<div><dt>접속</dt><dd>${r.member.last_login_at ? '마지막 로그인 ' + esc(String(r.member.last_login_at).slice(5)) : '<span class="text-secondary">로그인 기록 없음</span>'}</dd></div>`;
+            }
 
             // ③ 버튼: 체크인/취소(주요) · 프로필 · 번호·테이블(체크인 후, 입장등록 전) · 삭제(미도착일 때만)
             // 입장등록을 마친 사람은 체크인 취소가 막혀 있으므로(서버 거부) 버튼을 보이지 않는다.
@@ -424,14 +427,16 @@
             // 입장등록을 마친 사람만: 회원 상세정보 모달
             var memberBtn = (r.registered && r.member)
                 ? `<button type="button" class="btn btn-sm btn-outline-azure btn-checkin-member"`
-                  + ` data-id="${r.id}" aria-label="${esc(nickname)} 회원 상세보기"><i class="ti ti-user-search me-1"></i>회원 상세보기</button>` : '';
+                  + ` data-id="${r.id}" aria-label="${esc(nickname)} 회원 상세보기"><i class="ti ti-user-search me-1"></i>회원 상세보기</button>`
+                  + `<button type="button" class="btn btn-sm btn-outline-orange btn-member-login"`
+                  + ` data-member-id="${r.member.id}" aria-label="${esc(nickname)} 회원으로 로그인"><i class="ti ti-login-2 me-1"></i>회원으로 로그인</button>` : '';
             var delBtn = inState ? ''
                 : `<button type="button" class="btn btn-sm btn-outline-danger btn-checkin-del"`
                   + ` data-id="${r.id}" data-name="${esc(nickname)}" aria-label="${esc(nickname)} 명단에서 삭제">`
                   + `<i class="ti ti-trash me-1"></i>삭제</button>`;
 
             // 모바일 2열 버튼 줄: 보조 버튼(프로필·번호·테이블·삭제)이 홀수면 마지막 버튼을 한 줄 전체로 (혼자 반쪽 차지 방지)
-            var secondaryCount = [profBtn, memberBtn, ticketBtn, delBtn].filter(function(b){ return b; }).length;
+            var secondaryCount = [profBtn, memberBtn, ticketBtn, delBtn].filter(function(b){ return b; }).length + (memberBtn ? 1 : 0); // memberBtn 은 버튼 2개
 
             return `<div class="list-group-item checkin-row ${stateCls}"`
                 +      ` role="button" tabindex="0" data-id="${r.id}"`

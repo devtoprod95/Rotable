@@ -119,7 +119,7 @@ class Member extends Authenticatable
      */
     public static function outerPreferenceOptions(): array
     {
-        return ['얼굴', '몸매', '스타일', self::PREFERENCE_ANY];
+        return ['얼굴', '몸매', '스타일', '키', self::PREFERENCE_ANY];
     }
 
     /**

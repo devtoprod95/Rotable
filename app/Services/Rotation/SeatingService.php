@@ -683,6 +683,11 @@ class SeatingService
     public function sendCloseVotingReport(int $eventId, string $trigger): void
     {
         try {
+            // 운영(production) 환경에서만 보낸다. 로컬/스테이징에서는 실제 운영진 채팅방으로 나가지 않게 한다.
+            if (! app()->isProduction()) {
+                return;
+            }
+
             $notifier = TelegramNotifier::fromConfig();
             if (! $notifier->isConfigured()) {
                 return; // 미설정이면 조립 비용 없이 건너뛴다.

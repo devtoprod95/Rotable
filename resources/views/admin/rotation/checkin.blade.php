@@ -211,31 +211,37 @@
             {{-- 남 --}}
             <div class="col-12 col-lg-6">
                 <div class="card">
-                    <div class="card-header bg-blue-lt flex-column align-items-stretch gap-2">
-                        <h3 class="card-title mb-0">👨 남 <span class="text-secondary fw-normal fs-5">· 명단 <span id="maleTotal">0</span>명</span></h3>
+                    <div class="card-header bg-blue-lt flex-column align-items-stretch gap-2" role="button" tabindex="0" style="cursor:pointer;"
+                         data-bs-toggle="collapse" data-bs-target="#maleCollapse" aria-expanded="true" aria-controls="maleCollapse">
+                        <h3 class="card-title mb-0 d-flex align-items-center gap-1">👨 남 <span class="text-secondary fw-normal fs-5">· 명단 <span id="maleTotal">0</span>명</span> <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i></h3>
                         <div class="ck-col-stats">
                             <div><div class="ck-stat-label">참석</div><div class="ck-stat-val text-blue"><span id="maleIn">0</span></div></div>
                             <div><div class="ck-stat-label">입장등록</div><div class="ck-stat-val text-teal"><span id="maleReg">0</span></div></div>
                             <div><div class="ck-stat-label">미도착</div><div class="ck-stat-val text-secondary"><span id="maleOut">0</span></div></div>
                         </div>
                     </div>
-                    <div class="list-group list-group-flush" id="maleList" aria-label="남성 참가자 체크인 목록"></div>
-                    <div class="text-center text-secondary py-4" id="maleEmpty">참가자가 없습니다.</div>
+                    <div class="collapse show" id="maleCollapse">
+                        <div class="list-group list-group-flush" id="maleList" aria-label="남성 참가자 체크인 목록"></div>
+                        <div class="text-center text-secondary py-4" id="maleEmpty">참가자가 없습니다.</div>
+                    </div>
                 </div>
             </div>
             {{-- 여 --}}
             <div class="col-12 col-lg-6">
                 <div class="card">
-                    <div class="card-header bg-pink-lt flex-column align-items-stretch gap-2">
-                        <h3 class="card-title mb-0">👩 여 <span class="text-secondary fw-normal fs-5">· 명단 <span id="femaleTotal">0</span>명</span></h3>
+                    <div class="card-header bg-pink-lt flex-column align-items-stretch gap-2" role="button" tabindex="0" style="cursor:pointer;"
+                         data-bs-toggle="collapse" data-bs-target="#femaleCollapse" aria-expanded="true" aria-controls="femaleCollapse">
+                        <h3 class="card-title mb-0 d-flex align-items-center gap-1">👩 여 <span class="text-secondary fw-normal fs-5">· 명단 <span id="femaleTotal">0</span>명</span> <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i></h3>
                         <div class="ck-col-stats">
                             <div><div class="ck-stat-label">참석</div><div class="ck-stat-val text-pink"><span id="femaleIn">0</span></div></div>
                             <div><div class="ck-stat-label">입장등록</div><div class="ck-stat-val text-teal"><span id="femaleReg">0</span></div></div>
                             <div><div class="ck-stat-label">미도착</div><div class="ck-stat-val text-secondary"><span id="femaleOut">0</span></div></div>
                         </div>
                     </div>
-                    <div class="list-group list-group-flush" id="femaleList" aria-label="여성 참가자 체크인 목록"></div>
-                    <div class="text-center text-secondary py-4" id="femaleEmpty">참가자가 없습니다.</div>
+                    <div class="collapse show" id="femaleCollapse">
+                        <div class="list-group list-group-flush" id="femaleList" aria-label="여성 참가자 체크인 목록"></div>
+                        <div class="text-center text-secondary py-4" id="femaleEmpty">참가자가 없습니다.</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -307,6 +313,27 @@
             el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(true); } });
             el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
         })();
+
+        // 남/여 명단: 기본은 펼침. 접은 상태는 기억해 새로고침 후에도 유지한다. (헤더에서 Enter/Space 로도 토글)
+        ['male', 'female'].forEach(function(g){
+            var KEY = 'rotable.checkin.' + g + 'ListCollapsed';
+            var el = document.getElementById(g + 'Collapse');
+            if(!el){ return; }
+            var $head = $('[data-bs-target="#' + g + 'Collapse"]');
+            var collapsed = false;
+            try { collapsed = localStorage.getItem(KEY) === '1'; } catch(e) { /* 저장소 사용 불가 시 기본(펼침) */ }
+            if(collapsed){
+                el.classList.remove('show');
+                $head.attr('aria-expanded', 'false');
+            }
+            function save(v){ try { localStorage.setItem(KEY, v ? '1' : '0'); } catch(e) {} }
+            el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(true); } });
+            el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
+            $head.on('keydown', function(e){
+                if(e.target !== this){ return; }
+                if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); this.click(); }
+            });
+        });
 
         var rosters = [];
         var tableRatios = [];  // 테이블별 성비 (load 때 갱신, 번호표 모달에서도 재사용)

@@ -704,7 +704,7 @@ class MemberPageController extends Controller
         }
 
         // 나에게 온 메시지 — 회원의 어필(보낸 사람 번호표 공개)과 관리자가 보낸 메시지(관리자로 표시).
-        // 1:1 은 다른 메시지함이 없으므로 관리자 메시지도 여기서 보여준다. (종료 전에도 볼 수 있다)
+        // 종료(X) 전에는 이 화면 자체를 이용할 수 없으므로 아래 "이용 불가" 안내만 보여주고 메시지는 내려주지 않는다.
         $received = Message::query()
             ->with('sender:id,name,gender')
             ->where('receiver_id', $me->id)
@@ -722,7 +722,7 @@ class MemberPageController extends Controller
             ->values();
 
         if ($event->status !== EventRound::STATUS_CLOSED) {
-            return Inertia::render('Notes', ['available' => false, 'received' => $received]);
+            return Inertia::render('Notes', ['available' => false]);
         }
 
         $oppositeGen = $me->gender === Member::GENDER_MALE ? Member::GENDER_FEMALE : Member::GENDER_MALE;

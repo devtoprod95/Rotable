@@ -396,6 +396,8 @@
                             <option value="received_asc">받은 투표 적은 순</option>
                             <option value="cast_desc">보낸 투표 많은 순</option>
                             <option value="cast_asc">보낸 투표 적은 순</option>
+                            <option value="login_desc">최근 접속 순</option>
+                            <option value="login_asc">오래된 접속 순 (기록 없음 먼저)</option>
                         </select>
                         </div>
                         {{-- 참여자 카드: 모바일 1열 / 768px↑ 2열 / 1200px↑ 3열. 번호표 순(서버 정렬) --}}
@@ -436,7 +438,7 @@
                                     $visitCounts = $member->visit_counts ?? [];
                                 @endphp
                                 <div class="pm-card {{ $isFemale ? 'is-f' : 'is-m' }}" data-member-row data-gender="{{ $member->gender }}"
-                                     data-order="{{ $loop->index }}" data-received="{{ (int) $member->received_votes_count }}" data-cast="{{ (int) $member->cast_votes_count }}">
+                                     data-order="{{ $loop->index }}" data-received="{{ (int) $member->received_votes_count }}" data-cast="{{ (int) $member->cast_votes_count }}" data-login="{{ $member->last_login_at?->timestamp ?? 0 }}">
                                     {{-- ① 번호표 · 라벨 · 플랫폼 · 방문 횟수 --}}
                                     <div class="pm-head">
                                         <div class="pm-ticket"><small>{{ $isFemale ? '여' : '남' }}</small><b>{{ $member->name }}</b></div>
@@ -667,13 +669,14 @@
         // 득표수가 같으면 번호표 순을 유지한다. (성별 필터와 독립적으로 동작)
         var MEMBER_SORT_LABEL = {
             ticket: '번호표 순', received_desc: '받은 투표 많은 순', received_asc: '받은 투표 적은 순',
-            cast_desc: '보낸 투표 많은 순', cast_asc: '보낸 투표 적은 순'
+            cast_desc: '보낸 투표 많은 순', cast_asc: '보낸 투표 적은 순',
+            login_desc: '최근 접속 순', login_asc: '오래된 접속 순'
         };
         $('#memberSortSelect').on('change', function(){
             var mode = this.value;
             var $grid = $('.pm-grid');
             var cards = $grid.children('[data-member-row]').get();
-            var key = mode.indexOf('received') === 0 ? 'received' : (mode.indexOf('cast') === 0 ? 'cast' : null);
+            var key = mode.indexOf('received') === 0 ? 'received' : (mode.indexOf('cast') === 0 ? 'cast' : (mode.indexOf('login') === 0 ? 'login' : null));
             var dir = mode.slice(-3) === 'asc' ? 1 : -1;
             cards.sort(function(a, b){
                 var byOrder = Number(a.dataset.order) - Number(b.dataset.order);

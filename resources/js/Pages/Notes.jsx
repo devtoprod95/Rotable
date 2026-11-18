@@ -126,18 +126,6 @@ export default function Notes() {
                             </>
                         }
                     />
-
-                    {/* 관리자가 보낸 메시지는 종료 전에도 볼 수 있다 */}
-                    {received.length > 0 && (
-                        <div className="mt-6">
-                            <h2 className="text-base font-extrabold">받은 메시지</h2>
-                            <div className="mt-2 space-y-2.5">
-                                {received.map((n) => (
-                                    <ReceivedNote key={n.id} note={n} />
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
             </AppLayout>
         );

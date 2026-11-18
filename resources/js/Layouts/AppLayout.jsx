@@ -1,5 +1,5 @@
 import { Link, router, usePage } from "@inertiajs/react";
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import useRealtimeChat from "@/useRealtimeChat";
 import NavigationLoader from "@/Components/NavigationLoader";
 import echo from "@/echo";
@@ -9,6 +9,18 @@ import echo from "@/echo";
  * - 모바일 폭(max 480px) 가운데 정렬
  * - 상단 nav: 좌측 Rotable 로고, 우측 로그인(미로그인 시)
  * - 하단 nav: 4개 버튼, 스크롤해도 고정(플로팅)
+ *
+ * 구조: AppShell 은 app.jsx 에서 "지속 레이아웃"으로 한 번만 마운트되어 페이지를 옮겨도 header/nav/소켓 구독이
+ * 다시 만들어지지 않는다(깜빡임 방지). 각 페이지가 쓰는 <AppLayout center ...> 는 화면 옵션만 AppShell 에 알리고
+ * 자식을 그대로 그린다.
+ */
+const LayoutOptionsContext = createContext(null);
+
+const DEFAULT_OPTIONS = { bottomNav: true, headerAction: true, center: false };
+
+/**
+ * 각 페이지가 쓰는 레이아웃 래퍼. 화면 옵션을 지속 레이아웃(AppShell)에 전달한다.
+ * (AppShell 밖에서 단독으로 쓰이면 스스로 AppShell 로 감싼다.)
  */
 export default function AppLayout({
     children,
@@ -16,8 +28,34 @@ export default function AppLayout({
     headerAction = true,
     center = false,
 }) {
+    const setOptions = useContext(LayoutOptionsContext);
+
+    // 화면이 그려지기 전에 옵션을 반영해, 페이지 전환 때 nav/header 가 잠깐 바뀌어 보이는 현상을 막는다.
+    useLayoutEffect(() => {
+        setOptions?.((prev) =>
+            prev.bottomNav === bottomNav && prev.headerAction === headerAction && prev.center === center
+                ? prev
+                : { bottomNav, headerAction, center },
+        );
+    }, [setOptions, bottomNav, headerAction, center]);
+
+    if (!setOptions) {
+        return (
+            <AppShell initialOptions={{ bottomNav, headerAction, center }}>
+                {children}
+            </AppShell>
+        );
+    }
+
+    return <>{children}</>;
+}
+
+/** header · 하단 nav · 컨텐츠 틀. 페이지가 바뀌어도 유지된다. */
+export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
+    const [options, setOptions] = useState(initialOptions);
+    const { bottomNav, headerAction, center } = options;
     const page = usePage();
-    const { auth, eventName } = page.props;
+    const { auth, eventName, adminImpersonating } = page.props;
     const url = page.url;
 
     // 게임 탭/화면 접근은 "와인파티 && 진행중(S)" 에서만 허용된다.
@@ -149,6 +187,7 @@ export default function AppLayout({
     }, [url]);
 
     return (
+        <LayoutOptionsContext.Provider value={setOptions}>
         <div className="min-h-screen bg-secondary-100 font-sans">
             {/* 모바일 프레임. 뷰포트 높이를 고정하지 않고 body(페이지)가 스크롤되게 둔다.
                 header/nav 는 position:fixed 로 뷰포트에 고정 → 모바일 Chrome 주소창/툴바 변화와 무관하게 항상 고정. */}
@@ -159,7 +198,12 @@ export default function AppLayout({
                 {/* 상단 header (뷰포트 고정) */}
                 <header className="vt-header fixed inset-x-0 top-0 z-30">
                     <div className="mx-auto w-full max-w-[480px]">
-                        <div className="flex h-header items-center justify-between rounded-b-3xl border-b-2 border-primary-200 bg-white/95 px-4 pt-[env(safe-area-inset-top)] shadow-[0_4px_16px_-6px_rgba(207,47,76,0.25)] backdrop-blur">
+                        <div className="relative flex h-header items-center justify-between rounded-b-3xl border-b-2 border-primary-200 bg-white/95 px-4 pt-[env(safe-area-inset-top)] shadow-[0_4px_16px_-6px_rgba(207,47,76,0.25)] backdrop-blur">
+                            {adminImpersonating && (
+                                <span className="pointer-events-none absolute left-1/2 top-[env(safe-area-inset-top)] z-10 -translate-x-1/2 whitespace-nowrap rounded-b-md bg-amber-500 px-2 py-0.5 text-[10px] font-bold leading-none text-white shadow">
+                                    🔧 관리자 대리 로그인 중
+                                </span>
+                            )}
                             <Link href="/" className="flex items-center gap-2">
                                 <img
                                     src="/images/logo-sm.png"
@@ -248,6 +292,7 @@ export default function AppLayout({
                 {bottomNav && <BottomNav />}
             </div>
         </div>
+        </LayoutOptionsContext.Provider>
     );
 }
 
@@ -294,22 +339,24 @@ function BottomNav() {
     const [unreadCount, setUnreadCount] = useState(sharedUnread);
     // 메시지함(/chats)과 어필(/notes)은 같은 메시지 데이터를 쓰므로 안읽음 뱃지를 함께 다룬다.
     const onChatsPage = url.startsWith("/chats") || url.startsWith("/notes");
+    // 관리자 대리 로그인 중에는 메시지가 읽음 처리되지 않으므로, 메시지함/어필 화면에서도 뱃지를 그대로 유지한다.
+    const keepBadge = props.adminImpersonating === true;
 
     // 페이지 이동(Inertia)으로 shared prop 이 갱신되면 동기화.
     useEffect(() => {
         setUnreadCount(sharedUnread);
     }, [sharedUnread]);
 
-    // 메시지함 화면에 있으면 뱃지는 0으로 유지.
+    // 메시지함 화면에 있으면 뱃지는 0으로 유지. (대리 로그인 중에는 제외)
     useEffect(() => {
-        if (onChatsPage) {
+        if (onChatsPage && !keepBadge) {
             setUnreadCount(0);
         }
-    }, [onChatsPage]);
+    }, [onChatsPage, keepBadge]);
 
-    // 소켓으로 새 메시지가 오면, 메시지함 밖일 때만 뱃지를 올린다.
+    // 소켓으로 새 메시지가 오면, 메시지함 밖일 때만 뱃지를 올린다. (대리 로그인 중에는 화면과 무관하게 올린다)
     useRealtimeChat(memberId, () => {
-        if (!onChatsPage) {
+        if (!onChatsPage || keepBadge) {
             setUnreadCount((n) => n + 1);
         }
     });
@@ -328,12 +375,12 @@ function BottomNav() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sharedReplyKey]);
 
-    // 요청 화면에 있으면 뱃지는 0으로 유지.
+    // 요청 화면에 있으면 뱃지는 0으로 유지. (대리 로그인 중에는 답장이 확인 처리되지 않으므로 유지)
     useEffect(() => {
-        if (onRequestsPage) {
+        if (onRequestsPage && !keepBadge) {
             setReplyIds(new Set());
         }
-    }, [onRequestsPage]);
+    }, [onRequestsPage, keepBadge]);
 
     // 관리자가 답장(또는 수정)하면, 요청 화면 밖일 때만 뱃지를 올린다.
     useEffect(() => {

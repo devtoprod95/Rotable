@@ -6,7 +6,7 @@ import { router } from '@inertiajs/react';
  * - 상단 progress 바 대신 사용(app.jsx 에서 progress:false).
  * - 아주 빠른 전환에서는 깜빡임을 막기 위해 DELAY(ms) 이후에만 노출한다.
  */
-const DELAY = 300;
+const DELAY = 600;
 
 export default function NavigationLoader() {
     const [visible, setVisible] = useState(false);

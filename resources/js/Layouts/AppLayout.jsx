@@ -179,8 +179,10 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
     };
 
     // 페이지(라우트)가 바뀌면 항상 최상단으로 되돌린다. (body 가 스크롤 컨테이너)
-    useEffect(() => {
-        window.scrollTo({ top: 0 });
+    // useLayoutEffect: 새 화면이 그려지기 "전에" 스크롤을 올려, 이전 스크롤 위치에서 새 화면이 한 프레임 보였다가
+    // 위로 튀는 깜빡임을 막는다. (useEffect 는 화면이 그려진 뒤에 실행된다)
+    useLayoutEffect(() => {
+        window.scrollTo(0, 0);
     }, [url]);
 
     return (

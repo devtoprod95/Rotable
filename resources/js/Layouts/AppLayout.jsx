@@ -206,7 +206,13 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                 {/* 상단 header (뷰포트 고정) */}
                 <header className="vt-header fixed inset-x-0 top-0 z-30">
                     <div className="mx-auto w-full max-w-[480px]">
-                        <div className="relative flex h-header items-center justify-between rounded-b-3xl border-b-2 border-primary-200 bg-white/95 px-4 pt-[env(safe-area-inset-top)] shadow-[0_4px_16px_-6px_rgba(207,47,76,0.25)] backdrop-blur">
+                        <div
+                            className={
+                                "relative flex h-header items-center justify-between rounded-b-3xl border-b-2 border-primary-200 px-4 pt-[env(safe-area-inset-top)] shadow-[0_4px_16px_-6px_rgba(207,47,76,0.25)] backdrop-blur " +
+                                // 접속 카운트다운 줄이 header 뒤로 이어질 때는 비쳐 보이지 않도록 불투명 흰색으로 한다.
+                                (accessExpiresAt ? "bg-white" : "bg-white/95")
+                            }
+                        >
                             {adminImpersonating && (
                                 <span className="pointer-events-none absolute left-1/2 top-[env(safe-area-inset-top)] z-10 -translate-x-1/2 whitespace-nowrap rounded-b-md bg-amber-500 px-2 py-0.5 text-[10px] font-bold leading-none text-white shadow">
                                     🔧 관리자 대리 로그인 중
@@ -311,7 +317,7 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                     className={
                         "flex flex-1 flex-col bg-gray-50 " +
                         (accessExpiresAt
-                            ? "pt-[calc(var(--spacing-header)+env(safe-area-inset-top)+3.5rem)] "
+                            ? "pt-[calc(var(--spacing-header)+env(safe-area-inset-top)+4.25rem)] "
                             : "pt-[calc(var(--spacing-header)+env(safe-area-inset-top))] ") +
                         (bottomNav
                             ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] "
@@ -381,7 +387,7 @@ function AccessCountdown({ expiresAt }) {
     return (
         <div className="fixed inset-x-0 top-[calc(var(--spacing-header)+env(safe-area-inset-top)-1.5rem)] z-20">
             <div className="mx-auto w-full max-w-[480px]">
-                <div className={"pt-6 shadow-sm " + barTone}>
+                <div className={"relative z-10 rounded-b-3xl pt-6 shadow-sm " + barTone}>
                     <div className="flex h-8 items-center justify-center gap-1.5 px-3 text-[12px] font-bold">
                         <span>⏰ 접속 가능 시간</span>
                         <span className="font-extrabold tabular-nums">
@@ -391,7 +397,8 @@ function AccessCountdown({ expiresAt }) {
                         <span>남음 · 이후 접속 불가</span>
                     </div>
                 </div>
-                <div className="bg-white px-3 py-1.5 text-center text-[12px] font-bold text-gray-800 shadow-sm">
+                {/* 폐기 안내 줄: 위 줄 뒤로 1rem 밀어 넣어, header → 카운트다운 줄 → 안내 줄이 겹겹이 둥글게 이어지게 한다. */}
+                <div className="-mt-4 rounded-b-3xl bg-white px-3 pb-2 pt-5 text-center text-[12px] font-bold text-gray-800 shadow-md">
                     🔒 마감 후 입력하신 개인정보와 모든 데이터는 안전하게 폐기될 예정이에요.
                 </div>
             </div>

@@ -374,21 +374,22 @@ function AccessCountdown({ expiresAt }) {
     const ss = String(total % 60).padStart(2, "0");
     const urgent = total < 3600; // 1시간 미만이면 강조
 
+    const barTone = urgent ? "bg-rose-600 text-white" : "bg-amber-100 text-amber-900";
+
+    // header 아래 모서리가 둥글어서 바로 밑에 붙이면 모서리 뒤로 배경이 비쳐 경계가 어색하다.
+    // 그래서 카운트다운 줄을 header 뒤로 1.5rem 밀어 넣고(위쪽 여백), 같은 색이 둥근 모서리 뒤를 채우게 한다.
     return (
-        <div className="fixed inset-x-0 top-[calc(var(--spacing-header)+env(safe-area-inset-top))] z-20">
+        <div className="fixed inset-x-0 top-[calc(var(--spacing-header)+env(safe-area-inset-top)-1.5rem)] z-20">
             <div className="mx-auto w-full max-w-[480px]">
-                <div
-                    className={
-                        "flex h-8 items-center justify-center gap-1.5 px-3 text-[12px] font-bold shadow-sm " +
-                        (urgent ? "bg-rose-600 text-white" : "bg-amber-100 text-amber-900")
-                    }
-                >
-                    <span>⏰ 접속 가능 시간</span>
-                    <span className="font-extrabold tabular-nums">
-                        {days > 0 ? `${days}일 ` : ""}
-                        {hh}:{mm}:{ss}
-                    </span>
-                    <span>남음 · 이후 접속 불가</span>
+                <div className={"pt-6 shadow-sm " + barTone}>
+                    <div className="flex h-8 items-center justify-center gap-1.5 px-3 text-[12px] font-bold">
+                        <span>⏰ 접속 가능 시간</span>
+                        <span className="font-extrabold tabular-nums">
+                            {days > 0 ? `${days}일 ` : ""}
+                            {hh}:{mm}:{ss}
+                        </span>
+                        <span>남음 · 이후 접속 불가</span>
+                    </div>
                 </div>
                 <div className="bg-white px-3 py-1.5 text-center text-[12px] font-bold text-gray-800 shadow-sm">
                     🔒 마감 후 입력하신 개인정보와 모든 데이터는 안전하게 폐기될 예정이에요.

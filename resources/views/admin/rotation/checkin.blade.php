@@ -470,7 +470,8 @@
 
             return `<div class="list-group-item checkin-row ${stateCls}"`
                 +      ` role="${(inState && r.registered) ? 'group' : 'button'}" tabindex="${(inState && r.registered) ? '-1' : '0'}" data-id="${r.id}"`
-                +      ` data-locked="${(inState && r.registered) ? '1' : '0'}"`                +      ` aria-pressed="${inState ? 'true' : 'false'}"`
+                +      ` data-locked="${(inState && r.registered) ? '1' : '0'}"`
+                +      ` aria-pressed="${inState ? 'true' : 'false'}"`
                 +      ` aria-label="${esc(nickname)} ${esc(pfLabel)} ${inState ? '참석됨, 탭하면 취소' : '미도착, 탭하면 체크인'}">`
                 +   `<div class="ck-top">${ticket}`
                 +     `<div class="ck-ident"><div class="ck-name">${name}</div><div class="ck-sub">${pf}${tableBadge}</div></div>`

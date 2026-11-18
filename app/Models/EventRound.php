@@ -159,6 +159,32 @@ class EventRound extends Model
         return $this->hasMany(AdminRequest::class, 'event_id');
     }
 
+    /** 종료(X)된 행사에 회원이 접속할 수 있는 기간(일). 행사 일시 기준. */
+    public const MEMBER_ACCESS_DAYS = 2;
+
+    /**
+     * 회원이 이 행사에 접속할 수 있는 마지막 시각. (행사 일시 + MEMBER_ACCESS_DAYS 일)
+     * 종료(X)된 행사에만 적용하며, 진행 중인 행사나 행사 시간이 없으면 null(제한 없음).
+     */
+    public function memberAccessExpiresAt(): ?\Illuminate\Support\Carbon
+    {
+        if ($this->status !== self::STATUS_CLOSED || ! $this->event_time) {
+            return null;
+        }
+
+        return $this->event_time->copy()->addDays(self::MEMBER_ACCESS_DAYS);
+    }
+
+    /**
+     * 회원 접속 가능 기간이 지났는지 여부.
+     */
+    public function isMemberAccessExpired(): bool
+    {
+        $expiresAt = $this->memberAccessExpiresAt();
+
+        return $expiresAt !== null && now()->greaterThanOrEqualTo($expiresAt);
+    }
+
     /**
      * 투표가 자동으로 마감되어야 하는 시각(= 행사 다음 날 오전 9시).
      * 행사 시간이 없으면 null 을 반환한다.

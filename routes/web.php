@@ -74,7 +74,7 @@ Route::post('/contact', [MemberAuthController::class, 'contact'])
     ->name('member.contact');
 
 // 로그인한 유저만
-Route::middleware('auth:web')->group(function () {
+Route::middleware(['auth:web', \App\Http\Middleware\EnsureMemberAccessAllowed::class])->group(function () {
     Route::get('/home', [MemberPageController::class, 'home'])->name('home');
     Route::get('/chats', [MemberPageController::class, 'chats'])->name('chats');
     Route::post('/chats/messages', [MemberPageController::class, 'sendMessage'])->name('chats.messages.send');

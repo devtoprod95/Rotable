@@ -67,6 +67,9 @@ class HandleInertiaRequests extends Middleware
                     'event_id' => $member->event_id,
                 ] : null,
             ],
+            // 상단 카운트다운용 - 종료된 행사의 접속 가능 마감 시각(ISO 8601)과 서버 현재 시각(ms). 제한이 없으면 null.
+            'accessExpiresAt' => $event?->memberAccessExpiresAt()?->toIso8601String(),
+            'serverNow'       => now()->getTimestampMs(),
             // 상단 header 표시용 - 관리자가 "회원으로 로그인"한 세션인지.
             'adminImpersonating' => (bool) $request->session()->get('admin_impersonating', false),
             // 상단 header 표시용 - 로그인 회원이 참여한 행사명.

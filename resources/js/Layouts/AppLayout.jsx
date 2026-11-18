@@ -56,7 +56,7 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
     const [options, setOptions] = useState(initialOptions);
     const { bottomNav, headerAction, center } = options;
     const page = usePage();
-    const { auth, eventName, adminImpersonating } = page.props;
+    const { auth, eventName, adminImpersonating, accessExpiresAt } = page.props;
     const url = page.url;
 
     // 게임 탭/화면 접근은 "와인파티 && 진행중(S)" 에서만 허용된다.
@@ -302,11 +302,17 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                     </div>
                 </header>
 
+                {/* 종료된 행사: 접속 가능 시간 카운트다운 (header 바로 아래 고정) */}
+                {accessExpiresAt && <AccessCountdown expiresAt={accessExpiresAt} />}
+
                 {/* 컨텐츠. fixed header/nav 에 가리지 않도록 상/하단 패딩으로 공간 확보.
                     (상단: header 높이 + safe-area-top / 하단: nav 높이 + safe-area-bottom) */}
                 <main
                     className={
-                        "flex flex-1 flex-col bg-gray-50 pt-[calc(var(--spacing-header)+env(safe-area-inset-top))] " +
+                        "flex flex-1 flex-col bg-gray-50 " +
+                        (accessExpiresAt
+                            ? "pt-[calc(var(--spacing-header)+env(safe-area-inset-top)+3.5rem)] "
+                            : "pt-[calc(var(--spacing-header)+env(safe-area-inset-top))] ") +
                         (bottomNav
                             ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] "
                             : "") +
@@ -325,6 +331,70 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
             </div>
         </div>
         </LayoutOptionsContext.Provider>
+    );
+}
+
+/**
+ * 종료된 행사의 접속 가능 시간 카운트다운.
+ * 서버 시각 기준으로 남은 시간을 계산해(기기 시계가 틀려도 정확) 1초마다 갱신한다.
+ * 0 이 되면 서버가 접속을 막으므로 페이지를 다시 불러와 로그인 화면으로 보낸다.
+ */
+function AccessCountdown({ expiresAt }) {
+    const { props } = usePage();
+    const serverNow = props.serverNow ?? Date.now();
+    const target = new Date(expiresAt).getTime();
+
+    // 서버 시각과 기기 시각의 차이. 서버가 새 시각을 내려줄 때(serverNow 가 바뀔 때)만 다시 맞춘다.
+    // (렌더 때마다 다시 계산하면 흐른 시간만큼 차이가 줄어 카운트가 멈춘 것처럼 보인다.)
+    const offsetRef = useRef(serverNow - Date.now());
+    useEffect(() => {
+        offsetRef.current = serverNow - Date.now();
+    }, [serverNow]);
+
+    const [remaining, setRemaining] = useState(() => target - (Date.now() + offsetRef.current));
+
+    useEffect(() => {
+        const tick = () => {
+            const left = target - (Date.now() + offsetRef.current);
+            setRemaining(left);
+            if (left <= 0) {
+                clearInterval(timer);
+                router.reload();
+            }
+        };
+        const timer = setInterval(tick, 1000);
+        tick();
+        return () => clearInterval(timer);
+    }, [target]);
+
+    const total = Math.max(0, Math.floor(remaining / 1000));
+    const days = Math.floor(total / 86400);
+    const hh = String(Math.floor((total % 86400) / 3600)).padStart(2, "0");
+    const mm = String(Math.floor((total % 3600) / 60)).padStart(2, "0");
+    const ss = String(total % 60).padStart(2, "0");
+    const urgent = total < 3600; // 1시간 미만이면 강조
+
+    return (
+        <div className="fixed inset-x-0 top-[calc(var(--spacing-header)+env(safe-area-inset-top))] z-20">
+            <div className="mx-auto w-full max-w-[480px]">
+                <div
+                    className={
+                        "flex h-8 items-center justify-center gap-1.5 px-3 text-[12px] font-bold shadow-sm " +
+                        (urgent ? "bg-rose-600 text-white" : "bg-amber-100 text-amber-900")
+                    }
+                >
+                    <span>⏰ 접속 가능 시간</span>
+                    <span className="font-extrabold tabular-nums">
+                        {days > 0 ? `${days}일 ` : ""}
+                        {hh}:{mm}:{ss}
+                    </span>
+                    <span>남음 · 이후 접속 불가</span>
+                </div>
+                <div className="bg-white px-3 py-1.5 text-center text-[12px] font-bold text-gray-800 shadow-sm">
+                    🔒 마감 후 입력하신 개인정보와 모든 데이터는 안전하게 폐기될 예정이에요.
+                </div>
+            </div>
+        </div>
     );
 }
 

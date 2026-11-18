@@ -262,6 +262,10 @@
                 <div class="card-body d-flex flex-column flex-md-row flex-md-wrap gap-2">
                     {{-- 더미 데이터 도구: 최고관리자 + 운영(production) 환경이 아닐 때만 --}}
                     @if (! empty($dummyMode))
+                        <button type="button" class="btn btn-warning" id="checkinDevOneStepBtn"
+                                title="더미 명단 추가 → 더미 체크인 → 더미 입장등록을 한 번에 진행합니다 (개발용)">
+                            <i class="ti ti-player-track-next me-1"></i><span>더미 원스텝 (명단→체크인→입장등록)</span>
+                        </button>
                         <button type="button" class="btn btn-outline-warning" id="checkinDevRosterBtn"
                                 title="체크인 명단에 더미 신청자를 추가합니다 (개발용)">
                             <i class="ti ti-user-plus me-1"></i><span>더미 명단 추가</span>
@@ -648,6 +652,81 @@
             }).always(function(){
                 $btn.prop('disabled', false).html(original);
             });
+        });
+
+        // [개발용] 원스텝: 더미 명단 추가 → 더미 체크인 → 더미 입장등록을 순서대로 한 번에 실행한다.
+        //  각 단계는 위의 개별 버튼과 같은 서버 API 를 쓴다. 한 단계라도 실패하면 거기서 멈추고 알려준다.
+        $('#checkinDevOneStepBtn').on('click', async function(){
+            if(!TABLES.length){
+                await salert({ text: '테이블이 없습니다. 행사 상세에서 테이블을 먼저 추가해 주세요.', cancel: false });
+                return;
+            }
+            var per = IS_ONE_TO_ONE ? 1 : 3;
+            var def = Math.max(1, TABLES.length * per);
+            var numInput = function(id, label, color){
+                return '<div style="flex:1;text-align:left;">'
+                     +   '<label for="' + id + '" style="font-size:0.85rem;font-weight:700;color:' + color + ';display:block;margin-bottom:4px;">' + label + '</label>'
+                     +   '<input id="' + id + '" type="number" class="swal2-input" value="' + def + '" min="0" max="100" inputmode="numeric" style="width:100%;margin:0;box-sizing:border-box;">'
+                     + '</div>';
+            };
+            var ans = await Swal.fire({
+                title: '더미 원스텝',
+                html: '<div style="text-align:left;font-size:.88rem;color:#475569;margin-bottom:8px;">① 더미 명단 추가 → ② 더미 체크인 → ③ 더미 입장등록을 한 번에 진행해요.</div>'
+                    + '<div style="display:flex;gap:10px;">' + numInput('swal-os-m', '👨 남성', '#1d4ed8') + numInput('swal-os-f', '👩 여성', '#be185d') + '</div>'
+                    + '<div class="text-secondary small mt-2">이미 있는 미도착 인원도 함께 체크인·입장등록돼요. (개발용)</div>',
+                showCancelButton: true, reverseButtons: true, focusConfirm: true,
+                confirmButtonText: '시작', cancelButtonText: '취소',
+                confirmButtonColor: '#3085d6', cancelButtonColor: '#d33',
+                preConfirm: function(){
+                    var m = parseInt(document.getElementById('swal-os-m').value || '0', 10);
+                    var f = parseInt(document.getElementById('swal-os-f').value || '0', 10);
+                    if(isNaN(m) || isNaN(f) || m < 0 || f < 0 || m > 100 || f > 100){
+                        Swal.showValidationMessage('0~100 사이 숫자로 입력해 주세요.');
+                        return false;
+                    }
+                    if(m + f === 0){
+                        Swal.showValidationMessage('1명 이상 입력해 주세요.');
+                        return false;
+                    }
+                    return { male: m, female: f };
+                }
+            });
+            if(!ans.isConfirmed || !ans.value){ return; }
+
+            var $btn = $(this);
+            var original = $btn.html();
+            $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span><span class="os-step">① 명단 추가 중…</span>');
+            var setStep = function(t){ $btn.find('.os-step').text(t); };
+            var steps = [];
+
+            try {
+                var r1 = await $.ajax({ url: devRosterUrl, type: 'POST', data: ans.value });
+                steps.push('① 명단 추가: ' + (r1?.msg || '완료'));
+
+                setStep('② 체크인 중…');
+                var r2 = await $.ajax({ url: devCheckInUrl, type: 'POST' });
+                steps.push('② 체크인: ' + (r2?.msg || '완료'));
+
+                setStep('③ 입장등록 중…');
+                var r3 = await $.ajax({ url: devSeedUrl, type: 'POST' });
+                steps.push('③ 입장등록: 생성 ' + (r3?.created ?? 0) + '건, 건너뜀 ' + (r3?.skipped ?? 0) + '건');
+
+                Swal.fire({
+                    icon: 'success', title: '원스텝 완료',
+                    html: '<div style="text-align:left;line-height:1.8;">' + steps.map(function(t){ return esc(t); }).join('<br>') + '</div>',
+                    confirmButtonText: '확인', confirmButtonColor: '#3085d6'
+                });
+            } catch(xhr) {
+                Swal.fire({
+                    icon: 'error', title: '원스텝 중단',
+                    html: '<div style="text-align:left;line-height:1.8;">' + steps.map(function(t){ return esc(t); }).join('<br>')
+                        + (steps.length ? '<br>' : '') + '<b>실패: </b>' + esc(xhr?.responseJSON?.error?.message ?? xhr?.responseJSON?.msg ?? '오류가 발생했습니다.') + '</div>',
+                    confirmButtonText: '확인', confirmButtonColor: '#3085d6'
+                });
+            } finally {
+                $btn.prop('disabled', false).html(original);
+                load();
+            }
         });
 
         // [개발용] 더미 체크인: 미도착 전원을 번호표·테이블 자동으로 체크인한다.

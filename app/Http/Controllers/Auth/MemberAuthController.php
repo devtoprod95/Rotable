@@ -35,24 +35,28 @@ class MemberAuthController extends Controller
      * @param  array<int, string>  $statuses
      * @return array<int, array{id: int, label: string}>
      */
-    private function roundOptions(array $statuses, bool $includeRecentClosed = false): array
+    private function roundOptions(array $statuses, bool $includeRecentClosed = false, bool $showAll = false): array
     {
         return EventRound::query()
-            ->where(function ($query) use ($statuses, $includeRecentClosed) {
-                $query->whereIn('status', $statuses);
+            ->when(! $showAll, function ($outer) use ($statuses, $includeRecentClosed) {
+                $outer->where(function ($query) use ($statuses, $includeRecentClosed) {
+                    $query->whereIn('status', $statuses);
 
-                if ($includeRecentClosed) {
-                    $query->orWhere(function ($q) {
-                        $q->where('status', EventRound::STATUS_CLOSED)
-                            ->where('event_time', '>=', now()->subDays(2));
-                    });
-                }
+                    if ($includeRecentClosed) {
+                        // 종료된 행사는 행사 일시 기준 접속 가능 기간(2일) 안의 것만 보인다.
+                        $query->orWhere(function ($q) {
+                            $q->where('status', EventRound::STATUS_CLOSED)
+                                ->where('event_time', '>=', now()->subDays(EventRound::MEMBER_ACCESS_DAYS));
+                        });
+                    }
+                });
             })
             ->orderBy('event_time', 'desc')
             ->get()
             ->map(fn (EventRound $round): array => [
                 'id'    => $round->id,
-                'label' => $round->label,
+                // 전체 보기(테스트)에서는 접속 기간이 지난 행사를 구분할 수 있게 표시한다.
+                'label' => $round->label . ($showAll && $round->isMemberAccessExpired() ? ' [접속 마감]' : ''),
             ])
             ->all();
     }
@@ -328,7 +332,13 @@ class MemberAuthController extends Controller
     public function showLogin(): InertiaResponse
     {
         return Inertia::render('Auth/Login', [
-            'rounds' => $this->roundOptions([EventRound::STATUS_STARTED, EventRound::STATUS_PENDING, EventRound::STATUS_VOTING], true),
+            // [테스트] /login?all=1 — 접속 기간이 지난 행사까지 전체 목록을 보여 접속 불가 안내를 확인한다.
+            //  (운영 환경에서는 관리자로 로그인한 상태에서만 동작)
+            'rounds' => $this->roundOptions(
+                [EventRound::STATUS_STARTED, EventRound::STATUS_PENDING, EventRound::STATUS_VOTING],
+                true,
+                request()->boolean('all') && (! app()->isProduction() || auth('admin')->check()),
+            ),
         ]);
     }
 
@@ -362,6 +372,13 @@ class MemberAuthController extends Controller
         if ($member === null || ! hash_equals($member->password, $validated['password'])) {
             throw ValidationException::withMessages([
                 'phone' => '회차, 핸드폰 번호 또는 비밀번호가 일치하지 않습니다.',
+            ]);
+        }
+
+        // 종료된 행사는 행사 일시 + 2일까지만 접속할 수 있다.
+        if (EventRound::find($member->event_id)?->isMemberAccessExpired()) {
+            throw ValidationException::withMessages([
+                'phone' => '이 행사는 접속 가능 기간(행사 후 ' . EventRound::MEMBER_ACCESS_DAYS . '일)이 지나 더 이상 접속할 수 없어요.',
             ]);
         }
 

@@ -531,7 +531,6 @@ function BottomNav() {
                                 // 터치/클릭이 시작되는 순간(손가락을 떼기 전) 요청을 먼저 보내 전환을 빠르게 한다.
                                 // click 모드는 결과를 캐시에 남기지 않고 곧바로 쓰므로, 턴·매칭 상태가 낡을 일이 없다.
                                 prefetch="click"
-                                viewTransition
                                 // 이미 active 인 탭을 다시 누르면 아무 동작도 하지 않는다.
                                 onClick={(e) => {
                                     if (active) {

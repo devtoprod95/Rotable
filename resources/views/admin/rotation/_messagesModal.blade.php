@@ -19,10 +19,9 @@
 @endphp
 
 <style>
-    /* 메시지 목록 — 표(라이브러리) 대신 카드 목록. 모바일·PC 같은 구조, PC 는 2열.
+    /* 메시지 목록 — 표(라이브러리) 대신 카드 목록. 읽기 편하도록 모바일·PC 모두 1열.
        카드: ① 보낸사람 → 받는사람  ② 말풍선(내용)  ③ 보낸 시각 · 읽음 상태 */
-    #messagesModal .mm-list{ display:grid; grid-template-columns:1fr; gap:.6rem; }
-    @media (min-width: 992px){ #messagesModal .mm-list{ grid-template-columns:1fr 1fr; } }
+    #messagesModal .mm-list{ display:grid; grid-template-columns:minmax(0, 1fr); gap:.6rem; }
     #messagesModal .mm-card{ border:1px solid #e9ecf1; border-radius:14px; background:#fff; padding:.75rem .85rem; box-shadow:0 1px 3px rgba(20,30,60,.05); }
     #messagesModal .mm-card.is-new{ animation: mmFlash 1.6s ease-out; }
     @keyframes mmFlash{ from{ background:#fff3bf; } to{ background:#fff; } }
@@ -41,7 +40,7 @@
 </style>
 
 <div class="modal fade" id="messagesModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header py-3 px-4 align-items-start">
                 <div>
@@ -89,15 +88,27 @@
                 </div>
 
                 <form id="mm-searchForm" class="mb-2">
+                    {{-- 보낸 사람 종류: 라디오 버튼 그룹 (선택 즉시 조회) --}}
+                    <div class="btn-group w-100 mb-2" role="group" aria-label="보낸 사람">
+                        <input type="radio" class="btn-check" name="from" id="mmFromAll" value="" autocomplete="off" checked onchange="MessagesModal.search()">
+                        <label class="btn btn-outline-secondary" for="mmFromAll">전체</label>
+                        <input type="radio" class="btn-check" name="from" id="mmFromM" value="M" autocomplete="off" onchange="MessagesModal.search()">
+                        <label class="btn btn-outline-blue" for="mmFromM">남</label>
+                        <input type="radio" class="btn-check" name="from" id="mmFromF" value="F" autocomplete="off" onchange="MessagesModal.search()">
+                        <label class="btn btn-outline-pink" for="mmFromF">여</label>
+                        <input type="radio" class="btn-check" name="from" id="mmFromAdmin" value="admin" autocomplete="off" onchange="MessagesModal.search()">
+                        <label class="btn btn-outline-yellow" for="mmFromAdmin">관리자</label>
+                    </div>
+                    {{-- 읽음 여부: 같은 라디오 버튼 그룹 (선택 즉시 조회) --}}
+                    <div class="btn-group w-100 mb-2" role="group" aria-label="읽음 여부">
+                        <input type="radio" class="btn-check" name="read" id="mmReadAll" value="" autocomplete="off" checked onchange="MessagesModal.search()">
+                        <label class="btn btn-outline-secondary" for="mmReadAll">전체</label>
+                        <input type="radio" class="btn-check" name="read" id="mmReadY" value="Y" autocomplete="off" onchange="MessagesModal.search()">
+                        <label class="btn btn-outline-green" for="mmReadY">읽음</label>
+                        <input type="radio" class="btn-check" name="read" id="mmReadN" value="N" autocomplete="off" onchange="MessagesModal.search()">
+                        <label class="btn btn-outline-red" for="mmReadN">안읽음</label>
+                    </div>
                     <div class="row g-2 align-items-end">
-                        <div class="col-12 col-md-auto">
-                            <label class="form-label mb-1">읽음 여부</label>
-                            <select class="form-select" name="read">
-                                <option value="">전체</option>
-                                <option value="Y">읽음</option>
-                                <option value="N">안읽음</option>
-                            </select>
-                        </div>
                         <div class="col-12 col-md">
                             <label class="form-label mb-1">검색어</label>
                             <input type="text" class="form-control" name="searchText"
@@ -173,7 +184,8 @@
         function filters(){
             var f = {
                 searchText: $('#mm-searchForm [name=searchText]').val(),
-                read: $('#mm-searchForm [name=read]').val(),
+                read: $('#mm-searchForm [name=read]:checked').val() || '',
+                from: $('#mm-searchForm [name=from]:checked').val() || '',
             };
             if(currentSenderId){ f.senderId = currentSenderId; }
             if(currentConvA && currentConvB){ f.convA = currentConvA; f.convB = currentConvB; }
@@ -194,6 +206,9 @@
             }
             if(f.read === 'Y' && !d.read_at){ return false; }
             if(f.read === 'N' && d.read_at){ return false; }
+            // 보낸 사람 종류(남/여/관리자) 필터
+            if(f.from === 'admin' && !d.is_admin){ return false; }
+            if((f.from === 'M' || f.from === 'F') && (d.is_admin || !d.sender || d.sender.gender !== f.from)){ return false; }
             var kw = (f.searchText || '').trim().toLowerCase();
             if(kw){
                 var hay = [

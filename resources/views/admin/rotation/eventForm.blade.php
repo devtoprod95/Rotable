@@ -47,6 +47,9 @@
     .pm-grid{ display:grid; grid-template-columns:minmax(0, 1fr); gap:.75rem; }
     @media (min-width: 768px){ .pm-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
     @media (min-width: 1200px){ .pm-grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
+    /* 남/여 두 칸일 때는 각 칸이 좁으므로 카드를 한 줄에 하나씩. (한 성별만 볼 때는 위의 반응형 열 수를 쓴다) */
+    .pm-col-head{ font-weight:800; font-size:1.05rem; padding:.45rem .75rem; border-radius:10px; margin-bottom:.6rem; }
+    @media (min-width: 992px){ .pm-cols:not(.is-solo) .pm-grid{ grid-template-columns:minmax(0, 1fr); } }
     .pm-card{ display:flex; flex-direction:column; border:1px solid #e6e8eb; border-radius:14px; background:#fff; padding:.8rem .9rem; box-shadow:0 1px 3px rgba(0,0,0,.05); border-top:4px solid #206bc4; }
     .pm-card.is-f{ border-top-color:#d6336c; }
     .pm-head{ display:flex; align-items:flex-start; gap:.65rem; }
@@ -407,8 +410,13 @@
                             $typeLabels       = \App\Models\EventRound::typeOptions();
                             $typeBadgeCls     = [\App\Models\EventRound::TYPE_WINE => 'bg-red-lt', \App\Models\EventRound::TYPE_ONE => 'bg-purple-lt'];
                         @endphp
+                        {{-- 남/여를 나눠 두 칸(PC 좌우, 모바일 위아래)으로 보여준다. 성별 보기 탭을 고르면 해당 칸만 넓게 보인다. --}}
+                        <div class="row g-3 pm-cols">
+                        @foreach (['M' => ['👨 남', 'bg-blue-lt', $maleCount], 'F' => ['👩 여', 'bg-pink-lt', $femaleCount]] as $colGender => [$colTitle, $colBg, $colCount])
+                        <div class="col-12 col-lg-6 pm-col" data-gender-col="{{ $colGender }}">
+                        <div class="pm-col-head {{ $colBg }}">{{ $colTitle }} <span class="text-secondary fw-normal">· {{ $colCount }}명</span></div>
                         <div class="pm-grid">
-                            @foreach ($event->members as $member)
+                            @foreach ($event->members->where('gender', $colGender)->values() as $member)
                                 @php
                                     $memberData = $member->toArray();
                                     if ($isSuperAdmin) {
@@ -511,6 +519,9 @@
                                     </div>
                                 </div>
                             @endforeach
+                        </div>
+                        </div>
+                        @endforeach
                         </div>
                     @endif
                 </div>
@@ -659,8 +670,13 @@
         // ===== 상세: 참여자 성별 보기 (전체/남/여) =====
         $('input[name="memberGenderFilter"]').on('change', function(){
             var g = $('input[name="memberGenderFilter"]:checked').val();
-            $('.pm-grid [data-member-row]').each(function(){
-                $(this).toggleClass('d-none', !!g && $(this).data('gender') !== g);
+            // 고른 성별 칸만 남기고 넓게(전체면 좌우 반반)
+            $('.pm-cols').toggleClass('is-solo', !!g);
+            $('.pm-col').each(function(){
+                var hide = !!g && $(this).data('gender-col') !== g;
+                $(this).toggleClass('d-none', hide)
+                       .toggleClass('col-lg-6', !g)
+                       .toggleClass('col-lg-12', !!g);
             });
         });
 
@@ -674,17 +690,20 @@
         };
         $('#memberSortSelect').on('change', function(){
             var mode = this.value;
-            var $grid = $('.pm-grid');
-            var cards = $grid.children('[data-member-row]').get();
             var key = mode.indexOf('received') === 0 ? 'received' : (mode.indexOf('cast') === 0 ? 'cast' : (mode.indexOf('login') === 0 ? 'login' : null));
             var dir = mode.slice(-3) === 'asc' ? 1 : -1;
-            cards.sort(function(a, b){
-                var byOrder = Number(a.dataset.order) - Number(b.dataset.order);
-                if(!key){ return byOrder; }
-                var diff = Number(a.dataset[key]) - Number(b.dataset[key]);
-                return diff !== 0 ? diff * dir : byOrder;
+            // 남/여 칸마다 따로 정렬한다.
+            $('.pm-grid').each(function(){
+                var $grid = $(this);
+                var cards = $grid.children('[data-member-row]').get();
+                cards.sort(function(a, b){
+                    var byOrder = Number(a.dataset.order) - Number(b.dataset.order);
+                    if(!key){ return byOrder; }
+                    var diff = Number(a.dataset[key]) - Number(b.dataset[key]);
+                    return diff !== 0 ? diff * dir : byOrder;
+                });
+                $grid.append(cards);
             });
-            $grid.append(cards);
             $('#memberSortLabel').text('· ' + (MEMBER_SORT_LABEL[mode] || '번호표 순'));
             // 선택한 정렬을 쿼리파라미터(?sort=)에 남겨 새로고침·링크 공유에도 유지한다. (페이지 이동 없이 주소만 바꿈)
             var url = new URL(window.location.href);

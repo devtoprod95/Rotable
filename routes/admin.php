@@ -79,6 +79,8 @@ Route::middleware('role')->group(function () {
                 // 참여자 정보 수정 (번호표·성별·테이블은 체크인에서만)
                 // 음료 전달 완료 체크/해제 (1:1)
                 Route::patch('/{id}/members/{memberId}/drink-served', [EventController::class, 'eventMemberDrinkServed'])->whereNumber('id')->whereNumber('memberId')->name('members.drinkServed');
+                // 회원 상세 모달용 데이터 조회 (로테이션 진행 화면 등에서 필요할 때 불러온다)
+                Route::get('/{id}/members/{memberId}', [EventController::class, 'eventMemberShow'])->whereNumber('id')->whereNumber('memberId')->name('members.show');
                 Route::put('/{id}/members/{memberId}', [EventController::class, 'eventMemberUpdate'])->whereNumber('id')->whereNumber('memberId')->name('members.update');
                 // 관리자가 해당 회원으로 바로 로그인 (새 탭으로 회원 홈 이동, 기존 회원 로그인은 덮어씀)
                 Route::post('/{id}/members/{memberId}/impersonate', [EventController::class, 'eventMemberImpersonate'])->whereNumber('id')->whereNumber('memberId')->name('members.impersonate');

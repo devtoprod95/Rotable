@@ -36,10 +36,13 @@ class SeatingController extends RotationBaseController
             ?: ($this->eventContextService->currentEventId() ?? ($events->first()->id ?? 0)));
 
         return view('admin.rotation.seating', [
-            'events'   => $events,
-            'eventId'  => $eventId,
-            'roundNo'  => (int) ($this->request->input('roundNo') ?? 0),
-            'statuses' => EventRound::statusOptions(),
+            'events'       => $events,
+            'eventId'      => $eventId,
+            // 회원 상세 모달(_memberDetailModal)용 — 음료 선택지 포함
+            'currentEvent' => $events->isEmpty() ? null : EventRound::with('drinks')->find($eventId),
+            'isSuperAdmin' => $this->isSuperAdmin(),
+            'roundNo'      => (int) ($this->request->input('roundNo') ?? 0),
+            'statuses'     => EventRound::statusOptions(),
         ]);
     }
 

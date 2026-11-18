@@ -153,6 +153,27 @@ class EventController extends RotationBaseController
     }
 
     /**
+     * 회원 상세 모달용 데이터 1건. 행사 상세의 상세보기 버튼과 같은 형태(label·age·last_login_at, 최고관리자는 password 포함).
+     */
+    public function eventMemberShow(int $id, int $memberId): JsonResponse
+    {
+        $member = Member::where('event_id', $id)->find($memberId);
+        abort_if($member === null, 404);
+
+        $labelMap = $this->memberLabelService->labelMap($id);
+
+        $data = $member->toArray();
+        if ($this->isSuperAdmin()) {
+            $data['password'] = $member->password;
+        }
+        $data['age']           = $member->birth_year ? (now()->year - $member->birth_year + 1) : null;
+        $data['last_login_at'] = $member->last_login_at?->format('Y-m-d H:i');
+        $data['label']         = $this->memberLabelService->label($labelMap, $member->gender, $member->name, $member->platform);
+
+        return response()->json(['data' => $data]);
+    }
+
+    /**
      * 관리자가 해당 회원으로 바로 로그인한다. (회원 화면 확인/현장 지원용)
      * 회원(web) guard 만 건드리므로 관리자 로그인은 유지되고, 이미 다른 회원으로 로그인돼 있으면 덮어쓴다.
      */

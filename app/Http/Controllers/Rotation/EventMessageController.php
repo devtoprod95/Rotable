@@ -34,6 +34,7 @@ class EventMessageController extends RotationBaseController
                 'searchText' => $this->request->input('searchText', ''),
                 'read'       => $this->request->input('read', ''),
                 'senderId'   => (int) $this->request->input('senderId', 0),
+                'from'       => (string) $this->request->input('from', ''),
                 'convA'      => (int) $this->request->input('convA', 0),
                 'convB'      => (int) $this->request->input('convB', 0),
             ]

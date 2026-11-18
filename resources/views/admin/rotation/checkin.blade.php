@@ -7,6 +7,9 @@
     /* 현장(모바일) 사용 최적화 — 큰 탭 영역, 또렷한 상태색 */
     .checkin-row{ transition: background .12s ease; cursor:pointer; padding-top:.85rem; padding-bottom:.85rem; }
     .checkin-row:active{ background:#f1f5f9; }
+    /* 입장등록 완료자는 카드를 눌러도 아무 동작이 없다 */
+    .checkin-row[data-locked="1"]{ cursor:default; }
+    .checkin-row[data-locked="1"]:active{ background:inherit; }
     .checkin-row:focus-visible{ outline:3px solid #3b82f6; outline-offset:-3px; }
     .checkin-in{ background:#ecfdf5 !important; border-left:4px solid #34d399; }
     .checkin-out{ background:#ffffff; border-left:4px solid transparent; }
@@ -466,8 +469,8 @@
             var secondaryCount = [profBtn, memberBtn, ticketBtn, delBtn].filter(function(b){ return b; }).length + (memberBtn ? 1 : 0); // memberBtn 은 버튼 2개
 
             return `<div class="list-group-item checkin-row ${stateCls}"`
-                +      ` role="button" tabindex="0" data-id="${r.id}"`
-                +      ` aria-pressed="${inState ? 'true' : 'false'}"`
+                +      ` role="${(inState && r.registered) ? 'group' : 'button'}" tabindex="${(inState && r.registered) ? '-1' : '0'}" data-id="${r.id}"`
+                +      ` data-locked="${(inState && r.registered) ? '1' : '0'}"`                +      ` aria-pressed="${inState ? 'true' : 'false'}"`
                 +      ` aria-label="${esc(nickname)} ${esc(pfLabel)} ${inState ? '참석됨, 탭하면 취소' : '미도착, 탭하면 체크인'}">`
                 +   `<div class="ck-top">${ticket}`
                 +     `<div class="ck-ident"><div class="ck-name">${name}</div><div class="ck-sub">${pf}${tableBadge}</div></div>`
@@ -890,16 +893,8 @@
             var nick = r.name || '닉네임 없음';
 
             if(r.checked_in){
-                // 이미 그 번호표로 입장등록했다면 서버가 취소를 거부한다. 먼저 안내해 헛걸음을 줄인다.
-                if(r.registered){
-                    Swal.fire({
-                        icon: 'info',
-                        title: '체크인을 취소할 수 없어요',
-                        html: '<b>' + esc(nick) + '</b> 님은 이미 번호표(' + genderText(r.gender) + ' ' + (r.ticket_no || '-') + '번)로 입장등록했어요.',
-                        confirmButtonText: '확인', confirmButtonColor: '#3085d6'
-                    });
-                    return;
-                }
+                // 이미 그 번호표로 입장등록했다면 취소할 수 없다. 안내 없이 아무 동작도 하지 않는다.
+                if(r.registered){ return; }
                 var cancel = await Swal.fire({
                     icon: 'warning',
                     title: '체크인 취소',

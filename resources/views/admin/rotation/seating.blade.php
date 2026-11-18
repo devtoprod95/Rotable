@@ -36,6 +36,9 @@
     /* 칩 제거(x) 버튼: 클릭 영역을 넓히고 hover 시 배경 피드백 */
     .seat-chips .chip-remove { transition: background-color .12s ease; cursor: pointer; }
     .seat-chips .chip-remove:hover { background-color: rgba(214, 57, 57, 0.15); }
+    /* 칩 안 작은 버튼(상세/로그인) */
+    .seat-person .seat-actions .btn { display:inline-flex; align-items:center; justify-content:center; width:2rem; height:1.75rem; padding:0; font-size:1.05rem; line-height:1; }
+    .seat-person .seat-actions .btn .ti { font-size:1.05rem; }
 
     /* 진행 컨트롤 패널(턴 / 로테이션 횟수 / 진행) — 같은 높이의 카드형 칸 */
     .seating-panel { border: 1px solid var(--tblr-border-color, #e6e7e9); border-radius: 10px; padding: .85rem 1rem; background: var(--tblr-bg-surface-secondary, #f8fafc); }
@@ -535,6 +538,10 @@
                                 <span class="seat-meta">
                                     ${nick ? `<span class="seat-nick">${escHtml(nick)}</span>` : ''}
                                     ${info.length ? `<span class="seat-info">${escHtml(info.join(' · '))}</span>` : ''}
+                                    <span class="seat-actions d-flex gap-1 mt-1">
+                                        <button type="button" class="btn btn-outline-azure btn-seat-detail" data-member-id="${m.member_id}" title="상세보기" aria-label="${escHtml(m.name)}호 상세보기"><i class="ti ti-id"></i></button>
+                                        <button type="button" class="btn btn-outline-orange btn-member-login" data-member-id="${m.member_id}" title="회원으로 로그인" aria-label="${escHtml(m.name)}호 회원으로 로그인"><i class="ti ti-login-2"></i></button>
+                                    </span>
                                 </span>
                                 ${removeBtn}
                             </div>`;
@@ -638,6 +645,16 @@
                 },
                 error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
             });
+        });
+
+        // 회원 상세보기: 모달용 데이터를 불러와 회원 상세정보 모달을 연다.
+        var memberShowTpl = {!! json_encode(route('admin.rotation.event.members.show', ['id' => $eventId ?: 0, 'memberId' => '__MID__']), JSON_UNESCAPED_SLASHES) !!};
+        $('#boardArea').on('click', '.btn-seat-detail', function(){
+            var memberId = $(this).data('member-id');
+            if(!memberId){ return; }
+            $.get(memberShowTpl.replace('__MID__', memberId), function(res){
+                if(res && res.data){ MemberDetailModal.open(res.data); }
+            }).fail(function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '회원 정보를 불러오지 못했습니다.'); });
         });
 
         // 회원 제거 (즉시 삭제)
@@ -844,4 +861,7 @@
 @include('admin.rotation._matchesModal')
 @include('admin.rotation._matchedModal')
 @include('admin.rotation._requestsModal')
+@if ($currentEvent)
+    @include('admin.rotation._memberDetailModal', ['event' => $currentEvent, 'isSuperAdmin' => $isSuperAdmin])
+@endif
 @endsection

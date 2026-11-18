@@ -352,7 +352,7 @@ class RotationService
      * 특정 행사의 메시지 목록 (페이지네이션).
      * 보낸사람/받는사람 정보를 함께 로드하며, 읽음 필터와 검색을 지원한다.
      *
-     * @param array{searchText?:string, read?:string, senderId?:int, convA?:int, convB?:int} $filters
+     * @param array{searchText?:string, read?:string, senderId?:int, from?:string, convA?:int, convB?:int} $filters
      * @return LengthAwarePaginator
      */
     public function eventMessageList(int $eventId, int $page, int $size, array $sort, array $filters = []): LengthAwarePaginator
@@ -374,6 +374,15 @@ class RotationService
         // 특정 회원이 "보낸" 메시지만 조회할 때.
         if (!empty($filters['senderId'])) {
             $query->where('sender_id', (int) $filters['senderId']);
+        }
+
+        // 보낸 사람 종류: 남(M) / 여(F) 회원이 보낸 것, 또는 관리자(admin)가 보낸 것.
+        $from = $filters['from'] ?? '';
+        if ($from === 'admin') {
+            $query->where('sender_type', \App\Models\Message::SENDER_ADMIN);
+        } elseif ($from === 'M' || $from === 'F') {
+            $query->where('sender_type', \App\Models\Message::SENDER_MEMBER)
+                ->whereHas('sender', fn ($sq) => $sq->where('gender', $from));
         }
 
         if (!empty($filters['searchText'])) {

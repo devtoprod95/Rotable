@@ -271,18 +271,6 @@
         </div>
     </div>
 
-    {{-- 오픈 기념 할인 배너 (최상단 강조) --}}
-    <div style="background:#fff7ed; border:3px solid #fb923c; border-radius:16px; padding:24px 16px; margin-bottom:32px; text-align:center;">
-        <div style="display:inline-block; background:#ea580c; color:#ffffff; border-radius:999px; padding:5px 20px; font-size:28px; font-weight:900; margin-bottom:14px;">🎉 OPEN EVENT</div>
-        <div style="font-family:'Jua',sans-serif; font-size:46px; font-weight:400; color:#c2410c; letter-spacing:0.5px; line-height:1.3;">오픈 기념 할인 진행 중!</div>
-        <div style="font-size:28px; color:#9a3412; margin-top:14px; line-height:1.6;">지금 신청하시면 <b>오픈 특가</b>로 참여하실 수 있어요.<br>할인 혜택은 <b>조기 마감</b>될 수 있으니 서둘러 주세요 🔥</div>
-        <div style="background:#ffedd5; border:2px dashed #fb923c; border-radius:12px; padding:18px 12px; margin-top:18px; font-size:26px; color:#9a3412; line-height:1.7;">
-            ⭐ <b>오픈 기념 할인 행사</b>예요!<br>
-            할인 혜택 적용을 위해 참여 후
-            <span style="background:linear-gradient(transparent 55%, #fdba74 55%); padding:0 4px; font-weight:900; color:#7c2d12;">리뷰 작성이 필수</span>입니다.
-        </div>
-    </div>
-
     @if ($type === 'wine')
     {{-- 진정성 어필 배너 (와인파티 전용) — '도파민 만남'이 아닌 소개팅 목적임을 강조 --}}
     <div style="background:#fdf2f8; border:2px solid #f9a8d4; border-radius:16px; padding:28px 20px; margin-bottom:32px; text-align:center;">

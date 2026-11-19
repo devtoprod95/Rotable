@@ -801,7 +801,12 @@ class RosterService
      *
      * 운영 데이터가 아닌 테스트 편의용이므로 비밀번호는 고정값('q')으로 둔다.
      *
-     * @return array{isSuccess:bool, msg?:string, created?:int, skipped?:int}
+     * 건너뛴 사유를 나눠 돌려준다. (원스텝 등에서 "왜 입장등록이 안 됐는지" 알리기 위함)
+     *  - already: 이미 그 번호표로 입장등록한 회원이 있음 (정상)
+     *  - no_seat: 1:1 인데 그 성별을 앉힐 테이블이 없음
+     *  - not_checked_in: 아직 체크인(번호표 배정)이 안 된 명단 — 입장등록 대상이 아님
+     *
+     * @return array{isSuccess:bool, msg?:string, created?:int, skipped?:int, already?:int, no_seat?:int, no_seat_names?:list<string>, not_checked_in?:int}
      */
     public function devSeedRegistrations(int $eventId): array
     {
@@ -828,7 +833,12 @@ class RosterService
                 ->orderBy('ticket_no')
                 ->get();
 
-            return DB::transaction(function () use ($event, $eventId, $rosters, $tables, $isOne): array {
+            // 체크인(번호표 배정)이 안 되어 입장등록할 수 없는 명단 수
+            $notCheckedIn = EventRoster::where('event_id', $eventId)
+                ->where(fn ($q) => $q->whereNull('checked_in_at')->orWhereNull('ticket_no'))
+                ->count();
+
+            return DB::transaction(function () use ($event, $eventId, $rosters, $tables, $isOne, $notCheckedIn): array {
                 // 이미 어떤 성별이 앉은 테이블 집합 (1:1 제약 판정용). [table_id => ['M'=>bool,'F'=>bool]]
                 $occupied = [];
                 \App\Models\RotationSeat::with('member:id,gender')
@@ -845,8 +855,10 @@ class RosterService
                 // 더미 전화번호 충돌 방지: 이 행사에 이미 쓰인 번호 뒤에서부터 채운다.
                 $usedPhones = \App\Models\Member::where('event_id', $eventId)->pluck('phone')->flip();
 
-                $created = 0;
-                $skipped = 0;
+                $created     = 0;
+                $already     = 0;
+                $noSeat      = 0;
+                $noSeatNames = [];
                 // 트랜잭션 커밋 후 브로드캐스트할 음료 선택 회원 (롤백 시 잘못된 신호 방지)
                 $drinkChosen = [];
                 // 1:1 더미 음료 선택용 — 이 행사에 등록된 음료 id 목록
@@ -858,7 +870,7 @@ class RosterService
 
                     // 이미 그 번호표로 가입한 회원이 있으면 건너뛴다.
                     if ($this->memberByTicket($eventId, $gender, $ticket) !== null) {
-                        $skipped++;
+                        $already++;
 
                         continue;
                     }
@@ -875,7 +887,8 @@ class RosterService
                     }
                     if ($table === null) {
                         // 1:1 인데 그 성별을 더 앉힐 자리가 없으면 건너뛴다.
-                        $skipped++;
+                        $noSeat++;
+                        $noSeatNames[] = (string) $roster->name;
 
                         continue;
                     }
@@ -910,9 +923,18 @@ class RosterService
                     $created++;
                 }
 
-                $res            = helpersSuccessMessage("입장등록 더미 {$created}건 생성, {$skipped}건 건너뜀 (이미 등록/자리 없음)");
-                $res['created'] = $created;
-                $res['skipped'] = $skipped;
+                $msg = "입장등록 더미 {$created}건 생성"
+                    . ($already > 0 ? ", 이미 등록 {$already}건" : '')
+                    . ($noSeat > 0 ? ", 자리가 없어 {$noSeat}명 건너뜀" : '')
+                    . ($notCheckedIn > 0 ? ", 체크인 안 된 명단 {$notCheckedIn}명은 제외" : '');
+
+                $res                   = helpersSuccessMessage($msg);
+                $res['created']        = $created;
+                $res['skipped']        = $already + $noSeat;
+                $res['already']        = $already;
+                $res['no_seat']        = $noSeat;
+                $res['no_seat_names']  = $noSeatNames;
+                $res['not_checked_in'] = $notCheckedIn;
 
                 // 커밋이 끝난 뒤에 신호를 보낸다. (롤백되면 보내지 않음)
                 DB::afterCommit(function () use ($drinkChosen): void {
@@ -1006,7 +1028,7 @@ class RosterService
      *  - 1:1(one): 그 성별이 아직 없는 테이블 중 번호가 가장 작은 곳. 자리가 없으면 건너뛴다.
      *  - 그 외(와인파티): 그 성별 인원이 가장 적은 테이블 (동률이면 전체 인원 적은 곳 → 번호 작은 곳).
      *
-     * @return array{isSuccess:bool, msg?:string, checked?:int, skipped?:int}
+     * @return array{isSuccess:bool, msg?:string, checked?:int, skipped?:int, skipped_names?:list<string>}
      */
     public function devCheckInAll(int $eventId): array
     {
@@ -1046,8 +1068,9 @@ class RosterService
                     ->orderBy('id')
                     ->get();
 
-                $checked = 0;
-                $skipped = 0;
+                $checked      = 0;
+                $skipped      = 0;
+                $skippedNames = [];
 
                 foreach ($pending as $roster) {
                     $gender = $roster->gender === Member::GENDER_FEMALE ? Member::GENDER_FEMALE : Member::GENDER_MALE;
@@ -1074,6 +1097,7 @@ class RosterService
 
                     if ($tableId === null) {
                         $skipped++;
+                        $skippedNames[] = (string) $roster->name;
                         continue;
                     }
 
@@ -1088,10 +1112,11 @@ class RosterService
                     $checked++;
                 }
 
-                $msg            = "더미 체크인 {$checked}명 완료" . ($skipped > 0 ? " (남은 자리가 없어 {$skipped}명 건너뜀)" : '');
-                $res            = helpersSuccessMessage($msg);
-                $res['checked'] = $checked;
-                $res['skipped'] = $skipped;
+                $msg                  = "더미 체크인 {$checked}명 완료" . ($skipped > 0 ? " (남은 자리가 없어 {$skipped}명 건너뜀)" : '');
+                $res                  = helpersSuccessMessage($msg);
+                $res['checked']       = $checked;
+                $res['skipped']       = $skipped;
+                $res['skipped_names'] = $skippedNames;
 
                 return $res;
             });

@@ -321,6 +321,22 @@
             el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
         })();
 
+        // 개발 도구: 기본은 접힘. 마지막에 열어 둔 상태를 기억해 새로고침 후에도 열어 둔다.
+        (function(){
+            var KEY = 'rotable.checkin.devToolsOpen';
+            var el = document.getElementById('devToolsCollapse');
+            if(!el){ return; }
+            var open = false;
+            try { open = localStorage.getItem(KEY) === '1'; } catch(e) { /* 저장소 사용 불가 시 기본(접힘) */ }
+            if(open){
+                el.classList.add('show');
+                $('[data-bs-target="#devToolsCollapse"]').attr('aria-expanded', 'true');
+            }
+            function save(v){ try { localStorage.setItem(KEY, v ? '1' : '0'); } catch(e) {} }
+            el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(true); } });
+            el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(false); } });
+        })();
+
         // 남/여 명단: 기본은 펼침. 접은 상태는 기억해 새로고침 후에도 유지한다. (헤더에서 Enter/Space 로도 토글)
         ['male', 'female'].forEach(function(g){
             var KEY = 'rotable.checkin.' + g + 'ListCollapsed';
@@ -517,6 +533,9 @@
         // 목록 조회. 동시에 여러 번 요청되지 않도록 진행 중이면 건너뛴다.
         // 처음 열 때와 [새로고침] 버튼에서 쓰고, 마지막 갱신 시각과 실패 여부를 화면에 표시한다.
         var loading = false;
+        // 전역 로딩 팝업(beforeSend/complete)을 건너뛰는 ajax 옵션. 요청마다 팝업이 열렸다 닫히며 깜빡이는 것을 막는다.
+        var QUIET_AJAX = { beforeSend: function(){}, complete: function(){} };
+
         function pad(n){ return (n < 10 ? '0' : '') + n; }
         // 테이블별 성비 보관. (번호표 모달의 ratioModalHtml 에서 사용 — 화면에는 따로 그리지 않는다)
         function renderTableRatios(ratios){
@@ -544,12 +563,14 @@
                  + '</div>';
         }
 
-        function load(){
-            if(loading){ return; }
+        // 목록을 다시 불러온다. 호출한 쪽이 끝나길 기다릴 수 있도록 jqXHR(프라미스)을 돌려준다.
+        //  silent === true 면 전역 로딩 팝업('처리 중...')을 띄우지 않는다. (원스텝처럼 여러 요청을 묶을 때)
+        function load(silent){
+            if(loading){ return $.Deferred().resolve().promise(); }
             loading = true;
             var $btn = $('#checkinRefreshBtn');
             $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>');
-            $.get(listUrl, function(res){
+            return $.ajax($.extend({ url: listUrl, type: 'GET' }, silent === true ? QUIET_AJAX : {})).done(function(res){
                 rosters = (res && res.data) ? res.data : [];
                 render();
                 renderTableRatios((res && res.table_ratios) ? res.table_ratios : []);
@@ -591,10 +612,11 @@
             $.ajax({
                 url: devSeedUrl, type: 'POST',
                 success: function(res){
+                    // 자리가 없어 입장등록되지 않은 사람이 있으면 경고로 알린다. (사유는 서버 메시지에 포함)
                     Swal.fire({
-                        icon: 'success',
-                        title: '완료',
-                        html: '생성 <b>' + (res?.created ?? 0) + '건</b>, 건너뜀 ' + (res?.skipped ?? 0) + '건',
+                        icon: (res?.no_seat ?? 0) > 0 ? 'warning' : 'success',
+                        title: (res?.no_seat ?? 0) > 0 ? '일부 미처리' : '완료',
+                        text: res?.msg || ('생성 ' + (res?.created ?? 0) + '건'),
                         confirmButtonText: '확인', confirmButtonColor: '#3085d6'
                     });
                     load();
@@ -656,23 +678,39 @@
 
         // [개발용] 원스텝: 더미 명단 추가 → 더미 체크인 → 더미 입장등록을 순서대로 한 번에 실행한다.
         //  각 단계는 위의 개별 버튼과 같은 서버 API 를 쓴다. 한 단계라도 실패하면 거기서 멈추고 알려준다.
+        //  단계는 성공했어도 자리가 없어 체크인·입장등록되지 않은 사람이 있으면 결과에서 경고로 알려준다.
         $('#checkinDevOneStepBtn').on('click', async function(){
             if(!TABLES.length){
                 await salert({ text: '테이블이 없습니다. 행사 상세에서 테이블을 먼저 추가해 주세요.', cancel: false });
                 return;
             }
-            var per = IS_ONE_TO_ONE ? 1 : 3;
-            var def = Math.max(1, TABLES.length * per);
-            var numInput = function(id, label, color){
+
+            // 1:1 은 테이블당 성별 1명이라 자리 수에 상한이 있다.
+            //  이미 있는 명단(미도착 포함)은 원스텝에서 먼저 체크인되므로 그만큼 자리를 쓴 것으로 본다.
+            var countOf = function(g){ return rosters.filter(function(r){ return r.gender === g; }).length; };
+            var freeM   = IS_ONE_TO_ONE ? Math.max(0, TABLES.length - countOf('M')) : null;
+            var freeF   = IS_ONE_TO_ONE ? Math.max(0, TABLES.length - countOf('F')) : null;
+            if(IS_ONE_TO_ONE && freeM === 0 && freeF === 0){
+                await salert({ text: '1:1 은 테이블당 남/여 1명씩인데 남은 자리가 없습니다. 테이블을 늘리거나 명단을 정리해 주세요.', cancel: false });
+                return;
+            }
+
+            var defM     = IS_ONE_TO_ONE ? freeM : Math.max(1, TABLES.length * 3);
+            var defF     = IS_ONE_TO_ONE ? freeF : Math.max(1, TABLES.length * 3);
+            var numInput = function(id, label, color, value){
                 return '<div style="flex:1;text-align:left;">'
                      +   '<label for="' + id + '" style="font-size:0.85rem;font-weight:700;color:' + color + ';display:block;margin-bottom:4px;">' + label + '</label>'
-                     +   '<input id="' + id + '" type="number" class="swal2-input" value="' + def + '" min="0" max="100" inputmode="numeric" style="width:100%;margin:0;box-sizing:border-box;">'
+                     +   '<input id="' + id + '" type="number" class="swal2-input" value="' + value + '" min="0" max="100" inputmode="numeric" style="width:100%;margin:0;box-sizing:border-box;">'
                      + '</div>';
             };
+            var seatInfo = IS_ONE_TO_ONE
+                ? '<div class="small mt-2" style="color:#b45309;">1:1 남은 자리: 남 ' + freeM + '명 / 여 ' + freeF + '명 (테이블 ' + TABLES.length + '개)</div>'
+                : '';
             var ans = await Swal.fire({
                 title: '더미 원스텝',
                 html: '<div style="text-align:left;font-size:.88rem;color:#475569;margin-bottom:8px;">① 더미 명단 추가 → ② 더미 체크인 → ③ 더미 입장등록을 한 번에 진행해요.</div>'
-                    + '<div style="display:flex;gap:10px;">' + numInput('swal-os-m', '👨 남성', '#1d4ed8') + numInput('swal-os-f', '👩 여성', '#be185d') + '</div>'
+                    + '<div style="display:flex;gap:10px;">' + numInput('swal-os-m', '👨 남성', '#1d4ed8', defM) + numInput('swal-os-f', '👩 여성', '#be185d', defF) + '</div>'
+                    + seatInfo
                     + '<div class="text-secondary small mt-2">이미 있는 미도착 인원도 함께 체크인·입장등록돼요. (개발용)</div>',
                 showCancelButton: true, reverseButtons: true, focusConfirm: true,
                 confirmButtonText: '시작', cancelButtonText: '취소',
@@ -688,45 +726,79 @@
                         Swal.showValidationMessage('1명 이상 입력해 주세요.');
                         return false;
                     }
+                    if(IS_ONE_TO_ONE && (m > freeM || f > freeF)){
+                        Swal.showValidationMessage('1:1 남은 자리를 넘었어요. (남 최대 ' + freeM + '명 / 여 최대 ' + freeF + '명)');
+                        return false;
+                    }
                     return { male: m, female: f };
                 }
             });
             if(!ans.isConfirmed || !ans.value){ return; }
 
-            var $btn = $(this);
+            var $btn     = $(this);
             var original = $btn.html();
             $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span><span class="os-step">① 명단 추가 중…</span>');
-            var setStep = function(t){ $btn.find('.os-step').text(t); };
-            var steps = [];
+            var setStep  = function(t){ $btn.find('.os-step').text(t); };
+            var steps    = [];
+            var warnings = []; // 단계는 성공했지만 일부가 처리되지 않은 경우
+            var result   = null; // 마지막에 보여줄 결과 팝업 설정
+
+            // 이름 목록 문구 (10명까지만 나열)
+            var namesText = function(list){
+                list = list || [];
+                if(!list.length){ return ''; }
+                var shown = list.slice(0, 10).join(', ');
+                return ' (' + shown + (list.length > 10 ? ' 외 ' + (list.length - 10) + '명' : '') + ')';
+            };
+            var listHtml  = function(items){
+                return items.map(function(t){ return esc(t); }).join('<br>');
+            };
 
             try {
-                var r1 = await $.ajax({ url: devRosterUrl, type: 'POST', data: ans.value });
+                var r1 = await $.ajax($.extend({ url: devRosterUrl, type: 'POST', data: ans.value }, QUIET_AJAX));
                 steps.push('① 명단 추가: ' + (r1?.msg || '완료'));
 
                 setStep('② 체크인 중…');
-                var r2 = await $.ajax({ url: devCheckInUrl, type: 'POST' });
+                var r2 = await $.ajax($.extend({ url: devCheckInUrl, type: 'POST' }, QUIET_AJAX));
                 steps.push('② 체크인: ' + (r2?.msg || '완료'));
+                if((r2?.skipped ?? 0) > 0){
+                    warnings.push('남은 자리가 없어 ' + r2.skipped + '명은 체크인되지 않았어요. 번호표 미배정 · 입장등록 안 됨' + namesText(r2?.skipped_names));
+                }
 
                 setStep('③ 입장등록 중…');
-                var r3 = await $.ajax({ url: devSeedUrl, type: 'POST' });
-                steps.push('③ 입장등록: 생성 ' + (r3?.created ?? 0) + '건, 건너뜀 ' + (r3?.skipped ?? 0) + '건');
+                var r3 = await $.ajax($.extend({ url: devSeedUrl, type: 'POST' }, QUIET_AJAX));
+                steps.push('③ 입장등록: ' + (r3?.msg || ('생성 ' + (r3?.created ?? 0) + '건')));
+                if((r3?.no_seat ?? 0) > 0){
+                    warnings.push('앉을 테이블이 없어 ' + r3.no_seat + '명은 입장등록되지 않았어요' + namesText(r3?.no_seat_names));
+                }
 
-                Swal.fire({
-                    icon: 'success', title: '원스텝 완료',
-                    html: '<div style="text-align:left;line-height:1.8;">' + steps.map(function(t){ return esc(t); }).join('<br>') + '</div>',
-                    confirmButtonText: '확인', confirmButtonColor: '#3085d6'
-                });
+                result = warnings.length
+                    ? {
+                        icon: 'warning', title: '원스텝 완료 (일부 미처리)',
+                        html: '<div style="text-align:left;line-height:1.8;">' + listHtml(steps)
+                            + '<div style="margin-top:10px;padding:8px 10px;border-radius:8px;background:#fff7ed;color:#9a3412;">'
+                            + warnings.map(function(t){ return '⚠️ ' + esc(t); }).join('<br>') + '</div></div>',
+                        confirmButtonText: '확인', confirmButtonColor: '#3085d6'
+                    }
+                    : {
+                        icon: 'success', title: '원스텝 완료',
+                        html: '<div style="text-align:left;line-height:1.8;">' + listHtml(steps) + '</div>',
+                        confirmButtonText: '확인', confirmButtonColor: '#3085d6'
+                    };
             } catch(xhr) {
-                Swal.fire({
+                result = {
                     icon: 'error', title: '원스텝 중단',
-                    html: '<div style="text-align:left;line-height:1.8;">' + steps.map(function(t){ return esc(t); }).join('<br>')
+                    html: '<div style="text-align:left;line-height:1.8;">' + listHtml(steps)
                         + (steps.length ? '<br>' : '') + '<b>실패: </b>' + esc(xhr?.responseJSON?.error?.message ?? xhr?.responseJSON?.msg ?? '오류가 발생했습니다.') + '</div>',
                     confirmButtonText: '확인', confirmButtonColor: '#3085d6'
-                });
-            } finally {
-                $btn.prop('disabled', false).html(original);
-                load();
+                };
             }
+
+            $btn.prop('disabled', false).html(original);
+
+            // 세 단계와 목록 재조회 모두 전역 로딩 팝업 없이 처리하고(깜빡임 방지), 끝난 뒤 결과 팝업을 한 번만 보여준다.
+            try { await load(true); } catch(e) { /* 목록 갱신 실패는 결과 팝업과 무관 */ }
+            Swal.fire(result);
         });
 
         // [개발용] 더미 체크인: 미도착 전원을 번호표·테이블 자동으로 체크인한다.
@@ -757,7 +829,12 @@
             $.ajax({
                 url: devCheckInUrl, type: 'POST',
                 success: function(res){
-                    Swal.fire({ icon: 'success', text: res?.msg || '체크인했습니다.', confirmButtonText: '확인', confirmButtonColor: '#3085d6' });
+                    // 남은 자리가 없어 체크인되지 않은 사람이 있으면 경고로 알린다. (번호표 미배정 → 입장등록도 안 됨)
+                    Swal.fire({
+                        icon: (res?.skipped ?? 0) > 0 ? 'warning' : 'success',
+                        text: res?.msg || '체크인했습니다.',
+                        confirmButtonText: '확인', confirmButtonColor: '#3085d6'
+                    });
                     load();
                 },
                 error: function(xhr){ showError(xhr, '더미 체크인에 실패했습니다.'); }

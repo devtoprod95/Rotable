@@ -12,9 +12,8 @@
     // 유형별 설정 (이미지/타이틀/행사명/포인트)
     $typeConfig = [
         'wine' => [
-            'image'    => file_exists(public_path('images/detail_img_wine.png'))
-                ? asset('images/detail_img_wine.png')
-                : asset('images/detail_img.png'),
+            // 최상단 상세 이미지 — 와인·1:1 공통 메인 배너
+            'image'    => asset('images/rotable_main_banner.png'),
             'title'    => 'ROTABLE 와인파티 안내',
             'subtitle' => '이번 회차 참여자를 확인하세요',
             'eventName'=> '와인파티',
@@ -35,9 +34,8 @@
             ],
         ],
         'solo' => [
-            'image'    => file_exists(public_path('images/detail_img_one.png'))
-                ? asset('images/detail_img_one.png')
-                : asset('images/detail_img.png'),
+            // 최상단 상세 이미지 — 와인·1:1 공통 메인 배너
+            'image'    => asset('images/rotable_main_banner.png'),
             'title'    => 'ROTABLE 1:1 소개팅 안내',
             'subtitle' => '이번 회차 참여자를 확인하세요',
             'eventName'=> '1:1 소개팅',
@@ -422,6 +420,49 @@
                     </div>
                 </div>
             @endforeach
+        </div>
+    </div>
+    @endif
+
+    {{-- 실제 참여 후기 (와인·1:1 공통) — 파일명: reviewNN.png (public/images)
+         01부터 번호 순서대로 2열(좌→우, 위→아래)로 보여준다. (파일이 있는 것만 노출)
+         이미지는 원본 비율 그대로(width:100%, height:auto) 보여주고, 카드 배경을 흰색으로 둬 높이 차이가 티 나지 않게 한다. --}}
+    @php
+        $reviewFiles = array_values(array_filter(
+            array_map(fn (int $n): string => sprintf('review%02d.png', $n), range(1, 6)),
+            fn ($f) => file_exists(public_path('images/' . $f)),
+        ));
+        $reviewRows = array_chunk($reviewFiles, 2);
+    @endphp
+    @if (count($reviewRows) > 0)
+    <div style="margin-bottom:32px; border-radius:16px; background:#fdf2f8; padding:28px 10px 24px;">
+        <div style="font-family:'Jua',sans-serif; font-size:42px; font-weight:400; color:#ec4899; text-align:center; letter-spacing:0.5px;">💬 먼저 다녀간 분들의 진짜 후기</div>
+        <div style="font-size:30px; color:#f59e0b; text-align:center; letter-spacing:4px; margin-top:10px;">★★★★★</div>
+        <div style="font-size:27px; font-weight:800; color:#4b5563; text-align:center; line-height:1.6; margin-top:8px; margin-bottom:18px; word-break:keep-all;">
+            {{-- 유형별 강조 문구: 와인파티는 "혼자 와도 편한 분위기", 1:1 은 "한 분 한 분과 진지한 대화" --}}
+            @if ($type === 'wine')
+                <b style="color:#be185d; background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">"혼자 갔는데 하나도 어색하지 않았어요"</b><br>
+                참여하신 분들께 가장 많이 듣는 이야기예요.
+            @else
+                <b style="color:#be185d; background:linear-gradient(transparent 55%, #fbcfe8 55%); padding:0 4px;">"좋은 분들과 편안하게, 진지하게 대화했어요"</b><br>
+                한 분 한 분과 마주 앉아 천천히 알아가는 시간이라<br>
+                가벼운 만남이 아닌 진심이 오가는 자리가 돼요.
+            @endif
+        </div>
+        @foreach ($reviewRows as $row)
+            <div style="display:flex; align-items:stretch;">
+                @foreach ($row as $file)
+                    <div style="width:50%; box-sizing:border-box; padding:6px;">
+                        <div style="height:100%; box-sizing:border-box; border:1px solid #f3d6e6; border-radius:14px; overflow:hidden; background:#ffffff; box-shadow:0 2px 6px rgba(190,24,93,0.08);">
+                            <img src="{{ asset('images/' . $file) }}" alt="참여 후기"
+                                 style="display:block; width:100%; height:auto;">
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endforeach
+        <div style="font-family:'Jua',sans-serif; font-size:34px; font-weight:400; color:#be185d; text-align:center; margin-top:18px; word-break:keep-all;">
+            다음 설렘의 주인공은 바로 당신이에요 💗
         </div>
     </div>
     @endif

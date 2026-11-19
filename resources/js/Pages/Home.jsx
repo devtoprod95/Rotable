@@ -277,7 +277,7 @@ export default function Home() {
         // 좌석/턴이 갱신되면 홈 데이터만 다시 받아온다. (전체 새로고침 없이)
         // 로테이션 시작(P→S) 시 와인파티 '💌 전달' 버튼이 바로 보이도록
         // canSendMessage/sendLimit 도 함께 갱신한다.
-        channel.listen('.rotation.updated', () => {
+        const onRotation = () => {
             router.reload({
                 only: [
                     'rotations',
@@ -288,14 +288,14 @@ export default function Home() {
                     'sendLimit',
                 ],
             });
-        });
+        };
         // 매칭이 종료되면 상태만 갱신(선택 UI가 닫히고 "매칭 결과" 탭에서 결과 확인).
-        channel.listen('.event.closed', () => {
+        const onClosed = () => {
             router.reload({ only: ['eventStatus', 'matchSelectable'] });
-        });
+        };
         // 관리자가 '매칭 시작(V)'하면 선택 UI가 열리도록 상태를 갱신한다.
         // 와인파티는 V 상태에서도 메시지 전송이 가능하므로 함께 갱신한다.
-        channel.listen('.event.voting.opened', () => {
+        const onVotingOpened = () => {
             router.reload({
                 only: [
                     'eventStatus',
@@ -305,10 +305,17 @@ export default function Home() {
                     'sendLimit',
                 ],
             });
-        });
+        };
+
+        channel.listen('.rotation.updated', onRotation);
+        channel.listen('.event.closed', onClosed);
+        channel.listen('.event.voting.opened', onVotingOpened);
 
         return () => {
-            echo.leave(`private-${channelName}`);
+            // event-rotation 채널은 지속 레이아웃(AppShell)도 구독하므로 leave 하지 않고 이 화면의 리스너만 해제한다.
+            channel.stopListening('.rotation.updated', onRotation);
+            channel.stopListening('.event.closed', onClosed);
+            channel.stopListening('.event.voting.opened', onVotingOpened);
         };
     }, [eventId]);
 

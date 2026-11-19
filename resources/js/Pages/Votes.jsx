@@ -371,20 +371,21 @@ export default function Votes() {
         const channelName = `event-rotation.${eventId}`;
         const channel = echo.private(channelName);
 
-        channel.listen('.event.closed', () => {
+        const reload = () => {
             router.reload();
-        });
+        };
+
+        channel.listen('.event.closed', reload);
         // 관리자가 '매칭 시작(V)'하면 이 화면을 리로드해 '매칭하기'를 바로 노출한다.
-        channel.listen('.event.voting.opened', () => {
-            router.reload();
-        });
+        channel.listen('.event.voting.opened', reload);
         // 로테이션 진행으로 상태/후보가 바뀌는 경우(와인파티 투표중 등)도 갱신.
-        channel.listen('.rotation.updated', () => {
-            router.reload();
-        });
+        channel.listen('.rotation.updated', reload);
 
         return () => {
-            echo.leave(`private-${channelName}`);
+            // event-rotation 채널은 지속 레이아웃(AppShell)도 구독하므로 leave 하지 않고 이 화면의 리스너만 해제한다.
+            channel.stopListening('.event.closed', reload);
+            channel.stopListening('.event.voting.opened', reload);
+            channel.stopListening('.rotation.updated', reload);
         };
     }, [eventId]);
 

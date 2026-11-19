@@ -370,16 +370,20 @@ class SeatingService
 
                 $prev                 = $current - 1;
                 $event->current_round = $prev;
-                $maxRound             = $event->maxRound($tableCount);
 
                 // 1 → 0 이면 로테이션 시작 전으로 되돌아가므로 상태를 대기(P)로.
+                // 로테이션 횟수도 초기화(테이블 수만큼)해 시작 전 상태로 완전히 되돌린다.
                 // 1:1 은 진행 시 기록한 voting_opened_at 도 되돌린다.
                 if ($prev === 0) {
-                    $event->status = EventRound::STATUS_PENDING;
+                    $event->status         = EventRound::STATUS_PENDING;
+                    $event->rotation_limit = null;
                     if ($event->isOneToOne()) {
                         $event->voting_opened_at = null;
                     }
                 }
+
+                // 횟수 초기화가 반영된 값으로 총 턴 수를 계산한다.
+                $maxRound = $event->maxRound($tableCount);
 
                 $event->save();
 
@@ -390,7 +394,7 @@ class SeatingService
 
             $returnMsg = helpersSuccessMessage(
                 $result === 0
-                    ? '로테이션을 시작 전(0턴)으로 되돌렸습니다.'
+                    ? '로테이션을 시작 전(0턴)으로 되돌렸습니다. 로테이션 횟수도 초기화했어요.'
                     : "{$result}턴으로 되돌렸습니다.",
             );
             $returnMsg['data'] = [

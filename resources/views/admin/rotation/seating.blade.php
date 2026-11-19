@@ -40,14 +40,75 @@
     .seat-person .seat-actions .btn { display:inline-flex; align-items:center; justify-content:center; width:2rem; height:1.75rem; padding:0; font-size:1.05rem; line-height:1; }
     .seat-person .seat-actions .btn .ti { font-size:1.05rem; }
 
-    /* 진행 컨트롤 패널(턴 / 로테이션 횟수 / 진행) — 같은 높이의 카드형 칸 */
-    .seating-panel { border: 1px solid var(--tblr-border-color, #e6e7e9); border-radius: 10px; padding: .85rem 1rem; background: var(--tblr-bg-surface-secondary, #f8fafc); }
-    .seating-panel__label { font-weight: 700; font-size: .85rem; color: var(--tblr-secondary, #667382); margin-bottom: .5rem; }
-    /* 보조 액션이 하나도 안 보이면 여백도 없앤다 */
-    .seating-sub-actions:not(:has(.btn:not(.d-none))) { display: none !important; }
+    /* ── 진행 컨트롤 ──────────────────────────────────────────────
+       상단 요약(현재 턴/총 턴 · 상태 · 안내) + 주 액션, 아래에 턴 진행 막대.
+       PC(lg↑): 요약 왼쪽 · 액션 오른쪽 / 태블릿·모바일: 액션은 화면 하단에 고정해 스크롤 중에도 바로 누른다. */
+    .seating-top { display:flex; gap:1rem; align-items:stretch; }
+    .seating-summary { flex:1 1 auto; min-width:0; }
+    .seating-summary__head { display:flex; align-items:center; flex-wrap:wrap; gap:.4rem; font-weight:700; font-size:.85rem; color:var(--tblr-secondary, #667382); }
+    .seating-summary__round { font-size:2.1rem; font-weight:800; line-height:1.15; margin-top:.15rem; color:var(--tblr-body-color, #1d273b); }
+    .seating-summary__round small { font-size:1.05rem; font-weight:700; color:var(--tblr-secondary, #667382); }
+    .seating-summary__hint { font-size:.85rem; color:var(--tblr-secondary, #667382); margin-top:.2rem; line-height:1.5; }
+
+    .seating-actionbar { flex:0 0 340px; display:flex; flex-direction:column; justify-content:center; gap:.5rem; }
+    .seating-actionbar__main .btn { min-height:48px; font-weight:700; }
+    .seating-actionbar__round { display:none; }
+    /* 보조 액션이 하나도 안 보이면 줄 자체를 없앤다 */
+    .seating-sub-actions { display:flex; flex-wrap:wrap; gap:.4rem; }
+    .seating-sub-actions:not(:has(.btn:not(.d-none))) { display:none !important; }
+    .seating-sub-actions .btn { flex:1 1 auto; }
+
+    /* 턴 진행 막대: 1~N턴 칸. 지난 턴은 채움, 보는 턴은 강조, 아직 안 온 턴은 흐리게(누를 수 없음) */
+    .seating-turns { display:flex; align-items:center; gap:.4rem; margin-top:1rem; }
+    .seating-turns__nav { flex:0 0 auto; width:2.4rem; height:2.4rem; padding:0; display:inline-flex; align-items:center; justify-content:center; }
+    .seating-turns__list { flex:1 1 auto; display:flex; gap:.35rem; overflow-x:auto; padding:.2rem .1rem; scrollbar-width:thin; }
+    .turn-chip { flex:0 0 auto; min-width:2.6rem; height:2.4rem; padding:0 .55rem; border-radius:10px; border:1px solid var(--tblr-border-color, #e6e7e9);
+                 background:#fff; font-weight:700; font-size:.9rem; color:var(--tblr-secondary, #667382); cursor:pointer; transition:background-color .12s ease, border-color .12s ease; }
+    .turn-chip.is-done { background:#e7f1ff; border-color:#b6d4fe; color:#1e5aa8; }
+    .turn-chip.is-current { box-shadow:inset 0 0 0 2px #206bc4; }
+    .turn-chip.is-view { background:#206bc4; border-color:#206bc4; color:#fff; }
+    .turn-chip.is-future { background:var(--tblr-bg-surface-secondary, #f8fafc); color:#adb5bd; cursor:default; }
+    .turn-chip:not(.is-future):not(.is-view):hover { border-color:#206bc4; }
+    .seating-note { display:block; font-size:.8rem; color:var(--tblr-secondary, #667382); margin-top:.45rem; }
+
+    /* 0턴 준비 영역: 로테이션 횟수 + 시작 전 점검 */
+    .seating-setup { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem 1rem; margin-top:1rem; padding:.75rem 1rem; border-radius:10px;
+                     background:var(--tblr-bg-surface-secondary, #f8fafc); border:1px solid var(--tblr-border-color, #e6e7e9); }
+    .seating-setup__label { font-weight:700; font-size:.85rem; }
+    .seating-setup .input-group { width:9rem; }
+    .seating-setup__hint { flex:1 1 16rem; font-size:.8rem; color:var(--tblr-secondary, #667382); }
+    .seating-preflight { margin-top:.75rem; margin-bottom:0; font-size:.85rem; }
+    .seating-preflight ul { margin:.25rem 0 0; padding-left:1.1rem; }
+
+    /* 결과 보기 버튼: 모바일은 4칸 한 줄(아이콘 위 · 글자 아래)로 줄여 화면을 덜 차지한다 */
     @media (max-width: 767.98px){
-        /* 모바일: 보조 액션은 꽉 찬 폭으로 누르기 쉽게 */
-        .seating-sub-actions .btn { flex: 1 1 100%; }
+        .seating-result-grid { grid-template-columns:repeat(4, 1fr) !important; gap:.35rem; }
+        .seating-result-grid .btn { flex-direction:column; min-height:56px; padding:.35rem .15rem; font-size:.72rem; line-height:1.25; white-space:normal; }
+        .seating-result-grid .btn .ti { margin:0 0 .15rem !important; font-size:1.25rem; }
+    }
+
+    /* 태블릿·모바일(lg 미만): 주 액션을 화면 하단에 고정한다. (하단 여백은 .seating-actionbar-spacer 로 확보) */
+    @media (max-width: 991.98px){
+        .seating-top { display:block; }
+        .seating-summary__round { font-size:1.8rem; }
+        .seating-actionbar { position:fixed; left:0; right:0; bottom:0; z-index:1030; flex-direction:row; flex-wrap:wrap; align-items:center; gap:.4rem .5rem;
+                             padding:.6rem .75rem calc(.6rem + env(safe-area-inset-bottom)); background:#fff;
+                             border-top:1px solid var(--tblr-border-color, #e6e7e9); box-shadow:0 -6px 16px rgba(29,39,59,.08); }
+        .seating-actionbar__round { display:flex; flex-direction:column; justify-content:center; flex:0 0 auto; min-width:3.6rem; text-align:center; line-height:1.15; }
+        .seating-actionbar__round b { font-size:1.15rem; }
+        .seating-actionbar__round small { font-size:.7rem; color:var(--tblr-secondary, #667382); }
+        .seating-actionbar__main { flex:1 1 0; min-width:0; }
+        .seating-actionbar__main .btn { min-height:46px; }
+        .seating-sub-actions { flex:1 1 100%; }
+        .seating-sub-actions .btn { flex:1 1 0; font-size:.78rem; white-space:nowrap; }
+        .seating-actionbar-spacer { height:calc(130px + env(safe-area-inset-bottom)); }
+    }
+    @media (min-width: 992px){
+        .seating-actionbar-spacer { display:none; }
+        /* PC: 버튼이 화면 오른쪽 끝으로 멀어지지 않게, 요약 바로 옆에 붙이고 구분선으로 나눈다. */
+        .seating-top { justify-content:flex-start; gap:1.5rem; }
+        .seating-summary { flex:0 1 auto; max-width:560px; }
+        .seating-actionbar { flex:0 0 320px; padding-left:1.5rem; border-left:1px solid var(--tblr-border-color, #e6e7e9); }
     }
 
     /* 결과 보기 버튼 줄(.eventform-btn-grid)은 public/css/custom.css 공통 규칙 — 행사 상세와 같은 크기/배치 */
@@ -61,30 +122,24 @@
 <div class="row row-cards">
     {{-- 결과 보기 버튼 (진행 중 참고용) — 행사 상세와 같은 크기·배치 --}}
     <div class="col-12">
-        <div class="eventform-btn-grid">
+        <div class="eventform-btn-grid seating-result-grid">
             <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
-                <i class="ti ti-heart me-1"></i> 전체 매칭
+                <i class="ti ti-heart me-1"></i><span>전체 매칭</span>
             </button>
             <button type="button" id="goMatchedBtn" class="btn btn-outline-pink">
-                <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
+                <i class="ti ti-heart-filled me-1"></i><span>매칭 결과<span id="matchedCount"></span></span>
             </button>
             <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
-                <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
+                <i class="ti ti-messages me-1"></i><span>메시지<span id="messagesCount"></span></span>
             </button>
             <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow">
-                <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
+                <i class="ti ti-hand-stop me-1"></i><span>요청<span id="requestsCount"></span></span>
             </button>
         </div>
     </div>
 
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div class="d-flex align-items-center gap-2">
-                    <h3 class="card-title mb-0">로테이션 진행</h3>
-                    <span class="badge d-none" id="eventStatusBadge"></span>
-                </div>
-            </div>
             <div class="card-body">
                 {{-- 행사 선택은 상단 탭바가 맡는다. 이 화면의 스크립트가 값을 읽으므로 숨겨서 유지한다. --}}
                 <select class="d-none" id="eventSelect" aria-hidden="true" tabindex="-1">
@@ -93,82 +148,86 @@
                     @endforeach
                 </select>
 
-                {{-- 진행 컨트롤 — PC(lg↑): [턴 | 로테이션 횟수 | 진행 액션] 3칸 / 태블릿: 2칸 + 액션 한 줄 / 모바일: 세로 --}}
-                <div class="row g-3 align-items-stretch">
-                    {{-- ① 턴 이동 --}}
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <div class="seating-panel h-100">
-                            <div class="seating-panel__label">턴</div>
-                            <div class="input-group">
-                                <button class="btn btn-outline-secondary" type="button" id="roundPrev" title="이전 턴" aria-label="이전 턴">
-                                    <i class="ti ti-chevron-left"></i>
-                                </button>
-                                <input type="number" min="0" class="form-control text-center fw-bold fs-3" id="roundInput" value="{{ $roundNo }}" readonly aria-label="보고 있는 턴">
-                                <button class="btn btn-outline-secondary" type="button" id="roundNext" title="다음 턴" aria-label="다음 턴">
-                                    <i class="ti ti-chevron-right"></i>
-                                </button>
-                            </div>
-                            <small class="form-hint text-muted mt-2 d-block" id="roundHint">턴을 이동하며 배치를 볼 수 있습니다.</small>
+                {{-- 상단: 진행 요약(현재 턴 / 총 턴 · 상태 · 다음 할 일) + 주 액션
+                     PC 는 오른쪽에, 태블릿·모바일은 화면 하단에 고정된다. --}}
+                <div class="seating-top">
+                    <div class="seating-summary">
+                        <div class="seating-summary__head">
+                            <span>로테이션 진행</span>
+                            <span class="badge d-none" id="eventStatusBadge"></span>
                         </div>
+                        <div class="seating-summary__round" id="summaryRound">-</div>
+                        <div class="seating-summary__hint" id="actionHint"></div>
                     </div>
 
-                    {{-- ② 로테이션 횟수(총 턴 수): 테이블 수와 별개로 지정. 비우면 테이블 수만큼 (0턴에서만 수정) --}}
-                    <div class="col-12 col-md-6 col-lg-3">
-                        <div class="seating-panel h-100 d-none" id="rotationLimitBox">
-                            <div class="seating-panel__label d-flex align-items-center justify-content-between">
-                                <label class="mb-0" for="rotationLimitInput">로테이션 횟수</label>
-                                <span class="badge bg-azure-lt" id="rotationProgressBadge"></span>
-                            </div>
-                            <div class="input-group">
-                                <input type="number" min="1" class="form-control text-center" id="rotationLimitInput"
-                                       inputmode="numeric" placeholder="테이블 수">
-                                <span class="input-group-text">턴</span>
-                                <button type="button" class="btn btn-outline-primary" id="rotationLimitSave">저장</button>
-                            </div>
-                            <small class="form-hint text-muted mt-2 d-block" id="rotationLimitHint"></small>
+                    <div class="seating-actionbar" id="seatingActionBar">
+                        {{-- 모바일 하단 바 전용: 지금 몇 턴인지 --}}
+                        <div class="seating-actionbar__round" id="actionBarRound"></div>
+                        {{-- 주 액션: 상태에 따라 하나만 보인다 --}}
+                        <div class="seating-actionbar__main">
+                            <button type="button" class="btn btn-primary w-100 d-none" id="rotateBtn">
+                                <i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행
+                            </button>
+                            <button type="button" class="btn btn-success w-100 d-none" id="finishBtn">
+                                <i class="ti ti-checkbox me-1"></i>매칭 시작
+                            </button>
+                            <button type="button" class="btn btn-danger w-100 d-none" id="closeVotingBtn">
+                                <i class="ti ti-flag-check me-1"></i>매칭 종료
+                            </button>
+                            <span class="btn btn-outline-secondary w-100 d-none disabled" id="closedBtn">
+                                <i class="ti ti-lock me-1"></i>종료된 행사
+                            </span>
+                            <button type="button" class="btn btn-outline-primary w-100 d-none" id="pastNotice">
+                                <i class="ti ti-player-track-next me-1"></i>최신 턴으로 이동
+                            </button>
                         </div>
-                    </div>
-
-                    {{-- ③ 진행 액션: 주 버튼 크게 + 되돌리기류는 작은 버튼으로 한 줄 --}}
-                    <div class="col-12 col-lg-5">
-                        <div class="seating-panel h-100 d-flex flex-column">
-                            <div class="seating-panel__label" id="actionLabel">진행</div>
-                            <div class="d-flex align-items-center" style="min-height: 44px;">
-                                <button type="button" class="btn btn-primary btn-lg w-100 d-none" id="rotateBtn">
-                                    <i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행
-                                </button>
-                                <button type="button" class="btn btn-success btn-lg w-100 d-none" id="finishBtn">
-                                    <i class="ti ti-checkbox me-1"></i>매칭 시작
-                                </button>
-                                <button type="button" class="btn btn-danger btn-lg w-100 d-none" id="closeVotingBtn">
-                                    <i class="ti ti-flag-check me-1"></i>매칭 종료
-                                </button>
-                                <span class="btn btn-outline-secondary btn-lg w-100 d-none disabled" id="closedBtn">
-                                    <i class="ti ti-lock me-1"></i>종료된 행사
-                                </span>
-                                <div class="d-none align-items-center justify-content-center text-danger fw-bold text-center w-100" id="pastNotice">
-                                    최신 턴에서만 로테이션을 진행할 수 있습니다.
-                                </div>
-                            </div>
-                            {{-- 보조 액션(되돌리기류) — 노출되는 것만 가로로 나란히 --}}
-                            <div class="d-flex flex-wrap gap-2 mt-2 seating-sub-actions">
-                                {{-- 로테이션 되돌리기 (실수로 한 번 더 진행했을 때). 진행 중(S)·1턴 이상에서만 노출 --}}
-                                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="rotateBackBtn">
-                                    <i class="ti ti-arrow-back-up me-1"></i>로테이션 되돌리기 (이전 턴)
-                                </button>
-                                {{-- 종료 되돌리기 (실수로 매칭을 종료했을 때). 종료(X) 상태에서만 노출 --}}
-                                <button type="button" class="btn btn-outline-dark btn-sm d-none" id="reopenBtn">
-                                    <i class="ti ti-lock-open me-1"></i>종료 되돌리기 (이전 상태로)
-                                </button>
-                                {{-- 매칭 시작 취소 (실수로 매칭을 시작했을 때). 매칭중(V)·와인파티에서만 노출. 기존 투표는 유지 --}}
-                                <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="cancelVotingBtn">
-                                    <i class="ti ti-arrow-back-up me-1"></i>매칭 시작 취소 (진행으로)
-                                </button>
-                            </div>
-                            <small class="form-hint text-muted mt-2 d-block" id="actionHint"></small>
+                        {{-- 보조 액션(되돌리기류) — 노출되는 것만 나란히 --}}
+                        <div class="seating-sub-actions">
+                            {{-- 로테이션 되돌리기 (실수로 한 번 더 진행했을 때). 진행 중(S)·1턴 이상에서만 노출 --}}
+                            <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="rotateBackBtn">
+                                <i class="ti ti-arrow-back-up me-1"></i>이전 턴으로 되돌리기
+                            </button>
+                            {{-- 종료 되돌리기 (실수로 매칭을 종료했을 때). 종료(X) 상태에서만 노출 --}}
+                            <button type="button" class="btn btn-outline-dark btn-sm d-none" id="reopenBtn">
+                                <i class="ti ti-lock-open me-1"></i>종료 되돌리기
+                            </button>
+                            {{-- 매칭 시작 취소 (실수로 매칭을 시작했을 때). 매칭중(V)·와인파티에서만 노출. 기존 투표는 유지 --}}
+                            <button type="button" class="btn btn-outline-secondary btn-sm d-none" id="cancelVotingBtn">
+                                <i class="ti ti-arrow-back-up me-1"></i>매칭 시작 취소
+                            </button>
                         </div>
                     </div>
                 </div>
+
+                {{-- 턴 진행 막대: 칸을 눌러 그 턴의 배치를 바로 본다. (아직 안 온 턴은 누를 수 없음) --}}
+                <div class="seating-turns">
+                    <button class="btn btn-outline-secondary seating-turns__nav" type="button" id="roundPrev" title="이전 턴 보기" aria-label="이전 턴 보기">
+                        <i class="ti ti-chevron-left"></i>
+                    </button>
+                    <div class="seating-turns__list" id="turnStepper" role="group" aria-label="턴 선택"></div>
+                    <button class="btn btn-outline-secondary seating-turns__nav" type="button" id="roundNext" title="다음 턴 보기" aria-label="다음 턴 보기">
+                        <i class="ti ti-chevron-right"></i>
+                    </button>
+                    {{-- 보고 있는 턴 값 (스크립트용) --}}
+                    <input type="hidden" id="roundInput" value="{{ $roundNo }}">
+                </div>
+                <small class="seating-note" id="roundHint"></small>
+
+                {{-- 0턴(시작 전)에만: 로테이션 횟수(총 턴 수). 비우면 테이블 수만큼.
+                     별도 저장 버튼 없이, 로테이션을 시작할 때 입력값이 함께 저장된다. --}}
+                <div class="seating-setup d-none" id="rotationLimitBox">
+                    <label class="seating-setup__label mb-0" for="rotationLimitInput">로테이션 횟수</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" min="1" class="form-control text-center" id="rotationLimitInput"
+                               inputmode="numeric" placeholder="테이블 수">
+                        <span class="input-group-text">턴</span>
+                    </div>
+                    <span class="d-none" id="rotationProgressBadge"></span>
+                    <span class="seating-setup__hint" id="rotationLimitHint"></span>
+                </div>
+
+                {{-- 0턴(시작 전)에만: 시작 전 점검 — 자리 미배정 회원 · 테이블 성비 --}}
+                <div class="alert seating-preflight d-none" id="preflight" role="status"></div>
             </div>
         </div>
     </div>
@@ -177,6 +236,8 @@
         <div id="boardArea" class="row row-cards"></div>
     </div>
 </div>
+{{-- 태블릿·모바일: 하단 고정 액션 바에 마지막 테이블이 가리지 않도록 여백 확보 --}}
+<div class="seating-actionbar-spacer" aria-hidden="true"></div>
 
 <script>
     $(document).ready(function(){
@@ -339,8 +400,7 @@
             let $cancelVoting = $('#cancelVotingBtn').addClass('d-none');
             let $hint   = $('#actionHint');
             let $roundHint = $('#roundHint');
-            let $pastNotice = $('#pastNotice').removeClass('d-flex').addClass('d-none');
-            let $actionLabel = $('#actionLabel').removeClass('d-none');
+            let $pastNotice = $('#pastNotice').addClass('d-none');
 
             currentRound = (typeof meta.current_round !== 'undefined') ? meta.current_round : 0;
 
@@ -372,12 +432,13 @@
             let isBaseView = (viewRound <= 1);
             if(isBaseView){
                 $roundHint.html(currentRound === 0
-                    ? '기준 자리 배치 화면입니다. (회원 추가/삭제/이동 가능)'
-                    : '1턴(기준) 화면입니다. 진행 중에도 여기서 자리를 옮기면 <b>모든 턴에 바로 반영</b>돼요.');
+                    ? '<i class="ti ti-armchair me-1"></i>기준 자리를 배치하는 단계예요. 아래 테이블에서 회원을 추가·삭제할 수 있어요.'
+                    : '<i class="ti ti-pencil me-1"></i>1턴(기준) 화면이에요. 여기서 자리를 옮기면 <b>모든 턴에 바로 반영</b>돼요.');
             } else {
-                $roundHint.html('조회 전용 화면입니다. 자리를 옮기려면 <b>1턴(기준)</b>으로 이동하세요.');
+                $roundHint.html('<i class="ti ti-eye me-1"></i>' + viewRound + '턴 조회 화면이에요. 자리를 옮기려면 <b>1턴</b>으로 이동하세요.');
             }
 
+            renderTurns(meta);
             renderRotationLimit(meta);
 
             // 생성된 테이블이 없으면 액션 버튼을 노출하지 않는다.
@@ -393,7 +454,7 @@
                 $reopen.removeClass('d-none');
                 // 되돌리면 복귀할 상태를 타입별로 안내한다. (와인파티→매칭중 / 1:1→진행)
                 var backLabel = meta.is_one_to_one ? '진행' : '매칭중';
-                $hint.html('이미 종료된 행사입니다. (매칭 마감)<br>실수로 종료했다면 아래에서 <b>' + backLabel + '</b> 상태로 되돌릴 수 있어요.');
+                $hint.html('매칭이 마감된 행사예요. 실수로 종료했다면 <b>종료 되돌리기</b>로 <b>' + backLabel + '</b> 상태로 돌아갈 수 있어요.');
                 return;
             }
             if(meta.is_voting){
@@ -402,15 +463,15 @@
                 if(!meta.is_one_to_one){
                     $cancelVoting.removeClass('d-none');
                 }
-                $hint.html('매칭이 진행 중입니다. 회원들이 상대를 선택하고 있어요.<br>(행사 다음 날 오전 9시 자동 종료)'
-                    + (!meta.is_one_to_one ? '<br>실수로 시작했다면 아래에서 <b>진행</b> 상태로 되돌릴 수 있어요. (기존 투표는 유지)' : ''));
+                $hint.html('회원들이 상대를 선택하고 있어요. 행사 다음 날 <b>오전 9시</b>에 자동 종료돼요.'
+                    + (!meta.is_one_to_one ? '<br>실수로 시작했다면 <b>매칭 시작 취소</b>로 되돌릴 수 있어요. (기존 투표는 유지)' : ''));
                 return;
             }
 
             // 과거 턴을 보고 있으면 진행/종료 버튼 대신 안내 문구를 표시한다. (label/힌트 라인은 왼쪽과 정렬 유지)
             if(!isLatest){
-                $pastNotice.removeClass('d-none').addClass('d-flex');
-                $hint.text('이전 턴은 로테이션을 진행할 수 없습니다.');
+                $pastNotice.removeClass('d-none');
+                $hint.html('지금 <b>' + viewRound + '턴</b>을 보고 있어요. 로테이션 진행은 최신 턴(' + currentRound + '턴)에서 할 수 있어요.');
                 return;
             }
 
@@ -418,20 +479,20 @@
                 if(meta.is_one_to_one){
                     // 1:1: 매칭 선택을 홈에서 받으므로 '매칭 시작(V)' 없이 바로 '매칭 종료(X)'.
                     $closeVoting.removeClass('d-none');
-                    $hint.text('마지막 턴(' + (meta.max_round || '') + '턴)입니다. 매칭을 종료하면 결과가 공개됩니다.');
+                    $hint.text('마지막 턴이에요. 매칭을 종료하면 결과가 공개돼요.');
                 } else {
                     $finish.removeClass('d-none');
-                    $hint.text('마지막 턴(' + (meta.max_round || '') + '턴)입니다. 매칭을 시작할 수 있습니다.');
+                    $hint.text('마지막 턴이에요. 이제 매칭을 시작할 수 있어요.');
                 }
             } else {
                 $rotate.removeClass('d-none');
                 // 0턴(아직 로테이션 시작 전)이면 '시작', 그 이후면 '진행'.
                 if(viewRound === 0){
                     $rotate.html('<i class="ti ti-player-play me-1"></i>로테이션 시작');
-                    $hint.text('로테이션을 시작합니다.');
+                    $hint.text('기준 자리 배치를 확인한 뒤 로테이션을 시작하세요.');
                 } else {
                     $rotate.html('<i class="ti ti-rotate-clockwise me-1"></i>로테이션 진행');
-                    $hint.text('다음 턴을 자동 생성합니다. (여자 고정 / 남자 이동)');
+                    $hint.text('대화 시간이 끝나면 진행하세요. 남자만 다음 테이블로 한 칸 이동해요.');
                 }
             }
 
@@ -442,59 +503,97 @@
             }
         }
 
-        // 로테이션 횟수 박스: 현재 진행(N/총 M턴) + 입력값. 로테이션 시작 전(0턴·대기)에만 수정 가능.
+        // 진행 요약(현재 턴 / 총 턴)과 턴 진행 막대를 그린다.
+        //  - 칸: 1~총 턴. 지난 턴(≤ 현재)은 채움, 보고 있는 턴은 강조, 아직 안 온 턴은 흐리게(누를 수 없음).
+        //  - 아직 시작 전(0턴)이면 '준비' 칸 하나를 앞에 둔다.
+        function renderTurns(meta){
+            let max    = meta.max_round || meta.table_count || 0;
+            let status = meta.event_status;
+
+            let roundText = currentRound === 0 ? '시작 전' : (currentRound + '턴');
+            $('#summaryRound').html(max
+                ? (currentRound === 0 ? '시작 전 <small>· 총 ' + max + '턴</small>' : currentRound + '<small> / ' + max + '턴</small>')
+                : '<small>테이블을 먼저 만들어 주세요</small>');
+            $('#actionBarRound').html(max
+                ? '<b>' + (currentRound === 0 ? '0' : currentRound) + '/' + max + '</b><small>' + (status === 'V' ? '매칭중' : (status === 'X' ? '종료' : roundText)) + '</small>'
+                : '');
+
+            let $list = $('#turnStepper').empty();
+            if(!max){ return; }
+            if(currentRound === 0){
+                $list.append('<button type="button" class="turn-chip is-view is-current" data-round="0" aria-current="true">준비</button>');
+            }
+            for(let n = 1; n <= max; n++){
+                let cls = ['turn-chip'];
+                if(n > currentRound){ cls.push('is-future'); }
+                else { cls.push('is-done'); }
+                if(n === currentRound){ cls.push('is-current'); }
+                if(n === viewRound){ cls.push('is-view'); }
+                let future = n > currentRound;
+                $list.append('<button type="button" class="' + cls.join(' ') + '" data-round="' + n + '"'
+                    + (future ? ' disabled aria-disabled="true"' : '')
+                    + (n === viewRound ? ' aria-current="true"' : '')
+                    + ' title="' + n + '턴' + (n === currentRound ? ' (현재)' : '') + '">' + n + '</button>');
+            }
+            // 보고 있는 턴 칸이 보이도록 가로 스크롤을 맞춘다.
+            let el = $list.find('.is-view')[0];
+            if(el){ $list[0].scrollLeft = Math.max(0, el.offsetLeft - $list[0].clientWidth / 2 + el.clientWidth / 2); }
+        }
+
+        // 턴 칸을 누르면 그 턴의 배치를 본다.
+        $('#turnStepper').on('click', '.turn-chip:not([disabled])', function(){
+            let n = parseInt($(this).data('round'), 10);
+            if(isNaN(n) || n === viewRound){ return; }
+            viewRound = n;
+            loadData();
+        });
+
+        // 과거 턴을 보고 있을 때: 최신 턴으로 바로 이동
+        $('#pastNotice').on('click', function(){
+            viewRound = currentRound;
+            loadData();
+        });
+
+        // 로테이션 횟수 박스: 로테이션 시작 전(0턴·대기)에만 보이고 수정 가능.
+        // 서버에 저장된 로테이션 횟수(없으면 null). 로테이션 시작 때 입력값과 비교해 자동 저장 여부를 정한다.
+        var savedRotationLimit = null;
+
         function renderRotationLimit(meta){
+            savedRotationLimit = meta.rotation_limit ? Number(meta.rotation_limit) : null;
             var $box = $('#rotationLimitBox');
             var tables = meta.table_count || 0;
-            if(!tables){ $box.addClass('d-none'); return; }
-            $box.removeClass('d-none');
-
             var max = meta.max_round || tables;
             var cur = meta.current_round || 0;
             var locked = cur > 0 || meta.event_status !== 'P';
+
+            // 시작 전(0턴·대기)에만 보인다. 시작 후 총 턴 수는 위 진행 요약에 표시된다.
+            if(!tables || locked){ $box.addClass('d-none'); return; }
+            $box.removeClass('d-none');
 
             $('#rotationProgressBadge').text(cur + ' / ' + max + '턴');
             var $in = $('#rotationLimitInput');
             // 입력 중에는 덮어쓰지 않는다. (주기적 갱신 시 값이 튀지 않게)
             if(!$in.is(':focus')){ $in.val(meta.rotation_limit ? meta.rotation_limit : ''); }
             $in.attr({ min: 1, max: tables, placeholder: tables + ' (테이블 수)' }).prop('disabled', locked);
-            $('#rotationLimitSave').toggleClass('d-none', locked);
 
             $('#rotationLimitHint').html(locked
                 ? '<i class="ti ti-lock me-1"></i>로테이션이 시작되어 횟수가 <b>' + max + '턴</b>으로 고정됐어요. 바꾸려면 0턴까지 되돌린 뒤 수정하세요.'
                 : (meta.rotation_limit
-                    ? '<b>' + max + '턴</b>에서 종료돼요. (테이블 ' + tables + '개 중 남자가 ' + max + '개 테이블만 돌아요) · 비우고 저장하면 테이블 수만큼'
-                    : '비워두면 테이블 수만큼(<b>' + tables + '턴</b>) 진행해요. 1~' + tables + '턴 사이로 줄일 수 있어요.'));
+                    ? '<b>' + max + '턴</b>에서 종료 (테이블 ' + tables + '개 중 ' + max + '개만 이동) · 비우면 테이블 수만큼'
+                    : '비우면 테이블 수만큼(<b>' + tables + '턴</b>) · 1~' + tables + '턴으로 줄일 수 있어요')
+                    + ' · <b>시작할 때 함께 저장</b>돼요.');
         }
 
-        // 로테이션 횟수 저장
-        $('#rotationLimitSave').on('click', function(){
-            var raw = String($('#rotationLimitInput').val() || '').trim();
-            if(raw !== '' && !/^\d+$/.test(raw)){
-                alert('로테이션 횟수는 숫자로 입력해 주세요.');
-                return;
-            }
-            var $btn = $(this).prop('disabled', true);
-            // ※ complete 옵션을 쓰면 전역 $.ajaxSetup 의 complete(로딩창 닫기)를 덮어써 무한 로딩이 된다 → .always() 사용
-            $.ajax({
-                url: rotationLimitUrl,
-                type: 'POST',
-                data: { event_id: $('#eventSelect').val(), rotation_limit: raw },
-                success: function(res){
-                    $('#rotationLimitInput').blur();
-                    $.when(loadData()).always(function(){ alert(res?.msg); });
-                },
-                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
-            }).always(function(){ $btn.prop('disabled', false); });
-        });
+        // 로테이션 횟수 입력칸: Enter 로 폼이 전송되거나 다른 동작이 일어나지 않게 막는다. (저장은 로테이션 시작 때)
         $('#rotationLimitInput').on('keydown', function(e){
-            if(e.key === 'Enter'){ e.preventDefault(); $('#rotationLimitSave').trigger('click'); }
+            if(e.key === 'Enter'){ e.preventDefault(); $(this).blur(); }
         });
 
         function renderBoard(data){
             // 이전 Choices 인스턴스를 먼저 정리(원본 select 복원)한 뒤 보드를 비운다.
             destroySeatChoices();
             let $area = $('#boardArea').empty();
+            $('#preflight').addClass('d-none').empty();
             if(!data.tables || data.tables.length === 0){
                 $area.html('<div class="col-12"><div class="card"><div class="card-body text-center text-muted py-5">생성된 테이블이 없습니다. 행사 관리 &gt; 상세에서 테이블을 먼저 추가해주세요.</div></div></div>');
                 return;
@@ -506,6 +605,8 @@
             data.tables.forEach(function(t){
                 t.members.forEach(function(m){ assignedIds.add(m.member_id); });
             });
+
+            renderPreflight(data.tables, assignedIds);
 
             // 좌석(기준자리) 편집은 "기준 뷰"(1턴 이하)에서만 허용한다.
             // 2턴 이상에서 보이는 자리는 공식으로 계산된 '이동 결과'이므로,
@@ -594,6 +695,40 @@
             initSeatChoices();
         }
 
+        // 시작 전 점검(0턴·종료 전만): 자리 미배정 회원과 성비가 맞지 않는 테이블을 알려준다. (시작을 막지는 않는다)
+        //  - 1:1: 테이블마다 남 1 · 여 1 이어야 한다.
+        //  - 와인파티: 남녀 수가 다르면 확인용으로 알린다. (3:2 등은 운영상 가능)
+        function renderPreflight(tables, assignedIds){
+            let $box = $('#preflight');
+            if(currentRound !== 0 || isClosed){ $box.addClass('d-none').empty(); return; }
+
+            let unassigned = members.filter(function(m){ return !assignedIds.has(m.id); });
+            let uneven = [];
+            tables.forEach(function(t){
+                let m = t.members.filter(function(x){ return x.gender === 'M'; }).length;
+                let f = t.members.length - m;
+                let bad = isOneToOne ? (m !== 1 || f !== 1) : (m !== f);
+                if(bad){ uneven.push(t.table_no + '번(남 ' + m + ' · 여 ' + f + ')'); }
+            });
+
+            if(!unassigned.length && !uneven.length){
+                $box.removeClass('d-none alert-warning').addClass('alert-success')
+                    .html('<i class="ti ti-circle-check me-1"></i>모든 회원이 자리에 배정됐어요. 로테이션을 시작할 수 있어요.');
+                return;
+            }
+
+            let items = [];
+            if(unassigned.length){
+                let names = unassigned.slice(0, 12).map(function(m){ return escHtml(m.name) + '호(' + genderLabel(m.gender) + ')'; }).join(', ');
+                items.push('<li>아직 자리에 배정되지 않은 회원 <b>' + unassigned.length + '명</b>: ' + names + (unassigned.length > 12 ? ' 외' : '') + '</li>');
+            }
+            if(uneven.length){
+                items.push('<li>' + (isOneToOne ? '남 1 · 여 1이 아닌 테이블' : '남녀 수가 다른 테이블') + ': ' + escHtml(uneven.join(', ')) + '</li>');
+            }
+            $box.removeClass('d-none alert-success').addClass('alert-warning')
+                .html('<b><i class="ti ti-alert-triangle me-1"></i>시작 전 확인해 주세요</b><ul>' + items.join('') + '</ul>');
+        }
+
         // 회원 추가 셀렉트(.seat-add)에 Choices 적용. (단일 선택 + 검색)
         // 보드가 매 렌더마다 재생성되므로, 이전 인스턴스를 먼저 destroy 하여
         // option 이 중복 누적되는 것을 방지한다.
@@ -675,26 +810,64 @@
 
         // 로테이션 진행: 현재 턴 기준 다음 턴 자동 생성 (여자 고정 / 남자 이동)
         $('#rotateBtn').on('click', async function(){
+            // 로테이션 시작(0턴) 때 횟수 입력값이 저장된 값과 다르면, 시작하면서 먼저 저장한다.
+            //  빈 값은 "테이블 수만큼"(null)으로 본다.
+            let $limitIn     = $('#rotationLimitInput');
+            let limitRaw     = String($limitIn.val() || '').trim();
+            let limitValue   = limitRaw === '' ? null : Number(limitRaw);
+            let pendingLimit = (viewRound === 0 && !$limitIn.prop('disabled') && limitValue !== savedRotationLimit)
+                ? limitRaw
+                : null;
+            if(pendingLimit !== null && pendingLimit !== '' && !/^\d+$/.test(pendingLimit)){
+                alert('로테이션 횟수는 숫자로 입력해 주세요.');
+                return;
+            }
+
             let msg = (viewRound === 0)
                 ? '로테이션을 시작하시겠습니까?'
                 : '다음 턴으로 로테이션을 진행하시겠습니까?';
+            let html = pendingLimit !== null
+                ? '로테이션 횟수를 <b>' + (pendingLimit === '' ? '테이블 수만큼' : pendingLimit + '턴') + '</b>으로 저장하고<br>로테이션을 시작하시겠습니까?'
+                : null;
             // 확인창을 띄우기 전 턴을 기억해, 그 사이 다른 곳에서 진행되었거나 연타되면 서버가 거부하게 한다.
             let expectedRound = currentRound;
-            if(!(await salert({text: msg}))) return;
+            if(!(await salert(html !== null ? {html: html} : {text: msg}))) return;
 
+            function startRotate(){
+                $.ajax({
+                    url: rotateUrl,
+                    type: 'POST',
+                    data: { event_id: $('#eventSelect').val(), expected_round: expectedRound },
+                    success: function(res){
+                        // 응답(권한 있는 최신 값)으로 상태/턴 표기를 먼저 즉시 갱신한다.
+                        // (뒤이은 loadData 조회가 끝나기 전에도 상단 탭바·카드 뱃지가 어긋나지 않게)
+                        applyStatusFromResponse(res);
+                        // 진행 후 최신 턴을 보도록 viewRound를 리셋하고, 보드 갱신이 끝난 뒤 알림.
+                        viewRound = null;
+                        $.when(loadData()).always(function(){ alert(res?.msg); });
+                    },
+                    error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+                });
+            }
+
+            if(pendingLimit === null){
+                startRotate();
+                return;
+            }
+
+            // 횟수 저장 → 시작을 이어서 실행한다. 저장 실패(범위 초과 등)면 시작하지 않는다.
+            // 시작 요청을 저장 요청의 success 안에서 보내야 전역 로딩('처리 중...')이 닫히지 않고 한 번만 보인다.
+            // (전역 로딩은 진행 중 요청 수로 관리되고, complete 는 success 뒤에 호출된다)
             $.ajax({
-                url: rotateUrl,
+                url: rotationLimitUrl,
                 type: 'POST',
-                data: { event_id: $('#eventSelect').val(), expected_round: expectedRound },
-                success: function(res){
-                    // 응답(권한 있는 최신 값)으로 상태/턴 표기를 먼저 즉시 갱신한다.
-                    // (뒤이은 loadData 조회가 끝나기 전에도 상단 탭바·카드 뱃지가 어긋나지 않게)
-                    applyStatusFromResponse(res);
-                    // 진행 후 최신 턴을 보도록 viewRound를 리셋하고, 보드 갱신이 끝난 뒤 알림.
-                    viewRound = null;
-                    $.when(loadData()).always(function(){ alert(res?.msg); });
+                data: { event_id: $('#eventSelect').val(), rotation_limit: pendingLimit },
+                success: function(){
+                    savedRotationLimit = limitValue;
+                    $limitIn.blur();
+                    startRotate();
                 },
-                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }
+                error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '로테이션 횟수 저장에 실패해 시작하지 않았습니다.'); }
             });
         });
 

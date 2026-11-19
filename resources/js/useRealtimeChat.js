@@ -25,15 +25,21 @@ export default function useRealtimeChat(memberId, onMessage, onRead) {
         const channelName = `chat.${memberId}`;
         const channel = echo.private(channelName);
 
-        channel.listen('.message.sent', (message) => {
+        const handleSent = (message) => {
             messageRef.current?.(message);
-        });
-        channel.listen('.message.read', (payload) => {
+        };
+        const handleRead = (payload) => {
             readRef.current?.(payload);
-        });
+        };
+
+        channel.listen('.message.sent', handleSent);
+        channel.listen('.message.read', handleRead);
 
         return () => {
-            echo.leave(`private-${channelName}`);
+            // chat.{id} 채널은 하단 nav(지속 레이아웃)·요청 화면 등이 공유한다.
+            // 채널 자체를 leave 하면 다른 구독자의 리스너까지 끊기므로 이 훅의 리스너만 해제한다.
+            channel.stopListening('.message.sent', handleSent);
+            channel.stopListening('.message.read', handleRead);
         };
     }, [memberId]);
 }

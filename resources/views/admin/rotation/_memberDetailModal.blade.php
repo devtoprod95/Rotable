@@ -34,6 +34,8 @@
     #memberDetailModal .member-edit-hint{ font-size:.88rem; line-height:1.65; color:#495057; }
     /* 모바일: 하단 버튼은 홈 인디케이터(safe area)만큼 띄운다. (요청 플로팅 버튼은 모바일에서 전역으로 숨김) */
     @media (max-width: 767.98px){
+        /* 작은 화면: 주소창 등으로 100vh 가 실제 보이는 높이보다 커서 모달이 넘치므로, 보이는 높이(dvh)에 고정하고 본문만 스크롤한다. */
+        #memberDetailModal .modal-dialog-scrollable{ height:calc(100dvh - 1rem); max-height:calc(100dvh - 1rem); }
         #memberDetailModal .modal-footer{ padding-bottom:calc(.75rem + env(safe-area-inset-bottom)); }
     }
 </style>

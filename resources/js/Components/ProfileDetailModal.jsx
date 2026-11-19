@@ -59,7 +59,7 @@ export default function ProfileDetailModal({ member, tone, onClose }) {
             onClick={onClose}
         >
             <div
-                className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
+                className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-3xl bg-white shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 헤더 */}

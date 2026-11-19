@@ -33,7 +33,7 @@
 {{--
     초대 멘트 생성기 (홍보).
     - 종료가 아닌 행사를 셀렉트로 고르면, 유형/행사명/일시가 멘트에 자동 반영된다.
-    - 성별(남/여) × 무료 여부로 멘트가 달라지고, 무료면 제목에 바로 명시된다.
+    - 성별(남/여) × 혜택(없음 / 80% 페이백 / 무료 참여)으로 멘트가 달라지고, 무료면 본문에 바로 명시된다.
     - 신청은 별도 링크 없이 "프로필을 눌러 신청"하도록 안내한다.
     - 플랫폼(문토/네이버)에 따라 문구가 달라진다. 네이버는 블로거 게시글에 남기는 짧은 댓글(오픈채팅 문의 유도).
     - 문구는 화면에서 자유롭게 고친 뒤 [복사] 한다. (저장되지 않음)
@@ -77,7 +77,8 @@
                         <label class="form-label mb-1">혜택</label>
                         <div class="btn-group d-flex" role="group" id="inv-free">
                             <button type="button" class="btn btn-outline-secondary" data-val="0">혜택 없음</button>
-                            <button type="button" class="btn btn-outline-green active" data-val="1">80% 페이백</button>
+                            <button type="button" class="btn btn-outline-green active" data-val="payback">80% 페이백</button>
+                            <button type="button" class="btn btn-outline-orange" data-val="free">무료 참여</button>
                         </div>
                     </div>
                 </div>
@@ -107,15 +108,17 @@
 
         // ─────────────────────────────────────────────────────────────
         // 멘트 풀: build(ctx) 가 초대 멘트 전문을 만든다.
-        //  ctx = { title, time, type, gender('M'|'F'), free(bool) }
+        //  ctx = { title, time, type, gender('M'|'F'), benefit('0'|'payback'|'free') }
         //  톤: 운영자가 직접 보내는 담백한 권유체 + 핵심 혜택 나열 + 가벼운 마감 유도.
         // ─────────────────────────────────────────────────────────────
 
-        // 첫 인사 + 초대 한 줄. 혜택(ON)이면 "참가비 80% 페이백" 조건으로 모시고 싶다고 녹인다.
+        // 첫 인사 + 초대 한 줄. 혜택에 따라 "참가비 80% 페이백" 또는 "참가비 무료" 조건으로 모시고 싶다고 녹인다.
         function greetingLines(ctx) {
             var out = ['안녕하세요 😊 로테이블입니다.'];
-            if (ctx.free) {
+            if (ctx.benefit === 'payback') {
                 out.push('이번 오픈 기념으로, 참가비의 80%를 페이백(환급)해 드리는 조건으로 모시고 싶어 연락드려요.');
+            } else if (ctx.benefit === 'free') {
+                out.push("이번 '" + (ctx.title || '{행사명}') + "'에는 참가비 없이 무료로 모시고 싶어 연락드려요.");
             } else {
                 out.push("'" + (ctx.title || '{행사명}') + "' 행사에 초대드리고 싶어 연락드려요.");
             }
@@ -150,7 +153,8 @@
         function closingLines() {
             return [
 '좋은 인연 만나러 편하게 오시겠어요? 자리는 조기 마감될 수 있어요 💘',
-'신청 전에 제 프로필을 눌러서 행사 상세글 한 번 더 보시고 결정해 주세요!'
+'위 일정 말고도 다른 시간대의 행사들도 열려 있으니, 제 프로필을 눌러서 둘러보시고 편한 시간대로 골라 주세요 👀',
+'신청 전에 행사 상세글 한 번 더 보시고 결정해 주세요!'
             ];
         }
 
@@ -164,7 +168,7 @@
             var type    = normType(ctx.type);
             var isF     = ctx.gender === 'F';
             var recruit = isF ? '여성' : '남성';
-            var benefit = ctx.free ? '선착순 무료 참여' : '';   // 네이버는 페이백이 아니라 무료 혜택
+            var benefit = ctx.benefit === 'free' ? '선착순 무료 참여' : '';   // 네이버는 페이백이 아니라 무료 혜택
             var when    = ctx.time || '{일시}';
 
             // 행사 유형 명시 + 유형별 한 줄 설명
@@ -209,24 +213,34 @@
             lines.push(bodyCopy(type, ctx.gender));
             lines.push("");
             lines.push("🗓 일시: " + (ctx.time || '{일시}'));
+            if (ctx.benefit === 'free') { lines.push("🎁 혜택: 선착순 무료 참여"); }
             lines.push("");
             lines = lines.concat(closingLines());
             return lines.join("\n");
         }
 
         var GENDER_LABEL = { M: '남성', F: '여성' };
-        var state = { platform: 'munto', gender: 'F', free: '1' };
+        var state = { platform: 'munto', gender: 'F', benefit: 'payback' };
 
         function currentEvent() {
             var id = String($('#inv-event').val());
             return EVENTS.find(function (e) { return String(e.id) === id; }) || EVENTS[0];
         }
 
-        // 혜택 버튼/요약 라벨: 문토는 80% 페이백, 네이버는 무료 참여
-        function benefitLabel() { return state.platform === 'naver' ? '무료 참여' : '80% 페이백'; }
+        // 혜택 라벨. 네이버 댓글은 페이백이 없고 무료 참여만 쓴다.
+        var BENEFIT_LABEL = { '0': '혜택 없음', payback: '80% 페이백', free: '무료 참여' };
+
+        // 혜택 버튼 상태 동기화: 네이버면 80% 페이백 버튼을 숨기고(선택돼 있었다면 무료 참여로 대체)
+        function syncBenefitButtons() {
+            var naver = state.platform === 'naver';
+            if (naver && state.benefit === 'payback') { state.benefit = 'free'; }
+            $('#inv-free button[data-val="payback"]').toggleClass('d-none', naver);
+            $('#inv-free button').removeClass('active');
+            $('#inv-free button[data-val="' + state.benefit + '"]').addClass('active');
+        }
 
         function render() {
-            $('#inv-free button[data-val="1"]').text(benefitLabel());
+            syncBenefitButtons();
             var ev = currentEvent();
             var ctx = {
                 title: ev.title,
@@ -235,13 +249,13 @@
                 platform: state.platform,
                 type: ev.type,
                 gender: state.gender,
-                free: state.free === '1'
+                benefit: state.benefit
             };
             $('#inv-text').val(build(ctx));
             var typeLabel = normType(ev.type) === 'wine' ? '와인파티' : '1:1 소개팅';
             $('#inv-summary').text(
                 (state.platform === 'naver' ? '네이버' : '문토') + ' · ' + typeLabel + ' · ' + GENDER_LABEL[state.gender]
-                + ' · ' + (state.free === '1' ? benefitLabel() : '혜택 없음')
+                + ' · ' + BENEFIT_LABEL[state.benefit]
             );
         }
 
@@ -260,7 +274,7 @@
             $(this).removeClass('btn-outline-primary').addClass('btn-primary');
         });
         bindGroup('#inv-gender', 'gender');
-        bindGroup('#inv-free', 'free');
+        bindGroup('#inv-free', 'benefit');
         $('#inv-event').on('change', render);
 
         $('#inv-copy').on('click', async function () {

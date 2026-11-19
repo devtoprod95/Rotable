@@ -319,7 +319,10 @@ export default function Home() {
         };
     }, [eventId]);
 
-    const showSelectBar = isOneToOne && matchSelectable;
+    // 1:1 매칭 선택 UI(카드 선택·선택 수·유의 안내·저장 바)는 대기(P)일 때도 보여주고 카드 선택도 허용한다.
+    // 저장은 선택 가능 기간(matchSelectable)에만 열고, 그 전에는 저장 버튼을 비활성화한다.
+    const canSelectMatch = isOneToOne && matchSelectable;
+    const showSelectBar  = canSelectMatch || (isOneToOne && eventStatus === 'P');
 
     return (
         <AppLayout>
@@ -458,15 +461,21 @@ export default function Home() {
                     <button
                         type="button"
                         onClick={saveMatch}
-                        disabled={!dirty || saving}
+                        disabled={!canSelectMatch || !dirty || saving}
                         className={
                             'w-full rounded-2xl py-3 text-center text-sm font-bold shadow-lg transition ' +
-                            (dirty && !saving
+                            (canSelectMatch && dirty && !saving
                                 ? 'bg-primary text-white hover:bg-primary-600 active:scale-[0.99]'
                                 : 'cursor-not-allowed bg-secondary-200 text-secondary-400')
                         }
                     >
                         {saving ? '저장 중...' : `매칭 선택 저장 (${selected.length}/${maxVotes})`}
+                        {/* 대기(P): 아직 저장할 수 없음을 버튼 안에 작게 안내 */}
+                        {!canSelectMatch && (
+                            <span className="mt-0.5 block text-[11px] font-medium">
+                                로테이션이 시작되면 저장할 수 있어요
+                            </span>
+                        )}
                     </button>
                 </div>
             )}

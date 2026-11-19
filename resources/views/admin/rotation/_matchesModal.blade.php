@@ -16,7 +16,11 @@
 
 <style>
     /* 남/여 두 칸: 칸 머리(행사 상세 참여자 목록과 같은 모양) + 카드 세로 나열 */
-    #matchesModal .mc-col-head{ font-weight:800; font-size:1.05rem; padding:.45rem .75rem; border-radius:10px; margin-bottom:.6rem; }
+    #matchesModal .mc-col-head{ display:flex; align-items:center; gap:.35rem; width:100%; border:0; text-align:left; cursor:pointer;
+                                font-weight:800; font-size:1.05rem; padding:.45rem .75rem; border-radius:10px; margin-bottom:.6rem; }
+    #matchesModal .mc-col-head .ck-chevron{ margin-left:auto; }
+    #matchesModal .mc-col-head[aria-expanded="true"] .ck-chevron{ transform:rotate(180deg); }
+    #matchesModal .mc-col.is-collapsed .mc-col-body{ display:none; }
     #matchesModal .mc-col-list{ display:flex; flex-direction:column; gap:.6rem; }
     #matchesModal .mc-col-empty{ text-align:center; color:#868e96; padding:1.5rem 0; font-size:.9rem; }
 </style>
@@ -82,13 +86,24 @@
             return 0;
         }
 
-        // 성별 한 칸: 머리(👨 남 · N명) + 카드 목록
-        function genderColumn(label, cls, list, card){
-            return '<div class="col-12 col-lg-6">'
-                 +   '<div class="mc-col-head ' + cls + '">' + label + ' <span class="text-secondary fw-normal">· ' + list.length + '명</span></div>'
-                 +   (list.length
-                        ? '<div class="mc-col-list">' + list.map(card).join('') + '</div>'
-                        : '<div class="mc-col-empty">투표 내역이 없습니다.</div>')
+        // 남/여 칸 접힘 상태 (기본 펼침). 다시 그려도(검색·새로고침) 유지되고, 브라우저에 기억한다.
+        var COLLAPSE_KEY = 'rotable.matchesModal.collapsed.';
+        function isCollapsed(g){ try { return localStorage.getItem(COLLAPSE_KEY + g) === '1'; } catch(e) { return false; } }
+        function setCollapsed(g, v){ try { localStorage.setItem(COLLAPSE_KEY + g, v ? '1' : '0'); } catch(e) {} }
+
+        // 성별 한 칸: 머리(👨 남 · N명, 누르면 접기/펼치기) + 카드 목록
+        function genderColumn(gender, label, cls, list, card){
+            var collapsed = isCollapsed(gender);
+            return '<div class="col-12 col-lg-6 mc-col' + (collapsed ? ' is-collapsed' : '') + '" data-gender="' + gender + '">'
+                 +   '<button type="button" class="mc-col-head ' + cls + '" aria-expanded="' + (collapsed ? 'false' : 'true') + '">'
+                 +     label + ' <span class="text-secondary fw-normal">· ' + list.length + '명</span>'
+                 +     '<i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i>'
+                 +   '</button>'
+                 +   '<div class="mc-col-body">'
+                 +     (list.length
+                          ? '<div class="mc-col-list">' + list.map(card).join('') + '</div>'
+                          : '<div class="mc-col-empty">투표 내역이 없습니다.</div>')
+                 +   '</div>'
                  + '</div>';
         }
 
@@ -105,8 +120,8 @@
                 $l.html('<div class="mc-empty">표시할 투표 내역이 없습니다.</div>');
             } else {
                 $l.html('<div class="row g-3">'
-                    + genderColumn('👨 남', 'bg-blue-lt', males, card)
-                    + genderColumn('👩 여', 'bg-pink-lt', females, card)
+                    + genderColumn('M', '👨 남', 'bg-blue-lt', males, card)
+                    + genderColumn('F', '👩 여', 'bg-pink-lt', females, card)
                     + '</div>');
             }
             $('#match-pageCount').text('총 ' + list.length + '명 (남 ' + males.length + ' · 여 ' + females.length + ')');
@@ -126,8 +141,15 @@
             });
         }
 
-        // 검색 입력 바인딩 (1회)
+        // 검색 입력 · 남/여 칸 접기 바인딩 (1회)
         $(function(){
+            $('#match-list').on('click', '.mc-col-head', function(){
+                var $col = $(this).closest('.mc-col');
+                var collapsed = !$col.hasClass('is-collapsed');
+                $col.toggleClass('is-collapsed', collapsed);
+                $(this).attr('aria-expanded', collapsed ? 'false' : 'true');
+                setCollapsed($col.data('gender'), collapsed);
+            });
             var t = null;
             $('#match-search').on('input', function(){ clearTimeout(t); t = setTimeout(render, 150); });
             $('#match-search-clear').on('click', function(){ $('#match-search').val(''); render(); });

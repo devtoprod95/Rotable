@@ -49,6 +49,9 @@
     @media (min-width: 1200px){ .pm-grid{ grid-template-columns:repeat(3, minmax(0, 1fr)); } }
     /* 남/여 두 칸일 때는 각 칸이 좁으므로 카드를 한 줄에 하나씩. (한 성별만 볼 때는 위의 반응형 열 수를 쓴다) */
     .pm-col-head{ font-weight:800; font-size:1.05rem; padding:.45rem .75rem; border-radius:10px; margin-bottom:.6rem; }
+    /* 남/여 칸 머리를 누르면 그 칸의 카드를 접고 편다. (접은 상태는 브라우저에 기억) */
+    .pm-col-head[data-bs-toggle="collapse"]{ display:flex; align-items:center; gap:.35rem; cursor:pointer; user-select:none; }
+    .pm-col-head[data-bs-toggle="collapse"] .ck-chevron{ margin-left:auto; }
     @media (min-width: 992px){ .pm-cols:not(.is-solo) .pm-grid{ grid-template-columns:minmax(0, 1fr); } }
     .pm-card{ display:flex; flex-direction:column; border:1px solid #e6e8eb; border-radius:14px; background:#fff; padding:.8rem .9rem; box-shadow:0 1px 3px rgba(0,0,0,.05); border-top:4px solid #206bc4; }
     .pm-card.is-f{ border-top-color:#d6336c; }
@@ -414,7 +417,13 @@
                         <div class="row g-3 pm-cols">
                         @foreach (['M' => ['👨 남', 'bg-blue-lt', $maleCount], 'F' => ['👩 여', 'bg-pink-lt', $femaleCount]] as $colGender => [$colTitle, $colBg, $colCount])
                         <div class="col-12 col-lg-6 pm-col" data-gender-col="{{ $colGender }}">
-                        <div class="pm-col-head {{ $colBg }}">{{ $colTitle }} <span class="text-secondary fw-normal">· {{ $colCount }}명</span></div>
+                        <div class="pm-col-head {{ $colBg }}" role="button" tabindex="0"
+                             data-bs-toggle="collapse" data-bs-target="#pmCollapse{{ $colGender }}"
+                             aria-expanded="true" aria-controls="pmCollapse{{ $colGender }}">
+                            {{ $colTitle }} <span class="text-secondary fw-normal">· {{ $colCount }}명</span>
+                            <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i>
+                        </div>
+                        <div class="collapse show pm-collapse" id="pmCollapse{{ $colGender }}" data-gender="{{ $colGender }}">
                         <div class="pm-grid">
                             @foreach ($event->members->where('gender', $colGender)->values() as $member)
                                 @php
@@ -519,6 +528,7 @@
                                     </div>
                                 </div>
                             @endforeach
+                        </div>
                         </div>
                         </div>
                         @endforeach
@@ -666,6 +676,25 @@
             el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(true); } });
             el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
         })();
+
+        // ===== 상세: 참여자 남/여 칸 접기/펼치기 — 기본은 펼침, 접은 상태는 기억 (헤더에서 Enter/Space 로도 토글) =====
+        document.querySelectorAll('.pm-collapse').forEach(function(el){
+            var KEY = 'rotable.eventDetail.members' + el.dataset.gender + 'Collapsed';
+            var $head = $('[data-bs-target="#' + el.id + '"]');
+            var collapsed = false;
+            try { collapsed = localStorage.getItem(KEY) === '1'; } catch(e) { /* 저장소 사용 불가 시 기본(펼침) */ }
+            if(collapsed){
+                el.classList.remove('show');
+                $head.attr('aria-expanded', 'false');
+            }
+            function save(v){ try { localStorage.setItem(KEY, v ? '1' : '0'); } catch(e) {} }
+            el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(true); } });
+            el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
+            $head.on('keydown', function(e){
+                if(e.target !== this){ return; }
+                if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); this.click(); }
+            });
+        });
 
         // ===== 상세: 참여자 성별 보기 (전체/남/여) =====
         $('input[name="memberGenderFilter"]').on('change', function(){

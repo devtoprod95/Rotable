@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import Placeholder from '@/Components/Placeholder';
 import ProfileDetailModal from '@/Components/ProfileDetailModal';
-import echo from '@/echo';
+import { requestReload, useRealtimeEvent } from '@/realtime';
 
 function birthYearText(birthYear) {
     if (!birthYear) return null;
@@ -361,33 +361,13 @@ export default function Votes() {
         );
     };
 
-    // 실시간: 관리자가 매칭종료(X)하면 이 화면을 리로드해 결과를 바로 보여준다.
-    // (와인파티는 자동 마감 → X 전환, 1:1은 관리자가 직접 종료)
     const eventId = auth?.user?.event_id ?? null;
-    useEffect(() => {
-        if (!eventId) {
-            return undefined;
-        }
-        const channelName = `event-rotation.${eventId}`;
-        const channel = echo.private(channelName);
 
-        const reload = () => {
-            router.reload();
-        };
-
-        channel.listen('.event.closed', reload);
-        // 관리자가 '매칭 시작(V)'하면 이 화면을 리로드해 '매칭하기'를 바로 노출한다.
-        channel.listen('.event.voting.opened', reload);
-        // 로테이션 진행으로 상태/후보가 바뀌는 경우(와인파티 투표중 등)도 갱신.
-        channel.listen('.rotation.updated', reload);
-
-        return () => {
-            // event-rotation 채널은 지속 레이아웃(AppShell)도 구독하므로 leave 하지 않고 이 화면의 리스너만 해제한다.
-            channel.stopListening('.event.closed', reload);
-            channel.stopListening('.event.voting.opened', reload);
-            channel.stopListening('.rotation.updated', reload);
-        };
-    }, [eventId]);
+    // 실시간: 매칭 종료(X)·매칭 시작(V)·로테이션 진행 시 이 화면 전체를 다시 받아 결과/매칭하기를 바로 보여준다.
+    // (와인파티는 자동 마감 → X 전환, 1:1은 관리자가 직접 종료. 채널 구독은 AppShell 이 한다)
+    useRealtimeEvent('event.closed', () => requestReload());
+    useRealtimeEvent('event.voting.opened', () => requestReload());
+    useRealtimeEvent('rotation.updated', () => requestReload());
 
     const matches = candidates.filter((c) => c.is_match);
     // 나를 선택해준 사람(종료 후 공개). 1:1에서 번호 공개 대상.

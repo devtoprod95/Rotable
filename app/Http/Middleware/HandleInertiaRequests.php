@@ -80,8 +80,9 @@ class HandleInertiaRequests extends Middleware
             'gameTabVisible' => $gameTabVisible,
             // 프론트 nav 분기용 - 어필 탭(1:1)을 보여줄지 여부.
             'noteTabVisible' => $noteTabVisible,
-            // 하단 nav 메시지함 뱃지용 - 나에게 온 안읽은 메시지 개수.
-            'unreadCount' => fn () => $member
+            // 하단 nav 메시지함/어필 뱃지용 - 나에게 온 안읽은 메시지 개수.
+            // 1:1 은 메시지가 곧 어필이고 어필 화면은 종료(X) 뒤에만 열리므로, 종료가 아니면(되돌린 경우 포함) 0 으로 둔다.
+            'unreadCount' => fn () => ($member && ! ($noteTabVisible && $event->status !== \App\Models\EventRound::STATUS_CLOSED))
                 ? \App\Models\Message::where('receiver_id', $member->id)->whereNull('read_at')->count()
                 : 0,
             // 하단 nav '요청' 탭 뱃지용 - 아직 확인하지 않은 관리자 답장이 달린 요청 id 목록.

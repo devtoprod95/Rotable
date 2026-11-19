@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import MessageSender from '@/Components/MessageSender';
 import Placeholder from '@/Components/Placeholder';
-import useRealtimeChat from '@/useRealtimeChat';
+import { requestReload, useRealtimeEvent } from '@/realtime';
 
 /** 받은 어필 한 건 (보낸 사람 번호표를 보여 준다) */
 function ReceivedNote({ note }) {
@@ -97,12 +97,13 @@ export default function Notes() {
         router.post('/chats/messages/read', { message_ids: ids }, { preserveScroll: true, preserveState: true });
     }, [tab, received]);
 
-    // 새 어필이 오면(또는 내 어필이 읽히면) 목록을 서버에서 다시 받는다.
-    useRealtimeChat(
-        auth?.user?.id,
-        () => router.reload({ only: ['received', 'sent', 'unreadCount'] }),
-        () => router.reload({ only: ['sent'] }),
-    );
+    // 새 어필이 오면(또는 내 어필이 읽히면) 목록을 서버에서 다시 받는다. (채널 구독은 AppShell 이 한다)
+    useRealtimeEvent('message.sent', () => requestReload(['received', 'sent', 'unreadCount']));
+    useRealtimeEvent('message.read', () => requestReload(['sent']));
+    // 매칭 종료(X)되면 화면이 열리고, 종료를 되돌리면(X → 진행) 다시 잠기므로 화면 전체를 다시 받는다.
+    useRealtimeEvent('event.closed', () => requestReload());
+    useRealtimeEvent('event.voting.opened', () => requestReload());
+    useRealtimeEvent('rotation.updated', () => requestReload());
 
     const list = tab === 'received' ? received : sent;
 

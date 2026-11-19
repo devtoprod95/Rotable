@@ -1,6 +1,6 @@
 import { Link, router, usePage } from "@inertiajs/react";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
-import useRealtimeChat from "@/useRealtimeChat";
+import { cancelPendingReload, requestReload, useRealtimeConnection, useRealtimeEvent } from "@/realtime";
 import NavigationLoader from "@/Components/NavigationLoader";
 import ConfirmModal from "@/Components/ConfirmModal";
 import echo from "@/echo";
@@ -59,48 +59,26 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
     const { auth, eventName, adminImpersonating, accessExpiresAt } = page.props;
     const url = page.url;
 
-    // 게임 탭/화면 접근은 "와인파티 && 진행중(S)" 에서만 허용된다.
-    // 관리자가 매칭 시작(V)/종료(X) 등으로 상태를 바꾸면 실시간으로 반영해야 하므로,
-    // 행사 채널을 구독해 상태 변동 시 nav 상태를 갱신하고,
-    // 게임 화면에 머물러 있으면 홈으로 내보낸다.
+    // 실시간 채널 구독은 여기(지속 레이아웃) 한 곳에서만 한다. 화면들은 useRealtimeEvent 로 이벤트만 받는다.
     const eventId = auth?.user?.event_id ?? null;
-    useEffect(() => {
-        if (!eventId) {
-            return undefined;
+    useRealtimeConnection(auth?.user?.id ?? null, eventId);
+
+    // 게임 탭/화면 접근은 "와인파티 && 진행중(S)" 에서만 허용되고, 어필 탭은 1:1 에서 상태에 따라 열린다.
+    // 관리자가 로테이션 진행·매칭 시작(V)/종료(X)로 상태를 바꾸면 nav 탭 노출 조건을 갱신한다.
+    // 매칭 시작·종료 때 게임 화면에 머물러 있으면 홈으로 내보낸다. (이동하면서 새 props 를 받으므로 재조회는 취소)
+    // 안읽음 수(unreadCount)도 함께 받는다. (1:1 종료를 되돌리면 어필이 다시 잠기므로 뱃지가 사라져야 한다)
+    const refreshNavTabs = () => requestReload(["gameTabVisible", "noteTabVisible", "unreadCount"]);
+    const closeGames = () => {
+        if (window.location.pathname.startsWith("/games")) {
+            cancelPendingReload();
+            router.visit("/home");
+            return;
         }
-
-        const channelName = `event-rotation.${eventId}`;
-        const channel = echo.private(channelName);
-
-        // 매칭 시작(S→V)·종료(→X): 더 이상 진행중(S)이 아니므로 게임을 닫는다.
-        const closeGames = () => {
-            // nav 의 게임 탭 노출 조건(gameTabVisible)을 최신화.
-            router.reload({ only: ["gameTabVisible", "noteTabVisible"] });
-            // 게임 관련 화면에 있으면 즉시 홈으로 이동.
-            if (window.location.pathname.startsWith("/games")) {
-                router.visit("/home");
-            }
-            // 어필 화면에 있으면(종료되면 열린다) 화면 데이터를 다시 받는다.
-            if (window.location.pathname.startsWith("/notes")) {
-                router.reload();
-            }
-        };
-
-        channel.listen(".event.voting.opened", closeGames);
-        channel.listen(".event.closed", closeGames);
-        // 로테이션 진행(P→S 포함)으로 상태가 바뀌면 탭 노출 조건만 갱신.
-        channel.listen(".rotation.updated", () => {
-            router.reload({ only: ["gameTabVisible", "noteTabVisible"] });
-            // 종료를 되돌리면(X → 진행) 어필 화면이 다시 잠겨야 하므로 화면 데이터를 다시 받는다.
-            if (window.location.pathname.startsWith("/notes")) {
-                router.reload();
-            }
-        });
-
-        return () => {
-            echo.leave(`private-${channelName}`);
-        };
-    }, [eventId]);
+        refreshNavTabs();
+    };
+    useRealtimeEvent("rotation.updated", refreshNavTabs);
+    useRealtimeEvent("event.voting.opened", closeGames);
+    useRealtimeEvent("event.closed", closeGames);
 
     // 실시간 이벤트 유실 보정.
     // 모바일에서 화면 잠금·네트워크 전환으로 WebSocket 이 끊기면 그 사이의 이벤트(턴 진행·매칭 시작·종료 등)를
@@ -443,7 +421,6 @@ function BottomNav() {
     const { url, props } = usePage();
     const navItems = navItemsFor(props.eventType, props.gameTabVisible, props.noteTabVisible);
     const sharedUnread = props.unreadCount ?? 0;
-    const memberId = props.auth?.user?.id ?? null;
 
     // 서버에서 내려온 안읽음 수를 기준으로, 소켓 수신 시 실시간 증가시킨다.
     const [unreadCount, setUnreadCount] = useState(sharedUnread);
@@ -464,8 +441,18 @@ function BottomNav() {
         }
     }, [onChatsPage, keepBadge]);
 
+    // 행사 상태가 바뀌면(로테이션 진행·되돌리기, 매칭 시작/종료·종료 되돌리기) 소켓으로 더해 둔 수를 버리고 서버 값으로 맞춘다.
+    // AppShell 이 같은 신호에 unreadCount 를 다시 받으므로, 값이 같아 동기화 effect 가 안 도는 경우에도 서버 값이 맞게 남는다.
+    // (예: 1:1 종료를 되돌리면 어필이 다시 잠겨 서버가 0 을 준다 → 뱃지가 사라진다)
+    const sharedUnreadRef = useRef(sharedUnread);
+    sharedUnreadRef.current = sharedUnread;
+    const resetUnreadToServer = () => setUnreadCount(onChatsPage && !keepBadge ? 0 : sharedUnreadRef.current);
+    useRealtimeEvent("rotation.updated", resetUnreadToServer);
+    useRealtimeEvent("event.voting.opened", resetUnreadToServer);
+    useRealtimeEvent("event.closed", resetUnreadToServer);
+
     // 소켓으로 새 메시지가 오면, 메시지함 밖일 때만 뱃지를 올린다. (대리 로그인 중에는 화면과 무관하게 올린다)
-    useRealtimeChat(memberId, () => {
+    useRealtimeEvent("message.sent", () => {
         if (!onChatsPage || keepBadge) {
             setUnreadCount((n) => n + 1);
         }
@@ -476,8 +463,6 @@ function BottomNav() {
     const sharedReplyKey = sharedReplyIds.join(",");
     const [replyIds, setReplyIds] = useState(() => new Set(sharedReplyIds));
     const onRequestsPage = url.startsWith("/requests");
-    const onRequestsPageRef = useRef(onRequestsPage);
-    onRequestsPageRef.current = onRequestsPage;
 
     // 페이지 이동으로 shared prop 이 갱신되면 동기화. (요청 화면 진입 시 서버가 확인 처리 → 빈 목록)
     useEffect(() => {
@@ -493,23 +478,12 @@ function BottomNav() {
     }, [onRequestsPage, keepBadge]);
 
     // 관리자가 답장(또는 수정)하면, 요청 화면 밖일 때만 뱃지를 올린다.
-    useEffect(() => {
-        if (!memberId) {
-            return undefined;
+    useRealtimeEvent("request.replied", ({ id }) => {
+        if (onRequestsPage) {
+            return;
         }
-        const channel = echo.private(`chat.${memberId}`);
-        const handler = ({ id }) => {
-            if (onRequestsPageRef.current) {
-                return;
-            }
-            setReplyIds((prev) => new Set(prev).add(id));
-        };
-        channel.listen(".request.replied", handler);
-        return () => {
-            // chat.{id} 채널은 메시지 구독과 공유하므로 이 리스너만 해제한다.
-            channel.stopListening(".request.replied", handler);
-        };
-    }, [memberId]);
+        setReplyIds((prev) => new Set(prev).add(id));
+    });
 
     return (
         <div className="vt-nav fixed inset-x-0 bottom-0 z-30">

@@ -1,7 +1,7 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
-import echo from '@/echo';
+import { requestReload, useRealtimeEvent } from '@/realtime';
 
 /** 내가 보낸 요청 한 건 */
 function RequestItem({ request }) {
@@ -72,42 +72,26 @@ export default function Requests() {
         setList(requests);
     }, [requests]);
 
-    // 관리자가 내 요청을 확인하면 실시간으로 '확인됨' 반영.
-    useEffect(() => {
-        const memberId = auth?.user?.id;
-        if (!memberId) {
-            return undefined;
-        }
-        const channelName = `chat.${memberId}`;
-        const channel = echo.private(channelName);
-        const handler = ({ request_ids: ids = [] }) => {
-            setList((prev) =>
-                prev.map((req) =>
-                    ids.includes(req.id) ? { ...req, is_read: true } : req,
-                ),
-            );
-        };
-        // 관리자가 답장하면 해당 요청에 답장을 실시간 반영.
-        const replyHandler = ({ id, reply_body: replyBody, replied_at: repliedAt, reply_edited_at: editedAt }) => {
-            setList((prev) =>
-                prev.map((req) =>
-                    req.id === id
-                        ? { ...req, is_read: true, reply_body: replyBody, replied_at: repliedAt, reply_edited_at: editedAt, is_reply_new: true }
-                        : req,
-                ),
-            );
-            // 이 화면을 보고 있으므로 서버에서 다시 받아 "답장 확인" 처리한다. (하단 '요청' 탭 뱃지 해제)
-            router.reload({ only: ['requests', 'unreadReplyIds'] });
-        };
-        channel.listen('.request.read', handler);
-        channel.listen('.request.replied', replyHandler);
-        return () => {
-            // 같은 chat.{id} 채널을 BottomNav 등이 공유하므로 채널 자체를 leave 하지 않고
-            // 이 이벤트 리스너만 해제한다.
-            channel.stopListening('.request.read', handler);
-            channel.stopListening('.request.replied', replyHandler);
-        };
-    }, [auth?.user?.id]);
+    // 관리자가 내 요청을 확인하면 실시간으로 '확인됨' 반영. (채널 구독은 AppShell 이 한다)
+    useRealtimeEvent('request.read', ({ request_ids: ids = [] }) => {
+        setList((prev) =>
+            prev.map((req) =>
+                ids.includes(req.id) ? { ...req, is_read: true } : req,
+            ),
+        );
+    });
+    // 관리자가 답장하면 해당 요청에 답장을 실시간 반영.
+    useRealtimeEvent('request.replied', ({ id, reply_body: replyBody, replied_at: repliedAt, reply_edited_at: editedAt }) => {
+        setList((prev) =>
+            prev.map((req) =>
+                req.id === id
+                    ? { ...req, is_read: true, reply_body: replyBody, replied_at: repliedAt, reply_edited_at: editedAt, is_reply_new: true }
+                    : req,
+            ),
+        );
+        // 이 화면을 보고 있으므로 서버에서 다시 받아 "답장 확인" 처리한다. (하단 '요청' 탭 뱃지 해제)
+        requestReload(['requests', 'unreadReplyIds']);
+    });
 
     const { data, setData, post, processing, errors, reset } = useForm({ body: '' });
 

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import { SendModal } from '@/Components/MessageSender';
 import ProfileDetailModal from '@/Components/ProfileDetailModal';
-import echo from '@/echo';
+import { requestReload, useRealtimeEvent } from '@/realtime';
 
 const ROUND_STATUS = {
     P: { label: '대기', cls: 'bg-amber-100 text-amber-700' },
@@ -265,59 +265,21 @@ export default function Home() {
         );
     };
 
-    // ── 실시간: 관리자가 로테이션 진행/종료 시 홈을 부분 리로드 ──
-    const eventId = auth?.user?.event_id ?? null;
-    useEffect(() => {
-        if (!eventId) {
-            return undefined;
-        }
-        const channelName = `event-rotation.${eventId}`;
-        const channel = echo.private(channelName);
-
-        // 좌석/턴이 갱신되면 홈 데이터만 다시 받아온다. (전체 새로고침 없이)
-        // 로테이션 시작(P→S) 시 와인파티 '💌 전달' 버튼이 바로 보이도록
-        // canSendMessage/sendLimit 도 함께 갱신한다.
-        const onRotation = () => {
-            router.reload({
-                only: [
-                    'rotations',
-                    'eventStatus',
-                    'matchSelectable',
-                    'myVotedIds',
-                    'canSendMessage',
-                    'sendLimit',
-                ],
-            });
-        };
-        // 매칭이 종료되면 상태만 갱신(선택 UI가 닫히고 "매칭 결과" 탭에서 결과 확인).
-        const onClosed = () => {
-            router.reload({ only: ['eventStatus', 'matchSelectable'] });
-        };
-        // 관리자가 '매칭 시작(V)'하면 선택 UI가 열리도록 상태를 갱신한다.
-        // 와인파티는 V 상태에서도 메시지 전송이 가능하므로 함께 갱신한다.
-        const onVotingOpened = () => {
-            router.reload({
-                only: [
-                    'eventStatus',
-                    'matchSelectable',
-                    'myVotedIds',
-                    'canSendMessage',
-                    'sendLimit',
-                ],
-            });
-        };
-
-        channel.listen('.rotation.updated', onRotation);
-        channel.listen('.event.closed', onClosed);
-        channel.listen('.event.voting.opened', onVotingOpened);
-
-        return () => {
-            // event-rotation 채널은 지속 레이아웃(AppShell)도 구독하므로 leave 하지 않고 이 화면의 리스너만 해제한다.
-            channel.stopListening('.rotation.updated', onRotation);
-            channel.stopListening('.event.closed', onClosed);
-            channel.stopListening('.event.voting.opened', onVotingOpened);
-        };
-    }, [eventId]);
+    // ── 실시간: 관리자가 로테이션 진행/매칭 시작·종료 시 홈을 부분 리로드 ──
+    // (채널 구독은 AppShell 이 하고, 여기서는 이벤트만 받는다. 재조회는 nav 갱신과 합쳐 한 번만 나간다)
+    // 좌석/턴이 갱신되면 홈 데이터만 다시 받아온다. 로테이션 시작(P→S) 시 와인파티 '💌 전달' 버튼이
+    // 바로 보이도록 canSendMessage/sendLimit 도 함께 갱신한다.
+    useRealtimeEvent('rotation.updated', () => {
+        requestReload(['rotations', 'eventStatus', 'matchSelectable', 'myVotedIds', 'canSendMessage', 'sendLimit']);
+    });
+    // 매칭이 종료되면 상태만 갱신(선택 UI가 닫히고 "매칭 결과" 탭에서 결과 확인).
+    useRealtimeEvent('event.closed', () => {
+        requestReload(['eventStatus', 'matchSelectable']);
+    });
+    // 관리자가 '매칭 시작(V)'하면 선택 UI가 열리도록 상태를 갱신한다. (와인파티는 V 에서도 메시지 전송 가능)
+    useRealtimeEvent('event.voting.opened', () => {
+        requestReload(['eventStatus', 'matchSelectable', 'myVotedIds', 'canSendMessage', 'sendLimit']);
+    });
 
     // 1:1 매칭 선택 UI(카드 선택·선택 수·유의 안내·저장 바)는 대기(P)일 때도 보여주고 카드 선택도 허용한다.
     // 저장은 선택 가능 기간(matchSelectable)에만 열고, 그 전에는 저장 버튼을 비활성화한다.

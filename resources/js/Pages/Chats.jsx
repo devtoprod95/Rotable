@@ -2,7 +2,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import AppLayout from '@/Layouts/AppLayout';
 import MessageSender from '@/Components/MessageSender';
-import useRealtimeChat from '@/useRealtimeChat';
+import { useRealtimeEvent } from '@/realtime';
 
 /** 받은 메시지 한 건 (발신자 정보는 익명 처리) */
 function ReceivedMessage({ message }) {
@@ -130,22 +130,19 @@ export default function Chats() {
     // 소켓 구독:
     // - 받은 메시지: 목록 맨 위 추가 (탭이 received 면 다음 effect 에서 자동 읽음 처리)
     // - 보낸 메시지 읽음: 해당 메시지들을 '읽음'으로 갱신
-    useRealtimeChat(
-        auth?.user?.id,
-        (message) => {
-            setMessages((prev) => {
-                if (prev.some((m) => m.id === message.id)) {
-                    return prev;
-                }
-                return [{ ...message, is_read: false }, ...prev];
-            });
-        },
-        ({ message_ids: ids = [] }) => {
-            setSentMessages((prev) =>
-                prev.map((m) => (ids.includes(m.id) ? { ...m, is_read: true } : m)),
-            );
-        },
-    );
+    useRealtimeEvent('message.sent', (message) => {
+        setMessages((prev) => {
+            if (prev.some((m) => m.id === message.id)) {
+                return prev;
+            }
+            return [{ ...message, is_read: false }, ...prev];
+        });
+    });
+    useRealtimeEvent('message.read', ({ message_ids: ids = [] }) => {
+        setSentMessages((prev) =>
+            prev.map((m) => (ids.includes(m.id) ? { ...m, is_read: true } : m)),
+        );
+    });
 
     const list = tab === 'received' ? messages : sentMessages;
 

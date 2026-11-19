@@ -19,8 +19,8 @@
 <style>
     /* 회원 요청 — 표(라이브러리) 대신 카드 목록. 모바일 1열 / 992px↑ 2열.
        카드: ① 회원·테이블·상태(확인 버튼)  ② 요청 내용(말풍선)  ③ 관리자 답장 + 답장 버튼  ④ 요청 시각 */
+    /* 요청 카드는 화면 크기와 상관없이 한 줄에 하나씩 (시간순으로 읽기 쉽게) */
     #requestsModal .rq-list{ display:grid; grid-template-columns:1fr; gap:.6rem; }
-    @media (min-width: 992px){ #requestsModal .rq-list{ grid-template-columns:1fr 1fr; } }
     #requestsModal .rq-card{ border:1px solid #e9ecf1; border-radius:14px; background:#fff; padding:.75rem .85rem; box-shadow:0 1px 3px rgba(20,30,60,.05); }
     #requestsModal .rq-card.is-unread{ border-color:#f4c94a; box-shadow:0 0 0 2px rgba(244,201,74,.25); }
     #requestsModal .rq-head{ display:flex; align-items:center; flex-wrap:wrap; gap:.35rem; }

@@ -2,6 +2,8 @@
     재사용 "매칭 조회" 모달. (전체 투표: 누가 누구를 선택했는지 전부)
     - 페이지네이션이 없으므로 테이블 라이브러리 없이 마크업으로 직접 렌더한다.
     - 상호 매칭(상대도 나를 선택)인 경우 하트·분홍 배경으로 표시한다.
+    - 선택한 사람(voter)을 남/여 두 칸으로 나눠(PC 좌: 남 · 우: 여, 모바일 위아래) 각 칸 안은 번호표 순으로 보여준다.
+      (행사 상세의 참여자 목록과 같은 배치)
     - 카드 렌더는 _matchCard(매칭 결과 모달과 공용). 년생·직업·키·사는 곳·핸드폰·투표 시각을 보여주고 MBTI·흡연·생활습관은 뺀다.
     - 사용법(JS): MatchesModal.open(eventId, eventLabel)
     - matches.list 라우트는 {id} 를 치환해서 사용하므로 플레이스홀더(__ID__)를 둔다.
@@ -11,6 +13,13 @@
 @endphp
 
 @include('admin.rotation._matchCard')
+
+<style>
+    /* 남/여 두 칸: 칸 머리(행사 상세 참여자 목록과 같은 모양) + 카드 세로 나열 */
+    #matchesModal .mc-col-head{ font-weight:800; font-size:1.05rem; padding:.45rem .75rem; border-radius:10px; margin-bottom:.6rem; }
+    #matchesModal .mc-col-list{ display:flex; flex-direction:column; gap:.6rem; }
+    #matchesModal .mc-col-empty{ text-align:center; color:#868e96; padding:1.5rem 0; font-size:.9rem; }
+</style>
 
 <div class="modal fade" id="matchesModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -26,7 +35,7 @@
             <div class="modal-body">
                 <div class="d-flex align-items-center mb-2 flex-wrap gap-1">
                     <span id="match-pageCount" class="badge bg-secondary-lt"></span>
-                    <small class="text-muted">번호표 순 · 서로 선택하면 <span class="badge bg-pink-lt">매칭</span></small>
+                    <small class="text-muted">남/여 · 번호표 순 · 서로 선택하면 <span class="badge bg-pink-lt">매칭</span></small>
                     <button type="button" class="btn btn-outline-secondary btn-sm ms-auto" onclick="MatchesModal.refresh()">
                         <i class="ti ti-refresh me-1"></i> 새로고침
                     </button>
@@ -40,7 +49,7 @@
                     </button>
                 </div>
 
-                <div id="match-list" class="mc-list" aria-live="polite"></div>
+                <div id="match-list" aria-live="polite"></div>
             </div>
         </div>
     </div>
@@ -59,16 +68,48 @@
 
 
 
+        // 번호표 비교: 숫자 번호표는 숫자로(2 < 10), 숫자가 아니면 뒤로.
+        function ticketKey(p){
+            var n = String((p && p.name) || '');
+            return /^\d+$/.test(n) ? [0, parseInt(n, 10), n] : [1, 0, n];
+        }
+        function byTicket(a, b){
+            var ka = ticketKey(a.voter), kb = ticketKey(b.voter);
+            for(var i = 0; i < ka.length; i++){
+                if(ka[i] < kb[i]){ return -1; }
+                if(ka[i] > kb[i]){ return 1; }
+            }
+            return 0;
+        }
+
+        // 성별 한 칸: 머리(👨 남 · N명) + 카드 목록
+        function genderColumn(label, cls, list, card){
+            return '<div class="col-12 col-lg-6">'
+                 +   '<div class="mc-col-head ' + cls + '">' + label + ' <span class="text-secondary fw-normal">· ' + list.length + '명</span></div>'
+                 +   (list.length
+                        ? '<div class="mc-col-list">' + list.map(card).join('') + '</div>'
+                        : '<div class="mc-col-empty">투표 내역이 없습니다.</div>')
+                 + '</div>';
+        }
+
         function render(){
             var kw = ($('#match-search').val() || '').trim();
             var list = MatchCard.filter(rows, kw);
             var $l = $('#match-list');
+
+            var males   = list.filter(function(r){ return r.voter && r.voter.gender !== 'F'; }).sort(byTicket);
+            var females = list.filter(function(r){ return r.voter && r.voter.gender === 'F'; }).sort(byTicket);
+            var card    = function(r){ return MatchCard.html(r, { countLabel: '선택' }); };
+
             if(!list.length){
                 $l.html('<div class="mc-empty">표시할 투표 내역이 없습니다.</div>');
             } else {
-                $l.html(list.map(function(r){ return MatchCard.html(r, { countLabel: '선택' }); }).join(''));
+                $l.html('<div class="row g-3">'
+                    + genderColumn('👨 남', 'bg-blue-lt', males, card)
+                    + genderColumn('👩 여', 'bg-pink-lt', females, card)
+                    + '</div>');
             }
-            $('#match-pageCount').text('총 ' + list.length + '명');
+            $('#match-pageCount').text('총 ' + list.length + '명 (남 ' + males.length + ' · 여 ' + females.length + ')');
         }
 
         function load(){

@@ -4,7 +4,7 @@
 
 @section('content')
 @php
-    $genders = [\App\Models\Member::GENDER_FEMALE => '여', \App\Models\Member::GENDER_MALE => '남'];
+    $genders = [\App\Models\Member::GENDER_MALE => '남', \App\Models\Member::GENDER_FEMALE => '여'];
 @endphp
 <style>
     /* 접기/펼치기 카드 머리 (페이백 화면과 같은 모양) */
@@ -240,7 +240,7 @@
                             <div class="rv-rate-card is-{{ $opt['id'] }}">
                                 <div class="fw-bold mb-1">{{ $opt['label'] }}</div>
                                 <dl>
-                                    @foreach ([\App\Models\Member::GENDER_FEMALE => '여', \App\Models\Member::GENDER_MALE => '남'] as $gender => $label)
+                                    @foreach ($genders as $gender => $label)
                                         @php $base = $event->basePriceFor($opt['id'], $gender); @endphp
                                         <dt>{{ $label }} 정가</dt><dd>{{ $base !== null ? number_format($base) . '원' : '미설정' }}</dd>
                                     @endforeach
@@ -270,8 +270,8 @@
                 <div class="card-body">
                     <div class="rv-people-bar">
                         <div class="rv-gtabs" role="group" aria-label="성별">
-                            <button type="button" class="rv-gtab is-f" data-g="F">여</button>
                             <button type="button" class="rv-gtab is-m" data-g="M">남</button>
+                            <button type="button" class="rv-gtab is-f" data-g="F">여</button>
                             <button type="button" class="rv-gtab" data-g="">전체</button>
                         </div>
                         <input type="search" class="form-control rv-search" id="rvSearch" placeholder="번호표 또는 닉네임 검색" autocomplete="off">
@@ -295,7 +295,7 @@
         var PLATFORM_BADGE = { munto: 'bg-orange-lt', frip: 'bg-cyan-lt' };
         var COST_MAX     = {{ \App\Models\EventCost::MAX_PER_EVENT }};
 
-        var state = { people: [], gender: 'F' };
+        var state = { people: [], gender: 'M' }; // 매출은 남 → 여 순 (페이백만 여자 먼저)
 
         function esc(v){ return $('<div>').text(v == null ? '' : v).html(); }
         function won(n){ return (Number(n) || 0).toLocaleString('ko-KR') + '원'; }
@@ -360,16 +360,16 @@
                 + '</dl></div>';
         }
 
-        // 플랫폼 카드 1개: 머리(플랫폼 색) · 여/남 칸 · 성비 막대
+        // 플랫폼 카드 1개: 머리(플랫폼 색) · 남/여 칸 · 성비 막대
         function platformCard(p, f, m){
             var sub = sum(f, m);
-            var fw  = pct(f.people, sub.people);
+            var mw  = pct(m.people, sub.people);
             return '<div class="rv-pf is-' + esc(p.id) + '">'
                 + '<div class="rv-pf-head"><span class="rv-pf-name">' + esc(p.label) + '<small>' + sub.people + '명</small></span>'
                 +   '<span class="rv-pf-income"><small>실수입</small><b>' + won(income(sub)) + '</b></span></div>'
-                + '<div class="rv-pf-body">' + genderTile('F', f) + genderTile('M', m) + '</div>'
-                + '<div class="rv-pf-foot"><div class="rv-gbar" aria-hidden="true"><span class="is-f" style="width:' + fw + '%"></span><span class="is-m" style="width:' + (100 - fw) + '%"></span></div>'
-                +   '<div class="rv-gbar-label"><span class="is-f">여 ' + f.people + '명 · ' + fw + '%</span><span class="is-m">남 ' + m.people + '명 · ' + Math.round((100 - fw) * 10) / 10 + '%</span></div></div>'
+                + '<div class="rv-pf-body">' + genderTile('M', m) + genderTile('F', f) + '</div>'
+                + '<div class="rv-pf-foot"><div class="rv-gbar" aria-hidden="true"><span class="is-m" style="width:' + mw + '%"></span><span class="is-f" style="width:' + (100 - mw) + '%"></span></div>'
+                +   '<div class="rv-gbar-label"><span class="is-m">남 ' + m.people + '명 · ' + mw + '%</span><span class="is-f">여 ' + f.people + '명 · ' + Math.round((100 - mw) * 10) / 10 + '%</span></div></div>'
                 + '</div>';
         }
 

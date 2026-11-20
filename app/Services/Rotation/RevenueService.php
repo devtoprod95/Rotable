@@ -121,9 +121,9 @@ class RevenueService
         $totals['net_profit'] = $totals['income'] - $costTotal;
 
         usort($people, fn (array $a, array $b): int => [
-            $a['platform'], $a['gender'] === Member::GENDER_FEMALE ? 0 : 1, $a['ticket_no'] ?? PHP_INT_MAX, (string) $a['name'],
+            $a['platform'], $a['gender'] === Member::GENDER_MALE ? 0 : 1, $a['ticket_no'] ?? PHP_INT_MAX, (string) $a['name'],
         ] <=> [
-            $b['platform'], $b['gender'] === Member::GENDER_FEMALE ? 0 : 1, $b['ticket_no'] ?? PHP_INT_MAX, (string) $b['name'],
+            $b['platform'], $b['gender'] === Member::GENDER_MALE ? 0 : 1, $b['ticket_no'] ?? PHP_INT_MAX, (string) $b['name'],
         ]);
 
         return [

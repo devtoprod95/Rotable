@@ -77,8 +77,8 @@ class EventPayback extends Model
     public static function rateOptions(): array
     {
         return [
-            self::RATE_FULL    => '페이백 100%',
             self::RATE_PARTIAL => '페이백 80%',
+            self::RATE_FULL    => '페이백 100%',
         ];
     }
 

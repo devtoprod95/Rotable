@@ -20,6 +20,13 @@
     .pb-tile.is-noshow{ border-left-color:#d63939; background:#fdecec; } .pb-tile.is-noshow .pb-num{ color:#d63939; }
     .pb-tile.is-total{ border-left-color:#495057; }
 
+    /* 접기/펼치기 카드 머리 */
+    .pb-collapse-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; cursor:pointer; user-select:none; }
+    .pb-collapse-head:focus-visible{ outline:3px solid #74c0fc; outline-offset:-3px; }
+    .pb-head-side{ display:flex; align-items:center; flex-wrap:wrap; gap:.35rem; justify-content:flex-end; }
+    .pb-head-badge{ font-size:.8rem; font-weight:700; }
+    @media (max-width: 575.98px){ .pb-head-side{ width:100%; justify-content:flex-start; } }
+
     /* 참가비: 플랫폼별 블록 */
     .pb-fees{ display:flex; flex-direction:column; gap:.6rem; }
     .pb-fee-block{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem .6rem; padding:.7rem .75rem; border:1px solid #e6e8eb; border-radius:12px; border-left:4px solid #adb5bd; }
@@ -100,6 +107,28 @@
     .pb-pick-empty{ padding:1rem; text-align:center; color:#868e96; font-size:.9rem; }
     .pb-picked{ margin-top:6px; text-align:left; font-size:.88rem; color:#495057; }
 
+    /* 추가/수정 창(Swal): 화면 높이 안에 맞추고 본문만 스크롤, 닫기(X)·하단 버튼은 항상 보이게 */
+    .swal2-popup.pb-swal{ width:min(560px, calc(100vw - 1rem)); max-height:calc(100dvh - 1rem); padding:.75rem 0; }
+    .pb-swal .swal2-title{ padding:.35rem 3rem .5rem 1rem; font-size:1.15rem; text-align:left; }
+    .pb-swal .swal2-close{ font-size:2rem; }
+    .pb-swal .pb-swal-body{ margin:0; padding:0 1rem .25rem; max-height:calc(100dvh - 10rem); overflow-y:auto; -webkit-overflow-scrolling:touch; }
+    .pb-swal .swal2-validation-message{ margin:.5rem 1rem 0; }
+    .pb-swal .pb-swal-actions{ width:100%; margin:.6rem 0 0; padding:.6rem 1rem 0; border-top:1px solid #eef0f3; flex-wrap:nowrap; gap:.5rem; }
+    .pb-swal .pb-swal-actions button{ flex:1 1 0; margin:0; min-height:46px; }
+    .pb-swal .swal2-input, .pb-swal .swal2-select{ min-height:44px; height:auto; font-size:1rem; }
+    /* 페이백 비율: 버튼형 2칸 */
+    .pb-seg{ display:grid; grid-template-columns:1fr 1fr; gap:.4rem; }
+    .pb-seg-item{ position:relative; margin:0; cursor:pointer; }
+    .pb-seg-item input{ position:absolute; opacity:0; pointer-events:none; }
+    .pb-seg-item span{ display:flex; align-items:center; justify-content:center; min-height:42px; border:1px solid #dee2e6; border-radius:10px; font-weight:800; color:#495057; background:#fff; }
+    .pb-seg-item input:checked + span{ background:#f76707; border-color:#f76707; color:#fff; }
+    .pb-seg-item input:focus-visible + span{ outline:3px solid #74c0fc; outline-offset:1px; }
+    .pb-form-2col{ display:grid; grid-template-columns:1fr 1fr; gap:0 .5rem; }
+    @media (max-width: 575.98px){
+        .pb-pick-list{ max-height:180px; }
+        .pb-swal .pb-swal-body{ max-height:calc(100dvh - 9rem); }
+    }
+
     /* 모바일(좁은 화면) 보정 */
     @media (max-width: 575.98px){
         /* 상태 필터 4칸: 글자 줄이고 줄바꿈 방지 */
@@ -129,10 +158,16 @@
     {{-- 합계 --}}
     <div class="col-12">
         <div class="card">
-            <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <h3 class="card-title mb-0"><i class="ti ti-cash me-1"></i> 페이백 현황</h3>
-                <button type="button" class="btn btn-sm btn-outline-primary" id="pbRefreshBtn"><i class="ti ti-refresh me-1"></i>새로고침</button>
+            {{-- 머리를 누르면 접기/펼치기 (상태 기억). 접어도 입금 대기 금액은 머리에 보인다. --}}
+            <div class="card-header pb-collapse-head" role="button" tabindex="0"
+                 data-bs-toggle="collapse" data-bs-target="#pbSummaryCollapse" aria-expanded="true" aria-controls="pbSummaryCollapse">
+                <h3 class="card-title mb-0 d-flex align-items-center gap-1"><i class="ti ti-cash me-1"></i> 페이백 현황 <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i></h3>
+                <div class="pb-head-side">
+                    <span class="badge bg-orange-lt pb-head-badge">대기 <span id="sumWaitHead">0원</span></span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="pbRefreshBtn"><i class="ti ti-refresh me-1"></i>새로고침</button>
+                </div>
             </div>
+            <div class="collapse show" id="pbSummaryCollapse">
             <div class="card-body">
                 <div class="pb-stats" aria-live="polite">
                     <div class="pb-tile is-wait">
@@ -160,15 +195,20 @@
                     <div class="text-secondary small mt-2"><i class="ti ti-info-circle me-1"></i>행사 시작 전이라 아직 노쇼를 판정하지 않아요. 로테이션이 시작되면 체크인 안 한 사람이 노쇼로 표시돼요.</div>
                 @endunless
             </div>
+            </div>
         </div>
     </div>
 
     {{-- 참가비: 플랫폼 × 성별 정가 + 얼리버드 할인율 --}}
     <div class="col-12">
         <div class="card">
-            <div class="card-header">
-                <h3 class="card-title mb-0"><i class="ti ti-receipt me-1"></i> 이 행사 참가비</h3>
+            {{-- 머리를 누르면 접기/펼치기 (상태 기억). 접어도 저장된 참가비 요약은 머리에 보인다. --}}
+            <div class="card-header pb-collapse-head" role="button" tabindex="0"
+                 data-bs-toggle="collapse" data-bs-target="#pbFeeCollapse" aria-expanded="true" aria-controls="pbFeeCollapse">
+                <h3 class="card-title mb-0 d-flex align-items-center gap-1"><i class="ti ti-receipt me-1"></i> 이 행사 참가비 <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i></h3>
+                <div class="pb-head-side" id="feeHeadSummary"></div>
             </div>
+            <div class="collapse show" id="pbFeeCollapse">
             <div class="card-body">
                 {{-- 플랫폼별 한 묶음. 모바일: 남/여 2칸 + 할인율 한 줄 / PC(md+): 플랫폼 · 남 · 여 · 할인율 한 줄 --}}
                 <div class="pb-fees">
@@ -203,6 +243,7 @@
                     얼리버드는 선착순이라 사람마다 체크해요. 체크한 사람은 그 플랫폼의 할인율만큼 결제 금액이 빠져요.
                     결제 금액은 사람마다 따로 고칠 수 있고, 참가비를 바꿔도 이미 추가한 사람의 금액은 그대로예요.
                 </div>
+            </div>
             </div>
         </div>
     </div>
@@ -310,11 +351,13 @@
                 if(Array.isArray(state.fees.prices)){ state.fees.prices = {}; } // 빈 JSON 은 배열로 올 수 있다
                 if(!state.fees.early_bird_rates || Array.isArray(state.fees.early_bird_rates)){ state.fees.early_bird_rates = {}; }
                 renderSummary(res.summary || {});
+                renderFeeHead();
                 render();
             }).fail(ajaxError);
         }
 
         function renderSummary(s){
+            $('#sumWaitHead').text(won(s.waiting_sum) + ' · ' + (s.waiting_count || 0) + '명');
             $('#sumWaitAmount').text(won(s.waiting_sum));
             $('#sumWaitCount').text(s.waiting_count || 0);
             $('#sumDoneAmount').text(won(s.done_sum));
@@ -405,6 +448,40 @@
             $('#pbList').html(html);
         }
 
+        // 참가비 카드 머리 요약: 플랫폼별 "문토 남 39,000 · 여 29,000 · 얼리 20%" (저장된 값 기준)
+        function renderFeeHead(){
+            var html = PLATFORMS.map(function(p){
+                var pr = state.fees.prices[p.id] || {};
+                var parts = [];
+                if(pr.M != null){ parts.push('남 ' + Number(pr.M).toLocaleString('ko-KR')); }
+                if(pr.F != null){ parts.push('여 ' + Number(pr.F).toLocaleString('ko-KR')); }
+                if(rateFor(p.id) > 0){ parts.push('얼리 ' + rateFor(p.id) + '%'); }
+                return '<span class="badge ' + (PLATFORM_BADGE[p.id] || 'bg-secondary-lt') + ' pb-head-badge">' + esc(p.label) + ' ' + (parts.length ? esc(parts.join(' · ')) : '미설정') + '</span>';
+            }).join('');
+            $('#feeHeadSummary').html(html);
+        }
+
+        // 카드 접기/펼치기: 상태 기억(새로고침 후에도 유지), 머리에서 Enter/Space 로도 토글.
+        // 머리 안의 버튼(새로고침)을 눌렀을 때는 접히지 않게 한다.
+        document.querySelectorAll('#pbSummaryCollapse, #pbFeeCollapse').forEach(function(el){
+            var KEY   = 'rotable.payback.' + el.id + '.collapsed';
+            var $head = $('[data-bs-target="#' + el.id + '"]');
+            var collapsed = false;
+            try { collapsed = localStorage.getItem(KEY) === '1'; } catch(e) { /* 저장소 사용 불가 시 기본(펼침) */ }
+            if(collapsed){
+                el.classList.remove('show');
+                $head.attr('aria-expanded', 'false');
+            }
+            function save(v){ try { localStorage.setItem(KEY, v ? '1' : '0'); } catch(e) {} }
+            el.addEventListener('hidden.bs.collapse', function(e){ if(e.target === el){ save(true); } });
+            el.addEventListener('shown.bs.collapse', function(e){ if(e.target === el){ save(false); } });
+            $head.on('keydown', function(e){
+                if(e.target !== this){ return; }
+                if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); this.click(); }
+            });
+        });
+        $('.pb-collapse-head').on('click', 'button', function(e){ e.stopPropagation(); });
+
         $('input[name=pbFilter]').on('change', render);
         $('#pbRefreshBtn').on('click', load);
 
@@ -427,8 +504,8 @@
                 ? '<div style="text-align:left;font-weight:800;font-size:1rem;">' + esc(who(item)) + ' · ' + esc(PLATFORM_LABEL[item.platform] || '') + '</div>'
                 : label('대상자 *', 'sw-search')
                   + '<div class="pb-pick-tabs" role="group" aria-label="성별">'
-                  +   '<button type="button" class="pb-pick-tab is-m" data-g="M">남 ' + countM + '</button>'
                   +   '<button type="button" class="pb-pick-tab is-f" data-g="F">여 ' + countF + '</button>'
+                  +   '<button type="button" class="pb-pick-tab is-m" data-g="M">남 ' + countM + '</button>'
                   + '</div>'
                   + '<input id="sw-search" class="swal2-input" placeholder="번호표 또는 닉네임 검색" autocomplete="off" style="width:100%;margin:6px 0 0;box-sizing:border-box;">'
                   + '<div id="sw-roster-list" class="pb-pick-list" role="radiogroup" aria-label="대상자 목록"></div>'
@@ -443,9 +520,9 @@
                 + '</select>';
 
             var rateField = label('페이백 비율 *', 'sw-rate')
-                + '<div style="display:flex;gap:16px;text-align:left;">'
-                + Object.keys(RATE_LABEL).sort(function(a, b){ return b - a; }).map(function(rate){
-                    return '<label style="display:flex;align-items:center;gap:6px;font-weight:700;cursor:pointer;"><input type="radio" name="sw-rate" value="' + rate + '"' + (Number(rate) === Number(v.payback_rate) ? ' checked' : '') + ' style="width:18px;height:18px;"> ' + esc(RATE_LABEL[rate]) + '</label>';
+                + '<div class="pb-seg">'
+                + Object.keys(RATE_LABEL).sort(function(a, b){ return a - b; }).map(function(rate){ // 80% 를 왼쪽에
+                    return '<label class="pb-seg-item"><input type="radio" name="sw-rate" value="' + rate + '"' + (Number(rate) === Number(v.payback_rate) ? ' checked' : '') + '><span>' + esc(RATE_LABEL[rate]) + '</span></label>';
                 }).join('')
                 + '</div>';
 
@@ -459,12 +536,16 @@
                 html: rosterField + rateField + ebField
                     + label('결제 금액 (원)', 'sw-paid') + input('sw-paid', v.paid_amount != null ? Number(v.paid_amount).toLocaleString('ko-KR') : '', '', 'inputmode="numeric"')
                     + '<div id="sw-preview" style="text-align:left;margin-top:6px;font-size:.9rem;color:#d9480f;font-weight:800;"></div>'
-                    + bankField
+                    + '<div class="pb-form-2col"><div>' + bankField + '</div><div>'
+                    +   label('예금주', 'sw-holder') + input('sw-holder', v.account_holder || '', '예: 홍길동', 'maxlength="30"')
+                    + '</div></div>'
                     + label('계좌번호', 'sw-account') + input('sw-account', v.account_number || '', '숫자와 - 만', 'maxlength="30" inputmode="numeric"')
-                    + label('예금주', 'sw-holder') + input('sw-holder', v.account_holder || '', '예: 홍길동', 'maxlength="30"')
                     + label('메모', 'sw-memo') + input('sw-memo', v.memo || '', '', 'maxlength="255"'),
                 showCancelButton: true,
+                showCloseButton: true,
+                closeButtonAriaLabel: '닫기',
                 reverseButtons: true,
+                customClass: { popup: 'pb-swal', htmlContainer: 'pb-swal-body', actions: 'pb-swal-actions' },
                 confirmButtonText: isEdit ? '저장' : '추가',
                 cancelButtonText: '취소',
                 didOpen: function(){
@@ -477,7 +558,8 @@
                     }
 
                     // 대상자 목록: 고른 성별 + 검색어(번호표 정확 일치 또는 닉네임 포함)
-                    var pickGender = countM > 0 ? 'M' : 'F';
+                    // 여자가 먼저 오는 경우가 많아 여자 탭부터 연다. (여자 후보가 없으면 남자)
+                    var pickGender = countF > 0 ? 'F' : 'M';
                     function renderPickList(){
                         if(isEdit){ return; }
                         $('.pb-pick-tab').each(function(){ $(this).toggleClass('is-active', $(this).data('g') === pickGender); });

@@ -116,7 +116,8 @@ class RosterController extends RotationBaseController
         // 입장등록 완료자의 회원 상세 모달용 데이터 ("성별|번호" => 회원 배열)
         $memberDetails = $this->memberDetailsByTicket($id);
 
-        $rosters = $this->rosterService->rosterList($id)->map(function (EventRoster $r) use ($registered, $memberDetails): array {
+        // 페이백 정보(비율·금액·입금 상태)를 카드에 함께 보여주려고 한 번에 불러온다.
+        $rosters = $this->rosterService->rosterList($id)->load('payback')->map(function (EventRoster $r) use ($registered, $memberDetails): array {
             $regKey = $r->ticket_no !== null ? ($r->gender . '|' . (int) $r->ticket_no) : null;
 
             return [
@@ -126,6 +127,12 @@ class RosterController extends RotationBaseController
                 'gender'            => $r->gender,
                 'platform'          => $r->platform,
                 'pay_type'          => $r->pay_type ?: EventRoster::PAY_NORMAL,
+                // 페이백 대상이면 비율·금액·입금 완료 여부 (계좌 정보는 내리지 않는다)
+                'payback'           => $r->payback !== null ? [
+                    'rate'   => $r->payback->payback_rate,
+                    'amount' => $r->payback->payback_amount,
+                    'done'   => $r->payback->isTransferred(),
+                ] : null,
                 'height'            => $r->height,
                 'birth_year'        => $r->birth_year,
                 'job'               => $r->job,

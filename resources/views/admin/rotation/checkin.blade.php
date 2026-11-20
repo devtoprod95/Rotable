@@ -442,6 +442,11 @@
             if(r.pay_type && r.pay_type !== 'N'){
                 pf += `<span class="badge ${PAY_TYPE_BADGE[r.pay_type] || 'bg-secondary-lt'}">${esc(PAY_TYPE_LABEL[r.pay_type] || r.pay_type)}</span>`;
             }
+            // 페이백 배지: 비율 · 금액 · 입금 상태 (입금 완료=초록, 대기=주황)
+            if(r.payback){
+                var pbText = '페이백 ' + r.payback.rate + '% · ' + Number(r.payback.amount || 0).toLocaleString('ko-KR') + '원 · ' + (r.payback.done ? '입금 완료' : '입금 대기');
+                pf += `<span class="badge ${r.payback.done ? 'bg-green-lt' : 'bg-orange-lt'}"><i class="ti ti-cash me-1"></i>${esc(pbText)}</span>`;
+            }
 
             // ① 번호표 박스 (성별 색)
             var ticket = r.ticket_no

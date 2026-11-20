@@ -53,8 +53,13 @@
 
     /* 설정: 플랫폼 수수료율 */
     .rv-rate-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.6rem; }
-    @media (min-width: 768px){ .rv-rate-grid{ grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); } }
-    .rv-rate-grid .form-control{ min-height:44px; }
+    @media (max-width: 399.98px){ .rv-rate-grid{ grid-template-columns:minmax(0, 1fr); } }
+    .rv-rate-card{ border:1px solid #e6e8eb; border-radius:12px; padding:.6rem .75rem; border-left:4px solid #adb5bd; }
+    .rv-rate-card.is-munto{ border-left-color:#f76707; }
+    .rv-rate-card.is-frip{ border-left-color:#15aabf; }
+    .rv-rate-card dl{ display:grid; grid-template-columns:auto 1fr; gap:.15rem .75rem; margin:0; font-size:.86rem; }
+    .rv-rate-card dt{ color:#868e96; font-weight:700; }
+    .rv-rate-card dd{ margin:0; text-align:right; font-weight:700; }
     .rv-foot{ display:flex; flex-direction:column; gap:.5rem; margin-top:.75rem; }
     .rv-foot .btn{ min-height:44px; }
     @media (min-width: 768px){ .rv-foot{ flex-direction:row; justify-content:flex-end; } }
@@ -199,34 +204,33 @@
         </div>
     </div>
 
-    {{-- ④ 설정: 플랫폼 수수료율 (참가비는 페이백 탭에서) --}}
+    {{-- ④ 플랫폼 수수료 (행사 정보에서 설정한 값, 보기만) --}}
     <div class="col-12 col-lg-6">
         <div class="card h-100">
             <div class="card-header rv-collapse-head" role="button" tabindex="0"
                  data-bs-toggle="collapse" data-bs-target="#rvSettingCollapse" aria-expanded="true" aria-controls="rvSettingCollapse">
-                <h3 class="card-title mb-0 d-flex align-items-center gap-1"><i class="ti ti-percentage me-1"></i> 플랫폼 수수료 <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i></h3>
+                <h3 class="card-title mb-0 d-flex align-items-center gap-1"><i class="ti ti-percentage me-1"></i> 참가비 · 수수료 <i class="ti ti-chevron-down ck-chevron" aria-hidden="true"></i></h3>
                 <div class="rv-head-side" id="rvRateHead"></div>
             </div>
             <div class="collapse show" id="rvSettingCollapse">
                 <div class="card-body">
                     <div class="rv-rate-grid">
                         @foreach ($platformOptions as $opt)
-                            <div>
-                                <label class="form-label mb-1" for="rvRate-{{ $opt['id'] }}">{{ $opt['label'] }} 수수료율</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control rv-rate" inputmode="numeric" maxlength="3" id="rvRate-{{ $opt['id'] }}"
-                                           data-platform="{{ $opt['id'] }}" value="{{ $event->platformFeeRateFor($opt['id']) }}">
-                                    <span class="input-group-text">%</span>
-                                </div>
+                            <div class="rv-rate-card is-{{ $opt['id'] }}">
+                                <div class="fw-bold mb-1">{{ $opt['label'] }}</div>
+                                <dl>
+                                    @foreach ([\App\Models\Member::GENDER_FEMALE => '여', \App\Models\Member::GENDER_MALE => '남'] as $gender => $label)
+                                        @php $base = $event->basePriceFor($opt['id'], $gender); @endphp
+                                        <dt>{{ $label }} 정가</dt><dd>{{ $base !== null ? number_format($base) . '원' : '미설정' }}</dd>
+                                    @endforeach
+                                    <dt>얼리버드</dt><dd>{{ $event->earlyBirdRateFor($opt['id']) }}%</dd>
+                                    <dt>수수료</dt><dd>{{ $event->platformFeeRateFor($opt['id']) }}%</dd>
+                                </dl>
                             </div>
                         @endforeach
                     </div>
                     <div class="rv-foot">
-                        <button type="button" class="btn btn-primary px-4" id="rvRateSaveBtn"><i class="ti ti-device-floppy me-1"></i>수수료율 저장</button>
-                    </div>
-                    <div class="text-secondary small mt-2">
-                        참가비(플랫폼 × 성별 정가)와 얼리버드 할인율은
-                        <a href="{{ route('admin.rotation.event.payback', $event->id) }}">페이백 탭</a>에서 정해요.
+                        <a href="{{ route('admin.rotation.event.detail', $event->id) }}" class="btn btn-outline-primary px-4"><i class="ti ti-edit me-1"></i>행사 정보에서 수정</a>
                     </div>
                 </div>
             </div>
@@ -262,7 +266,6 @@
 <script>
     $(document).ready(function(){
         var DATA_URL     = @json(route('admin.rotation.event.revenue.data', $event->id));
-        var RATE_URL     = @json(route('admin.rotation.event.platformFees.save', $event->id));
         var COST_URL     = @json(route('admin.rotation.event.costs.save', $event->id));
         var PAYTYPE_TPL  = @json(route('admin.rotation.event.rosters.payType', [$event->id, '__RID__']));
         var PLATFORMS    = @json($platformOptions);
@@ -310,7 +313,7 @@
             $('#tPeopleLine').text('신청 ' + (t.people || 0) + '명 · 유료 ' + (t.paid_people || 0) + '명 (얼리버드 ' + (t.early_people || 0) + '명) · 무료 ' + (t.free_people || 0) + '명 · 노쇼 ' + (t.no_show || 0) + '명');
             var miss = t.missing_price || 0;
             $('#tMissingWarn').toggleClass('d-none', miss === 0)
-                .html(miss ? '<i class="ti ti-alert-triangle me-1"></i>참가비가 설정되지 않은 플랫폼·성별의 신청자 <b>' + miss + '명</b>은 0원으로 계산했어요. 페이백 탭에서 참가비를 입력해 주세요.' : '');
+                .html(miss ? '<i class="ti ti-alert-triangle me-1"></i>참가비가 설정되지 않은 플랫폼·성별의 신청자 <b>' + miss + '명</b>은 0원으로 계산했어요. 행사 상세의 행사 정보에서 참가비를 입력해 주세요.' : '');
         }
 
         /* ===== 플랫폼 · 성별 ===== */
@@ -358,15 +361,6 @@
                 return '<span class="badge ' + (PLATFORM_BADGE[p.id] || 'bg-secondary-lt') + ' rv-head-badge">' + esc(p.label) + ' ' + (Number(rates[p.id]) || 0) + '%</span>';
             }).join(''));
         }
-        $('#rvRateSaveBtn').on('click', function(){
-            var data = {};
-            $('.rv-rate').each(function(){ data['platform_fee_rates[' + $(this).data('platform') + ']'] = this.value; });
-            var $btn = $(this).prop('disabled', true);
-            $.ajax({ url: RATE_URL, type: 'PUT', data: data,
-                success: function(res){ alert(res?.msg); load(); }, error: ajaxError
-            }).always(function(){ $btn.prop('disabled', false); });
-        });
-
         /* ===== 비용 ===== */
         var costsDirty = false; // 저장 전 입력 중이면 새로고침이 덮어쓰지 않게
         function costRow(c){

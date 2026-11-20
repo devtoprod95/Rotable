@@ -40,6 +40,21 @@
     .ef-option-state{ min-width:2.5em; font-size:.85rem; font-weight:700; color:#868e96; }
     .ef-option-ctrl .form-check-input:checked + .ef-option-state{ color:#2fb344; }
     .ef-footer{ margin-top:1.5rem; padding-top:1rem; border-top:1px solid #eef0f3; }
+    /* 참가비 · 수수료 (선택) */
+    .ef-fee-section{ margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid #eef0f3; }
+    .ef-fees{ display:flex; flex-direction:column; gap:.6rem; }
+    .ef-fee-block{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem .6rem; padding:.7rem .75rem; border:1px solid #e6e8eb; border-radius:12px; border-left:4px solid #adb5bd; }
+    .ef-fee-block.is-munto{ border-left-color:#f76707; }
+    .ef-fee-block.is-frip{ border-left-color:#15aabf; }
+    .ef-fee-platform{ grid-column:1 / -1; font-weight:800; }
+    .ef-fee-cell{ min-width:0; }
+    .ef-fee-cell .form-control{ min-height:44px; }
+    .ef-fee-label{ display:block; font-size:.78rem; color:#868e96; font-weight:700; margin-bottom:.2rem; }
+    .ef-fee-eb{ font-size:.78rem; color:#ae3ec9; font-weight:700; margin-top:.2rem; min-height:1.1em; }
+    @media (min-width: 768px){
+        .ef-fee-block{ grid-template-columns:72px repeat(4, minmax(0, 1fr)); align-items:start; }
+        .ef-fee-platform{ grid-column:auto; padding-top:1.65rem; }
+    }
     @media (min-width: 992px){
         .ef-side{ border-left:1px solid #eef0f3; padding-left:1.75rem; }
     }
@@ -260,6 +275,49 @@
                             </div>
                         @endunless
                     </div>
+                </div>
+
+                {{-- 참가비 · 수수료 (선택). 페이백·매출 계산에 쓴다. 플랫폼별 한 묶음
+                     모바일: 여/남 정가 2칸 + 얼리버드/수수료 2칸 / PC(md+): 플랫폼 · 여 · 남 · 얼리버드 · 수수료 한 줄 --}}
+                @php
+                    $feeGenders = [\App\Models\Member::GENDER_FEMALE => '여', \App\Models\Member::GENDER_MALE => '남'];
+                @endphp
+                <div class="ef-fee-section">
+                    <div class="ef-section-title"><i class="ti ti-receipt"></i>참가비 · 수수료 <span class="fw-normal">(선택 · 페이백/매출 계산용)</span></div>
+                    <div class="ef-fees">
+                        @foreach (\App\Models\Member::platformOptions() as $opt)
+                            <div class="ef-fee-block is-{{ $opt['id'] }}">
+                                <div class="ef-fee-platform">{{ $opt['label'] }}</div>
+                                @foreach ($feeGenders as $gender => $gLabel)
+                                    @php $price = $isEdit ? $event->basePriceFor($opt['id'], $gender) : null; @endphp
+                                    <div class="ef-fee-cell">
+                                        <label class="ef-fee-label" for="{{ $idPrefix }}Fee-{{ $opt['id'] }}-{{ $gender }}">{{ $gLabel }} 정가 (원)</label>
+                                        <input type="text" class="form-control ef-money ef-fee-price" inputmode="numeric" id="{{ $idPrefix }}Fee-{{ $opt['id'] }}-{{ $gender }}"
+                                               data-platform="{{ $opt['id'] }}" data-gender="{{ $gender }}"
+                                               value="{{ $price !== null ? number_format($price) : '' }}" placeholder="미설정">
+                                        <div class="ef-fee-eb" data-eb-for="{{ $opt['id'] }}-{{ $gender }}"></div>
+                                    </div>
+                                @endforeach
+                                <div class="ef-fee-cell">
+                                    <label class="ef-fee-label" for="{{ $idPrefix }}Eb-{{ $opt['id'] }}">얼리버드 할인율</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control ef-fee-eb-rate" inputmode="numeric" maxlength="3" id="{{ $idPrefix }}Eb-{{ $opt['id'] }}"
+                                               data-platform="{{ $opt['id'] }}" value="{{ $isEdit ? $event->earlyBirdRateFor($opt['id']) : 0 }}">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <div class="ef-fee-cell">
+                                    <label class="ef-fee-label" for="{{ $idPrefix }}Pf-{{ $opt['id'] }}">플랫폼 수수료율</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control ef-fee-pf-rate" inputmode="numeric" maxlength="3" id="{{ $idPrefix }}Pf-{{ $opt['id'] }}"
+                                               data-platform="{{ $opt['id'] }}" value="{{ $isEdit ? $event->platformFeeRateFor($opt['id']) : 0 }}">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="create-hint mt-2">비워 두고 나중에 행사 상세에서 넣어도 돼요. 바꿔도 이미 추가한 페이백 대상의 금액은 그대로예요.</div>
                 </div>
 
                 {{-- 하단 버튼: 모바일은 전체 폭, PC 는 오른쪽 정렬 --}}
@@ -603,6 +661,33 @@
             });
         }
 
+        // ===== 생성/수정 공통: 참가비 · 수수료 입력 =====
+        function efDigits(v){ var d = String(v == null ? '' : v).replace(/[^\d]/g, ''); return d === '' ? null : parseInt(d, 10); }
+        // 금액 칸: 입력하면서 쉼표 표시, 정가 아래에 얼리버드가 미리보기
+        $(document).on('input', '.ef-money', function(){
+            var n = efDigits(this.value);
+            this.value = n === null ? '' : n.toLocaleString('ko-KR');
+        });
+        function efRenderEarlyBird(){
+            $('.ef-fee-price').each(function(){
+                var platform = $(this).data('platform');
+                var rate = Math.min(100, efDigits($('.ef-fee-eb-rate[data-platform="' + platform + '"]').val()) || 0);
+                var base = efDigits(this.value);
+                $('[data-eb-for="' + platform + '-' + $(this).data('gender') + '"]')
+                    .text(base !== null && rate > 0 ? '얼리버드 ' + Math.floor(base * (100 - rate) / 100).toLocaleString('ko-KR') + '원' : '');
+            });
+        }
+        $(document).on('input', '.ef-fee-price, .ef-fee-eb-rate', efRenderEarlyBird);
+        efRenderEarlyBird();
+        // 요청에 붙일 참가비·수수료 값
+        function efFeeData(){
+            var data = {};
+            $('.ef-fee-price').each(function(){ data['fee_prices[' + $(this).data('platform') + '][' + $(this).data('gender') + ']'] = this.value; });
+            $('.ef-fee-eb-rate').each(function(){ data['early_bird_rates[' + $(this).data('platform') + ']'] = this.value; });
+            $('.ef-fee-pf-rate').each(function(){ data['platform_fee_rates[' + $(this).data('platform') + ']'] = this.value; });
+            return data;
+        }
+
         @unless ($isEdit)
         // ===== 생성: 리뷰 인증 게이트 토글 라벨 동기화 =====
         $('#reviewGateToggle').on('change', function(){
@@ -660,14 +745,14 @@
                 $.ajax({
                     url: "{{ route('admin.rotation.event.store') }}",
                     type: 'POST',
-                    data: {
-                        title: title,
-                        type: createType(),
-                        event_time: time,
-                        table_count: tableCount,
+                    data: $.extend({
+                        title:               title,
+                        type:                createType(),
+                        event_time:          time,
+                        table_count:         tableCount,
                         review_gate_enabled: $('#reviewGateToggle').is(':checked') ? 1 : 0,
-                        drink_enabled: $('#drinkToggle').is(':checked') ? 1 : 0
-                    },
+                        drink_enabled:       $('#drinkToggle').is(':checked') ? 1 : 0
+                    }, efFeeData()),
                     success: function(res){
                         alert(res?.msg);
                         if(res?.status === 200){ location.href = "{{ route('admin.rotation.event.index') }}"; }
@@ -870,13 +955,13 @@
                 $.ajax({
                     url: "{{ route('admin.rotation.event.update', $event->id) }}",
                     type: 'PUT',
-                    data: {
-                        title: title,
-                        type: $f.find('[name=type]:checked').val(),
-                        event_time: time,
+                    data: $.extend({
+                        title:               title,
+                        type:                $f.find('[name=type]:checked').val(),
+                        event_time:          time,
                         review_gate_enabled: $('#reviewGateToggle').is(':checked') ? 1 : 0,
-                        drink_enabled: $('#drinkToggle').is(':checked') ? 1 : 0
-                    },
+                        drink_enabled:       $('#drinkToggle').is(':checked') ? 1 : 0
+                    }, efFeeData()),
                     // 상단 탭바·뱃지·음료 카드(1:1 전용) 등 타입/이름에 따라 달라지는 화면을 맞추기 위해 새로고침
                     success: function(res){ alert(res?.msg); if(res?.status === 200){ location.reload(); } },
                     error: function(xhr){ alert(xhr?.responseJSON?.error?.message ?? '오류가 발생했습니다.'); }

@@ -140,24 +140,6 @@ class RevenueService
     }
 
     /**
-     * 플랫폼별 수수료율(%) 저장.
-     *
-     * @param array<string, int> $rates
-     */
-    public function savePlatformFeeRates(int $eventId, array $rates): array
-    {
-        try {
-            $event                     = EventRound::findOrFail($eventId);
-            $event->platform_fee_rates = $rates !== [] ? $rates : null;
-            $event->save();
-
-            return helpersSuccessMessage('플랫폼 수수료율을 저장했습니다.');
-        } catch (\Throwable $th) {
-            return helpersFailMessage($th->getMessage());
-        }
-    }
-
-    /**
      * 비용 항목을 입력 목록으로 통째로 맞춘다. (입력 순서 = sort_order)
      *
      * @param list<array{name:string, amount:int}> $items

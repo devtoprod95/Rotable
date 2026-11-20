@@ -10,17 +10,35 @@ use Illuminate\Validation\Rule;
  */
 class EventUpdateRequest extends ApiFormRequest
 {
+    use EventFeeFields;
+
+    /**
+     * 참가비·수수료(선택 입력)를 숫자로 정리한다.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->prepareFeeFields();
+    }
+
     /**
      * @return array<string, mixed>
      */
     public function rules(): array
     {
-        return [
+        return array_merge([
             'title'               => 'required|string|max:255',
             'type'                => ['required', Rule::in([EventRound::TYPE_WINE, EventRound::TYPE_ONE])],
             'event_time'          => 'required|date',
             'review_gate_enabled' => 'nullable|boolean',
             'drink_enabled'       => 'nullable|boolean',
-        ];
+        ], $this->feeRules());
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->feeMessages();
     }
 }

@@ -87,10 +87,9 @@ Route::middleware('role')->group(function () {
                 // [운영/마이그레이션용] 기존 좌석(rotation_seats) 테이블을 체크인 명단(event_rosters)에 역동기화 (최고관리자 전용)
                 Route::post('/{id}/rosters/sync-tables', [RosterController::class, 'rosterSyncTables'])->whereNumber('id')->middleware('superAdmin')->name('rosters.syncTables');
                 Route::get('/{id}/matches/list', [MatchController::class, 'eventMatchList'])->whereNumber('id')->name('matches.list');
-                // 페이백 관리 — 페이백(100%/80%) 대상 · 계좌 · 입금 처리. 참가비는 플랫폼×성별 + 얼리버드 할인율, 노쇼는 체크인 명단 기준
+                // 페이백 관리 — 페이백(100%/80%) 대상 · 계좌 · 입금 처리. 참가비·할인율은 행사 정보에서 설정, 노쇼는 체크인 명단 기준
                 Route::get('/{id}/payback', [PaybackController::class, 'paybackIndex'])->whereNumber('id')->name('payback');
                 Route::get('/{id}/paybacks', [PaybackController::class, 'paybackList'])->whereNumber('id')->name('paybacks.list');
-                Route::put('/{id}/fees', [PaybackController::class, 'feeSave'])->whereNumber('id')->name('fees.save');
                 Route::post('/{id}/paybacks', [PaybackController::class, 'paybackAdd'])->whereNumber('id')->name('paybacks.add');
                 Route::put('/{id}/paybacks/{paybackId}', [PaybackController::class, 'paybackUpdate'])->whereNumber('id')->whereNumber('paybackId')->name('paybacks.update');
                 Route::patch('/{id}/paybacks/{paybackId}/transfer', [PaybackController::class, 'paybackTransfer'])->whereNumber('id')->whereNumber('paybackId')->name('paybacks.transfer');
@@ -98,7 +97,6 @@ Route::middleware('role')->group(function () {
                 // 매출 — 결제 합계(노쇼 포함, 무료 제외) · 플랫폼 수수료 · 페이백 · 비용 · 순이익
                 Route::get('/{id}/revenue', [RevenueController::class, 'revenueIndex'])->whereNumber('id')->name('revenue');
                 Route::get('/{id}/revenue/data', [RevenueController::class, 'revenueData'])->whereNumber('id')->name('revenue.data');
-                Route::put('/{id}/platform-fees', [RevenueController::class, 'platformFeeSave'])->whereNumber('id')->name('platformFees.save');
                 Route::put('/{id}/costs', [RevenueController::class, 'costSave'])->whereNumber('id')->name('costs.save');
                 Route::patch('/{id}/rosters/{rosterId}/pay-type', [RevenueController::class, 'rosterPayType'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.payType');
                 // 참여자 정보 수정 (번호표·성별·테이블은 체크인에서만)

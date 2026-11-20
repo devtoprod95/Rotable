@@ -102,28 +102,6 @@ class PaybackService
     }
 
     /**
-     * 행사 참가비 저장: 플랫폼 × 성별 정가 + 플랫폼별 얼리버드 할인율(%).
-     * 이미 등록된 대상자의 결제 금액은 바꾸지 않는다. (사람마다 고친 값이 있을 수 있어서)
-     *
-     * @param array<string, array<string, int>> $prices
-     * @param array<string, int>                $earlyBirdRates
-     */
-    public function saveFees(int $eventId, array $prices, array $earlyBirdRates): array
-    {
-        try {
-            $event = EventRound::findOrFail($eventId);
-
-            $event->fee_prices       = $prices !== [] ? $prices : null;
-            $event->early_bird_rates = $earlyBirdRates !== [] ? $earlyBirdRates : null;
-            $event->save();
-
-            return helpersSuccessMessage('참가비를 저장했습니다.');
-        } catch (\Throwable $th) {
-            return helpersFailMessage($th->getMessage());
-        }
-    }
-
-    /**
      * 페이백 대상 추가. 결제 금액을 비워 두면 그 사람의 플랫폼·성별 참가비(얼리버드 여부에 따라)로 채운다.
      *
      * @param array{event_roster_id:int, payback_rate:int, is_early_bird:bool, paid_amount:?int, bank_name:?string, account_number:?string, account_holder:?string, memo:?string} $data

@@ -40,9 +40,9 @@ enum Menu: string
                             ['name' => '체크인', 'route' => 'admin.rotation.checkin.current', 'pattern' => ['admin.rotation.event.checkin*', 'admin.rotation.checkin*']],
                             ['name' => '로테이션 진행', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
                             // 행사 후 페이백(100%/80%) 입금 관리
-                            ['name' => '페이백 관리', 'route' => 'admin.rotation.payback.current', 'pattern' => ['admin.rotation.event.payback*', 'admin.rotation.event.fees*', 'admin.rotation.payback*']],
+                            ['name' => '페이백 관리', 'route' => 'admin.rotation.payback.current', 'pattern' => ['admin.rotation.event.payback*', 'admin.rotation.payback*']],
                             // 행사별 매출 (결제 합계 · 수수료 · 페이백 · 비용 · 순이익)
-                            ['name' => '매출', 'route' => 'admin.rotation.revenue.current', 'pattern' => ['admin.rotation.event.revenue*', 'admin.rotation.event.platformFees*', 'admin.rotation.event.costs*', 'admin.rotation.revenue*']],
+                            ['name' => '매출', 'route' => 'admin.rotation.revenue.current', 'pattern' => ['admin.rotation.event.revenue*', 'admin.rotation.event.costs*', 'admin.rotation.revenue*']],
                         ],
                     ],
                     [

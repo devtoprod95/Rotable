@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Rotation;
 
 use App\Http\Requests\Admin\Rotation\EventCostSaveRequest;
-use App\Http\Requests\Admin\Rotation\PlatformFeeRateSaveRequest;
 use App\Http\Requests\Admin\Rotation\RosterPayTypeRequest;
 use App\Models\EventRoster;
 use App\Models\EventRound;
@@ -67,14 +66,6 @@ class RevenueController extends RotationBaseController
         abort_if($event === null, 404);
 
         return response()->json($this->revenueService->eventRevenue($event));
-    }
-
-    /**
-     * 플랫폼별 수수료율 저장.
-     */
-    public function platformFeeSave(PlatformFeeRateSaveRequest $request, int $id): JsonResponse
-    {
-        return $this->respond($this->revenueService->savePlatformFeeRates($id, $request->rates()), Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**

@@ -38,6 +38,7 @@
     .pb-fee-rate-cell{ grid-column:1 / -1; }
     .pb-fee-rate-cell .input-group{ max-width:180px; }
     .pb-fee-label{ display:block; font-size:.78rem; color:#868e96; font-weight:700; margin-bottom:.2rem; }
+    .pb-fee-value{ min-height:44px; display:flex; align-items:center; font-size:1.05rem; font-weight:800; color:#212529; }
     .pb-fee-eb{ font-size:.78rem; color:#ae3ec9; font-weight:700; margin-top:.2rem; min-height:1.1em; }
     @media (min-width: 768px){
         .pb-fee-block{ grid-template-columns:72px 1fr 1fr 160px; align-items:start; }
@@ -210,34 +211,33 @@
             </div>
             <div class="collapse show" id="pbFeeCollapse">
             <div class="card-body">
-                {{-- 플랫폼별 한 묶음. 모바일: 남/여 2칸 + 할인율 한 줄 / PC(md+): 플랫폼 · 남 · 여 · 할인율 한 줄 --}}
+                {{-- 참가비·할인율은 행사 정보(생성/수정)에서 정한다. 여기서는 보기만 --}}
                 <div class="pb-fees">
                     @foreach ($platformOptions as $opt)
                         <div class="pb-fee-block is-{{ $opt['id'] }}">
                             <div class="pb-fee-platform">{{ $opt['label'] }}</div>
-                            @foreach ($genders as $gender => $label)
-                                @php $price = $event->basePriceFor($opt['id'], $gender); @endphp
+                            @foreach ([\App\Models\Member::GENDER_FEMALE => '여', \App\Models\Member::GENDER_MALE => '남'] as $gender => $label)
+                                @php
+                                    $base = $event->basePriceFor($opt['id'], $gender);
+                                    $eb   = $event->paidPriceFor($opt['id'], $gender, true);
+                                @endphp
                                 <div class="pb-fee-cell">
-                                    <label class="pb-fee-label" for="fee-{{ $opt['id'] }}-{{ $gender }}">{{ $label }} 정가 (원)</label>
-                                    <input type="text" class="form-control money-input fee-price" inputmode="numeric" id="fee-{{ $opt['id'] }}-{{ $gender }}"
-                                           data-platform="{{ $opt['id'] }}" data-gender="{{ $gender }}"
-                                           value="{{ $price !== null ? number_format($price) : '' }}" placeholder="예: 39,000">
-                                    <div class="pb-fee-eb" data-eb-for="{{ $opt['id'] }}-{{ $gender }}"></div>
+                                    <div class="pb-fee-label">{{ $label }} 정가</div>
+                                    <div class="pb-fee-value">{{ $base !== null ? number_format($base) . '원' : '미설정' }}</div>
+                                    @if ($base !== null && $event->earlyBirdRateFor($opt['id']) > 0)
+                                        <div class="pb-fee-eb">얼리버드 {{ number_format($eb) }}원</div>
+                                    @endif
                                 </div>
                             @endforeach
                             <div class="pb-fee-cell pb-fee-rate-cell">
-                                <label class="pb-fee-label" for="fee-rate-{{ $opt['id'] }}">얼리버드 할인율</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control fee-rate" inputmode="numeric" maxlength="3" id="fee-rate-{{ $opt['id'] }}"
-                                           data-platform="{{ $opt['id'] }}" value="{{ $event->earlyBirdRateFor($opt['id']) }}">
-                                    <span class="input-group-text">%</span>
-                                </div>
+                                <div class="pb-fee-label">얼리버드 할인율</div>
+                                <div class="pb-fee-value">{{ $event->earlyBirdRateFor($opt['id']) }}%</div>
                             </div>
                         </div>
                     @endforeach
                 </div>
                 <div class="pb-fee-foot">
-                    <button type="button" class="btn btn-primary px-4" id="feeSaveBtn"><i class="ti ti-device-floppy me-1"></i>참가비 저장</button>
+                    <a href="{{ route('admin.rotation.event.detail', $event->id) }}" class="btn btn-outline-primary px-4"><i class="ti ti-edit me-1"></i>행사 정보에서 수정</a>
                 </div>
                 <div class="text-secondary small mt-2">
                     얼리버드는 선착순이라 사람마다 체크해요. 체크한 사람은 그 플랫폼의 할인율만큼 결제 금액이 빠져요.
@@ -278,7 +278,6 @@
     $(document).ready(function(){
         var LIST_URL       = @json(route('admin.rotation.event.paybacks.list', $event->id));
         var ADD_URL        = @json(route('admin.rotation.event.paybacks.add', $event->id));
-        var FEE_URL        = @json(route('admin.rotation.event.fees.save', $event->id));
         var ITEM_TPL       = @json(route('admin.rotation.event.paybacks.update', [$event->id, '__PID__']));
         var TRANSFER_TPL   = @json(route('admin.rotation.event.paybacks.transfer', [$event->id, '__PID__']));
         var RATE_LABEL     = @json($rateOptions);
@@ -312,34 +311,6 @@
         $(document).on('input', '.money-input', function(){
             var n = digits(this.value);
             this.value = n === null ? '' : n.toLocaleString('ko-KR');
-        });
-
-        /* ===== 참가비 표: 얼리버드가 미리보기 ===== */
-        function renderEarlyBirdHints(){
-            $('.fee-price').each(function(){
-                var rate = Math.min(100, digits($('.fee-rate[data-platform="' + $(this).data('platform') + '"]').val()) || 0);
-                var base = digits(this.value);
-                var $hint = $('[data-eb-for="' + $(this).data('platform') + '-' + $(this).data('gender') + '"]');
-                $hint.text(base !== null && rate > 0 ? '얼리버드 ' + won(Math.floor(base * (100 - rate) / 100)) : '');
-            });
-        }
-        $(document).on('input', '.fee-price, .fee-rate', renderEarlyBirdHints);
-        renderEarlyBirdHints();
-
-        $('#feeSaveBtn').on('click', function(){
-            var data = {};
-            $('.fee-price').each(function(){
-                data['fee_prices[' + $(this).data('platform') + '][' + $(this).data('gender') + ']'] = this.value;
-            });
-            $('.fee-rate').each(function(){
-                data['early_bird_rates[' + $(this).data('platform') + ']'] = this.value;
-            });
-            var $btn = $(this).prop('disabled', true);
-            $.ajax({
-                url: FEE_URL, type: 'PUT', data: data,
-                success: function(res){ alert(res?.msg); load(); },
-                error: ajaxError
-            }).always(function(){ $btn.prop('disabled', false); });
         });
 
         /* ===== 목록 ===== */

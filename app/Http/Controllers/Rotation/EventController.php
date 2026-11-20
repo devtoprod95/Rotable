@@ -81,7 +81,8 @@ class EventController extends RotationBaseController
 
     public function eventStore(EventStoreRequest $request): JsonResponse
     {
-        $data               = $request->validated();
+        // 참가비·수수료는 정리된 값(feeData)으로 바꿔 넘긴다.
+        $data               = array_merge($request->validated(), $request->feeData());
         $data['created_by'] = auth('admin')->id();
 
         return $this->respond($this->rotationService->eventStore((object) $data), Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -129,7 +130,10 @@ class EventController extends RotationBaseController
      */
     public function eventUpdate(EventUpdateRequest $request, int $id): JsonResponse
     {
-        return $this->respond($this->rotationService->eventUpdate($id, (object) $request->validated()), Response::HTTP_INTERNAL_SERVER_ERROR);
+        // 참가비·수수료 필드가 없으면 feeData 가 비어 기존 값을 그대로 둔다.
+        $data = array_diff_key($request->validated(), array_flip(['fee_prices', 'early_bird_rates', 'platform_fee_rates']));
+
+        return $this->respond($this->rotationService->eventUpdate($id, (object) array_merge($data, $request->feeData())), Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**

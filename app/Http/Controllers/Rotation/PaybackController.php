@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Rotation;
 
-use App\Http\Requests\Admin\Rotation\EventFeeSaveRequest;
 use App\Http\Requests\Admin\Rotation\PaybackSaveRequest;
 use App\Http\Requests\Admin\Rotation\PaybackTransferRequest;
 use App\Models\EventPayback;
@@ -68,18 +67,6 @@ class PaybackController extends RotationBaseController
         abort_if($event === null, 404);
 
         return response()->json($this->paybackService->eventPaybacks($event));
-    }
-
-    /**
-     * 행사 참가비(플랫폼 × 성별 정가 + 플랫폼별 얼리버드 할인율) 저장.
-     */
-    public function feeSave(EventFeeSaveRequest $request, int $id): JsonResponse
-    {
-        return $this->respond($this->paybackService->saveFees(
-            $id,
-            $request->prices(),
-            $request->earlyBirdRates(),
-        ), Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**

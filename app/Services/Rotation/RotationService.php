@@ -120,6 +120,10 @@ class RotationService
                     'status'              => EventRound::STATUS_PENDING, // 생성 시 상태는 무조건 대기(P)
                     'review_gate_enabled' => (bool) ($data->review_gate_enabled ?? true),
                     'drink_enabled'       => (bool) ($data->drink_enabled ?? false),
+                    // 참가비·수수료 (선택 입력, 비어 있으면 null)
+                    'fee_prices'          => ! empty($data->fee_prices) ? $data->fee_prices : null,
+                    'early_bird_rates'    => ! empty($data->early_bird_rates) ? $data->early_bird_rates : null,
+                    'platform_fee_rates'  => ! empty($data->platform_fee_rates) ? $data->platform_fee_rates : null,
                     'created_by'          => $data->created_by ?? null,
                 ]);
 
@@ -187,6 +191,12 @@ class RotationService
             // 음료 선택 on/off (전달된 경우에만 반영). 끄면 음료 목록·선택 기록은 지우지 않고 화면에서만 숨긴다.
             if (property_exists($data, 'drink_enabled')) {
                 $event->drink_enabled = (bool) $data->drink_enabled;
+            }
+            // 참가비·수수료 (전달된 경우에만 반영). 이미 추가한 페이백 대상의 금액은 바꾸지 않는다.
+            foreach (['fee_prices', 'early_bird_rates', 'platform_fee_rates'] as $key) {
+                if (property_exists($data, $key)) {
+                    $event->{$key} = ! empty($data->{$key}) ? $data->{$key} : null;
+                }
             }
             $event->save();
 

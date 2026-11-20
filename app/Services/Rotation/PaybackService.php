@@ -6,6 +6,7 @@ use App\Models\EventPayback;
 use App\Models\EventRoster;
 use App\Models\EventRound;
 use App\Models\Member;
+use Illuminate\Support\Facades\DB;
 
 /**
  * 행사 페이백(100% / 80%) 대상 관리.
@@ -15,6 +16,7 @@ use App\Models\Member;
  * - 페이백 금액 = 결제 금액 × 비율. 서버에서만 계산한다.
  * - 노쇼는 체크인 데이터로 판단한다. 행사가 시작(S/V/X)된 뒤에도 체크인하지 않았으면 노쇼이고,
  *   노쇼는 입금 대상 합계에서 빠지며 입금 완료 처리도 막는다.
+ * - 얼리버드 여부는 체크인 명단의 결제 유형(pay_type)과 같이 움직인다. 무료(F) 참가자는 페이백 대상이 될 수 없다.
  */
 class PaybackService
 {
@@ -67,6 +69,7 @@ class PaybackService
 
         $candidates = EventRoster::query()
             ->where('event_id', $event->id)
+            ->where('pay_type', '!=', EventRoster::PAY_FREE) // 무료 참가자는 돌려줄 돈이 없다
             ->whereDoesntHave('payback')
             ->get()
             ->sortBy(fn (EventRoster $r): array => [
@@ -81,6 +84,8 @@ class PaybackService
                 'platform'   => $r->platform,
                 'ticket_no'  => $r->ticket_no,
                 'checked_in' => $r->checked_in_at !== null,
+                // 명단의 결제 유형이 얼리버드면 추가 창의 얼리버드 체크를 미리 켠다.
+                'early_bird' => $r->isEarlyBird(),
             ])
             ->values()
             ->all();
@@ -134,25 +139,31 @@ class PaybackService
             if (EventPayback::where('event_roster_id', $roster->id)->exists()) {
                 return helpersFailMessage('이미 페이백 대상으로 등록된 사람입니다.');
             }
+            if ($roster->isFree()) {
+                return helpersFailMessage('무료 참가자는 페이백 대상이 될 수 없습니다. 매출 화면에서 결제 유형을 먼저 바꿔 주세요.');
+            }
 
             $paid = $this->resolvePaidAmount($event, $roster, (bool) $data['is_early_bird'], $data['paid_amount'] ?? null);
             if ($paid === null) {
                 return helpersFailMessage('결제 금액을 입력하거나, 위에서 이 플랫폼·성별의 참가비를 먼저 저장해 주세요.');
             }
 
-            EventPayback::create([
-                'event_id'        => $eventId,
-                'event_roster_id' => $roster->id,
-                'payback_rate'    => (int) $data['payback_rate'],
-                'is_early_bird'   => (bool) $data['is_early_bird'],
-                'paid_amount'     => $paid,
-                'payback_amount'  => EventPayback::calcAmount($paid, (int) $data['payback_rate']),
-                'bank_name'       => $this->clean($data['bank_name'] ?? null),
-                'account_number'  => $this->clean($data['account_number'] ?? null),
-                'account_holder'  => $this->clean($data['account_holder'] ?? null),
-                'memo'            => $this->clean($data['memo'] ?? null),
-                'status'          => EventPayback::STATUS_WAITING,
-            ]);
+            DB::transaction(function () use ($eventId, $roster, $data, $paid): void {
+                EventPayback::create([
+                    'event_id'        => $eventId,
+                    'event_roster_id' => $roster->id,
+                    'payback_rate'    => (int) $data['payback_rate'],
+                    'is_early_bird'   => (bool) $data['is_early_bird'],
+                    'paid_amount'     => $paid,
+                    'payback_amount'  => EventPayback::calcAmount($paid, (int) $data['payback_rate']),
+                    'bank_name'       => $this->clean($data['bank_name'] ?? null),
+                    'account_number'  => $this->clean($data['account_number'] ?? null),
+                    'account_holder'  => $this->clean($data['account_holder'] ?? null),
+                    'memo'            => $this->clean($data['memo'] ?? null),
+                    'status'          => EventPayback::STATUS_WAITING,
+                ]);
+                $this->syncRosterEarlyBird($roster, (bool) $data['is_early_bird']);
+            });
 
             return helpersSuccessMessage('페이백 대상을 추가했습니다.');
         } catch (\Throwable $th) {
@@ -193,7 +204,12 @@ class PaybackService
             $payback->account_number = $this->clean($data['account_number'] ?? null);
             $payback->account_holder = $this->clean($data['account_holder'] ?? null);
             $payback->memo           = $this->clean($data['memo'] ?? null);
-            $payback->save();
+            DB::transaction(function () use ($payback, $earlyBird): void {
+                $payback->save();
+                if ($payback->roster !== null) {
+                    $this->syncRosterEarlyBird($payback->roster, $earlyBird);
+                }
+            });
 
             return helpersSuccessMessage('페이백 정보를 수정했습니다.');
         } catch (\Throwable $th) {
@@ -245,6 +261,21 @@ class PaybackService
             return helpersSuccessMessage('페이백 대상에서 뺐습니다.');
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
+        }
+    }
+
+    /**
+     * 체크인 명단의 결제 유형을 페이백의 얼리버드 여부에 맞춘다. (무료는 건드리지 않는다)
+     */
+    private function syncRosterEarlyBird(EventRoster $roster, bool $earlyBird): void
+    {
+        if ($roster->isFree()) {
+            return;
+        }
+        $payType = $earlyBird ? EventRoster::PAY_EARLY_BIRD : EventRoster::PAY_NORMAL;
+        if ($roster->pay_type !== $payType) {
+            $roster->pay_type = $payType;
+            $roster->save();
         }
     }
 

@@ -75,6 +75,7 @@ class PurgeData extends Command
                 'event_rosters',
                 'members',
                 'event_drinks',
+                'event_costs',
                 'event_rounds',
             ],
         };

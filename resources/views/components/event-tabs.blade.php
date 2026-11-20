@@ -1,7 +1,7 @@
 {{--
-    행사 운영 화면 공용 탭바 — 행사 상세 · 체크인 · 로테이션 진행 · 페이백.
+    행사 운영 화면 공용 탭바 — 행사 상세 · 체크인 · 로테이션 진행 · 페이백 · 매출.
 
-    사용법: <x-event-tabs :event-id="$event->id" active="info|checkin|progress|payback" />
+    사용법: <x-event-tabs :event-id="$event->id" active="info|checkin|progress|payback|revenue" />
 
     - 행사 선택: 고르면 "지금 보던 탭" 그대로 다른 행사로 이동한다. (목록으로 돌아갈 필요 없음)
     - 탭 배지: 체크인은 참석/전체, 로테이션 진행은 현재 턴을 한눈에 보여준다.
@@ -28,6 +28,7 @@
             'info'    => route('admin.rotation.event.detail', ['id' => $id]),
             'checkin' => route('admin.rotation.event.checkin', ['id' => $id]),
             'payback' => route('admin.rotation.event.payback', ['id' => $id]),
+            'revenue' => route('admin.rotation.event.revenue', ['id' => $id]),
             default   => route('admin.rotation.seating.index', ['eventId' => $id]),
         };
     };
@@ -36,6 +37,7 @@
         'checkin'  => ['label' => '체크인'],
         'progress' => ['label' => '로테이션 진행'],
         'payback'  => ['label' => '페이백'],
+        'revenue'  => ['label' => '매출'],
     ];
     $activeKey = array_key_exists($active, $tabDefs) ? $active : 'info';
 @endphp
@@ -81,8 +83,8 @@
     }
     .event-tabs__qr:hover { background: #0f172a; border-color: #0f172a; }
 
-    /* ② 운영 화면 줄: 행사 상세 → 체크인 → 로테이션 진행 → 페이백 (같은 폭, 번호로 순서 표시) */
-    .event-tabs__nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; margin: 0; padding: 0; list-style: none; }
+    /* ② 운영 화면 줄: 행사 상세 → 체크인 → 로테이션 진행 → 페이백 → 매출 (같은 폭, 번호로 순서 표시) */
+    .event-tabs__nav { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .5rem; margin: 0; padding: 0; list-style: none; }
     .event-tabs__nav > li { display: flex; min-width: 0; }
     .event-tabs__btn {
         --tab-solid: #206bc4; --tab-soft: #e7f0fb; --tab-border: #b9d3f0; --tab-hover: #d6e6f8; --tab-dark: #1a5aa6;
@@ -103,11 +105,12 @@
     .event-tabs__btn.is-active .event-tabs__step { color: var(--tab-solid); background: #fff; }
     .event-tabs__btn .badge { font-weight: 600; }
     .event-tabs__btn.is-active .badge { background: rgba(255,255,255,.22) !important; color: #fff !important; }
-    /* 행사 상세=파랑 / 체크인=청록 / 로테이션 진행=보라 / 페이백=주황 */
+    /* 행사 상세=파랑 / 체크인=청록 / 로테이션 진행=보라 / 페이백=주황 / 매출=초록 */
     .event-tabs .tab-info     { --tab-solid: #206bc4; --tab-soft: #e7f0fb; --tab-border: #b9d3f0; --tab-hover: #d6e6f8; --tab-dark: #1a5aa6; }
     .event-tabs .tab-checkin  { --tab-solid: #0ca678; --tab-soft: #e3f6ef; --tab-border: #a9e2cf; --tab-hover: #cfeee2; --tab-dark: #087f5b; }
     .event-tabs .tab-progress { --tab-solid: #ae3ec9; --tab-soft: #f5e8fa; --tab-border: #dcb4ea; --tab-hover: #ecd3f5; --tab-dark: #8a2fa1; }
     .event-tabs .tab-payback  { --tab-solid: #f76707; --tab-soft: #fff0e6; --tab-border: #fcc8a3; --tab-hover: #ffe0cc; --tab-dark: #d9480f; }
+    .event-tabs .tab-revenue  { --tab-solid: #2b8a3e; --tab-soft: #ebfbee; --tab-border: #b2f2bb; --tab-hover: #d3f9d8; --tab-dark: #237032; }
 
     /* 태블릿 이하: 행사 선택은 한 줄 전체, 칩·QR 은 다음 줄에 나란히 */
     @media (max-width: 767.98px) {
@@ -120,9 +123,17 @@
         .event-tabs__btn .badge { font-size: .68rem; padding: .18rem .35rem; }
         .event-tabs__step { width: 1.15rem; height: 1.15rem; font-size: .66rem; }
     }
-    /* 아주 좁은 화면(400px 미만): 탭 4개를 2×2 로, 가로 배치 */
+    /* 태블릿 이하: 탭 5개를 3 + 2 로 (6칸 격자에서 윗줄 2칸씩, 아랫줄 3칸씩) */
+    @media (max-width: 767.98px) {
+        .event-tabs__nav { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+        .event-tabs__nav > li { grid-column: span 2; }
+        .event-tabs__nav > li:nth-child(n+4) { grid-column: span 3; }
+    }
+    /* 아주 좁은 화면(400px 미만): 2칸씩, 마지막 하나는 한 줄 전체. 가로 배치 */
     @media (max-width: 399.98px) {
         .event-tabs__nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .event-tabs__nav > li, .event-tabs__nav > li:nth-child(n+4) { grid-column: auto; }
+        .event-tabs__nav > li:last-child:nth-child(odd) { grid-column: 1 / -1; }
         .event-tabs__btn { flex-direction: row; min-height: 48px; }
     }
 </style>

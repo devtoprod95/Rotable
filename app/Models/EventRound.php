@@ -53,7 +53,7 @@ class EventRound extends Model
     protected $table = 'event_rounds';
 
     /** @var list<string> */
-    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'drink_enabled', 'fee_prices', 'early_bird_rates', 'current_round', 'rotation_limit', 'created_by'];
+    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'drink_enabled', 'fee_prices', 'early_bird_rates', 'platform_fee_rates', 'current_round', 'rotation_limit', 'created_by'];
 
     /**
      * @return array<string, string>
@@ -67,6 +67,7 @@ class EventRound extends Model
             'drink_enabled'       => 'boolean',
             'fee_prices'          => 'array',
             'early_bird_rates'    => 'array',
+            'platform_fee_rates'  => 'array',
             'current_round'       => 'integer',
             'rotation_limit'      => 'integer',
         ];
@@ -120,6 +121,16 @@ class EventRound extends Model
     public function paybacks(): HasMany
     {
         return $this->hasMany(EventPayback::class, 'event_id');
+    }
+
+    /**
+     * 이 회차의 비용 항목. 입력 순.
+     *
+     * @return HasMany<EventCost>
+     */
+    public function costs(): HasMany
+    {
+        return $this->hasMany(EventCost::class, 'event_id')->orderBy('sort_order')->orderBy('id');
     }
 
     /**
@@ -255,6 +266,14 @@ class EventRound extends Model
     public function earlyBirdRateFor(?string $platform): int
     {
         return (int) ($this->early_bird_rates[(string) $platform] ?? 0);
+    }
+
+    /**
+     * 플랫폼 수수료율(%). 설정하지 않았으면 0.
+     */
+    public function platformFeeRateFor(?string $platform): int
+    {
+        return (int) ($this->platform_fee_rates[(string) $platform] ?? 0);
     }
 
     /**

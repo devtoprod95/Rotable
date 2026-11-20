@@ -19,6 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @property string|null $name       닉네임(플랫폼 신청 닉네임)
  * @property string|null $gender     M|F
  * @property string      $platform   munto|frip
+ * @property string      $pay_type   N=정가 | E=얼리버드 | F=무료
  * @property int|null    $height     키(cm) — 상세페이지 명단 자동 채움용
  * @property int|null    $birth_year 출생연도(4자리) — 상세페이지 명단 자동 채움용
  * @property string|null $job        직업 — 상세페이지 명단 자동 채움용
@@ -31,6 +32,10 @@ class EventRoster extends Model
 {
     protected $table = 'event_rosters';
 
+    public const PAY_NORMAL     = 'N'; // 정가 결제
+    public const PAY_EARLY_BIRD = 'E'; // 얼리버드 결제 (선착순)
+    public const PAY_FREE       = 'F'; // 무료 참가 (결제 없음)
+
     /** @var list<string> */
     protected $fillable = [
         'event_id',
@@ -41,6 +46,7 @@ class EventRoster extends Model
         'job',
         'merit',
         'platform',
+        'pay_type',
         'ticket_no',
         'rotation_table_id',
         'checked_in_at',
@@ -78,6 +84,36 @@ class EventRoster extends Model
     public function rotationTable(): BelongsTo
     {
         return $this->belongsTo(RotationTable::class, 'rotation_table_id');
+    }
+
+    /**
+     * 결제 유형 선택지.
+     *
+     * @return array<string, string>
+     */
+    public static function payTypeOptions(): array
+    {
+        return [
+            self::PAY_NORMAL     => '정가',
+            self::PAY_EARLY_BIRD => '얼리버드',
+            self::PAY_FREE       => '무료',
+        ];
+    }
+
+    /**
+     * 얼리버드로 결제했는지.
+     */
+    public function isEarlyBird(): bool
+    {
+        return $this->pay_type === self::PAY_EARLY_BIRD;
+    }
+
+    /**
+     * 무료 참가인지.
+     */
+    public function isFree(): bool
+    {
+        return $this->pay_type === self::PAY_FREE;
     }
 
     /**

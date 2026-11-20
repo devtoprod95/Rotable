@@ -583,7 +583,13 @@
                     }
                     $('.pb-pick-tab').on('click', function(){ pickGender = $(this).data('g'); renderPickList(); $('#sw-search').trigger('focus'); });
                     $('#sw-search').on('input', renderPickList);
-                    $('#sw-roster-list').on('click', '.pb-pick-item', function(){ pickedId = $(this).data('id'); renderPickList(); preview(); });
+                    // 사람을 고르면 명단의 결제 유형(얼리버드 여부)으로 체크를 맞추고, 비어 있는 결제 금액은 자동 금액으로 다시 본다.
+                    $('#sw-roster-list').on('click', '.pb-pick-item', function(){
+                        pickedId = $(this).data('id');
+                        $('#sw-eb').prop('checked', !!person().early_bird);
+                        renderPickList();
+                        preview();
+                    });
                     renderPickList();
                     function autoPrice(eb){ var p = person(); return priceFor(p.platform, p.gender, eb); }
                     // 결제 금액이 비어 있으면 자동 금액을 placeholder 로 보여주고, 페이백 금액을 미리 계산한다.

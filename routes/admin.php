@@ -13,6 +13,7 @@ use App\Http\Controllers\Rotation\MeetingHistoryController;
 use App\Http\Controllers\Rotation\PaybackController;
 use App\Http\Controllers\Rotation\PromotionController;
 use App\Http\Controllers\Rotation\QrController;
+use App\Http\Controllers\Rotation\RevenueController;
 use App\Http\Controllers\Rotation\RosterController;
 use App\Http\Controllers\Rotation\SeatingController;
 use Illuminate\Support\Facades\Route;
@@ -49,6 +50,8 @@ Route::middleware('role')->group(function () {
             Route::get('/checkin', [RosterController::class, 'checkinCurrent'])->name('checkin.current');
             // 사이드바 "페이백 관리" 진입점 — 지금 운영할 행사의 페이백 화면으로 이동한다.
             Route::get('/payback', [PaybackController::class, 'paybackCurrent'])->name('payback.current');
+            // 사이드바 "매출" 진입점 — 지금 운영할 행사의 매출 화면으로 이동한다.
+            Route::get('/revenue', [RevenueController::class, 'revenueCurrent'])->name('revenue.current');
 
             Route::prefix('event')->name('event.')->group(function () {
                 Route::get('/', [EventController::class, 'eventIndex'])->name('index');
@@ -92,6 +95,12 @@ Route::middleware('role')->group(function () {
                 Route::put('/{id}/paybacks/{paybackId}', [PaybackController::class, 'paybackUpdate'])->whereNumber('id')->whereNumber('paybackId')->name('paybacks.update');
                 Route::patch('/{id}/paybacks/{paybackId}/transfer', [PaybackController::class, 'paybackTransfer'])->whereNumber('id')->whereNumber('paybackId')->name('paybacks.transfer');
                 Route::delete('/{id}/paybacks/{paybackId}', [PaybackController::class, 'paybackDelete'])->whereNumber('id')->whereNumber('paybackId')->name('paybacks.delete');
+                // 매출 — 결제 합계(노쇼 포함, 무료 제외) · 플랫폼 수수료 · 페이백 · 비용 · 순이익
+                Route::get('/{id}/revenue', [RevenueController::class, 'revenueIndex'])->whereNumber('id')->name('revenue');
+                Route::get('/{id}/revenue/data', [RevenueController::class, 'revenueData'])->whereNumber('id')->name('revenue.data');
+                Route::put('/{id}/platform-fees', [RevenueController::class, 'platformFeeSave'])->whereNumber('id')->name('platformFees.save');
+                Route::put('/{id}/costs', [RevenueController::class, 'costSave'])->whereNumber('id')->name('costs.save');
+                Route::patch('/{id}/rosters/{rosterId}/pay-type', [RevenueController::class, 'rosterPayType'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.payType');
                 // 참여자 정보 수정 (번호표·성별·테이블은 체크인에서만)
                 // 음료 전달 완료 체크/해제 (1:1)
                 Route::patch('/{id}/members/{memberId}/drink-served', [EventController::class, 'eventMemberDrinkServed'])->whereNumber('id')->whereNumber('memberId')->name('members.drinkServed');

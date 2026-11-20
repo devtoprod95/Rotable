@@ -193,7 +193,7 @@ class RosterService
     public function rosterAdd(int $eventId, string $name, ?string $platform, ?string $gender, array $profile = [], ?string $payType = null): array
     {
         try {
-            EventRoster::create([
+            $roster = EventRoster::create([
                 'event_id'   => $eventId,
                 'name'       => trim($name),
                 'gender'     => $this->normalizeGender($gender),
@@ -205,7 +205,10 @@ class RosterService
                 'merit'      => $this->normalizeMerit($profile['merit'] ?? null),
             ]);
 
-            return helpersSuccessMessage('명단에 추가했습니다.');
+            $res              = helpersSuccessMessage('명단에 추가했습니다.');
+            $res['roster_id'] = $roster->id;
+
+            return $res;
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }

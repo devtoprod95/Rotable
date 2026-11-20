@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Rotation;
 
 use App\Http\Requests\Admin\Rotation\EventCostSaveRequest;
+use App\Http\Requests\Admin\Rotation\RosterPaybackRateRequest;
 use App\Http\Requests\Admin\Rotation\RosterPayTypeRequest;
+use App\Models\EventPayback;
 use App\Models\EventRoster;
 use App\Models\EventRound;
 use App\Models\Member;
@@ -54,6 +56,7 @@ class RevenueController extends RotationBaseController
             'event'           => $event,
             'platformOptions' => Member::platformOptions(),
             'payTypeOptions'  => EventRoster::payTypeOptions(),
+            'rateOptions'     => EventPayback::rateOptions(),
         ]);
     }
 
@@ -82,5 +85,15 @@ class RevenueController extends RotationBaseController
     public function rosterPayType(RosterPayTypeRequest $request, int $id, int $rosterId): JsonResponse
     {
         return $this->respond($this->revenueService->setPayType($id, $rosterId, (string) $request->validated('pay_type')));
+    }
+
+    /**
+     * 신청자 페이백 비율 변경 (없음 / 80% / 100%). 금액은 행사 참가비로 자동 계산하고, 계좌는 페이백 화면에서 넣는다.
+     */
+    public function rosterPaybackRate(RosterPaybackRateRequest $request, int $id, int $rosterId): JsonResponse
+    {
+        $rate = $request->validated('payback_rate');
+
+        return $this->respond($this->revenueService->setPaybackRate($id, $rosterId, $rate !== null ? (int) $rate : null));
     }
 }

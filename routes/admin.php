@@ -99,6 +99,7 @@ Route::middleware('role')->group(function () {
                 Route::get('/{id}/revenue/data', [RevenueController::class, 'revenueData'])->whereNumber('id')->name('revenue.data');
                 Route::put('/{id}/costs', [RevenueController::class, 'costSave'])->whereNumber('id')->name('costs.save');
                 Route::patch('/{id}/rosters/{rosterId}/pay-type', [RevenueController::class, 'rosterPayType'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.payType');
+                Route::patch('/{id}/rosters/{rosterId}/payback-rate', [RevenueController::class, 'rosterPaybackRate'])->whereNumber('id')->whereNumber('rosterId')->name('rosters.paybackRate');
                 // 참여자 정보 수정 (번호표·성별·테이블은 체크인에서만)
                 // 음료 전달 완료 체크/해제 (1:1)
                 Route::patch('/{id}/members/{memberId}/drink-served', [EventController::class, 'eventMemberDrinkServed'])->whereNumber('id')->whereNumber('memberId')->name('members.drinkServed');

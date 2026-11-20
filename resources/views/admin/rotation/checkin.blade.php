@@ -63,6 +63,11 @@
     .ck-col-stats .ck-stat-label{ font-size:.72rem; color:#495057; font-weight:700; }
     .ck-col-stats .ck-stat-val{ font-size:1.15rem; font-weight:800; line-height:1.2; }
 
+    /* 프로필 팝업: 화면 높이 안에서 본문만 스크롤, 닫기(X) 버튼 */
+    .swal2-popup.ck-swal{ width:min(560px, calc(100vw - 1rem)); max-height:calc(100dvh - 1rem); }
+    .ck-swal .ck-swal-body{ max-height:calc(100dvh - 11rem); overflow-y:auto; -webkit-overflow-scrolling:touch; margin:.5rem 0 0; padding:0 .25rem; }
+    .ck-swal .swal2-input, .ck-swal .swal2-select{ min-height:44px; height:auto; font-size:1rem; }
+
     @media (max-width: 767.98px){
         /* 모바일: 숫자 적당히, 카드 패딩 축소, 버튼은 2열 같은 폭(체크인/취소는 한 줄 전체) */
         .checkin-row{ padding-left:.75rem; padding-right:.75rem; }
@@ -172,6 +177,40 @@
                                 <input type="radio" class="btn-check" name="addPayType" id="addPayType{{ $value }}" value="{{ $value }}" autocomplete="off" {{ $loop->first ? 'checked' : '' }}>
                                 <label class="btn {{ ['N' => 'btn-outline-secondary', 'E' => 'btn-outline-purple', 'F' => 'btn-outline-teal'][$value] ?? 'btn-outline-secondary' }}" for="addPayType{{ $value }}">{{ $label }}</label>
                             @endforeach
+                        </div>
+                    </div>
+                    {{-- 페이백: 페이백 화면과 같은 데이터. 무료면 고를 수 없다. 금액은 행사 참가비로 자동 계산 --}}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label mb-1 d-block">페이백</label>
+                        <div class="btn-group w-100" role="group" aria-label="페이백 선택">
+                            <input type="radio" class="btn-check" name="addPaybackRate" id="addPaybackNone" value="" autocomplete="off" checked>
+                            <label class="btn btn-outline-secondary" for="addPaybackNone">없음</label>
+                            @foreach ($rateOptions as $rate => $label)
+                                <input type="radio" class="btn-check" name="addPaybackRate" id="addPayback{{ $rate }}" value="{{ $rate }}" autocomplete="off">
+                                <label class="btn btn-outline-orange" for="addPayback{{ $rate }}">{{ $rate }}%</label>
+                            @endforeach
+                        </div>
+                    </div>
+                    {{-- 페이백 계좌 (페이백을 고르면 보인다, 비워 두고 나중에 넣어도 된다) --}}
+                    <div class="col-12 ck-add-account" style="display:none;">
+                        <div class="row g-2">
+                            <div class="col-6 col-md-3">
+                                <label for="addBank" class="form-label mb-1">은행</label>
+                                <select id="addBank" class="form-select">
+                                    <option value="">선택 안 함</option>
+                                    @foreach ($bankOptions as $bank)
+                                        <option value="{{ $bank }}">{{ $bank }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <label for="addHolder" class="form-label mb-1">예금주</label>
+                                <input type="text" id="addHolder" class="form-control" maxlength="30" placeholder="예: 홍길동" autocomplete="off">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="addAccount" class="form-label mb-1">계좌번호</label>
+                                <input type="text" id="addAccount" class="form-control" maxlength="30" inputmode="numeric" placeholder="숫자와 - 만" autocomplete="off">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -380,6 +419,8 @@
         var PLATFORM_BADGE = { munto: 'bg-orange-lt', frip: 'bg-cyan-lt' };
         // 결제 유형 라벨/색상 (정가/얼리버드/무료) — 매출 화면과 같은 값
         var PAY_TYPE_LABEL = @json($payTypeOptions);
+        var RATE_LABEL     = @json($rateOptions);
+        var BANKS          = @json($bankOptions);
         var PAY_TYPE_BADGE = { E: 'bg-purple-lt', F: 'bg-teal-lt' };
         var TICKET_MAX = {{ \App\Services\Rotation\RosterService::TICKET_MAX }};
 
@@ -1203,12 +1244,23 @@
         // 검색 (즉시 필터)
         $('#checkinSearch').on('input', render);
 
+        // 추가 폼: 무료면 페이백을 "없음"으로 고정하고, 페이백을 고르면 계좌 칸을 보인다.
+        function syncAddPayback(){
+            var isFree = $('input[name="addPayType"]:checked').val() === 'F';
+            if(isFree){ $('#addPaybackNone').prop('checked', true); }
+            $('input[name="addPaybackRate"]').not('#addPaybackNone').prop('disabled', isFree);
+            $('.ck-add-account').toggle(!isFree && !!$('input[name="addPaybackRate"]:checked').val());
+        }
+        $('input[name="addPayType"], input[name="addPaybackRate"]').on('change', syncAddPayback);
+        syncAddPayback();
+
         // 명단 1명 추가 (닉네임/플랫폼/성별)
         $('#checkinAddBtn').on('click', async function(){
             var name     = ($('#addName').val() || '').trim();
             var platform = $('input[name="addPlatform"]:checked').val();
             var gender   = $('input[name="addGender"]:checked').val() || 'M';
             var payType  = $('input[name="addPayType"]:checked').val() || 'N';
+            var pbRate   = $('input[name="addPaybackRate"]:checked').val() || '';
             var height    = ($('#addHeight').val() || '').trim();
             var birthYear = ($('#addBirthYear').val() || '').trim();
             var job       = ($('#addJob').val() || '').trim();
@@ -1220,12 +1272,17 @@
             if(!merit){ await salert({text: '장점을 입력해주세요.', cancel: false}); $('#addMerit').focus(); return; }
             $.ajax({
                 url: addUrl, type: 'POST',
-                data: { name: name, platform: platform, gender: gender, pay_type: payType, height: height, birth_year: birthYear, job: job, merit: merit },
+                data: $.extend(
+                    { name: name, platform: platform, gender: gender, pay_type: payType, height: height, birth_year: birthYear, job: job, merit: merit },
+                    // 페이백을 고른 경우에만 비율·계좌를 함께 보낸다. (금액은 서버가 참가비로 계산)
+                    pbRate ? { payback_rate: pbRate, bank_name: $('#addBank').val() || '', account_number: ($('#addAccount').val() || '').trim(), account_holder: ($('#addHolder').val() || '').trim() } : {}
+                ),
                 success: function(res){
                     alert(res?.msg);
                     if(res?.status === 200){
                         // 연속 입력 편의: 닉네임·프로필만 비우고 플랫폼/성별/결제 유형 선택은 유지한다.
-                        $('#addHeight, #addBirthYear, #addJob, #addMerit').val('');
+                        $('#addHeight, #addBirthYear, #addJob, #addMerit, #addAccount, #addHolder').val('');
+                        $('#addBank').val('');
                         $('#addName').val('').focus();
                         load();
                     }
@@ -1296,33 +1353,86 @@
                     return '<option value="' + esc(k) + '"' + ((r.pay_type || 'N') === k ? ' selected' : '') + '>' + esc(PAY_TYPE_LABEL[k]) + '</option>';
                 }).join('')
                 + '</select></div>';
+            if(r.payback && r.payback.done){
+                payTypeField = payTypeField.replace('<select id="swal-p-paytype"', '<select id="swal-p-paytype" disabled');
+            }
+            // 페이백 (없음 / 80% / 100%) + 계좌. 입금 완료면 비율·결제 유형은 잠기고 계좌만 고칠 수 있다.
+            var pb     = r.payback || null;
+            var pbDone = !!(pb && pb.done);
+            var sel = function(id, options, value, disabled){
+                return '<select id="' + id + '" class="swal2-select" style="width:100%;margin:0;box-sizing:border-box;"' + (disabled ? ' disabled' : '') + '>'
+                    + options.map(function(o){ return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(value) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
+                    + '</select>';
+            };
+            var lbl = function(forId, text){ return '<label for="' + forId + '" style="font-size:0.85rem;color:#475569;font-weight:700;display:block;margin-bottom:4px;">' + text + '</label>'; };
+            var rateOpts = [['', '없음']].concat(Object.keys(RATE_LABEL).sort(function(a, b){ return a - b; }).map(function(k){ return [k, RATE_LABEL[k]]; }));
+            var bankOpts = [['', '선택 안 함']].concat(BANKS.map(function(b){ return [b, b]; }));
+            var paybackField = '<div style="margin-top:8px;text-align:left;">' + lbl('swal-p-pbrate', '페이백') + sel('swal-p-pbrate', rateOpts, pb ? pb.rate : '', pbDone)
+                + (pb ? '<div style="font-size:.8rem;color:' + (pbDone ? '#2b8a3e' : '#d9480f') + ';margin-top:4px;font-weight:700;">현재 ' + Number(pb.amount || 0).toLocaleString('ko-KR') + '원 · ' + (pbDone ? '입금 완료 (비율·결제 유형 잠김)' : '입금 대기') + '</div>' : '')
+                + '<div id="swal-p-pbwarn" style="display:none;font-size:.8rem;color:#d63939;margin-top:4px;font-weight:700;">저장하면 페이백 정보(계좌 포함)가 지워져요.</div>'
+                + '</div>'
+                + '<div id="swal-p-account" style="text-align:left;">'
+                +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 8px;">'
+                +     '<div style="margin-top:8px;">' + lbl('swal-p-bank', '은행') + sel('swal-p-bank', bankOpts, pb ? (pb.bank_name || '') : '', false) + '</div>'
+                +     field('swal-p-holder', '예금주', 'text', pb ? (pb.account_holder || '') : '', '예: 홍길동', 'maxlength="30"')
+                +   '</div>'
+                +   field('swal-p-account-no', '계좌번호', 'text', pb ? (pb.account_number || '') : '', '숫자와 - 만', 'maxlength="30" inputmode="numeric"')
+                + '</div>';
             var res = await Swal.fire({
                 title: (r.name ? esc(r.name) : '닉네임 없음') + ' 프로필',
                 html: field('swal-p-name', '닉네임 *', 'text', r.name || '', '플랫폼에 등록된 닉네임', 'maxlength="50" autocomplete="off"')
                     + platformField
                     + payTypeField
+                    + paybackField
                     + field('swal-p-height', '키 (cm) *', 'text', r.height || '', '175', 'maxlength="3" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-birth', '년생 (2자리 가능) *', 'text', r.birth_year ? String(r.birth_year).slice(-2) : '', '97', 'maxlength="4" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-job', '직업 *', 'text', r.job || '', '예: 개발자', 'maxlength="50"')
                     + field('swal-p-merit', '장점 *', 'text', r.merit || '', '예: 잘 웃고 배려심이 깊어요', 'maxlength="100"'),
                 focusConfirm: true,
                 showCancelButton: true,
+                showCloseButton: true,
                 reverseButtons: true,
+                customClass: { popup: 'ck-swal', htmlContainer: 'ck-swal-body' },
                 confirmButtonText: '저장',
                 cancelButtonText: '취소',
+                didOpen: function(){
+                    // 무료면 페이백을 고를 수 없다. 단, 이미 페이백이 있으면 자동으로 지우지 않고 "없음"을 직접 고르게 한다.
+                    // 페이백 "없음"이면 계좌 칸을 숨기고, 기존 페이백이 지워진다는 경고를 보인다.
+                    function sync(){
+                        var isFree = $('#swal-p-paytype').val() === 'F';
+                        if(isFree && !pb){ $('#swal-p-pbrate').val(''); }
+                        $('#swal-p-pbrate').prop('disabled', pbDone || (isFree && !pb));
+                        var hasRate = !!$('#swal-p-pbrate').val();
+                        $('#swal-p-account').toggle(hasRate);
+                        $('#swal-p-pbwarn').toggle(!!pb && !pbDone && !hasRate);
+                    }
+                    $('#swal-p-paytype, #swal-p-pbrate').on('change', sync);
+                    sync();
+                },
                 preConfirm: function(){
+                    var pbRate = $('#swal-p-pbrate').val() || '';
                     var v = {
-                        name:       (document.getElementById('swal-p-name').value || '').trim(),
-                        platform:   document.getElementById('swal-p-platform').value,
-                        pay_type:   document.getElementById('swal-p-paytype').value,
-                        height:     (document.getElementById('swal-p-height').value || '').trim(),
-                        birth_year: (document.getElementById('swal-p-birth').value || '').trim(),
-                        job:        (document.getElementById('swal-p-job').value || '').trim(),
-                        merit:      (document.getElementById('swal-p-merit').value || '').trim()
+                        name:         (document.getElementById('swal-p-name').value || '').trim(),
+                        platform:     document.getElementById('swal-p-platform').value,
+                        pay_type:     document.getElementById('swal-p-paytype').value,
+                        payback_rate: pbRate,
+                        height:       (document.getElementById('swal-p-height').value || '').trim(),
+                        birth_year:   (document.getElementById('swal-p-birth').value || '').trim(),
+                        job:          (document.getElementById('swal-p-job').value || '').trim(),
+                        merit:        (document.getElementById('swal-p-merit').value || '').trim()
                     };
+                    if(v.pay_type === 'F' && pbRate){
+                        Swal.showValidationMessage('무료 참가자는 페이백을 받을 수 없어요. 페이백을 "없음"으로 바꿔 주세요.');
+                        return false;
+                    }
                     if(!v.name || !v.platform || !v.height || !v.birth_year || !v.job || !v.merit){
                         Swal.showValidationMessage('닉네임, 플랫폼, 키, 년생, 직업, 장점을 모두 입력해 주세요.');
                         return false;
+                    }
+                    if(pbRate){
+                        v.bank_name      = $('#swal-p-bank').val() || '';
+                        v.account_number = ($('#swal-p-account-no').val() || '').trim();
+                        v.account_holder = ($('#swal-p-holder').val() || '').trim();
                     }
                     return v;
                 }

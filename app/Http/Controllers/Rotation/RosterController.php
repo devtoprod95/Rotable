@@ -8,15 +8,19 @@ use App\Http\Requests\Admin\Rotation\RosterCheckInRequest;
 use App\Http\Requests\Admin\Rotation\RosterDevSeedRostersRequest;
 use App\Http\Requests\Admin\Rotation\RosterSetTicketRequest;
 use App\Http\Requests\Admin\Rotation\RosterUpdateRequest;
+use App\Exceptions\PaymentRuleException;
+use App\Models\EventPayback;
 use App\Models\EventRoster;
 use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\RotationTable;
 use App\Services\Rotation\EventContextService;
 use App\Services\Rotation\MemberLabelService;
+use App\Services\Rotation\PaybackService;
 use App\Services\Rotation\RevenueService;
 use App\Services\Rotation\RosterService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -35,6 +39,7 @@ class RosterController extends RotationBaseController
         protected EventContextService $eventContextService,
         protected MemberLabelService $memberLabelService,
         protected RevenueService $revenueService,
+        protected PaybackService $paybackService,
     ) {
         parent::__construct($request);
     }
@@ -78,6 +83,8 @@ class RosterController extends RotationBaseController
             'memberTableNos'  => $memberTableNos,
             'platformOptions' => Member::platformOptions(),
             'payTypeOptions'  => EventRoster::payTypeOptions(),
+            'rateOptions'     => EventPayback::rateOptions(),
+            'bankOptions'     => EventPayback::bankOptions(),
             // 체크인 때 테이블 지정용 — 이 행사의 테이블 목록 (번호 오름차순)
             'tables'          => RotationTable::where('event_id', $id)->orderBy('table_no')->get(['id', 'table_no']),
             // 최고관리자 전용 도구(기존 테이블 동기화 등) 노출 여부
@@ -127,11 +134,14 @@ class RosterController extends RotationBaseController
                 'gender'            => $r->gender,
                 'platform'          => $r->platform,
                 'pay_type'          => $r->pay_type ?: EventRoster::PAY_NORMAL,
-                // 페이백 대상이면 비율·금액·입금 완료 여부 (계좌 정보는 내리지 않는다)
+                // 페이백 대상이면 비율·금액·입금 완료 여부 + 계좌 (프로필 팝업에서 함께 고치기 위해)
                 'payback'           => $r->payback !== null ? [
-                    'rate'   => $r->payback->payback_rate,
-                    'amount' => $r->payback->payback_amount,
-                    'done'   => $r->payback->isTransferred(),
+                    'rate'           => $r->payback->payback_rate,
+                    'amount'         => $r->payback->payback_amount,
+                    'done'           => $r->payback->isTransferred(),
+                    'bank_name'      => $r->payback->bank_name,
+                    'account_number' => $r->payback->account_number,
+                    'account_holder' => $r->payback->account_holder,
                 ] : null,
                 'height'            => $r->height,
                 'birth_year'        => $r->birth_year,
@@ -187,24 +197,42 @@ class RosterController extends RotationBaseController
     }
 
     /**
-     * 체크인 명단 1명 추가 (닉네임/플랫폼/성별).
+     * 체크인 명단 1명 추가 (닉네임/플랫폼/성별 + 결제 유형 · 페이백).
+     * 명단 추가와 페이백 설정은 한 트랜잭션이라, 페이백 조건이 맞지 않으면 명단도 추가되지 않는다.
      */
     public function rosterAdd(RosterAddRequest $request, int $id): JsonResponse
     {
-        $result = $this->rosterService->rosterAdd(
-            $id,
-            (string) $request->validated('name'),
-            $request->validated('platform'),
-            $request->validated('gender'),
-            $request->safe()->only(['height', 'birth_year', 'job', 'merit']),
-            $request->validated('pay_type'),
-        );
+        try {
+            $result = DB::transaction(function () use ($request, $id): array {
+                $added = $this->rosterService->rosterAdd(
+                    $id,
+                    (string) $request->validated('name'),
+                    $request->validated('platform'),
+                    $request->validated('gender'),
+                    $request->safe()->only(['height', 'birth_year', 'job', 'merit']),
+                    $request->validated('pay_type'),
+                );
+                if (($added['isSuccess'] ?? false) !== true || ! $request->hasPaybackRate()) {
+                    return $added;
+                }
+
+                $payment = $this->paybackService->applyRosterPayment($id, (int) $added['roster_id'], $request->paymentInput());
+                if (($payment['isSuccess'] ?? false) !== true) {
+                    // 예외로 트랜잭션을 롤백해 방금 추가한 명단도 되돌린다.
+                    throw new PaymentRuleException($payment['msg'] ?? '페이백을 저장하지 못했습니다.');
+                }
+
+                return $added;
+            });
+        } catch (PaymentRuleException $e) {
+            return $this->respond(helpersFailMessage($e->getMessage()));
+        }
 
         return $this->respond($result, Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**
-     * 체크인 명단 1건 수정.
+     * 체크인 명단 1건 수정 (프로필 + 결제 유형 · 페이백). 모두 한 트랜잭션에서 저장한다.
      */
     public function rosterUpdate(RosterUpdateRequest $request, int $id, int $rosterId): JsonResponse
     {
@@ -213,18 +241,37 @@ class RosterController extends RotationBaseController
             return $this->respond(helpersFailMessage('이 행사의 명단에서 찾을 수 없습니다.'), Response::HTTP_NOT_FOUND);
         }
 
-        $data = $request->validated();
+        $payment = $request->paymentInput();
+        $profile = array_diff_key($request->validated(), array_flip(['pay_type', 'payback_rate', 'bank_name', 'account_number', 'account_holder']));
 
-        // 결제 유형은 페이백과 맞물리므로 매출 화면과 같은 규칙(무료↔페이백 대상, 입금 완료 잠금)으로 먼저 바꾼다.
-        if (! empty($data['pay_type'])) {
-            $result = $this->revenueService->setPayType($id, $rosterId, (string) $data['pay_type']);
-            if (($result['isSuccess'] ?? false) !== true) {
-                return $this->respond($result);
-            }
+        try {
+            $result = DB::transaction(function () use ($id, $rosterId, $payment, $profile): array {
+                // 결제 유형·페이백은 공통 규칙(무료↔페이백, 입금 완료 잠금)으로 먼저 처리한다.
+                if ($payment !== []) {
+                    $res = $this->paybackService->applyRosterPayment($id, $rosterId, $payment);
+                    if (($res['isSuccess'] ?? false) !== true) {
+                        throw new PaymentRuleException($res['msg'] ?? '저장하지 못했습니다.');
+                    }
+                }
+                $before = EventRoster::whereKey($rosterId)->first(['platform', 'gender']);
+                $res    = $this->rosterService->rosterUpdate($rosterId, $profile);
+                if (($res['isSuccess'] ?? false) !== true) {
+                    throw new PaymentRuleException($res['msg'] ?? '저장하지 못했습니다.');
+                }
+
+                // 플랫폼·성별이 바뀌면 참가비가 달라지므로 페이백 금액도 맞춘다. (입금 완료면 거부 → 전체 롤백)
+                $reprice = $this->paybackService->repriceForProfileChange($id, $rosterId, $before?->platform, $before?->gender);
+                if (($reprice['isSuccess'] ?? false) !== true) {
+                    throw new PaymentRuleException($reprice['msg'] ?? '저장하지 못했습니다.');
+                }
+
+                return $res;
+            });
+        } catch (PaymentRuleException $e) {
+            return $this->respond(helpersFailMessage($e->getMessage()));
         }
-        unset($data['pay_type']);
 
-        return $this->respond($this->rosterService->rosterUpdate($rosterId, $data), Response::HTTP_INTERNAL_SERVER_ERROR);
+        return $this->respond($result, Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**

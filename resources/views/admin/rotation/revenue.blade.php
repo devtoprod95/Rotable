@@ -118,7 +118,9 @@
     .rv-pwho .rv-pbadges{ display:flex; flex-wrap:wrap; gap:.25rem; margin-top:.15rem; }
     .rv-pmoney{ flex:0 0 auto; text-align:right; font-size:.85rem; line-height:1.35; }
     .rv-pmoney b{ font-size:1rem; }
-    .rv-seg{ flex:0 0 auto; display:grid; grid-template-columns:repeat(3, 1fr); gap:.25rem; width:228px; }
+    .rv-pctrl{ flex:0 0 auto; display:flex; flex-direction:column; gap:.3rem; width:228px; }
+    .rv-pbrate{ min-height:38px; font-size:.85rem; font-weight:700; }
+    .rv-seg{ flex:0 0 auto; display:grid; grid-template-columns:repeat(3, 1fr); gap:.25rem; width:100%; }
     .rv-seg button{ min-height:38px; border-radius:9px; border:1px solid #dee2e6; background:#fff; color:#495057; font-weight:700; font-size:.85rem; padding:0 .25rem; }
     .rv-seg button.is-on[data-type="N"]{ background:#495057; border-color:#495057; color:#fff; }
     .rv-seg button.is-on[data-type="E"]{ background:#ae3ec9; border-color:#ae3ec9; color:#fff; }
@@ -126,7 +128,8 @@
     .rv-seg button:disabled{ opacity:.6; }
     @media (max-width: 575.98px){
         .rv-pmoney{ flex:1 1 auto; text-align:left; order:3; }
-        .rv-seg{ order:4; width:100%; }
+        .rv-pctrl{ order:4; width:100%; }
+        .rv-pbrate{ min-height:42px; }
         .rv-seg button{ min-height:42px; }
     }
     .rv-empty{ padding:1.5rem 1rem; text-align:center; color:#868e96; word-break:keep-all; }
@@ -276,7 +279,7 @@
                         </div>
                         <input type="search" class="form-control rv-search" id="rvSearch" placeholder="번호표 또는 닉네임 검색" autocomplete="off">
                     </div>
-                    <div class="text-secondary small mb-2">얼리버드는 선착순이라 받은 사람만 바꿔 주세요. 무료는 결제 0원으로 계산하고 페이백 대상이 될 수 없어요.</div>
+                    <div class="text-secondary small mb-2">얼리버드는 선착순이라 받은 사람만 바꿔 주세요. 무료는 결제 0원으로 계산하고 페이백 대상이 될 수 없어요. 페이백 금액은 참가비로 자동 계산되고, 계좌는 체크인이나 페이백 화면에서 넣어요.</div>
                     <div id="rvPeople"></div>
                 </div>
             </div>
@@ -289,6 +292,8 @@
         var DATA_URL     = @json(route('admin.rotation.event.revenue.data', $event->id));
         var COST_URL     = @json(route('admin.rotation.event.costs.save', $event->id));
         var PAYTYPE_TPL  = @json(route('admin.rotation.event.rosters.payType', [$event->id, '__RID__']));
+        var PBRATE_TPL   = @json(route('admin.rotation.event.rosters.paybackRate', [$event->id, '__RID__']));
+        var RATE_LABEL   = @json($rateOptions);
         var PLATFORMS    = @json($platformOptions);
         var PAY_LABEL    = @json($payTypeOptions);
         var PLATFORM_LABEL = @json(collect($platformOptions)->pluck('label', 'id'));
@@ -505,15 +510,37 @@
                         + (lock && p.pay_type !== k ? ' disabled title="' + (p.payback_done ? '페이백 입금 완료' : '페이백 대상은 무료로 바꿀 수 없어요') + '"' : '')
                         + ' aria-pressed="' + (p.pay_type === k) + '">' + esc(PAY_LABEL[k]) + '</button>';
                 }).join('');
+                // 페이백 비율 (없음/80%/100%): 무료면 고를 수 없고, 입금 완료면 잠긴다. (서버가 같은 규칙으로 막는다)
+                var pbOpts = [['', '페이백 없음']].concat(Object.keys(RATE_LABEL).sort(function(a, b){ return a - b; }).map(function(k){ return [k, RATE_LABEL[k]]; }));
+                var pbSel = '<select class="form-select rv-pbrate" data-id="' + p.id + '" aria-label="페이백"'
+                    + (p.payback_done || p.pay_type === 'F' ? ' disabled title="' + (p.payback_done ? '페이백 입금 완료' : '무료 참가자는 페이백 불가') + '"' : '') + '>'
+                    + pbOpts.map(function(o){ return '<option value="' + o[0] + '"' + (String(p.payback_rate || '') === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
+                    + '</select>';
                 return '<div class="rv-person">'
                     + '<span class="rv-pno ' + (p.gender === 'F' ? 'is-f' : '') + '">' + (p.ticket_no || '-') + '</span>'
                     + '<div class="rv-pwho"><div class="rv-pname">' + esc(p.name || '닉네임 없음') + '</div><div class="rv-pbadges">' + badges + '</div></div>'
                     + '<div class="rv-pmoney">' + money + '</div>'
-                    + '<div class="rv-seg" role="group" aria-label="결제 유형">' + seg + '</div>'
+                    + '<div class="rv-pctrl">'
+                    +   '<div class="rv-seg" role="group" aria-label="결제 유형">' + seg + '</div>'
+                    +   pbSel
+                    + '</div>'
                     + '</div>';
             }).join(''));
         }
         $('.rv-gtab').on('click', function(){ state.gender = String($(this).data('g')); renderPeople(); });
+        $('#rvPeople').on('change', '.rv-pbrate', async function(){
+            var $s = $(this);
+            var p  = state.people.find(function(x){ return String(x.id) === String($s.data('id')); });
+            // 기존 페이백을 없애면 계좌 정보도 지워지므로 한 번 확인한다.
+            if(p && p.payback_rate && !$s.val()){
+                if(!(await salert({text: (p.name || '이 사람') + '님의 페이백을 없앨까요? (계좌 정보도 함께 지워져요)', icon: 'warning'}))){ $s.val(String(p.payback_rate)); return; }
+            }
+            $s.prop('disabled', true);
+            $.ajax({ url: PBRATE_TPL.replace('__RID__', $s.data('id')), type: 'PATCH', data: { payback_rate: $s.val() },
+                success: function(out){ if(out?.status !== 200){ alert(out?.msg); } load(); },
+                error: function(xhr){ ajaxError(xhr); load(); }
+            });
+        });
         $('#rvSearch').on('input', renderPeople);
         $('#rvPeople').on('click', '.rv-seg button', function(){
             var $b = $(this);

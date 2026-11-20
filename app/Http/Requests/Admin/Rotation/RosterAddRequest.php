@@ -11,6 +11,8 @@ use Illuminate\Validation\Rule;
  */
 class RosterAddRequest extends ApiFormRequest
 {
+    use PaybackFields;
+
     /**
      * 년생·키는 "00", "05" 처럼 앞에 0이 붙은 문자열로 올 수 있다.
      * (integer 규칙은 선행 0 문자열을 거부하므로) 검증 전에 숫자로 바꿔 둔다.
@@ -25,6 +27,7 @@ class RosterAddRequest extends ApiFormRequest
             }
         }
         $this->merge($numbers);
+        $this->preparePaybackFields();
     }
 
     /**
@@ -32,7 +35,7 @@ class RosterAddRequest extends ApiFormRequest
      */
     public function rules(): array
     {
-        return [
+        return array_merge([
             'name'       => 'required|string|max:50',
             'platform'   => ['required', Rule::in([Member::PLATFORM_MUNTO, Member::PLATFORM_FRIP])],
             'gender'     => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
@@ -41,7 +44,7 @@ class RosterAddRequest extends ApiFormRequest
             'birth_year' => 'required|integer|min:0|max:2100',
             'job'        => 'required|string|max:50',
             'merit'      => 'required|string|max:100',
-        ];
+        ], $this->paybackRules());
     }
 
     /**
@@ -49,7 +52,7 @@ class RosterAddRequest extends ApiFormRequest
      */
     public function messages(): array
     {
-        return [
+        return array_merge([
             'name.required'     => '닉네임을 입력해주세요.',
             'platform.required' => '플랫폼을 선택해주세요.',
             'platform.in'       => '플랫폼 선택이 올바르지 않습니다.',
@@ -64,6 +67,6 @@ class RosterAddRequest extends ApiFormRequest
             'job.required'      => '직업을 입력해주세요.',
             'merit.required'    => '장점을 입력해주세요.',
             'birth_year.integer' => '년생은 숫자로 입력해주세요. (예: 97)',
-        ];
+        ], $this->paybackMessages());
     }
 }

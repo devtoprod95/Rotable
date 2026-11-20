@@ -585,6 +585,45 @@
             return { side: 16000, area: 250 * 1000 * 1000 };     // 데스크톱: 화질 우선(넉넉히)
         }
 
+        /**
+         * 이미지 저장 배율. 1080px 디자인을 이 배율로 그린다. (2 → 가로 2160px)
+         * 4배는 세로로 긴 장이 5천만 화소를 넘어 그리기·PNG 변환이 매우 느렸다. 화질을 더 올리려면 3 으로.
+         */
+        var EXPORT_SCALE = 2;
+
+        /**
+         * 캡처 공통 옵션 — 폰트 파일을 한 번만 받아 메모리에 담아 두고 다시 쓴다.
+         *  - 상세페이지는 Google Fonts(Gothic A1·Jua)를 쓰는데, 한글 폰트는 글자 범위별로 잘게 나뉜 파일이
+         *    굵기마다 수십~수백 개다. 캡처 라이브러리는 장마다 이 파일들을 전부 다시 받아 이미지에 넣었다.
+         *  - 폰트(fonts.gstatic.com)만 여기서 받아 data URL 로 캐시하고, 이미지 등 나머지는 기존 방식(false → 기본 fetch)으로 둔다.
+         *    (업로드 이미지는 CORS 캐시 문제를 피하려고 계속 no-cache 로 받는다)
+         */
+        var fontDataCache = {};
+        function blobToDataUrl(blob){
+            return new Promise(function(resolve, reject){
+                var reader = new FileReader();
+                reader.onload = function(){ resolve(reader.result); };
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        }
+        function captureOptions(extra){
+            return Object.assign({
+                backgroundColor: '#ffffff',
+                fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } },
+                fetchFn: function(url){
+                    if (!/^https:\/\/fonts\.gstatic\.com\//.test(url)) { return Promise.resolve(false); }
+                    if (!fontDataCache[url]) {
+                        fontDataCache[url] = fetch(url, { mode: 'cors' })
+                            .then(function(res){ if (!res.ok) { throw new Error(res.status); } return res.blob(); })
+                            .then(blobToDataUrl)
+                            .catch(function(){ delete fontDataCache[url]; return false; }); // 실패하면 기본 방식으로
+                    }
+                    return fontDataCache[url];
+                }
+            }, extra || {});
+        }
+
         function computeSafeScale(cssWidth, cssHeight, desired){
             var lim = canvasLimits();
             var w = Math.max(1, cssWidth);
@@ -2778,15 +2817,13 @@
                     try {
                         var capW = pageHolder.offsetWidth || 1080;
                         var capH = pageHolder.scrollHeight || pageHolder.offsetHeight || 1080;
-                        var scale = computeSafeScale(capW, capH, 4);
+                        var scale = computeSafeScale(capW, capH, EXPORT_SCALE);
 
-                        var canvas = await modernScreenshot.domToCanvas(pageHolder, {
-                            backgroundColor: '#ffffff',
+                        var canvas = await modernScreenshot.domToCanvas(pageHolder, captureOptions({
                             width: capW,
                             height: capH,
-                            scale: scale,
-                            fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } }
-                        });
+                            scale: scale
+                        }));
 
                         // 파일명: 여러 장이면 _1, _2 … suffix. (한 장이면 suffix 없이)
                         // 파일명: 여러 장이면 순서 번호를 "앞에" 붙인다(1_, 2_ …). 한 장이면 접두 없음.
@@ -3045,15 +3082,13 @@
 
                 var feedW = target.offsetWidth || 1080;
                 var feedH = target.scrollHeight || target.offsetHeight || 1080;
-                var feedScale = computeSafeScale(feedW, feedH, 4);
+                var feedScale = computeSafeScale(feedW, feedH, EXPORT_SCALE);
 
-                var canvas = await modernScreenshot.domToCanvas(target, {
-                    backgroundColor: '#ffffff',
+                var canvas = await modernScreenshot.domToCanvas(target, captureOptions({
                     width: feedW,
                     height: feedH,
-                    scale: feedScale,
-                    fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } }
-                });
+                    scale: feedScale
+                }));
 
                 // 화질 최우선 + 상한 (상세페이지 다운로드와 동일 로직)
                 await exportCanvasUnder10MB(canvas, buildDownloadBaseName('rotable_피드'));

@@ -134,7 +134,10 @@ class RevenueService
             'fees'        => [
                 'prices'             => $event->fee_prices ?? [],
                 'early_bird_rates'   => $event->early_bird_rates ?? [],
-                'platform_fee_rates' => $event->platform_fee_rates ?? [],
+                // 화면 표시용: 설정하지 않은 플랫폼은 기본 수수료율로 채운다.
+                'platform_fee_rates' => collect(Member::platformOptions())
+                    ->mapWithKeys(fn (array $opt): array => [$opt['id'] => $event->platformFeeRateFor($opt['id'])])
+                    ->all(),
             ],
         ];
     }

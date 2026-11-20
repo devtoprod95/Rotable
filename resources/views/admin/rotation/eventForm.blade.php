@@ -310,7 +310,7 @@
                                     <label class="ef-fee-label" for="{{ $idPrefix }}Pf-{{ $opt['id'] }}">플랫폼 수수료율</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control ef-fee-pf-rate" inputmode="numeric" maxlength="3" id="{{ $idPrefix }}Pf-{{ $opt['id'] }}"
-                                               data-platform="{{ $opt['id'] }}" value="{{ $isEdit ? $event->platformFeeRateFor($opt['id']) : 0 }}">
+                                               data-platform="{{ $opt['id'] }}" value="{{ $isEdit ? $event->platformFeeRateFor($opt['id']) : \App\Models\EventRound::DEFAULT_PLATFORM_FEE_RATE }}">
                                         <span class="input-group-text">%</span>
                                     </div>
                                 </div>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Rotation;
 
+use App\Models\EventRound;
 use App\Models\Member;
 
 /**
@@ -9,7 +10,8 @@ use App\Models\Member;
  *
  * - fee_prices[플랫폼][성별] = 정가(원)
  * - early_bird_rates[플랫폼] = 얼리버드 할인율(%), platform_fee_rates[플랫폼] = 플랫폼 수수료율(%)
- * - 금액의 쉼표·"원", 비율의 "%" 를 지운다. 정가는 비우면 미설정, 비율은 비우면 0%.
+ * - 금액의 쉼표·"원", 비율의 "%" 를 지운다. 정가는 비우면 미설정, 얼리버드 할인율은 비우면 0%,
+ *   플랫폼 수수료율은 비우면 기본값(EventRound::DEFAULT_PLATFORM_FEE_RATE).
  * - 요청에 참가비 필드가 하나도 없으면 아무것도 하지 않는다. (수정 시 기존 값 유지)
  */
 trait EventFeeFields
@@ -42,7 +44,7 @@ trait EventFeeFields
             $rate                = preg_replace('/[^\d]/', '', (string) $this->input("early_bird_rates.$platform", ''));
             $rates[$platform]    = $rate === '' ? 0 : (int) $rate;
             $feeRate             = preg_replace('/[^\d]/', '', (string) $this->input("platform_fee_rates.$platform", ''));
-            $feeRates[$platform] = $feeRate === '' ? 0 : (int) $feeRate;
+            $feeRates[$platform] = $feeRate === '' ? EventRound::DEFAULT_PLATFORM_FEE_RATE : (int) $feeRate;
         }
 
         $this->merge([

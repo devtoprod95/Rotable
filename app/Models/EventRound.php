@@ -22,6 +22,9 @@ class EventRound extends Model
     public const STATUS_VOTING   = 'V'; // 투표중
     public const STATUS_CLOSED   = 'X'; // 종료
 
+    /** 플랫폼 수수료율 기본값(%). 행사에 따로 정하지 않은 플랫폼은 이 값으로 계산한다. */
+    public const DEFAULT_PLATFORM_FEE_RATE = 20;
+
     /**
      * 타입 셀렉트 옵션.
      *
@@ -269,11 +272,11 @@ class EventRound extends Model
     }
 
     /**
-     * 플랫폼 수수료율(%). 설정하지 않았으면 0.
+     * 플랫폼 수수료율(%). 설정하지 않았으면 기본값(DEFAULT_PLATFORM_FEE_RATE).
      */
     public function platformFeeRateFor(?string $platform): int
     {
-        return (int) ($this->platform_fee_rates[(string) $platform] ?? 0);
+        return (int) ($this->platform_fee_rates[(string) $platform] ?? self::DEFAULT_PLATFORM_FEE_RATE);
     }
 
     /**

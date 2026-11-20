@@ -29,27 +29,56 @@
     .rv-tile.is-profit.is-loss{ border-left-color:#d63939; background:#fdecec; } .rv-tile.is-profit.is-loss .rv-num{ color:#d63939; }
     .rv-warn{ margin-top:.6rem; padding:.5rem .7rem; border-radius:10px; background:#fff4e6; color:#a6420c; font-size:.85rem; word-break:keep-all; }
 
-    /* 플랫폼·성별 표: PC 는 표, 모바일은 카드 */
-    .rv-break{ width:100%; border-collapse:collapse; font-size:.9rem; }
-    .rv-break th, .rv-break td{ padding:.5rem .6rem; border-bottom:1px solid #eef0f3; text-align:right; white-space:nowrap; }
-    .rv-break th:first-child, .rv-break td:first-child{ text-align:left; }
-    .rv-break thead th{ font-size:.78rem; color:#868e96; font-weight:700; background:#f8f9fa; }
-    .rv-break tr.is-sub td{ font-weight:800; background:#fbfcfd; }
-    .rv-break tr.is-total td{ font-weight:800; background:#f1f3f5; border-bottom:0; }
-    .rv-break .is-minus{ color:#d63939; }
-    .rv-break .is-income{ color:#087f5b; font-weight:800; }
-    .rv-break-cards{ display:none; }
-    @media (max-width: 767.98px){
-        .rv-break{ display:none; }
-        .rv-break-cards{ display:grid; gap:.6rem; }
-    }
-    .rv-bcard{ border:1px solid #e6e8eb; border-radius:12px; padding:.65rem .75rem; border-left:4px solid #adb5bd; }
-    .rv-bcard.is-munto{ border-left-color:#f76707; }
-    .rv-bcard.is-frip{ border-left-color:#15aabf; }
-    .rv-bcard-head{ display:flex; justify-content:space-between; align-items:baseline; font-weight:800; margin-bottom:.35rem; }
-    .rv-bcard dl{ display:grid; grid-template-columns:auto 1fr; gap:.15rem .75rem; margin:0; font-size:.86rem; }
-    .rv-bcard dt{ color:#868e96; font-weight:700; }
-    .rv-bcard dd{ margin:0; text-align:right; }
+    /* 플랫폼 · 성별: 플랫폼 색(문토=주황, 프립=청록) 카드 안에 성별 색(여=분홍, 남=파랑) 칸 */
+    .rv-share{ margin-bottom:1rem; }
+    .rv-share-label{ display:flex; justify-content:space-between; font-size:.8rem; font-weight:700; color:#868e96; margin-bottom:.3rem; }
+    .rv-share-bar{ display:flex; height:14px; border-radius:999px; overflow:hidden; background:#f1f3f5; }
+    .rv-share-bar > span{ display:block; height:100%; }
+    .rv-share-legend{ display:flex; flex-wrap:wrap; gap:.4rem .9rem; margin-top:.4rem; font-size:.82rem; }
+    .rv-share-legend i{ display:inline-block; width:.7rem; height:.7rem; border-radius:3px; margin-right:.3rem; vertical-align:-1px; }
+    .rv-pf-grid{ display:grid; grid-template-columns:minmax(0, 1fr); gap:.85rem; }
+    @media (min-width: 992px){ .rv-pf-grid{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+    .rv-pf{ --pf:#868e96; --pf-soft:#f1f3f5; border:1px solid #e6e8eb; border-radius:14px; overflow:hidden; background:#fff; }
+    .rv-pf.is-munto{ --pf:#f76707; --pf-soft:#fff4e6; }
+    .rv-pf.is-frip{ --pf:#1098ad; --pf-soft:#e3fafc; }
+    .rv-pf-head{ display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.65rem .85rem; background:var(--pf); color:#fff; }
+    .rv-pf-name{ font-weight:800; font-size:1.05rem; }
+    .rv-pf-name small{ font-weight:600; opacity:.85; margin-left:.35rem; }
+    .rv-pf-income{ text-align:right; line-height:1.15; }
+    .rv-pf-income small{ display:block; font-size:.72rem; opacity:.85; }
+    .rv-pf-income b{ font-size:1.2rem; }
+    .rv-pf-body{ display:grid; grid-template-columns:1fr 1fr; gap:.5rem; padding:.65rem; background:var(--pf-soft); }
+    .rv-g{ border-radius:12px; padding:.55rem .65rem; background:#fff; border-top:4px solid #adb5bd; min-width:0; }
+    .rv-g.is-f{ border-top-color:#d6336c; }
+    .rv-g.is-m{ border-top-color:#206bc4; }
+    .rv-g-head{ display:flex; align-items:baseline; justify-content:space-between; gap:.35rem; }
+    .rv-g-title{ font-weight:800; }
+    .rv-g.is-f .rv-g-title{ color:#c2255c; }
+    .rv-g.is-m .rv-g-title{ color:#1c5aa6; }
+    .rv-g-people{ font-size:.82rem; font-weight:700; color:#495057; }
+    .rv-g-chips{ display:flex; flex-wrap:wrap; gap:.2rem; margin:.25rem 0 .35rem; min-height:1.2rem; }
+    .rv-g-chips .badge{ font-size:.68rem; }
+    .rv-g-lines{ margin:0; font-size:.82rem; }
+    .rv-g-lines > div{ display:flex; justify-content:space-between; gap:.35rem; line-height:1.6; }
+    .rv-g-lines dt{ color:#868e96; font-weight:600; margin:0; }
+    .rv-g-lines dd{ margin:0; font-weight:700; white-space:nowrap; }
+    .rv-g-lines .is-minus dd{ color:#d63939; }
+    .rv-g-lines .is-income{ margin-top:.2rem; padding-top:.25rem; border-top:1px dashed #dee2e6; }
+    .rv-g-lines .is-income dt{ color:#212529; font-weight:800; }
+    .rv-g-lines .is-income dd{ color:#087f5b; font-size:.95rem; font-weight:800; }
+    .rv-g.is-empty{ opacity:.55; }
+    .rv-pf-foot{ padding:.5rem .85rem .65rem; background:var(--pf-soft); border-top:1px solid rgba(0,0,0,.04); }
+    .rv-gbar{ display:flex; height:8px; border-radius:999px; overflow:hidden; background:#e9ecef; }
+    .rv-gbar .is-f{ background:#d6336c; } .rv-gbar .is-m{ background:#206bc4; }
+    .rv-gbar-label{ display:flex; justify-content:space-between; font-size:.74rem; font-weight:700; margin-top:.25rem; }
+    .rv-gbar-label .is-f{ color:#c2255c; } .rv-gbar-label .is-m{ color:#1c5aa6; }
+    .rv-total{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.5rem; margin-top:.85rem; padding:.7rem .85rem; border-radius:12px; background:#212529; color:#fff; }
+    @media (min-width: 768px){ .rv-total{ grid-template-columns:repeat(5, minmax(0, 1fr)); } }
+    .rv-total > div small{ display:block; font-size:.72rem; opacity:.7; }
+    .rv-total > div b{ font-size:1rem; }
+    .rv-total .is-minus b{ color:#ffa8a8; }
+    .rv-total .is-income b{ color:#8ce99a; font-size:1.1rem; }
+    @media (max-width: 399.98px){ .rv-pf-body{ grid-template-columns:minmax(0, 1fr); } }
 
     /* 설정: 플랫폼 수수료율 */
     .rv-rate-grid{ display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:.6rem; }
@@ -169,15 +198,7 @@
             </div>
             <div class="collapse show" id="rvBreakCollapse">
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="rv-break">
-                            <thead>
-                                <tr><th>구분</th><th>인원</th><th>무료</th><th>얼리버드</th><th>결제</th><th>수수료</th><th>페이백</th><th>실수입</th></tr>
-                            </thead>
-                            <tbody id="rvBreakBody"></tbody>
-                        </table>
-                    </div>
-                    <div class="rv-break-cards" id="rvBreakCards"></div>
+                    <div id="rvBreak"></div>
                 </div>
             </div>
         </div>
@@ -320,39 +341,77 @@
         function cell(b){ b = b || {}; return { people: b.people || 0, free: b.free || 0, early: b.early || 0, gross: b.gross || 0, fee: b.platform_fee || 0, payback: b.payback || 0 }; }
         function sum(a, b){ return { people: a.people + b.people, free: a.free + b.free, early: a.early + b.early, gross: a.gross + b.gross, fee: a.fee + b.fee, payback: a.payback + b.payback }; }
         function income(c){ return c.gross - c.fee - c.payback; }
-        function row(label, c, cls){
-            return '<tr class="' + (cls || '') + '"><td>' + label + '</td><td>' + c.people + '명</td><td>' + c.free + '</td><td>' + c.early + '</td>'
-                + '<td>' + won(c.gross) + '</td><td class="is-minus">' + minus(c.fee) + '</td><td class="is-minus">' + minus(c.payback) + '</td><td class="is-income">' + won(income(c)) + '</td></tr>';
+        function pct(part, whole){ return whole > 0 ? Math.round(part * 1000 / whole) / 10 : 0; }
+        var PF_COLOR = { munto: '#f76707', frip: '#1098ad' };
+
+        // 성별 칸 1개: 인원·무료/얼리버드 → 결제 - 수수료 - 페이백 = 실수입
+        function genderTile(gender, c){
+            var label = gender === 'F' ? '여' : '남';
+            var chips = (c.free ? '<span class="badge bg-teal-lt">무료 ' + c.free + '</span>' : '')
+                + (c.early ? '<span class="badge bg-purple-lt">얼리 ' + c.early + '</span>' : '');
+            return '<div class="rv-g ' + (gender === 'F' ? 'is-f' : 'is-m') + (c.people ? '' : ' is-empty') + '">'
+                + '<div class="rv-g-head"><span class="rv-g-title">' + label + '</span><span class="rv-g-people">' + c.people + '명</span></div>'
+                + '<div class="rv-g-chips">' + chips + '</div>'
+                + '<dl class="rv-g-lines">'
+                +   '<div><dt>결제</dt><dd>' + won(c.gross) + '</dd></div>'
+                +   '<div class="is-minus"><dt>수수료</dt><dd>' + minus(c.fee) + '</dd></div>'
+                +   '<div class="is-minus"><dt>페이백</dt><dd>' + minus(c.payback) + '</dd></div>'
+                +   '<div class="is-income"><dt>실수입</dt><dd>' + won(income(c)) + '</dd></div>'
+                + '</dl></div>';
         }
-        function bcard(label, c, platformId){
-            return '<div class="rv-bcard is-' + esc(platformId) + '"><div class="rv-bcard-head"><span>' + label + '</span><span class="text-success">' + won(income(c)) + '</span></div>'
-                + '<dl><dt>인원</dt><dd>' + c.people + '명 (무료 ' + c.free + ' · 얼리 ' + c.early + ')</dd>'
-                + '<dt>결제</dt><dd>' + won(c.gross) + '</dd><dt>수수료</dt><dd class="text-danger">' + minus(c.fee) + '</dd>'
-                + '<dt>페이백</dt><dd class="text-danger">' + minus(c.payback) + '</dd></dl></div>';
+
+        // 플랫폼 카드 1개: 머리(플랫폼 색) · 여/남 칸 · 성비 막대
+        function platformCard(p, f, m){
+            var sub = sum(f, m);
+            var fw  = pct(f.people, sub.people);
+            return '<div class="rv-pf is-' + esc(p.id) + '">'
+                + '<div class="rv-pf-head"><span class="rv-pf-name">' + esc(p.label) + '<small>' + sub.people + '명</small></span>'
+                +   '<span class="rv-pf-income"><small>실수입</small><b>' + won(income(sub)) + '</b></span></div>'
+                + '<div class="rv-pf-body">' + genderTile('F', f) + genderTile('M', m) + '</div>'
+                + '<div class="rv-pf-foot"><div class="rv-gbar" aria-hidden="true"><span class="is-f" style="width:' + fw + '%"></span><span class="is-m" style="width:' + (100 - fw) + '%"></span></div>'
+                +   '<div class="rv-gbar-label"><span class="is-f">여 ' + f.people + '명 · ' + fw + '%</span><span class="is-m">남 ' + m.people + '명 · ' + Math.round((100 - fw) * 10) / 10 + '%</span></div></div>'
+                + '</div>';
         }
+
         function renderBreak(byPlatform, t){
-            var rows = '', cards = '';
             var known = PLATFORMS.map(function(p){ return p.id; });
             var list  = PLATFORMS.slice();
             Object.keys(byPlatform).forEach(function(id){ if(known.indexOf(id) === -1){ list.push({ id: id, label: id || '기타' }); } });
-            var total = cell();
+
+            var total = cell(), rows = [];
             list.forEach(function(p){
                 var g = obj(byPlatform[p.id]);
                 var f = cell(g.F), m = cell(g.M), sub = sum(f, m);
                 if(sub.people === 0){ return; }
-                rows  += row(esc(p.label) + ' · 여', f) + row(esc(p.label) + ' · 남', m) + row(esc(p.label) + ' 소계', sub, 'is-sub');
-                cards += bcard(esc(p.label) + ' · 여', f, p.id) + bcard(esc(p.label) + ' · 남', m, p.id);
+                rows.push({ p: p, f: f, m: m, sub: sub });
                 total = sum(total, sub);
             });
             if(total.people === 0){
-                $('#rvBreakBody').html('<tr><td colspan="8" class="rv-empty">체크인 명단이 없어요. 체크인 탭에서 신청자를 먼저 등록해 주세요.</td></tr>');
-                $('#rvBreakCards').html('<div class="rv-empty">체크인 명단이 없어요. 체크인 탭에서 신청자를 먼저 등록해 주세요.</div>');
+                $('#rvBreak').html('<div class="rv-empty">체크인 명단이 없어요. 체크인 탭에서 신청자를 먼저 등록해 주세요.</div>');
                 return;
             }
-            rows  += row('합계', total, 'is-total');
-            cards += bcard('합계', total, 'total');
-            $('#rvBreakBody').html(rows);
-            $('#rvBreakCards').html(cards);
+
+            // 실수입 비중 막대 (플랫폼 색)
+            var totalIncome = Math.max(0, income(total));
+            var share = '<div class="rv-share"><div class="rv-share-label"><span>플랫폼별 실수입 비중</span><span>' + won(income(total)) + '</span></div>'
+                + '<div class="rv-share-bar">' + rows.map(function(r){
+                    return '<span style="width:' + pct(Math.max(0, income(r.sub)), totalIncome) + '%;background:' + (PF_COLOR[r.p.id] || '#868e96') + '"></span>';
+                }).join('') + '</div>'
+                + '<div class="rv-share-legend">' + rows.map(function(r){
+                    return '<span><i style="background:' + (PF_COLOR[r.p.id] || '#868e96') + '"></i><b>' + esc(r.p.label) + '</b> ' + pct(Math.max(0, income(r.sub)), totalIncome) + '%</span>';
+                }).join('') + '</div></div>';
+
+            var cards = '<div class="rv-pf-grid">' + rows.map(function(r){ return platformCard(r.p, r.f, r.m); }).join('') + '</div>';
+
+            var totalBar = '<div class="rv-total">'
+                + '<div><small>전체 인원</small><b>' + total.people + '명</b></div>'
+                + '<div><small>결제</small><b>' + won(total.gross) + '</b></div>'
+                + '<div class="is-minus"><small>수수료</small><b>' + minus(total.fee) + '</b></div>'
+                + '<div class="is-minus"><small>페이백</small><b>' + minus(total.payback) + '</b></div>'
+                + '<div class="is-income"><small>실수입</small><b>' + won(income(total)) + '</b></div>'
+                + '</div>';
+
+            $('#rvBreak').html(share + cards + totalBar);
         }
 
         /* ===== 플랫폼 수수료율 ===== */

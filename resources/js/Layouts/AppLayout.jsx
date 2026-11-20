@@ -614,14 +614,20 @@ function BottomNav() {
 function FlashToast() {
     const { flash } = usePage().props;
     const [toast, setToast] = useState(null);
+    // 타이머는 ref 로 따로 들고 있는다. flash 값이 바뀔 때(저장 직후 재조회로 flash 가 비는 경우 포함)
+    // effect 정리 단계에서 타이머가 취소되면 토스트가 사라지지 않고 남기 때문이다.
+    const timerRef = useRef(null);
 
     useEffect(() => {
         const message = flash?.success || flash?.error;
-        if (!message) return undefined;
+        if (!message) return;
         setToast({ message, type: flash?.error ? "error" : "success" });
-        const timer = setTimeout(() => setToast(null), 2500);
-        return () => clearTimeout(timer);
+        clearTimeout(timerRef.current);
+        timerRef.current = setTimeout(() => setToast(null), 2500);
     }, [flash?.success, flash?.error, flash?.ts]);
+
+    // 화면을 떠날 때만 타이머를 정리한다.
+    useEffect(() => () => clearTimeout(timerRef.current), []);
 
     if (!toast) return null;
 
@@ -630,7 +636,9 @@ function FlashToast() {
     return (
         <div className="pointer-events-none fixed inset-x-0 top-header z-50 mx-auto mt-3 flex w-full max-w-[480px] justify-center px-4">
             <div
-                className={`pointer-events-auto rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-lg ${cls}`}
+                role="status"
+                onClick={() => setToast(null)}
+                className={`pointer-events-auto cursor-pointer rounded-full px-3 py-1.5 text-xs font-semibold text-white shadow-lg ${cls}`}
             >
                 {toast.message}
             </div>

@@ -3,6 +3,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import { cancelPendingReload, requestReload, useRealtimeConnection, useRealtimeEvent } from "@/realtime";
 import NavigationLoader from "@/Components/NavigationLoader";
 import ConfirmModal from "@/Components/ConfirmModal";
+import ProfileDetailModal from "@/Components/ProfileDetailModal";
 import echo from "@/echo";
 
 /**
@@ -156,6 +157,27 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
         router.post("/logout");
     };
 
+    // 헤더의 '내 카드' 버튼. 누를 때마다 서버에서 최신 내 프로필(현재 테이블 포함)을 받아 상세카드 모달로 띄운다.
+    const [myCard, setMyCard]               = useState(null);
+    const [myCardLoading, setMyCardLoading] = useState(false);
+    const openMyCard = async () => {
+        if (myCardLoading) {
+            return;
+        }
+        setMyCardLoading(true);
+        try {
+            const res  = await fetch("/me/profile", { headers: { Accept: "application/json" } });
+            const json = res.ok ? await res.json() : null;
+            if (json?.member) {
+                setMyCard(json.member);
+            }
+        } catch {
+            // 네트워크 오류 시에는 조용히 무시한다. (다시 누르면 재시도)
+        } finally {
+            setMyCardLoading(false);
+        }
+    };
+
     // 페이지(라우트)가 바뀌면 항상 최상단으로 되돌린다. (body 가 스크롤 컨테이너)
     // useLayoutEffect: 새 화면이 그려지기 "전에" 스크롤을 올려, 이전 스크롤 위치에서 새 화면이 한 프레임 보였다가
     // 위로 튀는 깜빡임을 막는다. (useEffect 는 화면이 그려진 뒤에 실행된다)
@@ -180,6 +202,16 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                 />
                 <FlashToast />
                 <NavigationLoader />
+
+                {/* 내 상세카드 모달 (헤더의 이름 버튼) — 상대가 보는 모양 그대로 */}
+                {myCard && (
+                    <ProfileDetailModal
+                        member={myCard}
+                        tone={myCard.gender === "F" ? "female" : "male"}
+                        badge="내 카드"
+                        onClose={() => setMyCard(null)}
+                    />
+                )}
 
                 {/* 상단 header (뷰포트 고정) */}
                 <header className="vt-header fixed inset-x-0 top-0 z-30">
@@ -210,7 +242,7 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                                         Rotable
                                     </span>
                                     {eventName && (
-                                        <span className="mt-0.5 max-w-[150px] truncate text-[11px] font-medium leading-none text-secondary-400">
+                                        <span className="mt-0.5 max-w-[110px] min-[400px]:max-w-[150px] truncate text-[11px] font-medium leading-none text-secondary-400">
                                             {eventName}
                                         </span>
                                     )}
@@ -228,9 +260,14 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                                                 : "border-sky-200 bg-sky-50 text-sky-600";
                                             return (
                                                 <div className="flex items-center gap-1.5">
-                                                <div
+                                                <button
+                                                    type="button"
+                                                    onClick={openMyCard}
+                                                    disabled={myCardLoading}
+                                                    title="내 카드 보기"
+                                                    aria-label="내 카드 보기"
                                                     className={
-                                                        "flex items-center gap-1.5 rounded-full border px-3 py-1 shadow-sm " +
+                                                        "flex items-center gap-1.5 rounded-full border py-0.5 pl-3 pr-0.5 shadow-sm transition hover:shadow active:scale-95 disabled:opacity-60 " +
                                                         toneCls
                                                     }
                                                 >
@@ -245,7 +282,32 @@ export function AppShell({ children, initialOptions = DEFAULT_OPTIONS }) {
                                                             님
                                                         </span>
                                                     </span>
-                                                </div>
+                                                    {/* 버튼임이 바로 보이도록 성별 색으로 채운 '내 카드' 칸 */}
+                                                    <span
+                                                        className={
+                                                            "flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-extrabold leading-none text-white " +
+                                                            (isFemale ? "bg-rose-500" : "bg-sky-500")
+                                                        }
+                                                    >
+                                                        <svg
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            strokeWidth="2.2"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            className="h-3.5 w-3.5"
+                                                            aria-hidden="true"
+                                                        >
+                                                            <rect x="3" y="5" width="18" height="14" rx="2" />
+                                                            <circle cx="9" cy="11" r="2" />
+                                                            <path d="M6.5 16a3 3 0 0 1 5 0" />
+                                                            <path d="M14 10h4M14 14h3" />
+                                                        </svg>
+                                                        {myCardLoading ? "여는 중" : "내 카드"}
+                                                    </span>
+                                                </button>
                                                 <button
                                                     type="button"
                                                     onClick={handleLogout}

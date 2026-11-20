@@ -17,8 +17,9 @@ function birthYearText(birthYear) {
  * @param {object}  member   상대 회원 정보 (transformMember 결과)
  * @param {'female'|'male'} tone 상대 성별 톤 (female: 여자 상대, male: 남자 상대)
  * @param {Function} onClose 닫기 핸들러
+ * @param {string}  [badge]  이름 옆에 붙일 작은 표시 (예: 내 카드면 '내 카드')
  */
-export default function ProfileDetailModal({ member, tone, onClose }) {
+export default function ProfileDetailModal({ member, tone, onClose, badge = null }) {
     // 모달이 열려 있는 동안 배경 스크롤을 잠근다. (공용 훅)
     useBodyScrollLock(true);
 
@@ -67,6 +68,11 @@ export default function ProfileDetailModal({ member, tone, onClose }) {
                     <div className="flex items-center gap-2">
                         <span className="text-2xl">{tone === 'female' ? '👩' : '👨'}</span>
                         <span className="text-lg font-extrabold text-secondary-800">{member.name}호</span>
+                        {badge && (
+                            <span className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-bold text-primary">
+                                {badge}
+                            </span>
+                        )}
                         <button
                             type="button"
                             onClick={onClose}

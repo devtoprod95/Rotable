@@ -253,6 +253,23 @@ class MemberPageController extends Controller
     }
 
     /**
+     * 내 상세카드 (헤더의 '내 카드' 버튼). 상대가 보는 것과 같은 모양의 내 프로필을 JSON 으로 돌려준다.
+     * 현재 테이블은 현재 턴 기준으로 계산한다. (로테이션 시작 전/종료 후에는 null)
+     */
+    public function myProfile(): JsonResponse
+    {
+        /** @var \App\Models\Member $me */
+        $me    = Auth::guard('web')->user();
+        $event = $this->currentEvent($me);
+
+        $currentTableNo = $event !== null
+            ? ($this->currentTableNoMap($event->id, $event)[$me->id] ?? null)
+            : null;
+
+        return response()->json(['member' => $this->transformMember($me, $currentTableNo)]);
+    }
+
+    /**
      * 현재 턴(event_rounds.current_round) 기준으로 행사 내 모든 회원의 테이블 번호 맵.
      * 턴별 자리는 저장하지 않고 기준자리 + current_round 공식으로 계산한다.
      * 로테이션 시작 전(current_round<1)이면 빈 맵.

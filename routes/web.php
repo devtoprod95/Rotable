@@ -76,6 +76,8 @@ Route::post('/contact', [MemberAuthController::class, 'contact'])
 // 로그인한 유저만
 Route::middleware(['auth:web', \App\Http\Middleware\EnsureMemberAccessAllowed::class])->group(function () {
     Route::get('/home', [MemberPageController::class, 'home'])->name('home');
+    // 내 상세카드 (헤더 '내 카드' 버튼) — 상대가 보는 모양 그대로 내 프로필을 JSON 으로
+    Route::get('/me/profile', [MemberPageController::class, 'myProfile'])->name('me.profile');
     Route::get('/chats', [MemberPageController::class, 'chats'])->name('chats');
     Route::post('/chats/messages', [MemberPageController::class, 'sendMessage'])->name('chats.messages.send');
     Route::post('/chats/messages/read', [MemberPageController::class, 'markMessagesRead'])->name('chats.messages.read');

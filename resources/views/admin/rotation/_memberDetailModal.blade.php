@@ -18,7 +18,7 @@
         'outerPreference'     => \App\Models\Member::outerPreferenceOptions(),
         'innerPreference'     => \App\Models\Member::innerPreferenceOptions(),
     ];
-    $memberEditDrinks = ($event ?? null) && $event->isOneToOne()
+    $memberEditDrinks = ($event ?? null) && $event->usesDrinks()
         ? $event->drinks->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values()
         : collect();
     $memberUpdateUrlTemplate = route('admin.rotation.event.members.update', ['id' => $event->id, 'memberId' => '__MID__']);

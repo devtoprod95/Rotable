@@ -60,9 +60,9 @@ class RosterController extends RotationBaseController
         $event = EventRound::find($id);
         abort_if($event === null, 404);
 
-        // 1:1 소개팅은 체크인 화면에서 음료 선택지/선택 현황도 다룬다. (음료별 선택 인원수 포함)
+        // 1:1 소개팅(음료 선택 켜짐)은 체크인 화면에서 음료 선택지/선택 현황도 다룬다. (음료별 선택 인원수 포함)
         $memberTableNos = [];
-        if ($event->isOneToOne()) {
+        if ($event->usesDrinks()) {
             $event->load([
                 'drinks'  => fn ($q) => $q->withCount('members'),
                 'members' => fn ($q) => $q->select(['id', 'event_id', 'name', 'gender', 'event_drink_id', 'drink_served_at']),

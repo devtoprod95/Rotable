@@ -861,8 +861,8 @@ class RosterService
                 $noSeatNames = [];
                 // 트랜잭션 커밋 후 브로드캐스트할 음료 선택 회원 (롤백 시 잘못된 신호 방지)
                 $drinkChosen = [];
-                // 1:1 더미 음료 선택용 — 이 행사에 등록된 음료 id 목록
-                $drinkIds = $isOne ? $event->drinks()->pluck('id')->map(fn ($id) => (int) $id)->all() : [];
+                // 1:1 더미 음료 선택용 — 이 행사에 등록된 음료 id 목록 (음료 선택이 꺼져 있으면 고르지 않음)
+                $drinkIds = $event->usesDrinks() ? $event->drinks()->pluck('id')->map(fn ($id) => (int) $id)->all() : [];
 
                 foreach ($rosters as $roster) {
                     $gender = (string) $roster->gender;

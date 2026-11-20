@@ -1,6 +1,6 @@
 {{-- 음료 선택 (1:1 소개팅 전용) — 선택지 설정 + 참가자 선택/전달 현황. 체크인 화면에서 사용한다.
      필요한 값: $event (drinks[withCount members] · members 로드), $memberTableNos (회원 id => 기준 테이블 번호) --}}
-        @if ($event->isOneToOne())
+        @if ($event->usesDrinks())
             @php
                 // 음료별 현황 카드는 가나다(이름) 순. DB 정렬 규칙(콜레이션)에 기대지 않고 PHP 에서 한 번 더 정렬한다.
                 // (한글 음절은 유니코드 순서가 가나다 순과 같다)

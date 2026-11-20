@@ -114,12 +114,13 @@ class RotationService
         try {
             DB::transaction(function () use ($data) {
                 $event = EventRound::create([
-                    'title'      => $data->title,
-                    'type'       => $data->type,
-                    'event_time' => $data->event_time,
-                    'status'     => EventRound::STATUS_PENDING, // 생성 시 상태는 무조건 대기(P)
+                    'title'               => $data->title,
+                    'type'                => $data->type,
+                    'event_time'          => $data->event_time,
+                    'status'              => EventRound::STATUS_PENDING, // 생성 시 상태는 무조건 대기(P)
                     'review_gate_enabled' => (bool) ($data->review_gate_enabled ?? true),
-                    'created_by' => $data->created_by ?? null,
+                    'drink_enabled'       => (bool) ($data->drink_enabled ?? false),
+                    'created_by'          => $data->created_by ?? null,
                 ]);
 
                 $count = (int) ($data->table_count ?? 0);
@@ -136,7 +137,8 @@ class RotationService
                     RotationTable::insert($rows);
                 }
 
-                // 1:1 소개팅은 음료 선택이 필수라, 공통 기본 음료를 미리 채워 둔다. (행사 상세에서 수정 가능)
+                // 1:1 소개팅은 공통 기본 음료를 미리 채워 둔다. (행사 상세에서 수정 가능)
+                // 음료 선택을 끈 채 만들어도 채워 두어, 나중에 켜면 바로 쓸 수 있게 한다.
                 if ($event->isOneToOne()) {
                     $drinkRows = [];
                     foreach (EventDrink::DEFAULT_NAMES as $order => $name) {
@@ -181,6 +183,10 @@ class RotationService
             // 리뷰 인증 게이트 on/off (전달된 경우에만 반영)
             if (property_exists($data, 'review_gate_enabled')) {
                 $event->review_gate_enabled = (bool) $data->review_gate_enabled;
+            }
+            // 음료 선택 on/off (전달된 경우에만 반영). 끄면 음료 목록·선택 기록은 지우지 않고 화면에서만 숨긴다.
+            if (property_exists($data, 'drink_enabled')) {
+                $event->drink_enabled = (bool) $data->drink_enabled;
             }
             $event->save();
 

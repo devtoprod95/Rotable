@@ -20,6 +20,7 @@ class EventUpdateRequest extends ApiFormRequest
             'type'                => ['required', Rule::in([EventRound::TYPE_WINE, EventRound::TYPE_ONE])],
             'event_time'          => 'required|date',
             'review_gate_enabled' => 'nullable|boolean',
+            'drink_enabled'       => 'nullable|boolean',
         ];
     }
 }

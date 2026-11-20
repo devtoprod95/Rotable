@@ -53,7 +53,7 @@ class EventRound extends Model
     protected $table = 'event_rounds';
 
     /** @var list<string> */
-    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'current_round', 'rotation_limit', 'created_by'];
+    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'drink_enabled', 'current_round', 'rotation_limit', 'created_by'];
 
     /**
      * @return array<string, string>
@@ -64,6 +64,7 @@ class EventRound extends Model
             'event_time'          => 'datetime',
             'voting_opened_at'    => 'datetime',
             'review_gate_enabled' => 'boolean',
+            'drink_enabled'       => 'boolean',
             'current_round'       => 'integer',
             'rotation_limit'      => 'integer',
         ];
@@ -216,6 +217,14 @@ class EventRound extends Model
     public function isOneToOne(): bool
     {
         return $this->type === self::TYPE_ONE;
+    }
+
+    /**
+     * 음료 선택을 쓰는 행사인지 여부. (1:1 소개팅이면서 음료 선택이 켜져 있을 때)
+     */
+    public function usesDrinks(): bool
+    {
+        return $this->isOneToOne() && (bool) $this->drink_enabled;
     }
 
     /**

@@ -98,8 +98,8 @@ class MemberAuthController extends Controller
                 'innerPreference'     => Member::innerPreferenceOptions(),
             ],
             'event'       => $unavailable === null ? ['id' => $event->id, 'label' => $event->label, 'status' => $event->status] : null,
-            // 1:1 소개팅은 입장등록에서 음료를 고른다. (와인파티/등록 불가 시 빈 목록)
-            'drinks'      => $unavailable === null && $event->isOneToOne()
+            // 1:1 소개팅이면서 음료 선택이 켜진 행사만 입장등록에서 음료를 고른다. (그 외/등록 불가 시 빈 목록)
+            'drinks'      => $unavailable === null && $event->usesDrinks()
                 ? $event->drinks()->get(['id', 'name'])
                 : [],
             'unavailable' => $unavailable,
@@ -130,9 +130,9 @@ class MemberAuthController extends Controller
             'job'        => isset($fromRoster['job']) ? mb_substr($fromRoster['job'], 0, 50) : null,
         ]);
 
-        // 1:1 소개팅이고 음료가 등록되어 있으면 음료 선택이 필수다. (음료가 하나도 없으면 막지 않는다)
+        // 1:1 소개팅이고 음료 선택이 켜져 있으며 음료가 등록되어 있으면 음료 선택이 필수다. (음료가 하나도 없으면 막지 않는다)
         $drinkEvent    = (int) $request->input('event_id') > 0 ? EventRound::find((int) $request->input('event_id')) : null;
-        $drinkRequired = $drinkEvent !== null && $drinkEvent->isOneToOne() && $drinkEvent->drinks()->exists();
+        $drinkRequired = $drinkEvent !== null && $drinkEvent->usesDrinks() && $drinkEvent->drinks()->exists();
 
         $rules = [
             'event_drink_id' => $drinkRequired

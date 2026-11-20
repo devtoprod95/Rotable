@@ -1245,7 +1245,7 @@
             }
         });
 
-        // 프로필(키·년생·직업) 입력/수정
+        // 프로필(닉네임·플랫폼·키·년생·직업·장점) 입력/수정
         $(document).on('click', '.btn-checkin-profile', async function(e){
             e.stopPropagation(); // 행 참석 토글로 번지지 않게
             var id = $(this).data('id');
@@ -1257,9 +1257,19 @@
                     + '<input id="' + fid + '" type="' + type + '" class="swal2-input" value="' + esc(val) + '" placeholder="' + ph + '" ' + (extra || '')
                     + ' style="width:100%;margin:0;box-sizing:border-box;"></div>';
             };
+            // 신청 플랫폼 선택 (입장등록한 회원이 있으면 서버가 회원 플랫폼도 함께 맞춘다)
+            var platformField = '<div style="margin-top:8px;text-align:left;">'
+                + '<label for="swal-p-platform" style="font-size:0.85rem;color:#475569;font-weight:700;display:block;margin-bottom:4px;">플랫폼 *</label>'
+                + '<select id="swal-p-platform" class="swal2-select" style="width:100%;margin:0;box-sizing:border-box;">'
+                + Object.keys(PLATFORM_LABEL).map(function(pid){
+                    return '<option value="' + esc(pid) + '"' + (r.platform === pid ? ' selected' : '') + '>' + esc(PLATFORM_LABEL[pid]) + '</option>';
+                }).join('')
+                + '</select></div>';
             var res = await Swal.fire({
                 title: (r.name ? esc(r.name) : '닉네임 없음') + ' 프로필',
-                html: field('swal-p-height', '키 (cm) *', 'text', r.height || '', '175', 'maxlength="3" inputmode="numeric" pattern="[0-9]*"')
+                html: field('swal-p-name', '닉네임 *', 'text', r.name || '', '플랫폼에 등록된 닉네임', 'maxlength="50" autocomplete="off"')
+                    + platformField
+                    + field('swal-p-height', '키 (cm) *', 'text', r.height || '', '175', 'maxlength="3" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-birth', '년생 (2자리 가능) *', 'text', r.birth_year ? String(r.birth_year).slice(-2) : '', '97', 'maxlength="4" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-job', '직업 *', 'text', r.job || '', '예: 개발자', 'maxlength="50"')
                     + field('swal-p-merit', '장점 *', 'text', r.merit || '', '예: 잘 웃고 배려심이 깊어요', 'maxlength="100"'),
@@ -1270,13 +1280,15 @@
                 cancelButtonText: '취소',
                 preConfirm: function(){
                     var v = {
+                        name:       (document.getElementById('swal-p-name').value || '').trim(),
+                        platform:   document.getElementById('swal-p-platform').value,
                         height:     (document.getElementById('swal-p-height').value || '').trim(),
                         birth_year: (document.getElementById('swal-p-birth').value || '').trim(),
                         job:        (document.getElementById('swal-p-job').value || '').trim(),
                         merit:      (document.getElementById('swal-p-merit').value || '').trim()
                     };
-                    if(!v.height || !v.birth_year || !v.job || !v.merit){
-                        Swal.showValidationMessage('키, 년생, 직업, 장점을 모두 입력해 주세요.');
+                    if(!v.name || !v.platform || !v.height || !v.birth_year || !v.job || !v.merit){
+                        Swal.showValidationMessage('닉네임, 플랫폼, 키, 년생, 직업, 장점을 모두 입력해 주세요.');
                         return false;
                     }
                     return v;

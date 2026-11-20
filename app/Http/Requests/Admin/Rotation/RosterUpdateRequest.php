@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Rotation;
 
+use App\Models\EventRoster;
 use App\Models\Member;
 use Illuminate\Validation\Rule;
 
@@ -35,6 +36,7 @@ class RosterUpdateRequest extends ApiFormRequest
             'name'       => 'nullable|string|max:50',
             'platform'   => ['nullable', Rule::in([Member::PLATFORM_MUNTO, Member::PLATFORM_FRIP])],
             'gender'     => ['nullable', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
+            'pay_type'   => ['nullable', Rule::in(array_keys(EventRoster::payTypeOptions()))],
             'height'     => 'sometimes|required|integer|min:100|max:230',
             'birth_year' => 'sometimes|required|integer|min:0|max:2100',
             'job'        => 'sometimes|required|string|max:50',
@@ -56,6 +58,7 @@ class RosterUpdateRequest extends ApiFormRequest
             'birth_year.integer'  => '년생은 숫자로 입력해주세요. (예: 97)',
             'job.required'        => '직업을 입력해주세요.',
             'merit.required'      => '장점을 입력해주세요.',
+            'pay_type.in'         => '결제 유형 선택이 올바르지 않습니다.',
         ];
     }
 }

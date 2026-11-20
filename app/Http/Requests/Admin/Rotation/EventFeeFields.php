@@ -10,7 +10,7 @@ use App\Models\Member;
  *
  * - fee_prices[플랫폼][성별] = 정가(원)
  * - early_bird_rates[플랫폼] = 얼리버드 할인율(%), platform_fee_rates[플랫폼] = 플랫폼 수수료율(%)
- * - 금액의 쉼표·"원", 비율의 "%" 를 지운다. 정가는 비우면 미설정, 얼리버드 할인율은 비우면 0%,
+ * - 쉼표·공백·"원"·"%" 만 지운다. 마이너스·소수점 등이 섞이면 거부한다. 정가는 비우면 미설정, 얼리버드 할인율은 비우면 0%,
  *   플랫폼 수수료율은 비우면 기본값(EventRound::DEFAULT_PLATFORM_FEE_RATE).
  * - 요청에 참가비 필드가 하나도 없으면 아무것도 하지 않는다. (수정 시 기존 값 유지)
  */
@@ -38,13 +38,10 @@ trait EventFeeFields
         $feeRates = [];
         foreach ($this->feePlatformIds() as $platform) {
             foreach ([Member::GENDER_MALE, Member::GENDER_FEMALE] as $gender) {
-                $digits                     = preg_replace('/[^\d]/', '', (string) $this->input("fee_prices.$platform.$gender", ''));
-                $prices[$platform][$gender] = $digits === '' ? null : (int) $digits;
+                $prices[$platform][$gender] = $this->cleanNumber($this->input("fee_prices.$platform.$gender"));
             }
-            $rate                = preg_replace('/[^\d]/', '', (string) $this->input("early_bird_rates.$platform", ''));
-            $rates[$platform]    = $rate === '' ? 0 : (int) $rate;
-            $feeRate             = preg_replace('/[^\d]/', '', (string) $this->input("platform_fee_rates.$platform", ''));
-            $feeRates[$platform] = $feeRate === '' ? EventRound::DEFAULT_PLATFORM_FEE_RATE : (int) $feeRate;
+            $rates[$platform]    = $this->cleanNumber($this->input("early_bird_rates.$platform"), 0);
+            $feeRates[$platform] = $this->cleanNumber($this->input("platform_fee_rates.$platform"), EventRound::DEFAULT_PLATFORM_FEE_RATE);
         }
 
         $this->merge([
@@ -80,12 +77,14 @@ trait EventFeeFields
     protected function feeMessages(): array
     {
         return [
-            'fee_prices.*.*.integer'   => '참가비는 숫자로 입력해 주세요.',
-            'fee_prices.*.*.max'       => '참가비가 너무 큽니다.',
-            'early_bird_rates.*.min'   => '얼리버드 할인율은 0~100% 사이로 입력해 주세요.',
-            'early_bird_rates.*.max'   => '얼리버드 할인율은 0~100% 사이로 입력해 주세요.',
-            'platform_fee_rates.*.min' => '플랫폼 수수료율은 0~100% 사이로 입력해 주세요.',
-            'platform_fee_rates.*.max' => '플랫폼 수수료율은 0~100% 사이로 입력해 주세요.',
+            'fee_prices.*.*.integer'       => '참가비는 0 이상의 정수(원)로 입력해 주세요.',
+            'early_bird_rates.*.integer'   => '얼리버드 할인율은 0~100 사이의 정수로 입력해 주세요.',
+            'platform_fee_rates.*.integer' => '플랫폼 수수료율은 0~100 사이의 정수로 입력해 주세요.',
+            'fee_prices.*.*.max'           => '참가비가 너무 큽니다.',
+            'early_bird_rates.*.min'       => '얼리버드 할인율은 0~100% 사이로 입력해 주세요.',
+            'early_bird_rates.*.max'       => '얼리버드 할인율은 0~100% 사이로 입력해 주세요.',
+            'platform_fee_rates.*.min'     => '플랫폼 수수료율은 0~100% 사이로 입력해 주세요.',
+            'platform_fee_rates.*.max'     => '플랫폼 수수료율은 0~100% 사이로 입력해 주세요.',
         ];
     }
 

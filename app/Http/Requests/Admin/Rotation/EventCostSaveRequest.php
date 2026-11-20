@@ -11,7 +11,7 @@ use App\Models\EventCost;
 class EventCostSaveRequest extends ApiFormRequest
 {
     /**
-     * 빈 줄을 버리고, 금액의 쉼표·"원"을 지운다.
+     * 빈 줄을 버리고, 금액의 쉼표·공백·"원"만 지운다. (마이너스·소수점 등이 섞이면 거부)
      */
     protected function prepareForValidation(): void
     {
@@ -21,8 +21,7 @@ class EventCostSaveRequest extends ApiFormRequest
             if ($name === '') {
                 continue;
             }
-            $digits  = preg_replace('/[^\d]/', '', (string) ($row['amount'] ?? ''));
-            $costs[] = ['name' => $name, 'amount' => $digits === '' ? 0 : (int) $digits];
+            $costs[] = ['name' => $name, 'amount' => $this->cleanNumber($row['amount'] ?? null, 0)];
         }
         $this->merge(['costs' => $costs]);
     }
@@ -45,9 +44,10 @@ class EventCostSaveRequest extends ApiFormRequest
     public function messages(): array
     {
         return [
-            'costs.max'          => '비용 항목은 최대 ' . EventCost::MAX_PER_EVENT . '개까지 입력할 수 있습니다.',
-            'costs.*.name.max'   => '비용 항목명은 50자 이내로 입력해 주세요.',
-            'costs.*.amount.max' => '비용 금액이 너무 큽니다.',
+            'costs.max'              => '비용 항목은 최대 ' . EventCost::MAX_PER_EVENT . '개까지 입력할 수 있습니다.',
+            'costs.*.name.max'       => '비용 항목명은 50자 이내로 입력해 주세요.',
+            'costs.*.amount.integer' => '비용 금액은 0 이상의 정수(원)로 입력해 주세요.',
+            'costs.*.amount.max'     => '비용 금액이 너무 큽니다.',
         ];
     }
 }

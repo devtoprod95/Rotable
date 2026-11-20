@@ -6,6 +6,7 @@ use App\Models\EventPayback;
 use App\Models\EventRoster;
 use App\Models\EventRound;
 use App\Models\Member;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -109,24 +110,26 @@ class PaybackService
     public function add(int $eventId, array $data): array
     {
         try {
-            $event  = EventRound::findOrFail($eventId);
-            $roster = EventRoster::where('event_id', $eventId)->find($data['event_roster_id']);
-            if ($roster === null) {
-                return helpersFailMessage('이 행사의 체크인 명단에 없는 사람입니다.');
-            }
-            if (EventPayback::where('event_roster_id', $roster->id)->exists()) {
-                return helpersFailMessage('이미 페이백 대상으로 등록된 사람입니다.');
-            }
-            if ($roster->isFree()) {
-                return helpersFailMessage('무료 참가자는 페이백 대상이 될 수 없습니다. 매출 화면에서 결제 유형을 먼저 바꿔 주세요.');
-            }
+            $event = EventRound::findOrFail($eventId);
 
-            $paid = $this->resolvePaidAmount($event, $roster, (bool) $data['is_early_bird'], $data['paid_amount'] ?? null);
-            if ($paid === null) {
-                return helpersFailMessage('결제 금액을 입력하거나, 위에서 이 플랫폼·성별의 참가비를 먼저 저장해 주세요.');
-            }
+            // 확인 → 저장을 한 트랜잭션에서, 명단 행을 잠그고 처리한다. (동시에 두 번 눌러도 한 건만)
+            return DB::transaction(function () use ($event, $eventId, $data): array {
+                $roster = EventRoster::where('event_id', $eventId)->lockForUpdate()->find($data['event_roster_id']);
+                if ($roster === null) {
+                    return helpersFailMessage('이 행사의 체크인 명단에 없는 사람입니다.');
+                }
+                if (EventPayback::where('event_roster_id', $roster->id)->exists()) {
+                    return helpersFailMessage('이미 페이백 대상으로 등록된 사람입니다.');
+                }
+                if ($roster->isFree()) {
+                    return helpersFailMessage('무료 참가자는 페이백 대상이 될 수 없습니다. 체크인이나 매출 화면에서 결제 유형을 먼저 바꿔 주세요.');
+                }
 
-            DB::transaction(function () use ($eventId, $roster, $data, $paid): void {
+                $paid = $this->resolvePaidAmount($event, $roster, (bool) $data['is_early_bird'], $data['paid_amount'] ?? null);
+                if ($paid === null) {
+                    return helpersFailMessage('결제 금액을 입력하거나, 행사 정보에서 이 플랫폼·성별의 참가비를 먼저 저장해 주세요.');
+                }
+
                 EventPayback::create([
                     'event_id'        => $eventId,
                     'event_roster_id' => $roster->id,
@@ -141,9 +144,11 @@ class PaybackService
                     'status'          => EventPayback::STATUS_WAITING,
                 ]);
                 $this->syncRosterEarlyBird($roster, (bool) $data['is_early_bird']);
-            });
 
-            return helpersSuccessMessage('페이백 대상을 추가했습니다.');
+                return helpersSuccessMessage('페이백 대상을 추가했습니다.');
+            });
+        } catch (UniqueConstraintViolationException) {
+            return helpersFailMessage('이미 페이백 대상으로 등록된 사람입니다.');
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }
@@ -157,39 +162,45 @@ class PaybackService
     public function update(int $eventId, int $paybackId, array $data): array
     {
         try {
-            $payback = EventPayback::with('roster')->where('event_id', $eventId)->findOrFail($paybackId);
-            $event   = EventRound::findOrFail($eventId);
+            $event = EventRound::findOrFail($eventId);
 
-            $rate      = (int) $data['payback_rate'];
-            $earlyBird = (bool) $data['is_early_bird'];
-            $paid      = $this->resolvePaidAmount($event, $payback->roster, $earlyBird, $data['paid_amount'] ?? null);
-            if ($paid === null) {
-                return helpersFailMessage('결제 금액을 입력해 주세요.');
-            }
+            // 입금 완료 여부 확인 → 저장을 한 트랜잭션에서 행을 잠그고 처리한다. (다른 관리자가 동시에 입금 완료한 경우 대비)
+            return DB::transaction(function () use ($event, $eventId, $paybackId, $data): array {
+                $payback = EventPayback::where('event_id', $eventId)->lockForUpdate()->findOrFail($paybackId);
+                $payback->load('roster');
+                if ($payback->roster?->isFree()) {
+                    return helpersFailMessage('무료 참가자는 페이백 대상이 될 수 없습니다. 결제 유형을 먼저 바꿔 주세요.');
+                }
 
-            $amountChanged = $rate !== $payback->payback_rate
-                || $earlyBird !== $payback->is_early_bird
-                || $paid !== $payback->paid_amount;
-            if ($payback->isTransferred() && $amountChanged) {
-                return helpersFailMessage('입금 완료된 건은 금액을 바꿀 수 없습니다. 입금 완료를 먼저 취소해 주세요.');
-            }
+                $rate      = (int) $data['payback_rate'];
+                $earlyBird = (bool) $data['is_early_bird'];
+                $paid      = $this->resolvePaidAmount($event, $payback->roster, $earlyBird, $data['paid_amount'] ?? null);
+                if ($paid === null) {
+                    return helpersFailMessage('결제 금액을 입력해 주세요.');
+                }
 
-            $payback->payback_rate   = $rate;
-            $payback->is_early_bird  = $earlyBird;
-            $payback->paid_amount    = $paid;
-            $payback->payback_amount = EventPayback::calcAmount($paid, $rate);
-            $payback->bank_name      = $this->clean($data['bank_name'] ?? null);
-            $payback->account_number = $this->clean($data['account_number'] ?? null);
-            $payback->account_holder = $this->clean($data['account_holder'] ?? null);
-            $payback->memo           = $this->clean($data['memo'] ?? null);
-            DB::transaction(function () use ($payback, $earlyBird): void {
+                $amountChanged = $rate !== $payback->payback_rate
+                    || $earlyBird !== $payback->is_early_bird
+                    || $paid !== $payback->paid_amount;
+                if ($payback->isTransferred() && $amountChanged) {
+                    return helpersFailMessage('입금 완료된 건은 금액을 바꿀 수 없습니다. 입금 완료를 먼저 취소해 주세요.');
+                }
+
+                $payback->payback_rate   = $rate;
+                $payback->is_early_bird  = $earlyBird;
+                $payback->paid_amount    = $paid;
+                $payback->payback_amount = EventPayback::calcAmount($paid, $rate);
+                $payback->bank_name      = $this->clean($data['bank_name'] ?? null);
+                $payback->account_number = $this->clean($data['account_number'] ?? null);
+                $payback->account_holder = $this->clean($data['account_holder'] ?? null);
+                $payback->memo           = $this->clean($data['memo'] ?? null);
                 $payback->save();
                 if ($payback->roster !== null) {
                     $this->syncRosterEarlyBird($payback->roster, $earlyBird);
                 }
-            });
 
-            return helpersSuccessMessage('페이백 정보를 수정했습니다.');
+                return helpersSuccessMessage('페이백 정보를 수정했습니다.');
+            });
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }
@@ -201,24 +212,33 @@ class PaybackService
     public function setTransferred(int $eventId, int $paybackId, bool $done, ?int $adminId): array
     {
         try {
-            $payback = EventPayback::with('roster')->where('event_id', $eventId)->findOrFail($paybackId);
-            $event   = EventRound::findOrFail($eventId);
+            $event = EventRound::findOrFail($eventId);
 
-            if ($done) {
-                if ($this->isNoShow($payback, $this->isStarted($event))) {
-                    return helpersFailMessage('노쇼(체크인 안 함)인 사람은 입금 완료로 바꿀 수 없습니다. 실제 참석했다면 체크인 화면에서 먼저 체크인해 주세요.');
+            return DB::transaction(function () use ($event, $eventId, $paybackId, $done, $adminId): array {
+                $payback = EventPayback::where('event_id', $eventId)->lockForUpdate()->findOrFail($paybackId);
+                $payback->load('roster');
+
+                // 이미 그 상태면 아무것도 바꾸지 않는다. (처리 시각·처리자 기록을 덮어쓰지 않게)
+                if ($payback->isTransferred() === $done) {
+                    return helpersSuccessMessage($done ? '이미 입금 완료된 건입니다.' : '이미 입금 대기 상태입니다.');
                 }
-                $payback->status         = EventPayback::STATUS_DONE;
-                $payback->transferred_at = now();
-                $payback->transferred_by = $adminId;
-            } else {
-                $payback->status         = EventPayback::STATUS_WAITING;
-                $payback->transferred_at = null;
-                $payback->transferred_by = null;
-            }
-            $payback->save();
 
-            return helpersSuccessMessage($done ? '입금 완료로 표시했습니다.' : '입금 완료를 취소했습니다.');
+                if ($done) {
+                    if ($this->isNoShow($payback, $this->isStarted($event))) {
+                        return helpersFailMessage('노쇼(체크인 안 함)인 사람은 입금 완료로 바꿀 수 없습니다. 실제 참석했다면 체크인 화면에서 먼저 체크인해 주세요.');
+                    }
+                    $payback->status         = EventPayback::STATUS_DONE;
+                    $payback->transferred_at = now();
+                    $payback->transferred_by = $adminId;
+                } else {
+                    $payback->status         = EventPayback::STATUS_WAITING;
+                    $payback->transferred_at = null;
+                    $payback->transferred_by = null;
+                }
+                $payback->save();
+
+                return helpersSuccessMessage($done ? '입금 완료로 표시했습니다.' : '입금 완료를 취소했습니다.');
+            });
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }
@@ -230,13 +250,15 @@ class PaybackService
     public function delete(int $eventId, int $paybackId): array
     {
         try {
-            $payback = EventPayback::where('event_id', $eventId)->findOrFail($paybackId);
-            if ($payback->isTransferred()) {
-                return helpersFailMessage('입금 완료된 건은 삭제할 수 없습니다. 입금 완료를 먼저 취소해 주세요.');
-            }
-            $payback->delete();
+            return DB::transaction(function () use ($eventId, $paybackId): array {
+                $payback = EventPayback::where('event_id', $eventId)->lockForUpdate()->findOrFail($paybackId);
+                if ($payback->isTransferred()) {
+                    return helpersFailMessage('입금 완료된 건은 삭제할 수 없습니다. 입금 완료를 먼저 취소해 주세요.');
+                }
+                $payback->delete();
 
-            return helpersSuccessMessage('페이백 대상에서 뺐습니다.');
+                return helpersSuccessMessage('페이백 대상에서 뺐습니다.');
+            });
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }

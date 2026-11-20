@@ -187,9 +187,10 @@ class RosterService
      * - 전화번호가 없으므로 중복 판정은 하지 않는다. (동명이인·동일 닉네임 허용)
      *
      * @param array{height?:mixed, birth_year?:mixed, job?:mixed, merit?:mixed} $profile 상세페이지 명단용 프로필(선택)
+     * @param string|null $payType 결제 유형 (정가 N / 얼리버드 E / 무료 F, 비우면 정가)
      * @return array{isSuccess:bool, msg?:string}
      */
-    public function rosterAdd(int $eventId, string $name, ?string $platform, ?string $gender, array $profile = []): array
+    public function rosterAdd(int $eventId, string $name, ?string $platform, ?string $gender, array $profile = [], ?string $payType = null): array
     {
         try {
             EventRoster::create([
@@ -197,6 +198,7 @@ class RosterService
                 'name'       => trim($name),
                 'gender'     => $this->normalizeGender($gender),
                 'platform'   => $this->normalizePlatform($platform),
+                'pay_type'   => array_key_exists((string) $payType, EventRoster::payTypeOptions()) ? $payType : EventRoster::PAY_NORMAL,
                 'height'     => $this->normalizeHeight($profile['height'] ?? null),
                 'birth_year' => $this->normalizeBirthYear($profile['birth_year'] ?? null),
                 'job'        => $this->normalizeJob($profile['job'] ?? null),
@@ -325,17 +327,21 @@ class RosterService
     public function rosterDelete(array $ids): array
     {
         try {
-            $rosters = EventRoster::whereIn('id', $ids)->get();
+            // 페이백 대상은 삭제하면 페이백 기록(계좌·입금 처리)까지 함께 지워지므로 막는다.
+            $rosters = EventRoster::withExists('payback')->whereIn('id', $ids)->get();
             if ($rosters->isEmpty()) {
                 return helpersFailMessage('삭제할 명단을 찾을 수 없습니다.');
             }
 
-            $blocked   = [];
-            $deletable = [];
+            $blocked        = [];
+            $paybackBlocked = [];
+            $deletable      = [];
             foreach ($rosters as $roster) {
                 // 체크인 이후(참석·입장등록)는 삭제 불가
                 if ($roster->checked_in_at !== null) {
                     $blocked[] = $roster->name ?: ($roster->ticket_no . '번');
+                } elseif ($roster->payback_exists) {
+                    $paybackBlocked[] = $roster->name ?: '닉네임 없음';
                 } else {
                     $deletable[] = $roster->id;
                 }
@@ -345,10 +351,20 @@ class RosterService
                 EventRoster::whereIn('id', $deletable)->delete();
             }
 
-            if (! empty($blocked)) {
-                $names = implode(', ', array_slice($blocked, 0, 5));
-                $more  = count($blocked) > 5 ? ' 외 ' . (count($blocked) - 5) . '명' : '';
-                $msg   = "체크인한 참가자({$names}{$more})는 삭제할 수 없습니다. 먼저 체크인을 취소해 주세요.";
+            if (! empty($blocked) || ! empty($paybackBlocked)) {
+                $list = function (array $names): string {
+                    $more = count($names) > 5 ? ' 외 ' . (count($names) - 5) . '명' : '';
+
+                    return implode(', ', array_slice($names, 0, 5)) . $more;
+                };
+                $msgs = [];
+                if (! empty($blocked)) {
+                    $msgs[] = '체크인한 참가자(' . $list($blocked) . ')는 삭제할 수 없습니다. 먼저 체크인을 취소해 주세요.';
+                }
+                if (! empty($paybackBlocked)) {
+                    $msgs[] = '페이백 대상(' . $list($paybackBlocked) . ')은 삭제할 수 없습니다. 페이백 화면에서 먼저 빼 주세요.';
+                }
+                $msg = implode(' ', $msgs);
                 if (! empty($deletable)) {
                     $msg .= ' 나머지 ' . count($deletable) . '건만 삭제했습니다.';
                 }

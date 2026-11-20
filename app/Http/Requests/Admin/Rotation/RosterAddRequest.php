@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin\Rotation;
 
+use App\Models\EventRoster;
 use App\Models\Member;
 use Illuminate\Validation\Rule;
 
@@ -35,6 +36,7 @@ class RosterAddRequest extends ApiFormRequest
             'name'       => 'required|string|max:50',
             'platform'   => ['required', Rule::in([Member::PLATFORM_MUNTO, Member::PLATFORM_FRIP])],
             'gender'     => ['required', Rule::in([Member::GENDER_MALE, Member::GENDER_FEMALE])],
+            'pay_type'   => ['nullable', Rule::in(array_keys(EventRoster::payTypeOptions()))],
             'height'     => 'required|integer|min:100|max:230',
             'birth_year' => 'required|integer|min:0|max:2100',
             'job'        => 'required|string|max:50',
@@ -53,6 +55,7 @@ class RosterAddRequest extends ApiFormRequest
             'platform.in'       => '플랫폼 선택이 올바르지 않습니다.',
             'gender.required'   => '성별을 선택해주세요.',
             'gender.in'         => '성별 선택이 올바르지 않습니다.',
+            'pay_type.in'       => '결제 유형 선택이 올바르지 않습니다.',
             'height.required'   => '키를 입력해주세요.',
             'height.integer'    => '키는 숫자로 입력해주세요.',
             'height.min'        => '키는 100~230cm 사이로 입력해주세요.',

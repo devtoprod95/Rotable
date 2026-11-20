@@ -4,6 +4,7 @@ namespace App\Services\Rotation;
 
 use App\Dtos\RotationTableListRequestDto;
 use App\Models\EventDrink;
+use App\Models\EventPayback;
 use App\Models\EventRound;
 use App\Models\Member;
 use App\Models\RotationTable;
@@ -271,6 +272,16 @@ class RotationService
             $events = EventRound::whereIn('id', $ids)->get();
             if ($events->isEmpty()) {
                 throw new Exception('행사를 찾을 수 없습니다.');
+            }
+
+            // 입금 완료된 페이백이 있는 행사는 지우지 않는다. (행사를 지우면 페이백 기록도 함께 지워진다)
+            $paidEvents = EventPayback::whereIn('event_id', $ids)
+                ->where('status', EventPayback::STATUS_DONE)
+                ->distinct()
+                ->pluck('event_id');
+            if ($paidEvents->isNotEmpty()) {
+                $titles = $events->whereIn('id', $paidEvents->all())->pluck('title')->implode(', ');
+                throw new Exception("페이백 입금이 끝난 행사({$titles})는 삭제할 수 없습니다.");
             }
 
             DB::transaction(function () use ($ids, $events) {

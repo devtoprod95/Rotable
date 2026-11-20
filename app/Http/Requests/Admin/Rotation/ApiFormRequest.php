@@ -29,6 +29,22 @@ abstract class ApiFormRequest extends FormRequest
     }
 
     /**
+     * 금액·비율 입력 정리. 쉼표·공백·"원"·"%" 만 지운다.
+     *
+     * - 비면 $empty, 숫자만 남으면 정수, 그 밖의 글자(마이너스·소수점 등)가 섞이면 원래 문자열을 그대로 돌려
+     *   integer 규칙에서 거부되게 한다. (예: "-5000", "2.5" 를 5000, 25 로 잘못 읽지 않게)
+     */
+    protected function cleanNumber(mixed $value, ?int $empty = null): int|string|null
+    {
+        $text = preg_replace('/[,\s원%]/u', '', (string) ($value ?? ''));
+        if ($text === '') {
+            return $empty;
+        }
+
+        return ctype_digit($text) ? (int) $text : (string) $value;
+    }
+
+    /**
      * 비어 있지 않으면 정수, 비어 있으면 null. (선택 입력 숫자 필드용)
      */
     public function nullableInt(string $key): ?int

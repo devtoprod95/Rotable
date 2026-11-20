@@ -187,28 +187,34 @@ class RevenueService
     public function setPayType(int $eventId, int $rosterId, string $payType): array
     {
         try {
-            $roster = EventRoster::with('payback')->where('event_id', $eventId)->findOrFail($rosterId);
-            $event  = EventRound::findOrFail($eventId);
-
-            if ($roster->pay_type === $payType) {
-                return helpersSuccessMessage('결제 유형을 저장했습니다.');
+            if (! array_key_exists($payType, EventRoster::payTypeOptions())) {
+                return helpersFailMessage('결제 유형이 올바르지 않습니다.');
             }
+            $event = EventRound::findOrFail($eventId);
 
-            $payback = $roster->payback;
-            if ($payback !== null) {
-                if ($payType === EventRoster::PAY_FREE) {
-                    return helpersFailMessage('페이백 대상은 무료로 바꿀 수 없습니다. 페이백 화면에서 먼저 빼 주세요.');
-                }
-                if ($payback->isTransferred()) {
-                    return helpersFailMessage('페이백 입금이 끝난 사람은 결제 유형을 바꿀 수 없습니다.');
-                }
-            }
+            // 확인 → 저장을 한 트랜잭션에서 명단·페이백 행을 잠그고 처리한다. (동시에 입금 완료되는 경우 대비)
+            return DB::transaction(function () use ($event, $eventId, $rosterId, $payType): array {
+                $roster  = EventRoster::where('event_id', $eventId)->lockForUpdate()->findOrFail($rosterId);
+                $payback = EventPayback::where('event_roster_id', $roster->id)->lockForUpdate()->first();
 
-            DB::transaction(function () use ($roster, $payback, $event, $payType): void {
+                if ($roster->pay_type === $payType) {
+                    return helpersSuccessMessage('결제 유형을 저장했습니다.');
+                }
+
+                if ($payback !== null) {
+                    if ($payType === EventRoster::PAY_FREE) {
+                        return helpersFailMessage('페이백 대상은 무료로 바꿀 수 없습니다. 페이백 화면에서 먼저 빼 주세요.');
+                    }
+                    if ($payback->isTransferred()) {
+                        return helpersFailMessage('페이백 입금이 끝난 사람은 결제 유형을 바꿀 수 없습니다.');
+                    }
+                }
+
                 $roster->pay_type = $payType;
                 $roster->save();
 
                 if ($payback !== null) {
+                    // 얼리버드 여부를 페이백에 맞추고, 결제 금액이 자동 금액 그대로였으면 새 자동 금액으로 다시 계산한다.
                     $earlyBird = $payType === EventRoster::PAY_EARLY_BIRD;
                     $before    = $event->paidPriceFor($roster->platform, $roster->gender, (bool) $payback->is_early_bird);
                     $after     = $event->paidPriceFor($roster->platform, $roster->gender, $earlyBird);
@@ -220,9 +226,11 @@ class RevenueService
                     }
                     $payback->save();
                 }
-            });
 
-            return helpersSuccessMessage('결제 유형을 저장했습니다.');
+                return helpersSuccessMessage('결제 유형을 저장했습니다.');
+            });
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException) {
+            return helpersFailMessage('이 행사의 명단에서 찾을 수 없습니다.');
         } catch (\Throwable $th) {
             return helpersFailMessage($th->getMessage());
         }

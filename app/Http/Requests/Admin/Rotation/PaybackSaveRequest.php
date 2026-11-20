@@ -14,21 +14,20 @@ use Illuminate\Validation\Rule;
 class PaybackSaveRequest extends ApiFormRequest
 {
     /**
-     * 금액에 섞인 쉼표·"원"·공백을 지우고, 계좌번호는 숫자와 하이픈만 남긴다.
+     * 금액에 섞인 쉼표·"원"·공백만 지우고(그 밖의 글자가 있으면 거부), 계좌번호는 공백만 지운다.
      */
     protected function prepareForValidation(): void
     {
         $merge = [];
 
-        $paid = $this->input('paid_amount');
-        if (is_string($paid)) {
-            $digits               = preg_replace('/[^\d]/', '', $paid);
-            $merge['paid_amount'] = $digits === '' ? null : (int) $digits;
+        if ($this->has('paid_amount')) {
+            $merge['paid_amount'] = $this->cleanNumber($this->input('paid_amount'));
         }
 
+        // 계좌번호: 공백만 지우고, 숫자·하이픈 외 글자가 있으면 검증에서 거부한다.
         $account = $this->input('account_number');
         if (is_string($account)) {
-            $merge['account_number'] = preg_replace('/[^\d-]/', '', $account);
+            $merge['account_number'] = preg_replace('/\s/u', '', $account);
         }
 
         $this->merge($merge);
@@ -62,7 +61,7 @@ class PaybackSaveRequest extends ApiFormRequest
             'event_roster_id.required' => '페이백 대상자를 선택해 주세요.',
             'payback_rate.required'    => '페이백 비율을 선택해 주세요.',
             'payback_rate.in'          => '페이백 비율은 100% 또는 80%만 선택할 수 있습니다.',
-            'paid_amount.integer'      => '결제 금액은 숫자로 입력해 주세요.',
+            'paid_amount.integer'      => '결제 금액은 0 이상의 정수(원)로 입력해 주세요.',
             'paid_amount.max'          => '결제 금액이 너무 큽니다.',
             'account_number.regex'     => '계좌번호는 숫자와 하이픈(-)만 입력해 주세요.',
             'account_number.max'       => '계좌번호가 너무 깁니다.',

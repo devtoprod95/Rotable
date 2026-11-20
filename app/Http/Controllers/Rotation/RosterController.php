@@ -14,6 +14,7 @@ use App\Models\Member;
 use App\Models\RotationTable;
 use App\Services\Rotation\EventContextService;
 use App\Services\Rotation\MemberLabelService;
+use App\Services\Rotation\RevenueService;
 use App\Services\Rotation\RosterService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,7 @@ class RosterController extends RotationBaseController
         protected RosterService $rosterService,
         protected EventContextService $eventContextService,
         protected MemberLabelService $memberLabelService,
+        protected RevenueService $revenueService,
     ) {
         parent::__construct($request);
     }
@@ -75,6 +77,7 @@ class RosterController extends RotationBaseController
             // 1:1 음료 현황 표기용 — 회원 id => 기준(입장등록 때 배정된) 테이블 번호
             'memberTableNos'  => $memberTableNos,
             'platformOptions' => Member::platformOptions(),
+            'payTypeOptions'  => EventRoster::payTypeOptions(),
             // 체크인 때 테이블 지정용 — 이 행사의 테이블 목록 (번호 오름차순)
             'tables'          => RotationTable::where('event_id', $id)->orderBy('table_no')->get(['id', 'table_no']),
             // 최고관리자 전용 도구(기존 테이블 동기화 등) 노출 여부
@@ -122,6 +125,7 @@ class RosterController extends RotationBaseController
                 'name'              => $r->name,
                 'gender'            => $r->gender,
                 'platform'          => $r->platform,
+                'pay_type'          => $r->pay_type ?: EventRoster::PAY_NORMAL,
                 'height'            => $r->height,
                 'birth_year'        => $r->birth_year,
                 'job'               => $r->job,
@@ -186,6 +190,7 @@ class RosterController extends RotationBaseController
             $request->validated('platform'),
             $request->validated('gender'),
             $request->safe()->only(['height', 'birth_year', 'job', 'merit']),
+            $request->validated('pay_type'),
         );
 
         return $this->respond($result, Response::HTTP_INTERNAL_SERVER_ERROR);
@@ -196,7 +201,23 @@ class RosterController extends RotationBaseController
      */
     public function rosterUpdate(RosterUpdateRequest $request, int $id, int $rosterId): JsonResponse
     {
-        return $this->respond($this->rosterService->rosterUpdate($rosterId, $request->validated()), Response::HTTP_INTERNAL_SERVER_ERROR);
+        // 주소의 행사(id)에 속한 명단만 고칠 수 있다.
+        if (! EventRoster::where('event_id', $id)->whereKey($rosterId)->exists()) {
+            return $this->respond(helpersFailMessage('이 행사의 명단에서 찾을 수 없습니다.'), Response::HTTP_NOT_FOUND);
+        }
+
+        $data = $request->validated();
+
+        // 결제 유형은 페이백과 맞물리므로 매출 화면과 같은 규칙(무료↔페이백 대상, 입금 완료 잠금)으로 먼저 바꾼다.
+        if (! empty($data['pay_type'])) {
+            $result = $this->revenueService->setPayType($id, $rosterId, (string) $data['pay_type']);
+            if (($result['isSuccess'] ?? false) !== true) {
+                return $this->respond($result);
+            }
+        }
+        unset($data['pay_type']);
+
+        return $this->respond($this->rosterService->rosterUpdate($rosterId, $data), Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**

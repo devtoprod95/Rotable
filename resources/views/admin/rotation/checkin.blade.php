@@ -164,6 +164,16 @@
                             <label class="btn btn-outline-pink" for="addGenderF">여</label>
                         </div>
                     </div>
+                    {{-- 결제 유형: 매출 화면의 신청자별 결제 유형과 같은 값 (얼리버드는 선착순) --}}
+                    <div class="col-12 col-md-6">
+                        <label class="form-label mb-1 d-block">결제 유형</label>
+                        <div class="btn-group w-100" role="group" aria-label="결제 유형 선택">
+                            @foreach ($payTypeOptions as $value => $label)
+                                <input type="radio" class="btn-check" name="addPayType" id="addPayType{{ $value }}" value="{{ $value }}" autocomplete="off" {{ $loop->first ? 'checked' : '' }}>
+                                <label class="btn {{ ['N' => 'btn-outline-secondary', 'E' => 'btn-outline-purple', 'F' => 'btn-outline-teal'][$value] ?? 'btn-outline-secondary' }}" for="addPayType{{ $value }}">{{ $label }}</label>
+                            @endforeach
+                        </div>
+                    </div>
                 </div>
                 {{-- 상세페이지 명단 자동 채움용 프로필 (필수 입력) --}}
                 <div class="row g-2 align-items-end mt-1">
@@ -368,6 +378,9 @@
         // 플랫폼 표시 라벨/색상 (문토/프립)
         var PLATFORM_LABEL = @json(collect($platformOptions)->pluck('label', 'id'));
         var PLATFORM_BADGE = { munto: 'bg-orange-lt', frip: 'bg-cyan-lt' };
+        // 결제 유형 라벨/색상 (정가/얼리버드/무료) — 매출 화면과 같은 값
+        var PAY_TYPE_LABEL = @json($payTypeOptions);
+        var PAY_TYPE_BADGE = { E: 'bg-purple-lt', F: 'bg-teal-lt' };
         var TICKET_MAX = {{ \App\Services\Rotation\RosterService::TICKET_MAX }};
 
         function esc(v){ return $('<div>').text(v == null ? '' : v).html(); }
@@ -425,6 +438,10 @@
             var pfLabel = PLATFORM_LABEL[r.platform] || r.platform || '';
             var pf = pfLabel
                 ? `<span class="badge ${PLATFORM_BADGE[r.platform] || 'bg-secondary-lt'}">${esc(pfLabel)}</span>` : '';
+            // 결제 유형 배지: 정가는 기본이라 생략, 얼리버드·무료만 표시
+            if(r.pay_type && r.pay_type !== 'N'){
+                pf += `<span class="badge ${PAY_TYPE_BADGE[r.pay_type] || 'bg-secondary-lt'}">${esc(PAY_TYPE_LABEL[r.pay_type] || r.pay_type)}</span>`;
+            }
 
             // ① 번호표 박스 (성별 색)
             var ticket = r.ticket_no
@@ -1186,6 +1203,7 @@
             var name     = ($('#addName').val() || '').trim();
             var platform = $('input[name="addPlatform"]:checked').val();
             var gender   = $('input[name="addGender"]:checked').val() || 'M';
+            var payType  = $('input[name="addPayType"]:checked').val() || 'N';
             var height    = ($('#addHeight').val() || '').trim();
             var birthYear = ($('#addBirthYear').val() || '').trim();
             var job       = ($('#addJob').val() || '').trim();
@@ -1197,11 +1215,11 @@
             if(!merit){ await salert({text: '장점을 입력해주세요.', cancel: false}); $('#addMerit').focus(); return; }
             $.ajax({
                 url: addUrl, type: 'POST',
-                data: { name: name, platform: platform, gender: gender, height: height, birth_year: birthYear, job: job, merit: merit },
+                data: { name: name, platform: platform, gender: gender, pay_type: payType, height: height, birth_year: birthYear, job: job, merit: merit },
                 success: function(res){
                     alert(res?.msg);
                     if(res?.status === 200){
-                        // 연속 입력 편의: 닉네임·프로필만 비우고 플랫폼/성별 선택은 유지한다.
+                        // 연속 입력 편의: 닉네임·프로필만 비우고 플랫폼/성별/결제 유형 선택은 유지한다.
                         $('#addHeight, #addBirthYear, #addJob, #addMerit').val('');
                         $('#addName').val('').focus();
                         load();
@@ -1265,10 +1283,19 @@
                     return '<option value="' + esc(pid) + '"' + (r.platform === pid ? ' selected' : '') + '>' + esc(PLATFORM_LABEL[pid]) + '</option>';
                 }).join('')
                 + '</select></div>';
+            // 결제 유형 (페이백 대상은 무료 불가, 페이백 입금 완료면 변경 불가 — 서버가 막고 안내한다)
+            var payTypeField = '<div style="margin-top:8px;text-align:left;">'
+                + '<label for="swal-p-paytype" style="font-size:0.85rem;color:#475569;font-weight:700;display:block;margin-bottom:4px;">결제 유형</label>'
+                + '<select id="swal-p-paytype" class="swal2-select" style="width:100%;margin:0;box-sizing:border-box;">'
+                + Object.keys(PAY_TYPE_LABEL).map(function(k){
+                    return '<option value="' + esc(k) + '"' + ((r.pay_type || 'N') === k ? ' selected' : '') + '>' + esc(PAY_TYPE_LABEL[k]) + '</option>';
+                }).join('')
+                + '</select></div>';
             var res = await Swal.fire({
                 title: (r.name ? esc(r.name) : '닉네임 없음') + ' 프로필',
                 html: field('swal-p-name', '닉네임 *', 'text', r.name || '', '플랫폼에 등록된 닉네임', 'maxlength="50" autocomplete="off"')
                     + platformField
+                    + payTypeField
                     + field('swal-p-height', '키 (cm) *', 'text', r.height || '', '175', 'maxlength="3" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-birth', '년생 (2자리 가능) *', 'text', r.birth_year ? String(r.birth_year).slice(-2) : '', '97', 'maxlength="4" inputmode="numeric" pattern="[0-9]*"')
                     + field('swal-p-job', '직업 *', 'text', r.job || '', '예: 개발자', 'maxlength="50"')
@@ -1282,6 +1309,7 @@
                     var v = {
                         name:       (document.getElementById('swal-p-name').value || '').trim(),
                         platform:   document.getElementById('swal-p-platform').value,
+                        pay_type:   document.getElementById('swal-p-paytype').value,
                         height:     (document.getElementById('swal-p-height').value || '').trim(),
                         birth_year: (document.getElementById('swal-p-birth').value || '').trim(),
                         job:        (document.getElementById('swal-p-job').value || '').trim(),

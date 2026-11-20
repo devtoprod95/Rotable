@@ -57,6 +57,7 @@ class PurgeData extends Command
                 'rotation_seats',
                 'admin_requests',
                 'members',
+                'event_paybacks',
                 'event_rosters',
             ],
             'stats' => [
@@ -70,6 +71,7 @@ class PurgeData extends Command
                 'admin_requests',
                 'rotation_seats',
                 'rotation_tables',
+                'event_paybacks',
                 'event_rosters',
                 'members',
                 'event_drinks',

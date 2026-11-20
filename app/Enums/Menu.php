@@ -30,7 +30,7 @@ enum Menu: string
                     [
                         // 행사 목록 → 행사 상세 → 체크인 → 로테이션 진행 (행사 하나를 만들고 당일 운영하는 흐름)
                         'name'     => '행사 운영',
-                        'pattern'  => ['admin.rotation.event*', 'admin.rotation.checkin*', 'admin.rotation.seating*'],
+                        'pattern'  => ['admin.rotation.event*', 'admin.rotation.checkin*', 'admin.rotation.seating*', 'admin.rotation.payback*'],
                         'children' => [
                             // 목록/생성만. (상세·체크인 등 event.* 하위 화면은 아래 메뉴가 각각 맡는다)
                             ['name' => '행사 목록', 'route' => 'admin.rotation.event.index', 'pattern' => ['admin.rotation.event.index*', 'admin.rotation.event.create*']],
@@ -39,6 +39,8 @@ enum Menu: string
                             // 가장 가까운 진행 예정 행사의 체크인으로 바로 이동한다.
                             ['name' => '체크인', 'route' => 'admin.rotation.checkin.current', 'pattern' => ['admin.rotation.event.checkin*', 'admin.rotation.checkin*']],
                             ['name' => '로테이션 진행', 'route' => 'admin.rotation.seating.index', 'pattern' => 'admin.rotation.seating*'],
+                            // 행사 후 페이백(100%/80%) 입금 관리
+                            ['name' => '페이백 관리', 'route' => 'admin.rotation.payback.current', 'pattern' => ['admin.rotation.event.payback*', 'admin.rotation.event.fees*', 'admin.rotation.payback*']],
                         ],
                     ],
                     [

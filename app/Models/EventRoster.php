@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * 체크인 명단 1건.
@@ -85,5 +86,15 @@ class EventRoster extends Model
     public function isCheckedIn(): bool
     {
         return $this->checked_in_at !== null;
+    }
+
+    /**
+     * 이 사람의 페이백 정보. 대상이 아니면 null.
+     *
+     * @return HasOne<EventPayback>
+     */
+    public function payback(): HasOne
+    {
+        return $this->hasOne(EventPayback::class, 'event_roster_id');
     }
 }

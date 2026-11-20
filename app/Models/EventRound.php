@@ -53,7 +53,7 @@ class EventRound extends Model
     protected $table = 'event_rounds';
 
     /** @var list<string> */
-    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'drink_enabled', 'current_round', 'rotation_limit', 'created_by'];
+    protected $fillable = ['title', 'type', 'status', 'event_time', 'voting_opened_at', 'review_gate_enabled', 'drink_enabled', 'fee_prices', 'early_bird_rates', 'current_round', 'rotation_limit', 'created_by'];
 
     /**
      * @return array<string, string>
@@ -65,6 +65,8 @@ class EventRound extends Model
             'voting_opened_at'    => 'datetime',
             'review_gate_enabled' => 'boolean',
             'drink_enabled'       => 'boolean',
+            'fee_prices'          => 'array',
+            'early_bird_rates'    => 'array',
             'current_round'       => 'integer',
             'rotation_limit'      => 'integer',
         ];
@@ -108,6 +110,16 @@ class EventRound extends Model
     public function drinks(): HasMany
     {
         return $this->hasMany(EventDrink::class, 'event_id')->orderBy('name')->orderBy('id');
+    }
+
+    /**
+     * 이 회차의 페이백 대상.
+     *
+     * @return HasMany<EventPayback>
+     */
+    public function paybacks(): HasMany
+    {
+        return $this->hasMany(EventPayback::class, 'event_id');
     }
 
     /**
@@ -225,6 +237,37 @@ class EventRound extends Model
     public function usesDrinks(): bool
     {
         return $this->isOneToOne() && (bool) $this->drink_enabled;
+    }
+
+    /**
+     * 플랫폼·성별 참가비 정가. 설정하지 않았으면 null.
+     */
+    public function basePriceFor(?string $platform, ?string $gender): ?int
+    {
+        $price = $this->fee_prices[(string) $platform][(string) $gender] ?? null;
+
+        return $price !== null ? (int) $price : null;
+    }
+
+    /**
+     * 플랫폼별 얼리버드 할인율(%). 설정하지 않았으면 0.
+     */
+    public function earlyBirdRateFor(?string $platform): int
+    {
+        return (int) ($this->early_bird_rates[(string) $platform] ?? 0);
+    }
+
+    /**
+     * 실제 결제 금액. 얼리버드 적용자는 정가에서 그 플랫폼의 할인율만큼 뺀다. (원 단위 내림)
+     */
+    public function paidPriceFor(?string $platform, ?string $gender, bool $earlyBird): ?int
+    {
+        $base = $this->basePriceFor($platform, $gender);
+        if ($base === null || ! $earlyBird) {
+            return $base;
+        }
+
+        return intdiv($base * (100 - $this->earlyBirdRateFor($platform)), 100);
     }
 
     /**

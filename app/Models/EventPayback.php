@@ -83,6 +83,20 @@ class EventPayback extends Model
     }
 
     /**
+     * 입금 은행 선택지. (목록에 없으면 '기타'를 고르고 메모에 적는다)
+     *
+     * @return list<string>
+     */
+    public static function bankOptions(): array
+    {
+        return [
+            '국민', '신한', '우리', '하나', '농협', '기업', '카카오뱅크', '토스뱅크', '케이뱅크',
+            '새마을금고', '우체국', '신협', '수협', 'SC제일', '씨티', '산업',
+            'iM뱅크(대구)', '부산', '경남', '광주', '전북', '제주', '저축은행', '기타',
+        ];
+    }
+
+    /**
      * 결제 금액과 비율로 페이백 금액을 계산한다. (원 단위 내림)
      */
     public static function calcAmount(int $paidAmount, int $rate): int

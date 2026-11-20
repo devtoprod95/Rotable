@@ -84,6 +84,22 @@
     .pb-actions .btn{ min-height:40px; }
     .pb-empty{ padding:2rem 1rem; text-align:center; color:#868e96; word-break:keep-all; }
 
+    /* 대상자 고르기 (추가 창): 남/여 탭 · 검색 · 눌러서 선택하는 목록 */
+    .pb-pick-tabs{ display:grid; grid-template-columns:1fr 1fr; gap:.4rem; }
+    .pb-pick-tab{ min-height:42px; border-radius:10px; font-weight:800; border:1px solid #dee2e6; background:#fff; color:#495057; }
+    .pb-pick-tab.is-m.is-active{ background:#206bc4; border-color:#206bc4; color:#fff; }
+    .pb-pick-tab.is-f.is-active{ background:#d6336c; border-color:#d6336c; color:#fff; }
+    .pb-pick-list{ margin-top:6px; max-height:220px; overflow-y:auto; border:1px solid #e6e8eb; border-radius:10px; text-align:left; }
+    .pb-pick-item{ display:flex; align-items:center; gap:.5rem; width:100%; min-height:46px; padding:.4rem .6rem; border:0; border-bottom:1px solid #f1f3f5; background:#fff; text-align:left; }
+    .pb-pick-item:last-child{ border-bottom:0; }
+    .pb-pick-item:hover{ background:#f8fafc; }
+    .pb-pick-item.is-picked{ background:#fff4e6; box-shadow:inset 3px 0 0 #f76707; }
+    .pb-pick-no{ flex:0 0 auto; min-width:34px; height:30px; padding:0 .3rem; border-radius:8px; background:#206bc4; color:#fff; font-weight:800; display:inline-flex; align-items:center; justify-content:center; }
+    .pb-pick-no.is-f{ background:#d6336c; }
+    .pb-pick-name{ flex:1 1 auto; min-width:0; font-weight:700; color:#212529; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .pb-pick-empty{ padding:1rem; text-align:center; color:#868e96; font-size:.9rem; }
+    .pb-picked{ margin-top:6px; text-align:left; font-size:.88rem; color:#495057; }
+
     /* 모바일(좁은 화면) 보정 */
     @media (max-width: 575.98px){
         /* 상태 필터 4칸: 글자 줄이고 줄바꿈 방지 */
@@ -225,6 +241,7 @@
         var ITEM_TPL       = @json(route('admin.rotation.event.paybacks.update', [$event->id, '__PID__']));
         var TRANSFER_TPL   = @json(route('admin.rotation.event.paybacks.transfer', [$event->id, '__PID__']));
         var RATE_LABEL     = @json($rateOptions);
+        var BANKS          = @json($bankOptions);
         var PLATFORMS      = @json($platformOptions);
         var PLATFORM_LABEL = @json(collect($platformOptions)->pluck('label', 'id'));
         var PLATFORM_BADGE = { munto: 'bg-orange-lt', frip: 'bg-cyan-lt' };
@@ -330,8 +347,9 @@
             var account = hasAccount
                 ? esc([r.bank_name, r.account_number, r.account_holder].filter(Boolean).join(' '))
                 : '<span class="text-danger">미입력</span>';
-            var copyBtn = hasAccount
-                ? '<button type="button" class="btn btn-sm btn-outline-secondary btn-copy" data-id="' + r.id + '"><i class="ti ti-copy me-1"></i>복사</button>' : '';
+            // 계좌번호가 있을 때만 복사 버튼
+            var copyBtn = r.account_number
+                ? '<button type="button" class="btn btn-sm btn-outline-secondary btn-copy" data-id="' + r.id + '"><i class="ti ti-copy me-1"></i>계좌번호 복사</button>' : '';
 
             var info = '<dl class="pb-info">'
                 + '<div><dt>계좌</dt><dd>' + account + '</dd>' + copyBtn + '</div>'
@@ -402,15 +420,27 @@
             var label = function(t, forId){ return '<label for="' + forId + '" style="font-size:.85rem;color:#475569;font-weight:700;display:block;margin:10px 0 4px;text-align:left;">' + t + '</label>'; };
             var input = function(id, val, ph, extra){ return '<input id="' + id + '" class="swal2-input" value="' + esc(val) + '" placeholder="' + ph + '" ' + (extra || '') + ' style="width:100%;margin:0;box-sizing:border-box;">'; };
 
+            // 대상자: 남/여 탭 + 번호표·닉네임 검색 + 눌러서 고르는 목록
+            var countM = state.candidates.filter(function(c){ return c.gender !== 'F'; }).length;
+            var countF = state.candidates.length - countM;
             var rosterField = isEdit
                 ? '<div style="text-align:left;font-weight:800;font-size:1rem;">' + esc(who(item)) + ' · ' + esc(PLATFORM_LABEL[item.platform] || '') + '</div>'
-                : label('대상자 *', 'sw-roster')
-                  + '<select id="sw-roster" class="swal2-select" style="width:100%;margin:0;">'
-                  + state.candidates.map(function(c){
-                        var pf = PLATFORM_LABEL[c.platform] || '';
-                        return '<option value="' + c.id + '">' + esc((pf ? pf + ' · ' : '') + who(c)) + (c.checked_in ? '' : ' · 미체크인') + '</option>';
-                    }).join('')
-                  + '</select>';
+                : label('대상자 *', 'sw-search')
+                  + '<div class="pb-pick-tabs" role="group" aria-label="성별">'
+                  +   '<button type="button" class="pb-pick-tab is-m" data-g="M">남 ' + countM + '</button>'
+                  +   '<button type="button" class="pb-pick-tab is-f" data-g="F">여 ' + countF + '</button>'
+                  + '</div>'
+                  + '<input id="sw-search" class="swal2-input" placeholder="번호표 또는 닉네임 검색" autocomplete="off" style="width:100%;margin:6px 0 0;box-sizing:border-box;">'
+                  + '<div id="sw-roster-list" class="pb-pick-list" role="radiogroup" aria-label="대상자 목록"></div>'
+                  + '<div id="sw-picked" class="pb-picked"></div>';
+
+            // 은행 선택 (목록에 없는 은행은 '기타'를 고르고 메모에 적는다)
+            var bankList = BANKS.slice();
+            var bankField = label('은행', 'sw-bank')
+                + '<select id="sw-bank" class="swal2-select" style="width:100%;margin:0;">'
+                + '<option value="">선택 안 함</option>'
+                + bankList.map(function(b){ return '<option value="' + esc(b) + '"' + (b === v.bank_name ? ' selected' : '') + '>' + esc(b) + '</option>'; }).join('')
+                + '</select>';
 
             var rateField = label('페이백 비율 *', 'sw-rate')
                 + '<div style="display:flex;gap:16px;text-align:left;">'
@@ -429,7 +459,7 @@
                 html: rosterField + rateField + ebField
                     + label('결제 금액 (원)', 'sw-paid') + input('sw-paid', v.paid_amount != null ? Number(v.paid_amount).toLocaleString('ko-KR') : '', '', 'inputmode="numeric"')
                     + '<div id="sw-preview" style="text-align:left;margin-top:6px;font-size:.9rem;color:#d9480f;font-weight:800;"></div>'
-                    + label('은행', 'sw-bank') + input('sw-bank', v.bank_name || '', '예: 국민', 'maxlength="30"')
+                    + bankField
                     + label('계좌번호', 'sw-account') + input('sw-account', v.account_number || '', '숫자와 - 만', 'maxlength="30" inputmode="numeric"')
                     + label('예금주', 'sw-holder') + input('sw-holder', v.account_holder || '', '예: 홍길동', 'maxlength="30"')
                     + label('메모', 'sw-memo') + input('sw-memo', v.memo || '', '', 'maxlength="255"'),
@@ -440,11 +470,39 @@
                 didOpen: function(){
                     var $paid = $('#sw-paid').addClass('money-input');
                     // 지금 고른 사람의 플랫폼·성별
+                    var pickedId = null;
                     function person(){
                         if(isEdit){ return item; }
-                        var id = $('#sw-roster').val();
-                        return state.candidates.find(function(c){ return String(c.id) === String(id); }) || {};
+                        return state.candidates.find(function(c){ return String(c.id) === String(pickedId); }) || {};
                     }
+
+                    // 대상자 목록: 고른 성별 + 검색어(번호표 정확 일치 또는 닉네임 포함)
+                    var pickGender = countM > 0 ? 'M' : 'F';
+                    function renderPickList(){
+                        if(isEdit){ return; }
+                        $('.pb-pick-tab').each(function(){ $(this).toggleClass('is-active', $(this).data('g') === pickGender); });
+                        var q    = ($('#sw-search').val() || '').trim().toLowerCase();
+                        var rows = state.candidates.filter(function(c){
+                            if((c.gender === 'F' ? 'F' : 'M') !== pickGender){ return false; }
+                            if(q === ''){ return true; }
+                            return String(c.ticket_no || '') === q || (c.name || '').toLowerCase().indexOf(q) !== -1;
+                        });
+                        $('#sw-roster-list').html(rows.length ? rows.map(function(c){
+                            var pf = PLATFORM_LABEL[c.platform] || '';
+                            return '<button type="button" class="pb-pick-item' + (String(c.id) === String(pickedId) ? ' is-picked' : '') + '" data-id="' + c.id + '" role="radio" aria-checked="' + (String(c.id) === String(pickedId)) + '">'
+                                + '<span class="pb-pick-no ' + (c.gender === 'F' ? 'is-f' : '') + '">' + (c.ticket_no || '-') + '</span>'
+                                + '<span class="pb-pick-name">' + esc(c.name || '닉네임 없음') + '</span>'
+                                + (pf ? '<span class="badge ' + (PLATFORM_BADGE[c.platform] || 'bg-secondary-lt') + '">' + esc(pf) + '</span>' : '')
+                                + (c.checked_in ? '' : '<span class="badge bg-secondary-lt">미체크인</span>')
+                                + '</button>';
+                        }).join('') : '<div class="pb-pick-empty">해당하는 사람이 없어요.</div>');
+                        var p = person();
+                        $('#sw-picked').html(p.id ? '선택: <b>' + esc(who(p)) + '</b>' + (PLATFORM_LABEL[p.platform] ? ' · ' + esc(PLATFORM_LABEL[p.platform]) : '') : '아래 목록에서 눌러 선택해 주세요.');
+                    }
+                    $('.pb-pick-tab').on('click', function(){ pickGender = $(this).data('g'); renderPickList(); $('#sw-search').trigger('focus'); });
+                    $('#sw-search').on('input', renderPickList);
+                    $('#sw-roster-list').on('click', '.pb-pick-item', function(){ pickedId = $(this).data('id'); renderPickList(); preview(); });
+                    renderPickList();
                     function autoPrice(eb){ var p = person(); return priceFor(p.platform, p.gender, eb); }
                     // 결제 금액이 비어 있으면 자동 금액을 placeholder 로 보여주고, 페이백 금액을 미리 계산한다.
                     function preview(){
@@ -469,11 +527,16 @@
                         }
                         preview();
                     });
-                    $('#sw-roster, input[name=sw-rate]').on('change', preview);
+                    $('input[name=sw-rate]').on('change', preview);
                     $paid.on('input', preview);
                     preview();
                 },
                 preConfirm: function(){
+                    var picked = isEdit ? item.id : $('.pb-pick-item.is-picked').data('id');
+                    if(!isEdit && !picked){
+                        Swal.showValidationMessage('대상자를 선택해 주세요.');
+                        return false;
+                    }
                     var eb   = $('#sw-eb').is(':checked');
                     var paid = digits($('#sw-paid').val());
                     if(paid === null && $('#sw-paid').attr('placeholder').indexOf('미설정') !== -1){
@@ -484,12 +547,12 @@
                         payback_rate:   $('input[name=sw-rate]:checked').val(),
                         is_early_bird:  eb ? 1 : 0,
                         paid_amount:    paid === null ? '' : paid,
-                        bank_name:      ($('#sw-bank').val() || '').trim(),
+                        bank_name:      $('#sw-bank').val() || '',
                         account_number: ($('#sw-account').val() || '').trim(),
                         account_holder: ($('#sw-holder').val() || '').trim(),
                         memo:           ($('#sw-memo').val() || '').trim()
                     };
-                    if(!isEdit){ out.event_roster_id = $('#sw-roster').val(); }
+                    if(!isEdit){ out.event_roster_id = picked; }
                     return out;
                 }
             });
@@ -538,18 +601,18 @@
             });
         });
 
-        /* ===== 계좌 복사 (은행 계좌번호 예금주 금액) ===== */
+        /* ===== 계좌번호 복사 (계좌번호만) ===== */
         $(document).on('click', '.btn-copy', async function(){
             var it = findItem($(this).data('id'));
-            if(!it){ return; }
-            var text = [it.bank_name, it.account_number, it.account_holder].filter(Boolean).join(' ') + ' ' + won(it.payback_amount);
+            if(!it || !it.account_number){ return; }
+            var text = String(it.account_number);
             var $b = $(this);
             try {
                 await navigator.clipboard.writeText(text);
                 $b.html('<i class="ti ti-check me-1"></i>복사됨');
-                setTimeout(function(){ $b.html('<i class="ti ti-copy me-1"></i>복사'); }, 1500);
+                setTimeout(function(){ $b.html('<i class="ti ti-copy me-1"></i>계좌번호 복사'); }, 1500);
             } catch(e) {
-                window.prompt('아래 내용을 복사해 주세요.', text);
+                window.prompt('아래 계좌번호를 복사해 주세요.', text);
             }
         });
 

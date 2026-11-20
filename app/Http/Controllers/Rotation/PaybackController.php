@@ -54,6 +54,7 @@ class PaybackController extends RotationBaseController
         return view('admin.rotation.payback', [
             'event'           => $event,
             'rateOptions'     => EventPayback::rateOptions(),
+            'bankOptions'     => EventPayback::bankOptions(),
             'platformOptions' => Member::platformOptions(),
         ]);
     }

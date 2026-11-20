@@ -46,7 +46,7 @@ class PaybackSaveRequest extends ApiFormRequest
             'payback_rate'    => ['required', 'integer', Rule::in([EventPayback::RATE_FULL, EventPayback::RATE_PARTIAL])],
             'is_early_bird'   => ['required', 'boolean'],
             'paid_amount'     => ['nullable', 'integer', 'min:0', 'max:10000000'],
-            'bank_name'       => ['nullable', 'string', 'max:30'],
+            'bank_name'       => ['nullable', 'string', Rule::in(EventPayback::bankOptions())],
             'account_number'  => ['nullable', 'string', 'max:30', 'regex:/^[\d-]*$/'],
             'account_holder'  => ['nullable', 'string', 'max:30'],
             'memo'            => ['nullable', 'string', 'max:255'],
@@ -66,7 +66,7 @@ class PaybackSaveRequest extends ApiFormRequest
             'paid_amount.max'          => '결제 금액이 너무 큽니다.',
             'account_number.regex'     => '계좌번호는 숫자와 하이픈(-)만 입력해 주세요.',
             'account_number.max'       => '계좌번호가 너무 깁니다.',
-            'bank_name.max'            => '은행명은 30자 이내로 입력해 주세요.',
+            'bank_name.in'             => '은행을 목록에서 선택해 주세요.',
             'account_holder.max'       => '예금주는 30자 이내로 입력해 주세요.',
             'memo.max'                 => '메모는 255자 이내로 입력해 주세요.',
         ];

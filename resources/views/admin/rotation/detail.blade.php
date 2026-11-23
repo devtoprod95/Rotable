@@ -1049,7 +1049,7 @@
                 }
                 cards.push({
                     title:   $card.attr('data-event-title') || '',
-                    date:    $card.attr('data-event-date') || '',
+                    date:    toKoreanWeekday($card.attr('data-event-date') || ''),
                     males:   readCol($($cols.get(0))),
                     females: readCol($($cols.get(1)))
                 });
@@ -1227,6 +1227,7 @@
                 var maleHeadCount   = males.filter(function(p){ return !(p && p.recruit); }).length;
                 var femaleHeadCount = females.filter(function(p){ return !(p && p.recruit); }).length;
 
+                card.date = toKoreanWeekday(card.date);
                 html += '<div style="width:' + cardWidth + '; box-sizing:border-box; padding:3px;"'
                       + ' data-roster-card="' + idx + '"'
                       + ' data-event-title="' + esc(card.title) + '"'
@@ -1284,7 +1285,7 @@
                     +   '</div>'
                     +   '<div class="col-12 col-md-5 pe-0">'
                     +     '<label class="form-label mb-1 fw-bold"><i class="ti ti-clock text-pink me-1"></i>날짜</label>'
-                    +     '<input type="text" class="form-control form-control-lg fw-bold roster-ev-date" placeholder="날짜 · 시간" value="' + $('<i>').text(card.date).html() + '">'
+                    +     '<input type="text" class="form-control form-control-lg fw-bold roster-ev-date" placeholder="날짜 · 시간" value="' + $('<i>').text(toKoreanWeekday(card.date)).html() + '">'
                     +   '</div>'
                     + '</div>'
                 );
@@ -1303,6 +1304,14 @@
             initRosterDatePickers();
         }
 
+        // 날짜 문자열의 영문 요일(Sat, Saturday 등)을 한글 요일로 치환한다. 예: "2026.11.07(Sat) 19:30" → "2026.11.07(토) 19:30"
+        function toKoreanWeekday(str){
+            var MAP = { sun:'일', mon:'월', tue:'화', wed:'수', thu:'목', fri:'금', sat:'토' };
+            return String(str == null ? '' : str).replace(/\b(sun|mon|tue|wed|thu|fri|sat)(?:day|sday|nesday|rsday|urday|s)?\b\.?/gi, function(m, d){
+                return MAP[d.toLowerCase()];
+            });
+        }
+
         // 행사 날짜 입력칸에 달력(flatpickr) 적용. 표기 형식: "2026.11.07(토) 19:30"
         function initRosterDatePickers(){
             if(typeof flatpickr === 'undefined'){ return; }
@@ -1316,7 +1325,8 @@
                     time_24hr:  true,
                     allowInput: true,
                     locale:     'ko',
-                    dateFormat: 'Y.m.d(D) H:i',
+                    dateFormat: 'Y.m.d H:i',
+                    disableMobile: true,
                     formatDate: function(d){
                         return d.getFullYear() + '.' + pad(d.getMonth() + 1) + '.' + pad(d.getDate())
                              + '(' + WEEK[d.getDay()] + ') ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
@@ -1452,7 +1462,7 @@
                 }
                 cards.push({
                     title:   $card.find('.roster-ev-title').val(),
-                    date:    $card.find('.roster-ev-date').val(),
+                    date:    toKoreanWeekday($card.find('.roster-ev-date').val()),
                     males:   readCol('male'),
                     females: readCol('female')
                 });

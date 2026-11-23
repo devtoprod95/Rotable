@@ -429,7 +429,7 @@
          이미지는 원본 비율 그대로(width:100%, height:auto) 보여주고, 카드 배경을 흰색으로 둬 높이 차이가 티 나지 않게 한다. --}}
     @php
         $reviewFiles = array_values(array_filter(
-            array_map(fn (int $n): string => sprintf('review%02d.png', $n), range(1, 6)),
+            array_map(fn (int $n): string => sprintf('review%02d.png', $n), range(1, 8)),
             fn ($f) => file_exists(public_path('images/' . $f)),
         ));
         $reviewRows = array_chunk($reviewFiles, 2);

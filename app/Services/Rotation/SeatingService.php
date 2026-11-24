@@ -212,11 +212,35 @@ class SeatingService
                 throw new Exception('종료된 행사에는 회원을 추가할 수 없습니다.');
             }
 
+            // 다른 행사의 테이블/회원이 섞여 들어오지 않도록 이 행사 소속인지 확인한다.
+            $tableInEvent = RotationTable::where('id', (int) $data->rotation_table_id)
+                ->where('event_id', $eventId)
+                ->exists();
+            if (! $tableInEvent) {
+                throw new Exception('선택한 테이블이 이 행사의 테이블이 아닙니다. 화면을 새로고침한 뒤 다시 시도해 주세요.');
+            }
+
+            $memberInEvent = Member::where('id', (int) $data->member_id)
+                ->where('event_id', $eventId)
+                ->exists();
+            if (! $memberInEvent) {
+                throw new Exception('선택한 회원이 이 행사의 참가자가 아닙니다. 화면을 새로고침한 뒤 다시 시도해 주세요.');
+            }
+
             // 회원의 기준(홈) 자리를 upsert. 이미 있으면 테이블만 갱신(이동).
             $seat = RotationSeat::firstOrNew([
                 'event_id'  => $eventId,
                 'member_id' => (int) $data->member_id,
             ]);
+
+            // 로테이션이 시작된 뒤 기존 회원의 기준자리를 옮기면, 현재 턴의 자리가 즉시 바뀌어 상대가 뒤섞인다.
+            // 새로 합류하는 회원의 배정은 허용하고, 이미 배정된 회원의 테이블 변경만 막는다.
+            if ($seat->exists
+                && (int) $seat->rotation_table_id !== (int) $data->rotation_table_id
+                && (int) $event->current_round > 0) {
+                throw new Exception("로테이션이 진행 중({$event->current_round}턴)이라 이미 배정된 회원의 자리는 옮길 수 없습니다. 먼저 로테이션을 0턴으로 되돌려 주세요.");
+            }
+
             $seat->rotation_table_id = (int) $data->rotation_table_id;
             $seat->save();
 
@@ -236,6 +260,12 @@ class SeatingService
             $seat = RotationSeat::find($id);
             if (!$seat) {
                 throw new Exception('좌석을 찾을 수 없습니다.');
+            }
+
+            // 종료(X)된 행사의 좌석은 매칭 결과·기록 확인에 쓰이므로 지우지 못하게 한다.
+            $event = EventRound::find($seat->event_id);
+            if ($event !== null && $event->status === EventRound::STATUS_CLOSED) {
+                throw new Exception('종료된 행사의 좌석은 삭제할 수 없습니다. 필요하면 종료를 되돌린 뒤 삭제해 주세요.');
             }
 
             $seat->delete();
@@ -284,6 +314,14 @@ class SeatingService
                 $event = EventRound::lockForUpdate()->find($eventId);
                 if ($event === null) {
                     throw new Exception('행사를 찾을 수 없습니다.');
+                }
+
+                // 대기(P)·진행(S)에서만 턴을 올린다. 매칭중(V)/종료(X)에서 진행하면 상태가 S 로 덮어써지므로 막는다.
+                if ($event->status === EventRound::STATUS_VOTING) {
+                    throw new Exception('매칭이 진행 중이라 로테이션을 진행할 수 없습니다. 턴을 수정하려면 먼저 "매칭 시작 취소"를 해주세요.');
+                }
+                if ($event->status === EventRound::STATUS_CLOSED) {
+                    throw new Exception('종료된 행사는 로테이션을 진행할 수 없습니다. 필요하면 먼저 종료를 되돌려 주세요.');
                 }
 
                 // 화면이 보던 턴과 서버의 현재 턴이 다르면(이미 다른 곳에서 진행됨 · 연타) 진행하지 않는다.
@@ -496,6 +534,12 @@ class SeatingService
 
                 if ($locked->status === EventRound::STATUS_VOTING) {
                     throw new Exception('이미 매칭이 진행 중입니다.');
+                }
+                if ($locked->status === EventRound::STATUS_CLOSED) {
+                    throw new Exception('이미 종료된 행사입니다. 다시 열려면 "종료 되돌리기"를 사용해 주세요.');
+                }
+                if ($locked->status === EventRound::STATUS_PENDING) {
+                    throw new Exception('로테이션이 시작되지 않았습니다. 로테이션을 진행한 뒤 매칭을 시작해 주세요.');
                 }
 
                 $locked->status           = EventRound::STATUS_VOTING;

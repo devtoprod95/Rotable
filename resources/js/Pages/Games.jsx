@@ -28,6 +28,14 @@ const GAMES = [
         tone: "from-emerald-50 to-lime-50 border-emerald-200",
     },
     {
+        slug: "liar-game",
+        title: "라이어 게임",
+        emoji: "🕵️",
+        desc: "한 명만 제시어를 몰라요! 한 명씩 설명하고, 투표로 라이어를 찾아내요.",
+        spice: 1,
+        tone: "from-indigo-50 to-sky-50 border-indigo-200",
+    },
+    {
         slug: "image-mild",
         title: "순한맛 이미지게임",
         emoji: "🍯",

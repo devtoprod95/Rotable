@@ -1089,6 +1089,7 @@ class MemberPageController extends Controller
             'balance'     => 'Games/Balance',
             'table-poll'  => 'Games/TablePoll',
             'halli-galli' => 'Games/HalliGalli',
+            'liar-game'   => 'Games/LiarGame',
         ];
 
         if (! isset($pages[$slug])) {
@@ -1152,6 +1153,32 @@ class MemberPageController extends Controller
                 'initialState' => app(\App\Services\HalliGalliService::class)->publicState(
                     \App\Services\HalliGalliService::tableScope($eventId, $tableNo, $round)
                 ),
+            ];
+        }
+
+        // 라이어 게임도 "현재 테이블" 단위 게임. 내 몫의 비밀 정보(secret)를 함께 내려준다.
+        if ($slug === 'liar-game') {
+            /** @var \App\Models\Member $me */
+            $me      = Auth::guard('web')->user();
+            $tableNo = $me->currentTableNo();
+
+            if ($tableNo === null) {
+                return redirect()->route('games')
+                    ->with('error', '아직 로테이션이 진행되지 않았어요. 로테이션이 시작되면 이용할 수 있어요.');
+            }
+
+            $eventId = (int) $me->event_id;
+            $round   = (int) EventRound::whereKey($eventId)->value('current_round');
+            $scope   = \App\Services\LiarGameService::tableScope($eventId, $tableNo, $round);
+            $liar    = app(\App\Services\LiarGameService::class);
+
+            $props = [
+                'eventId'       => $eventId,
+                'tableNo'       => $tableNo,
+                'round'         => $round,
+                'myId'          => (string) $me->id,
+                'initialState'  => $liar->publicState($scope),
+                'initialSecret' => $liar->secretFor($scope, (string) $me->id),
             ];
         }
 
@@ -1300,6 +1327,59 @@ class MemberPageController extends Controller
             'ok'      => $result['ok'],
             'message' => $result['message'],
             'state'   => $result['state'],
+            'round'   => $round,
+        ]);
+    }
+
+    /**
+     * 테이블 라이어 게임 - 참가/시작/투표/결과 공개/다시하기 액션을 처리한다.
+     * 공개 상태만 브로드캐스트하고, 라이어/제시어는 요청자 본인의 응답으로만 내려준다.
+     */
+    public function liarAction(Request $request, \App\Services\LiarGameService $liar): JsonResponse
+    {
+        if (! $this->isGamePlayable()) {
+            return response()->json(['ok' => false]);
+        }
+
+        /** @var \App\Models\Member $me */
+        $me = Auth::guard('web')->user();
+
+        $validated = $request->validate([
+            'action' => ['required', 'in:join,start,to_vote,vote,reveal,reset,peek'],
+            'target' => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $tableNo = $me->currentTableNo();
+        if ($tableNo === null) {
+            return response()->json(['ok' => false]);
+        }
+
+        $eventId = (int) $me->event_id;
+        $round   = (int) EventRound::whereKey($eventId)->value('current_round');
+        $scope   = \App\Services\LiarGameService::tableScope($eventId, $tableNo, $round);
+
+        // peek: 상태를 바꾸지 않고 내 몫의 비밀 정보만 다시 받는다.
+        if ($validated['action'] === 'peek') {
+            return response()->json([
+                'ok'     => true,
+                'state'  => $liar->publicState($scope),
+                'secret' => $liar->secretFor($scope, (string) $me->id),
+                'round'  => $round,
+            ]);
+        }
+
+        $label  = ($me->gender === \App\Models\Member::GENDER_FEMALE ? '여 ' : '남 ') . $me->name . '번';
+        $result = $liar->act($scope, (string) $me->id, $label, $validated['action'], $validated['target'] ?? null);
+
+        if ($result['changed']) {
+            broadcast(new \App\Events\TableLiarUpdated($eventId, $tableNo, $round, $result['state']));
+        }
+
+        return response()->json([
+            'ok'      => $result['ok'],
+            'message' => $result['message'],
+            'state'   => $result['state'],
+            'secret'  => $result['secret'],
             'round'   => $round,
         ]);
     }

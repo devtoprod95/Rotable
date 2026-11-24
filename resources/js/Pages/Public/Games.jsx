@@ -39,6 +39,17 @@ const GAMES = [
         ready: true,
     },
     {
+        slug: "liar-game",
+        category: "dating",
+        title: "라이어 게임",
+        players: "3인 이상",
+        emoji: "🕵️",
+        desc: "한 명만 제시어를 몰라요! 한 명씩 설명하고, 투표로 라이어를 찾아내요.",
+        spice: 1,
+        tone: "from-indigo-50 to-sky-50 border-indigo-200",
+        ready: true,
+    },
+    {
         slug: "image-mild",
         category: "dating",
         title: "순한맛 이미지게임",
@@ -273,6 +284,17 @@ export default function Games() {
     const visibleGames = GAMES.filter((game) => game.category === tab).sort(
         (a, b) => minPlayers(a) - minPlayers(b),
     );
+    // 최소 인원이 같은 게임끼리 묶는다. (visibleGames 가 이미 인원순 정렬이라 순서대로 모으면 된다)
+    const groups = visibleGames.reduce((acc, game) => {
+        const min = minPlayers(game);
+        const last = acc[acc.length - 1];
+        if (last && last.min === min) {
+            last.games.push(game);
+        } else {
+            acc.push({ min, games: [game] });
+        }
+        return acc;
+    }, []);
     const isDrink = tab === "drink";
 
     // 공용 '현재 벌칙' — 상단 룰렛으로 정하면 모든 술게임에서 공유된다.
@@ -382,11 +404,27 @@ export default function Games() {
                     </div>
                 )}
 
-                <div className="flex flex-col gap-3">
-                    {visibleGames.map((game, index) => (
-                        <GameCard key={game.slug} game={game} index={index} />
-                    ))}
-                </div>
+                {/* 적정 인원별로 구역을 나눠 보여준다. (2인 이상 → 3인 이상 …) */}
+                {groups.map((group) => (
+                    <section key={group.min} className="flex flex-col gap-3">
+                        <div className="flex items-center gap-2 px-1">
+                            <span className="rounded-full bg-secondary-700 px-3 py-1 text-xs font-extrabold text-white">
+                                {group.min === 2 ? "👫" : "👥"} {group.min}인 이상
+                            </span>
+                            <span className="h-px flex-1 bg-secondary-200" />
+                            <span className="text-[11px] font-bold text-secondary-400">
+                                {group.games.length}개
+                            </span>
+                        </div>
+                        {group.games.map((game) => (
+                            <GameCard
+                                key={game.slug}
+                                game={game}
+                                index={visibleGames.indexOf(game)}
+                            />
+                        ))}
+                    </section>
+                ))}
             </div>
 
             {showPenalty && (

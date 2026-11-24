@@ -155,7 +155,7 @@ export default function HalliGalliBoard({
         const res = await postAction(actionUrl, {
             ...extraBody,
             action,
-            label: action === "join" || action === "reset" ? nickname.trim() : undefined,
+            label: ["join", "reset", "rename"].includes(action) ? nickname.trim() : undefined,
             version: action === "bell" ? versionRef.current : undefined,
         });
         setBusy(false);
@@ -174,6 +174,7 @@ export default function HalliGalliBoard({
 
     const myIndex = state.players.findIndex((p) => p.id === myId);
     const joined = myIndex !== -1;
+    const me = state.players[myIndex];
     const myTurn = state.status === "playing" && state.turn === myIndex;
     const turnPlayer = state.players[state.turn];
 
@@ -230,7 +231,7 @@ export default function HalliGalliBoard({
                                     value={nickname}
                                     onChange={(e) => setNickname(e.target.value)}
                                     maxLength={10}
-                                    placeholder="닉네임 (비우면 자동)"
+                                    placeholder="닉네임 (비우면 캐릭터 이름)"
                                     className="w-full rounded-2xl border-2 border-secondary-200 bg-white px-4 py-3 text-center text-sm font-bold text-secondary-700 outline-none focus:border-emerald-400"
                                 />
                             )}
@@ -378,6 +379,31 @@ export default function HalliGalliBoard({
                             </button>
                         )}
                 </div>
+
+
+                {/* 닉네임 변경 (공개방) */}
+                {askNickname && joined && state.status === "waiting" && (
+                    <div className="mt-3 flex gap-2">
+                        <input
+                            type="text"
+                            value={nickname}
+                            onChange={(e) => setNickname(e.target.value)}
+                            maxLength={10}
+                            placeholder={`내 닉네임: ${me?.label ?? ""}`}
+                            className="min-w-0 flex-1 rounded-2xl border-2 border-secondary-200 bg-white px-3 py-2.5 text-center text-sm font-bold text-secondary-700 outline-none focus:border-emerald-400"
+                        />
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                await act("rename");
+                                setNickname("");
+                            }}
+                            className="shrink-0 rounded-2xl border-2 border-secondary-200 bg-white px-4 py-2.5 text-sm font-bold text-secondary-500 transition active:scale-[0.98]"
+                        >
+                            변경
+                        </button>
+                    </div>
+                )}
 
                 {/* 규칙 (접어두기) */}
                 <details className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-3">

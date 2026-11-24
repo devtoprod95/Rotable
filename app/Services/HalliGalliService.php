@@ -49,7 +49,7 @@ class HalliGalliService
      * @param  string      $scope    게임판 구분자
      * @param  string      $playerId 참가자 식별자 (테이블: 회원 id, 공개방: 클라이언트 id)
      * @param  string      $label    화면에 보일 이름 (join 때만 사용)
-     * @param  string      $action   join|start|flip|bell|reset
+     * @param  string      $action   join|start|flip|bell|reset|rename
      * @return array{ok:bool, message:?string, state:array<string,mixed>, changed:bool}
      */
     public function act(string $scope, string $playerId, string $label, string $action, ?int $version = null): array
@@ -82,6 +82,9 @@ class HalliGalliService
                     $this->join($state, $playerId, $label);
                     $state['log'] = $label . ' 님이 게임을 새로 시작했어요.';
                     break;
+                case 'rename':
+                    [$changed, $message] = $this->rename($state, $playerId, $label);
+                    break;
                 default:
                     $changed = false;
             }
@@ -100,6 +103,33 @@ class HalliGalliService
         });
     }
 
+    /** 닉네임 변경. 게임 중에도 가능하며, 다른 참가자와 겹치면 숫자를 붙인다. */
+    private function rename(array &$state, string $playerId, string $label): array
+    {
+        $idx = $this->indexOf($state, $playerId);
+        if ($idx === null) {
+            return [false, '참가한 사람만 바꿀 수 있어요.'];
+        }
+
+        $others = [];
+        foreach ($state['players'] as $i => $p) {
+            if ($i !== $idx) {
+                $others[] = (string) $p['label'];
+            }
+        }
+        $label = CharacterNickname::unique($others, $label);
+
+        if ($label === $state['players'][$idx]['label']) {
+            return [false, null];
+        }
+
+        $old                           = $state['players'][$idx]['label'];
+        $state['players'][$idx]['label'] = $label;
+        $state['log']                  = $old . ' 님이 ' . $label . ' (으)로 닉네임을 바꿨어요.';
+
+        return [true, null];
+    }
+
     /** 참가 등록. 이미 참가 중이면 변화 없음. 진행 중에는 새 참가를 받지 않는다. */
     private function join(array &$state, string $playerId, string $label): bool
     {
@@ -109,6 +139,8 @@ class HalliGalliService
         if ($state['status'] !== 'waiting') {
             return false;
         }
+
+        $label = CharacterNickname::unique(array_column($state['players'], 'label'), $label);
 
         $state['players'][] = ['id' => $playerId, 'label' => $label];
         $state['scores'][$playerId] = 0;

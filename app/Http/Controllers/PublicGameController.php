@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Events\PublicHalliUpdated;
+use App\Events\PublicLiarUpdated;
 use App\Events\PublicPollPresence;
 use App\Events\PublicPollQuestionChanged;
 use App\Events\PublicPollVoted;
+use App\Services\CharacterNickname;
 use App\Services\HalliGalliService;
+use App\Services\LiarGameService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -60,6 +63,7 @@ class PublicGameController extends Controller
             'balance'     => 'Public/Balance',
             'poll'        => 'Public/Poll',
             'halli-galli' => 'Public/HalliGalli',
+            'liar-game'   => 'Public/LiarGame',
             // 술게임 (🔞 성인)
             'drink-balance'    => 'Public/DrinkBalance',
             'kings-game'       => 'Public/KingsGame',
@@ -95,6 +99,13 @@ class PublicGameController extends Controller
         if ($slug === 'halli-galli') {
             $props = [
                 'initialState' => app(HalliGalliService::class)->publicState(HalliGalliService::PUBLIC_SCOPE),
+            ];
+        }
+
+        // 라이어 게임은 전역 단일 방. 현재 상태와 (client_id 가 있으면) 내 몫의 비밀 정보를 내려준다.
+        if ($slug === 'liar-game') {
+            $props = [
+                'initialState' => app(LiarGameService::class)->publicState(LiarGameService::PUBLIC_SCOPE),
             ];
         }
 
@@ -164,7 +175,7 @@ class PublicGameController extends Controller
     {
         $validated = $request->validate([
             'client_id' => ['required', 'string', 'max:64'],
-            'action'    => ['required', 'in:join,start,flip,bell,reset'],
+            'action'    => ['required', 'in:join,start,flip,bell,reset,rename'],
             'label'     => ['nullable', 'string', 'max:10'],
             'version'   => ['nullable', 'integer', 'min:0'],
         ]);
@@ -172,7 +183,7 @@ class PublicGameController extends Controller
         $clientId = $validated['client_id'];
         $label    = trim((string) ($validated['label'] ?? ''));
         if ($label === '') {
-            $label = '손님' . strtoupper(substr(md5($clientId), 0, 3));
+            $label = CharacterNickname::forClient($clientId);
         }
 
         $result = $halli->act(
@@ -191,6 +202,56 @@ class PublicGameController extends Controller
             'ok'      => $result['ok'],
             'message' => $result['message'],
             'state'   => $result['state'],
+        ]);
+    }
+
+    /**
+     * 공개 라이어 게임 - 참가/시작/투표/결과 공개/다시하기.
+     * 로그인이 없으므로 참가자는 기기별 client_id 로 구분한다.
+     * 공개 상태만 브로드캐스트하고, 라이어/제시어는 요청자 본인의 응답으로만 내려준다.
+     */
+    public function liarAction(Request $request, LiarGameService $liar): JsonResponse
+    {
+        $validated = $request->validate([
+            'client_id' => ['required', 'string', 'max:64'],
+            'action'    => ['required', 'in:join,start,to_vote,vote,reveal,reset,peek,rename'],
+            'label'     => ['nullable', 'string', 'max:10'],
+            'target'    => ['nullable', 'string', 'max:64'],
+        ]);
+
+        $clientId = $validated['client_id'];
+
+        // peek: 상태를 바꾸지 않고 내 몫의 비밀 정보만 다시 받는다.
+        if ($validated['action'] === 'peek') {
+            return response()->json([
+                'ok'     => true,
+                'state'  => $liar->publicState(LiarGameService::PUBLIC_SCOPE),
+                'secret' => $liar->secretFor(LiarGameService::PUBLIC_SCOPE, $clientId),
+            ]);
+        }
+
+        $label = trim((string) ($validated['label'] ?? ''));
+        if ($label === '') {
+            $label = CharacterNickname::forClient($clientId);
+        }
+
+        $result = $liar->act(
+            LiarGameService::PUBLIC_SCOPE,
+            $clientId,
+            $label,
+            $validated['action'],
+            $validated['target'] ?? null,
+        );
+
+        if ($result['changed']) {
+            broadcast(new PublicLiarUpdated($result['state']));
+        }
+
+        return response()->json([
+            'ok'      => $result['ok'],
+            'message' => $result['message'],
+            'state'   => $result['state'],
+            'secret'  => $result['secret'],
         ]);
     }
 

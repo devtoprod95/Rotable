@@ -20,6 +20,14 @@ const GAMES = [
         tone: "from-violet-50 to-fuchsia-50 border-violet-200",
     },
     {
+        slug: "halli-galli",
+        title: "할리갈리",
+        emoji: "🔔",
+        desc: "각자 폰으로 카드를 뒤집다가 같은 과일이 딱 5개면 종을 쳐요! 가장 빠른 사람이 카드를 가져가요.",
+        spice: 1,
+        tone: "from-emerald-50 to-lime-50 border-emerald-200",
+    },
+    {
         slug: "image-mild",
         title: "순한맛 이미지게임",
         emoji: "🍯",

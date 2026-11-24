@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\PublicHalliUpdated;
 use App\Events\PublicPollPresence;
 use App\Events\PublicPollQuestionChanged;
 use App\Events\PublicPollVoted;
+use App\Services\HalliGalliService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,6 +59,7 @@ class PublicGameController extends Controller
             'image-spicy' => 'Public/ImageSpicy',
             'balance'     => 'Public/Balance',
             'poll'        => 'Public/Poll',
+            'halli-galli' => 'Public/HalliGalli',
             // 술게임 (🔞 성인)
             'drink-balance'    => 'Public/DrinkBalance',
             'kings-game'       => 'Public/KingsGame',
@@ -85,6 +88,13 @@ class PublicGameController extends Controller
                         ],
                     ],
                 'initialCount' => $this->activePresenceCount(),
+            ];
+        }
+
+        // 할리갈리는 전역 단일 방. 현재 게임 상태를 함께 내려준다.
+        if ($slug === 'halli-galli') {
+            $props = [
+                'initialState' => app(HalliGalliService::class)->publicState(HalliGalliService::PUBLIC_SCOPE),
             ];
         }
 
@@ -144,6 +154,44 @@ class PublicGameController extends Controller
         broadcast(new PublicPollQuestionChanged($questionIndex));
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * 공개 할리갈리 - 참가/시작/카드 뒤집기/종/다시하기.
+     * 로그인이 없으므로 참가자는 기기별 client_id 로 구분한다.
+     */
+    public function halliAction(Request $request, HalliGalliService $halli): JsonResponse
+    {
+        $validated = $request->validate([
+            'client_id' => ['required', 'string', 'max:64'],
+            'action'    => ['required', 'in:join,start,flip,bell,reset'],
+            'label'     => ['nullable', 'string', 'max:10'],
+            'version'   => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $clientId = $validated['client_id'];
+        $label    = trim((string) ($validated['label'] ?? ''));
+        if ($label === '') {
+            $label = '손님' . strtoupper(substr(md5($clientId), 0, 3));
+        }
+
+        $result = $halli->act(
+            HalliGalliService::PUBLIC_SCOPE,
+            $clientId,
+            $label,
+            $validated['action'],
+            isset($validated['version']) ? (int) $validated['version'] : null,
+        );
+
+        if ($result['changed']) {
+            broadcast(new PublicHalliUpdated($result['state']));
+        }
+
+        return response()->json([
+            'ok'      => $result['ok'],
+            'message' => $result['message'],
+            'state'   => $result['state'],
+        ]);
     }
 
     /**

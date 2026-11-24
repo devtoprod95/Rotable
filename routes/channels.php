@@ -27,3 +27,9 @@ Broadcast::channel('table-poll.{eventId}.{tableNo}', function (Member $member, i
     return (int) $member->event_id === $eventId
         && $member->currentTableNo() === $tableNo;
 }, ['guards' => ['web']]);
+
+// 테이블 할리갈리 게임 채널. Yes/No 투표와 같은 조건(같은 행사 && 현재 그 테이블 착석)으로 보호한다.
+Broadcast::channel('table-halli.{eventId}.{tableNo}', function (Member $member, int $eventId, int $tableNo) {
+    return (int) $member->event_id === $eventId
+        && $member->currentTableNo() === $tableNo;
+}, ['guards' => ['web']]);

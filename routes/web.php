@@ -43,6 +43,9 @@ Route::prefix('public')->name('public.')->group(function () {
         ->middleware('throttle:120,1')->name('games.poll.vote');
     Route::post('/games/poll/next', [\App\Http\Controllers\PublicGameController::class, 'pollNext'])
         ->middleware('throttle:120,1')->name('games.poll.next');
+    // 공개 할리갈리 — 전역 단일 방(Redis) + public 채널 브로드캐스트.
+    Route::post('/games/halli/action', [\App\Http\Controllers\PublicGameController::class, 'halliAction'])
+        ->middleware('throttle:600,1')->name('games.halli.action');
     // 접속자 수 하트비트(presence 대체) — 클라가 주기적으로 핑.
     Route::post('/games/poll/heartbeat', [\App\Http\Controllers\PublicGameController::class, 'pollHeartbeat'])
         ->middleware('throttle:120,1')->name('games.poll.heartbeat');
@@ -109,6 +112,10 @@ Route::middleware(['auth:web', \App\Http\Middleware\EnsureMemberAccessAllowed::c
     Route::post('/games/table-poll/next', [MemberPageController::class, 'tablePollNext'])
         ->middleware('throttle:60,1')
         ->name('games.table-poll.next');
+    // 테이블 할리갈리 - 서버(Redis)가 상태를 관리하고 변경 시 같은 테이블에 브로드캐스트.
+    Route::post('/games/halli/action', [MemberPageController::class, 'halliAction'])
+        ->middleware('throttle:240,1')
+        ->name('games.halli.action');
     Route::post('/requests', [MemberPageController::class, 'sendRequest'])
         ->middleware('throttle:5,1')
         ->name('requests.send');

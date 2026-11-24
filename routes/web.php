@@ -49,6 +49,9 @@ Route::prefix('public')->name('public.')->group(function () {
     // 공개 라이어 게임 — 전역 단일 방(Redis) + public 채널 브로드캐스트.
     Route::post('/games/liar/action', [\App\Http\Controllers\PublicGameController::class, 'liarAction'])
         ->middleware('throttle:600,1')->name('games.liar.action');
+    // 공개 4목 — 전역 단일 방(Redis) + public 채널 브로드캐스트.
+    Route::post('/games/connect-four/action', [\App\Http\Controllers\PublicGameController::class, 'connectFourAction'])
+        ->middleware('throttle:600,1')->name('games.connect-four.action');
     // 접속자 수 하트비트(presence 대체) — 클라가 주기적으로 핑.
     Route::post('/games/poll/heartbeat', [\App\Http\Controllers\PublicGameController::class, 'pollHeartbeat'])
         ->middleware('throttle:120,1')->name('games.poll.heartbeat');

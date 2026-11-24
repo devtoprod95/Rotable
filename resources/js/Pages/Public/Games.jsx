@@ -28,6 +28,17 @@ import { getCurrentPenalty, PENALTY_EVENT, PENALTY_FAIL } from "@/publicPenalty"
 const GAMES = [
     // ===== 소개팅 =====
     {
+        slug: "connect-four",
+        category: "dating",
+        title: "커넥트 포(4목)",
+        players: "2인",
+        emoji: "🔴",
+        desc: "번갈아 돌을 떨어뜨려 가로·세로·대각선으로 4개를 먼저 이으면 승리! 둘이서 한 판 붙어요.",
+        spice: 1,
+        tone: "from-red-50 to-yellow-50 border-red-200",
+        ready: true,
+    },
+    {
         slug: "poll",
         category: "dating",
         title: "Yes or No",

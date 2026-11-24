@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\PublicConnectFourUpdated;
 use App\Events\PublicHalliUpdated;
 use App\Events\PublicLiarUpdated;
 use App\Events\PublicPollPresence;
 use App\Events\PublicPollQuestionChanged;
 use App\Events\PublicPollVoted;
 use App\Services\CharacterNickname;
+use App\Services\ConnectFourService;
 use App\Services\HalliGalliService;
 use App\Services\LiarGameService;
 use Illuminate\Http\JsonResponse;
@@ -58,19 +60,20 @@ class PublicGameController extends Controller
     {
         $pages = [
             // 소개팅
-            'image-mild'  => 'Public/ImageMild',
-            'image-spicy' => 'Public/ImageSpicy',
-            'balance'     => 'Public/Balance',
-            'poll'        => 'Public/Poll',
-            'halli-galli' => 'Public/HalliGalli',
-            'liar-game'   => 'Public/LiarGame',
+            'image-mild'   => 'Public/ImageMild',
+            'image-spicy'  => 'Public/ImageSpicy',
+            'balance'      => 'Public/Balance',
+            'poll'         => 'Public/Poll',
+            'halli-galli'  => 'Public/HalliGalli',
+            'liar-game'    => 'Public/LiarGame',
+            'connect-four' => 'Public/ConnectFour',
             // 술게임 (🔞 성인)
-            'drink-balance'    => 'Public/DrinkBalance',
-            'kings-game'       => 'Public/KingsGame',
-            'drink-image'      => 'Public/DrinkImage',
-            'truth-game'       => 'Public/TruthGame',
-            'spin-bottle'      => 'Public/SpinBottle',
-            'timing-stop'      => 'Public/TimingStop',
+            'drink-balance' => 'Public/DrinkBalance',
+            'kings-game'    => 'Public/KingsGame',
+            'drink-image'   => 'Public/DrinkImage',
+            'truth-game'    => 'Public/TruthGame',
+            'spin-bottle'   => 'Public/SpinBottle',
+            'timing-stop'   => 'Public/TimingStop',
         ];
 
         if (! isset($pages[$slug])) {
@@ -106,6 +109,13 @@ class PublicGameController extends Controller
         if ($slug === 'liar-game') {
             $props = [
                 'initialState' => app(LiarGameService::class)->publicState(LiarGameService::PUBLIC_SCOPE),
+            ];
+        }
+
+        // 4목은 전역 단일 방(자리 2개). 현재 판 상태를 함께 내려준다.
+        if ($slug === 'connect-four') {
+            $props = [
+                'initialState' => app(ConnectFourService::class)->publicState(),
             ];
         }
 
@@ -252,6 +262,43 @@ class PublicGameController extends Controller
             'message' => $result['message'],
             'state'   => $result['state'],
             'secret'  => $result['secret'],
+        ]);
+    }
+
+    /**
+     * 공개 4목 - 참가/돌 놓기/한 판 더/자리 비우기/닉네임 변경.
+     * 로그인이 없으므로 참가자는 기기별 client_id 로 구분한다.
+     */
+    public function connectFourAction(Request $request, ConnectFourService $game): JsonResponse
+    {
+        $validated = $request->validate([
+            'client_id' => ['required', 'string', 'max:64'],
+            'action'    => ['required', 'in:join,drop,reset,leave,rename'],
+            'label'     => ['nullable', 'string', 'max:10'],
+            'col'       => ['nullable', 'integer', 'min:0', 'max:' . (ConnectFourService::COLS - 1)],
+        ]);
+
+        $clientId = $validated['client_id'];
+        $label    = trim((string) ($validated['label'] ?? ''));
+        if ($label === '') {
+            $label = CharacterNickname::forClient($clientId);
+        }
+
+        $result = $game->act(
+            $clientId,
+            $label,
+            $validated['action'],
+            isset($validated['col']) ? (int) $validated['col'] : null,
+        );
+
+        if ($result['changed']) {
+            broadcast(new PublicConnectFourUpdated($result['state']));
+        }
+
+        return response()->json([
+            'ok'      => $result['ok'],
+            'message' => $result['message'],
+            'state'   => $result['state'],
         ]);
     }
 

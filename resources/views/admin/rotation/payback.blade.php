@@ -156,6 +156,9 @@
 </div>
 
 <div class="row row-cards">
+    {{-- 결과 보기 버튼 (전체 매칭 · 매칭 결과 · 메시지 · 요청) — 공통 파셜 --}}
+    @include('admin.rotation._eventResultButtons', ['eventId' => $event->id, 'eventLabel' => $event->label])
+
     {{-- 합계 --}}
     <div class="col-12">
         <div class="card">

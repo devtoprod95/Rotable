@@ -13,8 +13,8 @@ use Illuminate\Support\Facades\Schema;
  *
  * - 운영(production) 환경에서만 동작한다. (그 밖의 환경에서는 isAvailable() 가 false)
  * - 개발 DB 접속 정보는 .env 의 DEV_DB_* 로 받고, config/database.php 의 `dev_sync` 연결을 쓴다.
- * - 개발 DB 의 TABLES 에 적힌 테이블 행을 전부 지운 뒤, 운영 DB 의 같은 테이블 행을 ID 그대로 넣는다.
- *   (관리자 계정·권한·통계·QR·상세페이지 등 행사에 속하지 않는 테이블은 건드리지 않는다.)
+ * - 개발 DB 의 TABLES 에 적힌 테이블 행(행사 관련 + 방문 통계)을 전부 지운 뒤, 운영 DB 의 같은 테이블 행을 ID 그대로 넣는다.
+ *   (관리자 계정·권한·QR·상세페이지, 방문자 원본 로그(visitor_logs: IP/UA) 등은 건드리지 않는다.)
  * - 개발 DB 에서 하나의 트랜잭션으로 처리하므로 중간에 실패하면 전부 롤백된다.
  * - 운영 DB 는 읽기만 한다.
  */
@@ -40,6 +40,9 @@ class EventDevSyncService
         'admin_requests',
         'event_paybacks',
         'event_costs',
+        // 방문 통계 (행사 목록의 방문 통계 · 사이트 통계). 서로 FK 가 없어 순서는 상관없다.
+        'event_visit_snapshots',
+        'site_statistics',
     ];
 
     /**
@@ -121,7 +124,7 @@ class EventDevSyncService
 
             return [
                 'isSuccess' => true,
-                'msg'       => "개발 DB를 운영 데이터로 교체했습니다. (행사 {$counts['event_rounds']}건, 회원 {$counts['members']}명, 총 {$total}행)",
+                'msg'       => "개발 DB를 운영 데이터로 교체했습니다. (행사 {$counts['event_rounds']}건, 회원 {$counts['members']}명, 방문 통계 {$counts['event_visit_snapshots']}일치, 총 {$total}행)",
                 'data'      => $counts,
             ];
         } catch (\Throwable $th) {

@@ -77,15 +77,20 @@
     .seating-setup__label { font-weight:700; font-size:.85rem; }
     .seating-setup .input-group { width:9rem; }
     .seating-setup__hint { flex:1 1 16rem; font-size:.8rem; color:var(--tblr-secondary, #667382); }
-    .seating-preflight { margin-top:.75rem; margin-bottom:0; font-size:.85rem; }
-    .seating-preflight ul { margin:.25rem 0 0; padding-left:1.1rem; }
-
-    /* 결과 보기 버튼: 모바일은 4칸 한 줄(아이콘 위 · 글자 아래)로 줄여 화면을 덜 차지한다 */
-    @media (max-width: 767.98px){
-        .seating-result-grid { grid-template-columns:repeat(4, 1fr) !important; gap:.35rem; }
-        .seating-result-grid .btn { flex-direction:column; min-height:56px; padding:.35rem .15rem; font-size:.72rem; line-height:1.25; white-space:normal; }
-        .seating-result-grid .btn .ti { margin:0 0 .15rem !important; font-size:1.25rem; }
-    }
+    /* Tabler .alert 는 flex 라서 안의 제목/목록이 가로로 나란히 놓여 글자가 세로로 쪼개져 보였다. 블록으로 쌓는다. */
+    .seating-preflight { display:block; margin-top:.75rem; margin-bottom:0; font-size:.85rem; padding:.7rem .85rem; }
+    .seating-preflight > * { width:100%; }
+    /* 시작 전 확인: 제목 → 항목별 블록(라벨 + 칩). 긴 쉼표 나열 대신 칩으로 나눠 모바일에서도 한눈에 보이게 한다. */
+    .pf-title { font-weight:800; font-size:.95rem; display:flex; align-items:center; gap:.3rem; }
+    .pf-section { margin-top:.65rem; padding-top:.6rem; border-top:1px dashed rgba(0,0,0,.15); }
+    .pf-label { font-weight:700; line-height:1.4; margin-bottom:.35rem; }
+    .pf-label b { color:#d63939; }
+    .pf-chips { display:flex; flex-wrap:wrap; gap:.35rem; }
+    .pf-chip { display:inline-flex; align-items:center; gap:.25rem; min-height:30px; padding:.15rem .6rem; border-radius:999px; background:#fff; border:1px solid #e0b252; font-weight:700; font-size:.82rem; line-height:1.2; white-space:nowrap; }
+    .pf-chip.is-m { border-color:#9ec5fe; background:#e7f1ff; color:#1c5aa6; }
+    .pf-chip.is-f { border-color:#f4a6c3; background:#ffeef4; color:#c2255c; }
+    .pf-chip small { font-weight:600; opacity:.85; }
+    .pf-more { align-self:center; font-size:.8rem; color:var(--tblr-secondary, #667382); font-weight:600; }
 
     /* 태블릿·모바일(lg 미만): 주 액션을 화면 하단에 고정한다. (하단 여백은 .seating-actionbar-spacer 로 확보) */
     @media (max-width: 991.98px){
@@ -120,23 +125,8 @@
 </div>
 
 <div class="row row-cards">
-    {{-- 결과 보기 버튼 (진행 중 참고용) — 행사 상세와 같은 크기·배치 --}}
-    <div class="col-12">
-        <div class="eventform-btn-grid seating-result-grid">
-            <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
-                <i class="ti ti-heart me-1"></i><span>전체 매칭</span>
-            </button>
-            <button type="button" id="goMatchedBtn" class="btn btn-outline-pink">
-                <i class="ti ti-heart-filled me-1"></i><span>매칭 결과<span id="matchedCount"></span></span>
-            </button>
-            <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
-                <i class="ti ti-messages me-1"></i><span>메시지<span id="messagesCount"></span></span>
-            </button>
-            <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow">
-                <i class="ti ti-hand-stop me-1"></i><span>요청<span id="requestsCount"></span></span>
-            </button>
-        </div>
-    </div>
+    {{-- 결과 보기 버튼 (진행 중 참고용) — 공통 파셜. 행사는 숨은 #eventSelect 값을 따른다. --}}
+    @include('admin.rotation._eventResultButtons', ['eventId' => $eventId, 'eventLabel' => '', 'eventSelect' => '#eventSelect'])
 
     <div class="col-12">
         <div class="card">
@@ -254,9 +244,6 @@
         const cancelVotingUrl = "{{ route('admin.rotation.seating.cancelVoting') }}";
         const reopenUrl  = "{{ route('admin.rotation.seating.reopen') }}";
         const voteProgressUrl = "{{ route('admin.rotation.seating.voteProgress') }}";
-        const matchesUrlTemplate = "{{ route('admin.rotation.event.matches.list', ['id' => '__ID__']) }}";
-        const messagesUrlTemplate = "{{ route('admin.rotation.event.messages.list', ['id' => '__ID__']) }}";
-        const requestsListUrl = "{{ route('admin.requests.list') }}";
 
         // 서버 enum 기반 상태 라벨 (P/S/V/X). 뱃지 표기에 사용.
         const STATUS_LABEL = @json($statuses);
@@ -356,37 +343,8 @@
                 renderActions(res?.board?.meta || {});
                 renderBoard(res?.board || {});
             }).always(function(){ dataXhr = null; });
-            refreshCounts();
+            if(window.EventResultButtons){ EventResultButtons.refresh(); }
             return dataXhr;
-        }
-
-        // 상단 버튼들에 현재 행사의 매칭 쌍 수 / 메시지 수 / 요청 수를 표시한다.
-        function refreshCounts(){
-            var eventId = $('#eventSelect').val();
-            var $matched = $('#matchedCount');
-            var $messages = $('#messagesCount');
-            var $requests = $('#requestsCount');
-
-            if(!eventId){ $matched.text(''); $messages.text(''); $requests.text(''); return; }
-
-            function setCount($el, cnt, unit){
-                $el.text((cnt > 0) ? ' (' + cnt + unit + ')' : '');
-            }
-
-            // 매칭 쌍 수 (남자 기준 중복 제거된 쌍)
-            $.get(matchesUrlTemplate.replace('__ID__', eventId) + '?matched=1', function(res){
-                setCount($matched, res?.total ?? (res?.data ? res.data.length : 0), '쌍');
-            }).fail(function(){ $matched.text(''); });
-
-            // 전체 메시지 수
-            $.get(messagesUrlTemplate.replace('__ID__', eventId), { size: 1 }, function(res){
-                setCount($messages, res?.total ?? 0, '건');
-            }).fail(function(){ $messages.text(''); });
-
-            // 전체 요청 수
-            $.get(requestsListUrl, { eventId: eventId, size: 1 }, function(res){
-                setCount($requests, res?.total ?? 0, '건');
-            }).fail(function(){ $requests.text(''); });
         }
 
         // 투표 참여 현황 표시/갱신.
@@ -756,7 +714,7 @@
                 let m = t.members.filter(function(x){ return x.gender === 'M'; }).length;
                 let f = t.members.length - m;
                 let bad = isOneToOne ? (m !== 1 || f !== 1) : (m !== f);
-                if(bad){ uneven.push(t.table_no + '번(남 ' + m + ' · 여 ' + f + ')'); }
+                if(bad){ uneven.push({ no: t.table_no, m: m, f: f }); }
             });
 
             if(!unassigned.length && !uneven.length){
@@ -765,16 +723,23 @@
                 return;
             }
 
-            let items = [];
+            let sections = [];
             if(unassigned.length){
-                let names = unassigned.slice(0, 12).map(function(m){ return escHtml(m.name) + '호(' + genderLabel(m.gender) + ')'; }).join(', ');
-                items.push('<li>아직 자리에 배정되지 않은 회원 <b>' + unassigned.length + '명</b>: ' + names + (unassigned.length > 12 ? ' 외' : '') + '</li>');
+                let MAX = 12;
+                let chips = unassigned.slice(0, MAX).map(function(m){
+                    return '<span class="pf-chip ' + (m.gender === 'F' ? 'is-f' : 'is-m') + '">' + escHtml(m.name) + '호 <small>' + genderLabel(m.gender) + '</small></span>';
+                }).join('');
+                if(unassigned.length > MAX){ chips += '<span class="pf-more">외 ' + (unassigned.length - MAX) + '명</span>'; }
+                sections.push('<div class="pf-section"><div class="pf-label">자리에 배정되지 않은 회원 <b>' + unassigned.length + '명</b></div><div class="pf-chips">' + chips + '</div></div>');
             }
             if(uneven.length){
-                items.push('<li>' + (isOneToOne ? '남 1 · 여 1이 아닌 테이블' : '남녀 수가 다른 테이블') + ': ' + escHtml(uneven.join(', ')) + '</li>');
+                let chips = uneven.map(function(u){
+                    return '<span class="pf-chip">' + u.no + '번 <small>남 ' + u.m + ' · 여 ' + u.f + '</small></span>';
+                }).join('');
+                sections.push('<div class="pf-section"><div class="pf-label">' + (isOneToOne ? '남 1 · 여 1이 아닌 테이블' : '남녀 수가 다른 테이블') + ' <b>' + uneven.length + '개</b></div><div class="pf-chips">' + chips + '</div></div>');
             }
             $box.removeClass('d-none alert-success').addClass('alert-warning')
-                .html('<b><i class="ti ti-alert-triangle me-1"></i>시작 전 확인해 주세요</b><ul>' + items.join('') + '</ul>');
+                .html('<div class="pf-title"><i class="ti ti-alert-triangle"></i>시작 전 확인해 주세요</div>' + sections.join(''));
         }
 
         // 회원 추가 셀렉트(.seat-add)에 Choices 적용. (단일 선택 + 검색)
@@ -1019,38 +984,6 @@
             window.history.replaceState({}, '', url);
         }
 
-        // 선택된 행사의 메시지를 모달로 조회
-        $('#goMessagesBtn').on('click', function(){
-            var eventId = $('#eventSelect').val();
-            if(!eventId){ return; }
-            var label = $('#eventSelect option:selected').text();
-            MessagesModal.open(eventId, label);
-        });
-
-        // 선택된 행사의 매칭 결과를 모달로 조회
-        $('#goMatchesBtn').on('click', function(){
-            var eventId = $('#eventSelect').val();
-            if(!eventId){ return; }
-            var label = $('#eventSelect option:selected').text();
-            MatchesModal.open(eventId, label);
-        });
-
-        // 선택된 행사의 "매칭된 쌍"만 모달로 조회 (남자 기준)
-        $('#goMatchedBtn').on('click', function(){
-            var eventId = $('#eventSelect').val();
-            if(!eventId){ return; }
-            var label = $('#eventSelect option:selected').text();
-            MatchedModal.open(eventId, label);
-        });
-
-        // 선택된 행사의 회원 요청을 모달로 조회
-        $('#goRequestsBtn').on('click', function(){
-            var eventId = $('#eventSelect').val();
-            if(!eventId){ return; }
-            var label = $('#eventSelect option:selected').text();
-            RequestsModal.open(eventId, label);
-        });
-
         // 턴 네비게이션: 이전/다음 턴 보기 (1턴 ~ 최신 턴 범위, 0턴은 세팅용이라 제외)
         $('#roundPrev').on('click', function(){
             if(viewRound === null){ viewRound = currentRound; }
@@ -1078,10 +1011,6 @@
     });
 </script>
 
-@include('admin.rotation._messagesModal')
-@include('admin.rotation._matchesModal')
-@include('admin.rotation._matchedModal')
-@include('admin.rotation._requestsModal')
 @if ($currentEvent)
     @include('admin.rotation._memberDetailModal', ['event' => $currentEvent, 'isSuperAdmin' => $isSuperAdmin])
 @endif

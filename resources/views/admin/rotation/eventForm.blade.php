@@ -131,25 +131,7 @@
 
     {{-- 바로가기 버튼 (상세일 때만) — 정보 수정 영역과 분리, 같은 크기 --}}
     @if ($isEdit)
-        <div class="col-12">
-            <div class="eventform-btn-grid">
-                <button type="button" id="goMatchesBtn" class="btn btn-outline-pink">
-                    <i class="ti ti-heart me-1"></i> 전체 매칭
-                </button>
-                <button type="button" id="goMatchedBtn" class="btn btn-outline-pink">
-                    <i class="ti ti-heart-filled me-1"></i> 매칭 결과<span id="matchedCount"></span>
-                </button>
-                <button type="button" id="goMessagesBtn" class="btn btn-outline-primary">
-                    <i class="ti ti-messages me-1"></i> 메시지<span id="messagesCount"></span>
-                </button>
-                <button type="button" id="goRequestsBtn" class="btn btn-outline-yellow">
-                    <i class="ti ti-hand-stop me-1"></i> 요청<span id="requestsCount"></span>
-                </button>
-                <a href="{{ route('admin.rotation.event.index') }}" class="btn btn-outline-secondary">
-                    <i class="ti ti-list me-1"></i> 목록
-                </a>
-            </div>
-        </div>
+        @include('admin.rotation._eventResultButtons', ['eventId' => $event->id, 'eventLabel' => $event->label, 'showList' => true])
     @endif
 
     {{-- 행사 정보 (생성/상세 공용) --}}
@@ -848,48 +830,6 @@
             }
         })();
 
-        // ===== 상세: 매칭 조회 모달 =====
-        $('#goMatchesBtn').on('click', function(){
-            MatchesModal.open({{ $event->id }}, @json($event->label));
-        });
-
-        // ===== 상세: 매칭 결과(매칭된 쌍만, 남자 기준) 모달 =====
-        $('#goMatchedBtn').on('click', function(){
-            MatchedModal.open({{ $event->id }}, @json($event->label));
-        });
-
-        // ===== 상세: 메시지 조회 모달 =====
-        $('#goMessagesBtn').on('click', function(){
-            MessagesModal.open({{ $event->id }}, @json($event->label));
-        });
-
-        // ===== 상세: 전체 요청 모달 =====
-        $('#goRequestsBtn').on('click', function(){
-            RequestsModal.open({{ $event->id }}, @json($event->label));
-        });
-
-        // ===== 상세: 상단 버튼 수 표시 (매칭 쌍 / 메시지 / 요청) =====
-        (function(){
-            var eventId = {{ $event->id }};
-            var matchesUrl  = "{{ route('admin.rotation.event.matches.list', ['id' => $event->id]) }}";
-            var messagesUrl = "{{ route('admin.rotation.event.messages.list', ['id' => $event->id]) }}";
-            var requestsUrl = "{{ route('admin.requests.list') }}";
-
-            function setCount(sel, cnt, unit){
-                $(sel).text((cnt > 0) ? ' (' + cnt + unit + ')' : '');
-            }
-
-            $.get(matchesUrl + '?matched=1', function(res){
-                setCount('#matchedCount', res?.total ?? (res?.data ? res.data.length : 0), '쌍');
-            });
-            $.get(messagesUrl, { size: 1 }, function(res){
-                setCount('#messagesCount', res?.total ?? 0, '건');
-            });
-            $.get(requestsUrl, { eventId: eventId, size: 1 }, function(res){
-                setCount('#requestsCount', res?.total ?? 0, '건');
-            });
-        })();
-
         // ===== 상세: 받은 투표수(나를 선택한 사람) 모달 =====
         $(document).on('click', '.btn-voters', function(){
             var memberId = $(this).data('member-id');
@@ -1029,12 +969,8 @@
 </script>
 
 @if ($isEdit)
-    @include('admin.rotation._messagesModal')
-    @include('admin.rotation._matchesModal')
-    @include('admin.rotation._matchedModal')
     @include('admin.rotation._votersModal')
     @include('admin.rotation._votedModal')
-    @include('admin.rotation._requestsModal')
     @include('admin.rotation._memberDetailModal', ['event' => $event, 'isSuperAdmin' => $isSuperAdmin ?? false])
 @endif
 @endsection

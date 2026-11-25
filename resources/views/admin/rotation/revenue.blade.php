@@ -56,6 +56,11 @@
     .rv-g.is-f .rv-g-title{ color:#c2255c; }
     .rv-g.is-m .rv-g-title{ color:#1c5aa6; }
     .rv-g-people{ font-size:.82rem; font-weight:700; color:#495057; }
+    .rv-g-price{ margin:.2rem 0 .1rem; font-size:.85rem; color:#495057; line-height:1.35; }
+    .rv-g-price b{ font-size:.95rem; color:#212529; }
+    .rv-g-price small{ display:block; font-size:.74rem; color:#7048e8; }
+    .rv-g-price small b{ font-size:.78rem; color:#7048e8; }
+    .rv-g-price.is-missing{ color:#d9480f; font-weight:700; font-size:.78rem; }
     .rv-g-chips{ display:flex; flex-wrap:wrap; gap:.2rem; margin:.25rem 0 .35rem; min-height:1.2rem; }
     .rv-g-chips .badge{ font-size:.68rem; }
     .rv-g-lines{ margin:0; font-size:.82rem; }
@@ -147,6 +152,9 @@
 </div>
 
 <div class="row row-cards">
+    {{-- 결과 보기 버튼 (전체 매칭 · 매칭 결과 · 메시지 · 요청) — 공통 파셜 --}}
+    @include('admin.rotation._eventResultButtons', ['eventId' => $event->id, 'eventLabel' => $event->label])
+
     {{-- ① 매출 요약 --}}
     <div class="col-12">
         <div class="card">
@@ -321,7 +329,7 @@
             $.getJSON(DATA_URL).done(function(res){
                 state.people = res.people || [];
                 renderTotals(res.totals || {});
-                renderBreak(obj(res.by_platform), res.totals || {});
+                renderBreak(obj(res.by_platform), res.totals || {}, res.fees || {});
                 renderRateHead(obj((res.fees || {}).platform_fee_rates));
                 if(!costsDirty){ renderCosts(res.costs || []); }
                 renderPeople();
@@ -351,13 +359,23 @@
         function pct(part, whole){ return whole > 0 ? Math.round(part * 1000 / whole) / 10 : 0; }
         var PF_COLOR = { munto: '#f76707', frip: '#1098ad' };
 
-        // 성별 칸 1개: 인원·무료/얼리버드 → 결제 - 수수료 - 페이백 = 실수입
-        function genderTile(gender, c){
+        // 1인당 참가비 줄: 행사 정보에서 설정한 플랫폼·성별 정가 + (얼리버드 할인율이 있으면) 얼리버드 가격
+        function priceLine(price, earlyRate){
+            if(price == null){ return '<div class="rv-g-price is-missing">1인당 참가비 미설정</div>'; }
+            var early = earlyRate > 0
+                ? '<small>얼리버드 <b>' + won(Math.floor(price * (100 - earlyRate) / 100)) + '</b> (-' + earlyRate + '%)</small>'
+                : '';
+            return '<div class="rv-g-price"><span>1인당 <b>' + won(price) + '</b></span>' + early + '</div>';
+        }
+
+        // 성별 칸 1개: 1인당 참가비 · 인원·무료/얼리버드 → 결제 - 수수료 - 페이백 = 실수입
+        function genderTile(gender, c, price, earlyRate){
             var label = gender === 'F' ? '여' : '남';
             var chips = (c.free ? '<span class="badge bg-teal-lt">무료 ' + c.free + '</span>' : '')
                 + (c.early ? '<span class="badge bg-purple-lt">얼리 ' + c.early + '</span>' : '');
             return '<div class="rv-g ' + (gender === 'F' ? 'is-f' : 'is-m') + (c.people ? '' : ' is-empty') + '">'
                 + '<div class="rv-g-head"><span class="rv-g-title">' + label + '</span><span class="rv-g-people">' + c.people + '명</span></div>'
+                + priceLine(price, earlyRate)
                 + '<div class="rv-g-chips">' + chips + '</div>'
                 + '<dl class="rv-g-lines">'
                 +   '<div><dt>결제</dt><dd>' + won(c.gross) + '</dd></div>'
@@ -368,19 +386,21 @@
         }
 
         // 플랫폼 카드 1개: 머리(플랫폼 색) · 남/여 칸 · 성비 막대
-        function platformCard(p, f, m){
-            var sub = sum(f, m);
+        function platformCard(p, f, m, fees){
+            var sub    = sum(f, m);
+            var prices = obj(obj(fees.prices)[p.id]);
+            var early  = Number(obj(fees.early_bird_rates)[p.id]) || 0;
             var mw  = pct(m.people, sub.people);
             return '<div class="rv-pf is-' + esc(p.id) + '">'
                 + '<div class="rv-pf-head"><span class="rv-pf-name">' + esc(p.label) + '<small>' + sub.people + '명</small></span>'
                 +   '<span class="rv-pf-income"><small>실수입</small><b>' + won(income(sub)) + '</b></span></div>'
-                + '<div class="rv-pf-body">' + genderTile('M', m) + genderTile('F', f) + '</div>'
+                + '<div class="rv-pf-body">' + genderTile('M', m, prices.M, early) + genderTile('F', f, prices.F, early) + '</div>'
                 + '<div class="rv-pf-foot"><div class="rv-gbar" aria-hidden="true"><span class="is-m" style="width:' + mw + '%"></span><span class="is-f" style="width:' + (100 - mw) + '%"></span></div>'
                 +   '<div class="rv-gbar-label"><span class="is-m">남 ' + m.people + '명 · ' + mw + '%</span><span class="is-f">여 ' + f.people + '명 · ' + Math.round((100 - mw) * 10) / 10 + '%</span></div></div>'
                 + '</div>';
         }
 
-        function renderBreak(byPlatform, t){
+        function renderBreak(byPlatform, t, fees){
             var known = PLATFORMS.map(function(p){ return p.id; });
             var list  = PLATFORMS.slice();
             Object.keys(byPlatform).forEach(function(id){ if(known.indexOf(id) === -1){ list.push({ id: id, label: id || '기타' }); } });
@@ -408,7 +428,7 @@
                     return '<span><i style="background:' + (PF_COLOR[r.p.id] || '#868e96') + '"></i><b>' + esc(r.p.label) + '</b> ' + pct(Math.max(0, income(r.sub)), totalIncome) + '%</span>';
                 }).join('') + '</div></div>';
 
-            var cards = '<div class="rv-pf-grid">' + rows.map(function(r){ return platformCard(r.p, r.f, r.m); }).join('') + '</div>';
+            var cards = '<div class="rv-pf-grid">' + rows.map(function(r){ return platformCard(r.p, r.f, r.m, fees); }).join('') + '</div>';
 
             var totalBar = '<div class="rv-total">'
                 + '<div><small>전체 인원</small><b>' + total.people + '명</b></div>'

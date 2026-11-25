@@ -83,6 +83,9 @@
 </div>
 
 <div class="row row-cards">
+    {{-- 결과 보기 버튼 (전체 매칭 · 매칭 결과 · 메시지 · 요청) — 공통 파셜 --}}
+    @include('admin.rotation._eventResultButtons', ['eventId' => $event->id, 'eventLabel' => $event->label])
+
     {{-- 상단: 현황 · 바로가기 버튼 (행사명·타입·일시는 위 탭바에 있으므로 여기서는 보여주지 않는다) --}}
     <div class="col-12">
         <div class="card ck-head">

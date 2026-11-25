@@ -292,7 +292,7 @@
                         <div class="flex-fill">
                             <div class="fw-bold mb-1">운영 데이터를 개발 DB로 덮어쓰기</div>
                             <ul class="text-secondary small mb-0 ps-3">
-                                <li><b class="text-danger">모든 행사</b>와 참여자·체크인·좌석·투표·메시지·요청·페이백·비용을 개발 DB로 옮겨요.</li>
+                                <li><b class="text-danger">모든 행사</b>와 참여자·체크인·좌석·투표·메시지·요청·페이백·비용, <b>방문 통계</b>를 개발 DB로 옮겨요.</li>
                                 <li>개발 DB에 있던 <b class="text-danger">행사 관련 데이터는 전부 삭제</b>되고 운영 데이터로 교체돼요. 되돌릴 수 없어요.</li>
                                 <li>연락처·비밀번호 등 <b>개인정보도 그대로</b> 복사돼요. 운영 DB는 변경되지 않아요.</li>
                             </ul>

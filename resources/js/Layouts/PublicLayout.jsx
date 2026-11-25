@@ -44,7 +44,7 @@ export default function PublicLayout({ children }) {
                     <p className="text-[11px] font-medium tracking-wide text-secondary-400">
                         made with <span className="text-primary">♥</span> by{" "}
                         <span className="font-bold tracking-normal text-secondary-600">
-                            Hando Kim
+                            Dohan Kim
                         </span>
                     </p>
                     <a

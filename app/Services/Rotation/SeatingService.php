@@ -721,6 +721,44 @@ class SeatingService
     }
 
     /**
+     * 투표 참여 현황: 성별별로 "1표 이상 던진 회원 수 / 전체 회원 수".
+     * 매칭중(V)·1:1 진행(S) 동안 관리자가 마감 전에 참여율을 확인하는 용도.
+     *
+     * @return array{
+     *     voted: int, total: int,
+     *     male: array{voted:int, total:int},
+     *     female: array{voted:int, total:int}
+     * }
+     */
+    public function voteProgress(int $eventId): array
+    {
+        $totals = Member::query()
+            ->where('event_id', $eventId)
+            ->selectRaw('gender, count(*) as cnt')
+            ->groupBy('gender')
+            ->pluck('cnt', 'gender');
+
+        // 소프트 삭제된 회원의 표는 집계하지 않는다.
+        $voted = Vote::query()
+            ->join('members', 'members.id', '=', 'event_votes.voter_id')
+            ->where('event_votes.event_id', $eventId)
+            ->whereNull('members.deleted_at')
+            ->selectRaw('members.gender as gender, count(distinct event_votes.voter_id) as cnt')
+            ->groupBy('members.gender')
+            ->pluck('cnt', 'gender');
+
+        $male   = ['voted' => (int) ($voted[Member::GENDER_MALE] ?? 0), 'total' => (int) ($totals[Member::GENDER_MALE] ?? 0)];
+        $female = ['voted' => (int) ($voted[Member::GENDER_FEMALE] ?? 0), 'total' => (int) ($totals[Member::GENDER_FEMALE] ?? 0)];
+
+        return [
+            'voted'  => $male['voted'] + $female['voted'],
+            'total'  => $male['total'] + $female['total'],
+            'male'   => $male,
+            'female' => $female,
+        ];
+    }
+
+    /**
      * 투표(매칭) 종료 시 운영진 텔레그램으로 요약 리포트를 보낸다.
      * SendCloseVotingReportJob(비동기 큐)에서 호출된다.
      * 전송 자체가 실패하더라도 예외를 삼켜 Job 이 과도하게 재시도하지 않도록 한다.

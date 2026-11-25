@@ -158,6 +158,8 @@
                         </div>
                         <div class="seating-summary__round" id="summaryRound">-</div>
                         <div class="seating-summary__hint" id="actionHint"></div>
+                        {{-- 투표 참여 현황: 매칭중(V)·1:1 진행(S)·종료(X)에서만 노출 --}}
+                        <div class="seating-summary__hint d-none" id="voteProgress"></div>
                     </div>
 
                     <div class="seating-actionbar" id="seatingActionBar">
@@ -251,6 +253,7 @@
         const closeVotingUrl = "{{ route('admin.rotation.seating.closeVoting') }}";
         const cancelVotingUrl = "{{ route('admin.rotation.seating.cancelVoting') }}";
         const reopenUrl  = "{{ route('admin.rotation.seating.reopen') }}";
+        const voteProgressUrl = "{{ route('admin.rotation.seating.voteProgress') }}";
         const matchesUrlTemplate = "{{ route('admin.rotation.event.matches.list', ['id' => '__ID__']) }}";
         const messagesUrlTemplate = "{{ route('admin.rotation.event.messages.list', ['id' => '__ID__']) }}";
         const requestsListUrl = "{{ route('admin.requests.list') }}";
@@ -386,11 +389,56 @@
             }).fail(function(){ $requests.text(''); });
         }
 
+        // 투표 참여 현황 표시/갱신.
+        //  - 매칭이 열려 있는 동안(와인파티 V · 1:1 S)은 10초마다 갱신하고, 종료(X)에서는 최종값을 한 번만 보여준다.
+        //  - 그 외 상태(대기/로테이션 진행 중)에서는 숨기고 갱신을 멈춘다.
+        let voteTimer = null;
+
+        function renderVoteProgress(p){
+            let total = p.total || 0;
+            let pct   = total > 0 ? Math.round(p.voted / total * 100) : 0;
+            $('#voteProgress').html(
+                '<i class="ti ti-chart-bar me-1"></i>투표 참여 <b>' + p.voted + '/' + total + '명</b> (' + pct + '%)'
+                + ' · 남 ' + p.male.voted + '/' + p.male.total + ' · 여 ' + p.female.voted + '/' + p.female.total
+                + '<div class="progress progress-sm mt-1"><div class="progress-bar bg-pink" style="width:' + pct + '%"></div></div>'
+            ).removeClass('d-none');
+        }
+
+        function refreshVoteProgress(){
+            let eventId = $('#eventSelect').val();
+            if(!eventId){ return; }
+            // 주기 조회라 전역 "처리 중..." 로딩 팝업(ajaxSetup beforeSend/complete)은 끈다.
+            $.ajax({
+                url: voteProgressUrl, type: 'GET', data: { eventId: eventId },
+                beforeSend: $.noop, complete: $.noop,
+            }).done(renderVoteProgress);
+        }
+
+        function syncVoteProgress(meta){
+            let isOpen = meta.event_status === 'V' || (meta.is_one_to_one && meta.event_status === 'S');
+            let show   = isOpen || !!meta.is_closed;
+
+            if(voteTimer){ clearInterval(voteTimer); voteTimer = null; }
+
+            if(!show){
+                $('#voteProgress').addClass('d-none').empty();
+                return;
+            }
+
+            refreshVoteProgress();
+            if(isOpen){
+                voteTimer = setInterval(function(){
+                    if(!document.hidden){ refreshVoteProgress(); }
+                }, 10000);
+            }
+        }
+
         // 메타 기반 버튼/네비게이션 제어:
         //  - 턴 네비게이션(◀▶)으로 과거 턴 조회 가능
         //  - [로테이션 진행]/[종료]는 "최신 턴을 보고 있을 때만" 노출
         //  - 과거 턴을 볼 때는 진행/종료 버튼 숨김
         function renderActions(meta){
+            syncVoteProgress(meta);
             let $rotate = $('#rotateBtn').addClass('d-none');
             let $rotateBack = $('#rotateBackBtn').addClass('d-none');
             let $finish = $('#finishBtn').addClass('d-none');

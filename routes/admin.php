@@ -116,6 +116,8 @@ Route::middleware('role')->group(function () {
                 Route::get('/', [SeatingController::class, 'seatingIndex'])->name('index');
                 Route::get('/data', [SeatingController::class, 'seatingData'])->name('data');
                 Route::get('/board', [SeatingController::class, 'seatingBoard'])->name('board');
+                // 투표 참여 현황 — 매칭 진행 중 성별별 투표 완료 수(주기 조회)
+                Route::get('/vote-progress', [SeatingController::class, 'seatingVoteProgress'])->name('voteProgress');
                 Route::get('/members', [SeatingController::class, 'seatingMembers'])->name('members');
                 Route::post('/store', [SeatingController::class, 'seatingStore'])->name('store');
                 Route::post('/rotate', [SeatingController::class, 'seatingRotate'])->name('rotate');

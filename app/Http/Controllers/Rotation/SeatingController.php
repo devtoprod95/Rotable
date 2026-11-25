@@ -70,6 +70,14 @@ class SeatingController extends RotationBaseController
     }
 
     /**
+     * 투표 참여 현황(성별별 투표 완료 수 / 전체 수). 매칭 진행 중 관리자 화면이 주기적으로 조회한다.
+     */
+    public function seatingVoteProgress(): JsonResponse
+    {
+        return response()->json($this->seatingService->voteProgress((int) $this->request->input('eventId')));
+    }
+
+    /**
      * 행사의 좌석 배정 대상 회원 목록 (성별 포함).
      */
     public function seatingMembers(): JsonResponse

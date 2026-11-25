@@ -101,13 +101,20 @@
     .rv-cost-total{ display:flex; justify-content:space-between; align-items:center; padding:.6rem .75rem; margin-top:.4rem; border-radius:10px; background:#f8f9fa; font-weight:800; }
 
     /* 신청자별 결제 유형 */
-    .rv-people-bar{ display:flex; flex-direction:column; gap:.5rem; margin-bottom:.75rem; }
-    @media (min-width: 768px){ .rv-people-bar{ flex-direction:row; align-items:center; } .rv-people-bar .rv-gtabs{ flex:0 0 260px; } .rv-people-bar .rv-search{ flex:1 1 auto; } }
-    .rv-gtabs{ display:grid; grid-template-columns:repeat(3, 1fr); gap:.35rem; }
-    .rv-gtab{ min-height:42px; border-radius:10px; font-weight:800; border:1px solid #dee2e6; background:#fff; color:#495057; }
-    .rv-gtab.is-active{ background:#495057; border-color:#495057; color:#fff; }
-    .rv-gtab.is-f.is-active{ background:#d6336c; border-color:#d6336c; }
-    .rv-gtab.is-m.is-active{ background:#206bc4; border-color:#206bc4; }
+    .rv-people-bar{ margin-bottom:.75rem; }
+    /* 남(좌) · 여(우) 두 열. 좁은 화면(lg 미만)에서는 남 → 여 순으로 위아래 */
+    .rv-pcols{ display:grid; grid-template-columns:minmax(0, 1fr); gap:1rem; }
+    @media (min-width: 992px){ .rv-pcols{ grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+    .rv-pcol{ border:1px solid #e9ecef; border-radius:12px; overflow:hidden; background:#fff; }
+    .rv-pcol-head{ display:flex; justify-content:space-between; align-items:center; gap:.5rem; width:100%; min-height:44px; padding:.55rem .85rem; border:0; text-align:left; font-weight:800; color:#fff; cursor:pointer; }
+    .rv-pcol-head .rv-pcol-side{ display:inline-flex; align-items:center; gap:.4rem; }
+    .rv-pcol-head .ti{ transition:transform .15s ease; }
+    .rv-pcol.is-collapsed .rv-pcol-head .ti{ transform:rotate(-90deg); }
+    .rv-pcol.is-collapsed .rv-pcol-body{ display:none; }
+    .rv-pcol.is-m .rv-pcol-head{ background:#206bc4; }
+    .rv-pcol.is-f .rv-pcol-head{ background:#d6336c; }
+    .rv-pcol-head small{ font-weight:700; opacity:.9; }
+    .rv-pcol-body{ padding:.25rem .75rem; }
     .rv-search{ min-height:42px; }
     .rv-person{ display:flex; flex-wrap:wrap; align-items:center; gap:.5rem .75rem; padding:.6rem .25rem; border-bottom:1px solid #f1f3f5; }
     .rv-person:last-child{ border-bottom:0; }
@@ -272,11 +279,6 @@
             <div class="collapse show" id="rvPeopleCollapse">
                 <div class="card-body">
                     <div class="rv-people-bar">
-                        <div class="rv-gtabs" role="group" aria-label="성별">
-                            <button type="button" class="rv-gtab is-m" data-g="M">남</button>
-                            <button type="button" class="rv-gtab is-f" data-g="F">여</button>
-                            <button type="button" class="rv-gtab" data-g="">전체</button>
-                        </div>
                         <input type="search" class="form-control rv-search" id="rvSearch" placeholder="번호표 또는 닉네임 검색" autocomplete="off">
                     </div>
                     <div class="text-secondary small mb-2">얼리버드는 선착순이라 받은 사람만 바꿔 주세요. 무료는 결제 0원으로 계산하고 페이백 대상이 될 수 없어요. 페이백 금액은 참가비로 자동 계산되고, 계좌는 체크인이나 페이백 화면에서 넣어요.</div>
@@ -300,7 +302,7 @@
         var PLATFORM_BADGE = { munto: 'bg-orange-lt', frip: 'bg-cyan-lt' };
         var COST_MAX     = {{ \App\Models\EventCost::MAX_PER_EVENT }};
 
-        var state = { people: [], gender: 'M' }; // 매출은 남 → 여 순 (페이백만 여자 먼저)
+        var state = { people: [], collapsed: { M: false, F: false } }; // 남/여 열 접힘 상태(다시 그려도 유지)
 
         function esc(v){ return $('<div>').text(v == null ? '' : v).html(); }
         function won(n){ return (Number(n) || 0).toLocaleString('ko-KR') + '원'; }
@@ -471,13 +473,6 @@
 
         /* ===== 신청자별 결제 유형 ===== */
         function renderPeople(){
-            $('.rv-gtab').each(function(){ $(this).toggleClass('is-active', String($(this).data('g')) === state.gender); });
-            var countF = state.people.filter(function(p){ return p.gender === 'F'; }).length;
-            var countM = state.people.length - countF;
-            $('.rv-gtab[data-g="F"]').text('여 ' + countF);
-            $('.rv-gtab[data-g="M"]').text('남 ' + countM);
-            $('.rv-gtab[data-g=""]').text('전체 ' + state.people.length);
-
             var counts = { N: 0, E: 0, F: 0 };
             state.people.forEach(function(p){ counts[p.pay_type] = (counts[p.pay_type] || 0) + 1; });
             $('#rvPeopleHead').html(Object.keys(PAY_LABEL).map(function(k){
@@ -485,49 +480,71 @@
             }).join(''));
 
             var q = ($('#rvSearch').val() || '').trim().toLowerCase();
-            var list = state.people.filter(function(p){
-                if(state.gender && p.gender !== state.gender){ return false; }
-                if(q === ''){ return true; }
-                return String(p.ticket_no || '') === q || (p.name || '').toLowerCase().indexOf(q) !== -1;
-            });
-            if(list.length === 0){
-                $('#rvPeople').html('<div class="rv-empty">' + (state.people.length ? '해당하는 사람이 없어요.' : '체크인 명단이 없어요.') + '</div>');
+            if(state.people.length === 0){
+                $('#rvPeople').html('<div class="rv-empty">체크인 명단이 없어요.</div>');
                 return;
             }
-            $('#rvPeople').html(list.map(function(p){
-                var pf = PLATFORM_LABEL[p.platform] || p.platform || '';
-                var badges = (pf ? '<span class="badge ' + (PLATFORM_BADGE[p.platform] || 'bg-secondary-lt') + '">' + esc(pf) + '</span>' : '')
-                    + (p.is_no_show ? '<span class="badge bg-red-lt">노쇼</span>' : (p.checked_in ? '<span class="badge bg-teal-lt">체크인</span>' : ''))
-                    + (p.payback_rate ? '<span class="badge bg-orange-lt">페이백 ' + p.payback_rate + '%' + (p.payback_done ? ' · 입금 완료' : '') + '</span>' : '')
-                    + (p.missing_price ? '<span class="badge bg-yellow-lt">참가비 미설정</span>' : '');
-                var money = p.pay_type === 'F'
-                    ? '<b>0원</b><div class="text-secondary">무료</div>'
-                    : '<b>' + won(p.gross) + '</b>' + (p.payback ? '<div class="text-danger">페이백 ' + minus(p.payback) + '</div>' : '');
-                // 페이백 대상은 무료로 못 바꾸고, 입금 완료면 유형을 못 바꾼다. (서버도 막는다)
-                var seg = Object.keys(PAY_LABEL).map(function(k){
-                    var lock = p.payback_done || (k === 'F' && p.payback_rate);
-                    return '<button type="button" data-id="' + p.id + '" data-type="' + k + '" class="' + (p.pay_type === k ? 'is-on' : '') + '"'
-                        + (lock && p.pay_type !== k ? ' disabled title="' + (p.payback_done ? '페이백 입금 완료' : '페이백 대상은 무료로 바꿀 수 없어요') + '"' : '')
-                        + ' aria-pressed="' + (p.pay_type === k) + '">' + esc(PAY_LABEL[k]) + '</button>';
-                }).join('');
-                // 페이백 비율 (없음/80%/100%): 무료면 고를 수 없고, 입금 완료면 잠긴다. (서버가 같은 규칙으로 막는다)
-                var pbOpts = [['', '페이백 없음']].concat(Object.keys(RATE_LABEL).sort(function(a, b){ return a - b; }).map(function(k){ return [k, RATE_LABEL[k]]; }));
-                var pbSel = '<select class="form-select rv-pbrate" data-id="' + p.id + '" aria-label="페이백"'
-                    + (p.payback_done || p.pay_type === 'F' ? ' disabled title="' + (p.payback_done ? '페이백 입금 완료' : '무료 참가자는 페이백 불가') + '"' : '') + '>'
-                    + pbOpts.map(function(o){ return '<option value="' + o[0] + '"' + (String(p.payback_rate || '') === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
-                    + '</select>';
-                return '<div class="rv-person">'
-                    + '<span class="rv-pno ' + (p.gender === 'F' ? 'is-f' : '') + '">' + (p.ticket_no || '-') + '</span>'
-                    + '<div class="rv-pwho"><div class="rv-pname">' + esc(p.name || '닉네임 없음') + '</div><div class="rv-pbadges">' + badges + '</div></div>'
-                    + '<div class="rv-pmoney">' + money + '</div>'
-                    + '<div class="rv-pctrl">'
-                    +   '<div class="rv-seg" role="group" aria-label="결제 유형">' + seg + '</div>'
-                    +   pbSel
-                    + '</div>'
-                    + '</div>';
-            }).join(''));
+            function matches(p){
+                if(q === ''){ return true; }
+                return String(p.ticket_no || '') === q || (p.name || '').toLowerCase().indexOf(q) !== -1;
+            }
+            // 남(좌) · 여(우). 성별이 F 가 아니면 남으로 본다.
+            function column(cls, label, gender){
+                var all  = state.people.filter(function(p){ return (p.gender === 'F') === (gender === 'F'); });
+                var list = all.filter(matches);
+                var fold = state.collapsed[gender];
+                return '<section class="rv-pcol ' + cls + (fold ? ' is-collapsed' : '') + '">'
+                    + '<button type="button" class="rv-pcol-head" data-col="' + gender + '" aria-expanded="' + (!fold) + '">'
+                    +   '<span>' + label + '</span>'
+                    +   '<span class="rv-pcol-side"><small>' + (q === '' ? all.length + '명' : list.length + ' / ' + all.length + '명') + '</small><i class="ti ti-chevron-down" aria-hidden="true"></i></span>'
+                    + '</button>'
+                    + '<div class="rv-pcol-body">'
+                    + (list.length ? list.map(personHtml).join('') : '<div class="rv-empty">해당하는 사람이 없어요.</div>')
+                    + '</div></section>';
+            }
+            $('#rvPeople').html('<div class="rv-pcols">' + column('is-m', '남', 'M') + column('is-f', '여', 'F') + '</div>');
         }
-        $('.rv-gtab').on('click', function(){ state.gender = String($(this).data('g')); renderPeople(); });
+
+        // 신청자 한 명의 행(번호표 · 이름/뱃지 · 금액 · 결제 유형/페이백 컨트롤).
+        function personHtml(p){
+            var pf = PLATFORM_LABEL[p.platform] || p.platform || '';
+            var badges = (pf ? '<span class="badge ' + (PLATFORM_BADGE[p.platform] || 'bg-secondary-lt') + '">' + esc(pf) + '</span>' : '')
+                + (p.is_no_show ? '<span class="badge bg-red-lt">노쇼</span>' : (p.checked_in ? '<span class="badge bg-teal-lt">체크인</span>' : ''))
+                + (p.payback_rate ? '<span class="badge bg-orange-lt">페이백 ' + p.payback_rate + '%' + (p.payback_done ? ' · 입금 완료' : '') + '</span>' : '')
+                + (p.missing_price ? '<span class="badge bg-yellow-lt">참가비 미설정</span>' : '');
+            var money = p.pay_type === 'F'
+                ? '<b>0원</b><div class="text-secondary">무료</div>'
+                : '<b>' + won(p.gross) + '</b>' + (p.payback ? '<div class="text-danger">페이백 ' + minus(p.payback) + '</div>' : '');
+            // 페이백 대상은 무료로 못 바꾸고, 입금 완료면 유형을 못 바꾼다. (서버도 막는다)
+            var seg = Object.keys(PAY_LABEL).map(function(k){
+                var lock = p.payback_done || (k === 'F' && p.payback_rate);
+                return '<button type="button" data-id="' + p.id + '" data-type="' + k + '" class="' + (p.pay_type === k ? 'is-on' : '') + '"'
+                    + (lock && p.pay_type !== k ? ' disabled title="' + (p.payback_done ? '페이백 입금 완료' : '페이백 대상은 무료로 바꿀 수 없어요') + '"' : '')
+                    + ' aria-pressed="' + (p.pay_type === k) + '">' + esc(PAY_LABEL[k]) + '</button>';
+            }).join('');
+            // 페이백 비율 (없음/80%/100%): 무료면 고를 수 없고, 입금 완료면 잠긴다. (서버가 같은 규칙으로 막는다)
+            var pbOpts = [['', '페이백 없음']].concat(Object.keys(RATE_LABEL).sort(function(a, b){ return a - b; }).map(function(k){ return [k, RATE_LABEL[k]]; }));
+            var pbSel = '<select class="form-select rv-pbrate" data-id="' + p.id + '" aria-label="페이백"'
+                + (p.payback_done || p.pay_type === 'F' ? ' disabled title="' + (p.payback_done ? '페이백 입금 완료' : '무료 참가자는 페이백 불가') + '"' : '') + '>'
+                + pbOpts.map(function(o){ return '<option value="' + o[0] + '"' + (String(p.payback_rate || '') === String(o[0]) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
+                + '</select>';
+            return '<div class="rv-person">'
+                + '<span class="rv-pno ' + (p.gender === 'F' ? 'is-f' : '') + '">' + (p.ticket_no || '-') + '</span>'
+                + '<div class="rv-pwho"><div class="rv-pname">' + esc(p.name || '닉네임 없음') + '</div><div class="rv-pbadges">' + badges + '</div></div>'
+                + '<div class="rv-pmoney">' + money + '</div>'
+                + '<div class="rv-pctrl">'
+                +   '<div class="rv-seg" role="group" aria-label="결제 유형">' + seg + '</div>'
+                +   pbSel
+                + '</div>'
+                + '</div>';
+        }
+        // 남/여 열 접기·펼치기. 목록을 다시 그리지 않고 클래스만 바꾸고, 상태는 state 에 남겨 새로고침 렌더에도 유지한다.
+        $('#rvPeople').on('click', '.rv-pcol-head', function(){
+            var col  = String($(this).data('col'));
+            var fold = !state.collapsed[col];
+            state.collapsed[col] = fold;
+            $(this).attr('aria-expanded', String(!fold)).closest('.rv-pcol').toggleClass('is-collapsed', fold);
+        });
         $('#rvPeople').on('change', '.rv-pbrate', async function(){
             var $s = $(this);
             var p  = state.people.find(function(x){ return String(x.id) === String($s.data('id')); });

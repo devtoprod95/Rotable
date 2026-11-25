@@ -26,6 +26,14 @@
         border-bottom-color: #374151;
     }
 
+    /* 위험 구역(운영 → 개발 DB 덮어쓰기): 붉은 테두리 + 사선 줄무늬 머리로 일반 카드와 확실히 구분 */
+    .danger-zone { border:2px solid #d63939; box-shadow:0 0 0 3px rgba(214,57,57,.12); }
+    .danger-zone__head { background:repeating-linear-gradient(-45deg, #fff5f5, #fff5f5 12px, #ffe3e3 12px, #ffe3e3 24px); border-bottom:2px solid #d63939; }
+    @media (max-width: 767.98px){ #syncDevBtn { width:100%; } }
+    /* 덮어쓰기 확인창: 제목이 크면 모바일에서 줄 간격이 붙어 보이므로 작게 + 줄 간격 확보 */
+    .swal-sync-title { font-size:1.15rem !important; line-height:1.5 !important; padding:.5rem 1rem 0 !important; }
+    .swal-sync-html { margin:.75rem 1rem .5rem !important; line-height:1.6 !important; }
+
     /* 행사 목록 표: 엑셀(격자) 느낌 제거 — 세로 격자선 없이 일반 테이블처럼. (모바일 접기 동작은 유지) */
     #example-table.tabulator { border: 1px solid #e9ecf1; border-radius: 10px; }
     #example-table.tabulator .tabulator-header { background: #f6f8fb; border-bottom: 1px solid #e9ecf1; }
@@ -267,6 +275,36 @@
             <div id="example-table"></div>
         </div>
     </div>
+
+    {{-- ⚠️ 위험 구역 [운영 전용]: 모든 행사 데이터를 개발 DB로 옮기고 개발 DB의 행사 관련 데이터를 교체한다.
+         최고관리자 · 운영 환경 · DEV_DB_* 설정 시에만 노출 --}}
+    @if (! empty($canSyncToDev))
+        <div class="col-12">
+            <div class="card danger-zone">
+                <div class="card-header danger-zone__head">
+                    <h3 class="card-title mb-0 d-flex align-items-center gap-2 text-danger">
+                        <i class="ti ti-alert-triangle"></i> 위험 구역
+                        <span class="badge bg-danger text-white">운영 전용</span>
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
+                        <div class="flex-fill">
+                            <div class="fw-bold mb-1">운영 데이터를 개발 DB로 덮어쓰기</div>
+                            <ul class="text-secondary small mb-0 ps-3">
+                                <li><b class="text-danger">모든 행사</b>와 참여자·체크인·좌석·투표·메시지·요청·페이백·비용을 개발 DB로 옮겨요.</li>
+                                <li>개발 DB에 있던 <b class="text-danger">행사 관련 데이터는 전부 삭제</b>되고 운영 데이터로 교체돼요. 되돌릴 수 없어요.</li>
+                                <li>연락처·비밀번호 등 <b>개인정보도 그대로</b> 복사돼요. 운영 DB는 변경되지 않아요.</li>
+                            </ul>
+                        </div>
+                        <button type="button" id="syncDevBtn" class="btn btn-danger btn-lg flex-shrink-0">
+                            <i class="ti ti-database-export me-1"></i> 개발 DB로 덮어쓰기
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
 
 <script>
@@ -437,6 +475,32 @@
         });
 
         function getSelectedIds(){ return table.getSelectedRows().map(row => row.getData().id); }
+
+        // ===== [운영 전용] 개발 DB 덮어쓰기: 확인창에서 버튼을 눌러 실행한다 =====
+        $('#syncDevBtn').on('click', async function(){
+            var r = await Swal.fire({
+                icon: 'warning',
+                title: '개발 DB를 운영 데이터로 덮어쓸까요?',
+                html: '<div class="text-start small lh-base">'
+                    + '<p class="mb-2"><b class="text-danger">개발 DB의 행사 관련 데이터가 전부 삭제</b>되고, 운영의 <b>모든 행사 데이터</b>로 교체돼요. 되돌릴 수 없어요.</p>'
+                    + '<p class="mb-0">연락처·비밀번호 등 개인정보도 그대로 복사돼요.</p>'
+                    + '</div>',
+                showCancelButton: true,
+                confirmButtonText: '덮어쓰기 실행',
+                cancelButtonText: '취소',
+                confirmButtonColor: '#d63939',
+                focusCancel: true,
+                customClass: { title: 'swal-sync-title', htmlContainer: 'swal-sync-html' }
+            });
+            if(!r.isConfirmed){ return; }
+
+            var $btn = $(this).prop('disabled', true);
+            $.ajax({
+                url: "{{ route('admin.rotation.event.syncDev') }}", type: 'POST',
+                success: function(res){ alert(res?.msg); },
+                error: function(xhr){ alert(xhr.responseJSON?.msg || '개발 DB 덮어쓰기에 실패했습니다.'); }
+            }).always(function(){ $btn.prop('disabled', false); });
+        });
 
         $('.btn-submit').click(function(){ table.setData(); });
         $('#searchForm select').change(function(){ table.setData(); });

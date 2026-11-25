@@ -13,6 +13,7 @@ use App\Models\EventRound;
 use App\Models\EventVisitSnapshot;
 use App\Models\Member;
 use App\Services\Rotation\EventContextService;
+use App\Services\Rotation\EventDevSyncService;
 use App\Services\Rotation\MemberLabelService;
 use App\Services\Rotation\MemberProfileService;
 use App\Services\Rotation\RotationService;
@@ -34,6 +35,7 @@ class EventController extends RotationBaseController
         protected MemberLabelService $memberLabelService,
         protected MemberProfileService $memberProfileService,
         protected EventContextService $eventContextService,
+        protected EventDevSyncService $eventDevSyncService,
     ) {
         parent::__construct($request);
     }
@@ -51,6 +53,8 @@ class EventController extends RotationBaseController
             'statuses'      => EventRound::statusOptions(),
             // 방문 통계: 가장 최근 자정 스냅샷 1건. (없으면 null)
             'visitSnapshot' => EventVisitSnapshot::orderByDesc('snapshot_date')->first(),
+            // 운영 → 개발 DB 교체 버튼: 최고관리자 + 운영 환경 + DEV_DB_* 설정 시에만 노출
+            'canSyncToDev'  => $this->canSyncToDev(),
         ]);
     }
 
@@ -122,7 +126,22 @@ class EventController extends RotationBaseController
             'statuses'       => EventRound::statusOptions(),
             // 참여자 표기 `닉네임(플랫폼)_N호` — 회원 id => 라벨
             'memberLabels'   => $this->memberLabelsFor($id, $event->members),
+            // 운영 → 개발 DB 복사 버튼: 최고관리자 + 운영 환경 + DEV_DB_* 설정 시에만 노출
+            'canSyncToDev'   => $this->canSyncToDev(),
         ]);
+    }
+
+    /**
+     * 모든 행사 데이터를 개발 DB 로 옮긴다. 개발 DB 의 행사 관련 데이터는 전부 지우고 교체한다.
+     * (운영 환경 · 최고관리자 · DEV_DB_* 설정 필요. 화면의 확인창에서 한 번 더 확인한다.)
+     */
+    public function eventSyncToDev(): JsonResponse
+    {
+        if (! $this->canSyncToDev()) {
+            return $this->forbidden('운영 환경에서 개발 DB 설정(DEV_DB_*)이 되어 있을 때만 사용할 수 있습니다.');
+        }
+
+        return $this->respond($this->eventDevSyncService->sync(), Response::HTTP_INTERNAL_SERVER_ERROR);
     }
 
     /**

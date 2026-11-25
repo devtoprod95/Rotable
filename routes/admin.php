@@ -61,6 +61,8 @@ Route::middleware('role')->group(function () {
                 Route::delete('/delete', [EventController::class, 'eventDelete'])->name('delete');
                 // 사이드바 "행사 상세" 진입점 — 지금 운영할 행사의 상세 화면으로 이동한다.
                 Route::get('/current', [EventController::class, 'eventDetailCurrent'])->name('detail.current');
+                // [운영 전용] 모든 행사 데이터를 개발 DB(DEV_DB_*)로 옮기고 개발 DB의 행사 관련 데이터는 교체 (최고관리자 · 운영 환경에서만 동작)
+                Route::post('/sync-dev', [EventController::class, 'eventSyncToDev'])->middleware(['superAdmin', 'throttle:3,1'])->name('syncDev');
                 Route::get('/{id}', [EventController::class, 'eventDetail'])->whereNumber('id')->name('detail');
                 Route::put('/{id}', [EventController::class, 'eventUpdate'])->whereNumber('id')->name('update');
                 // 음료 선택지 설정 (1:1 소개팅)

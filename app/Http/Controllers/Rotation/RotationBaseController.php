@@ -55,4 +55,12 @@ abstract class RotationBaseController extends Controller
     {
         return $this->isSuperAdmin() && ! app()->isProduction();
     }
+
+    /**
+     * 운영 → 개발 DB 복사 버튼 노출/실행 가능 여부: 최고관리자 && 운영(production) && DEV_DB_* 설정됨.
+     */
+    protected function canSyncToDev(): bool
+    {
+        return $this->isSuperAdmin() && app(\App\Services\Rotation\EventDevSyncService::class)->isAvailable();
+    }
 }

@@ -114,6 +114,27 @@ return [
             // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
+        /*
+         | 운영 → 개발 DB 행사 데이터 복사 전용 연결 (EventDevSyncService).
+         | DEV_DB_* 가 비어 있으면 비활성이며, 운영(production) 환경에서만 사용한다.
+         | DEV_DB_CONNECTION: mysql | pgsql
+         */
+        'dev_sync' => [
+            'driver'         => env('DEV_DB_CONNECTION', 'mysql'),
+            'host'           => env('DEV_DB_HOST'),
+            'port'           => env('DEV_DB_PORT', '3306'),
+            'database'       => env('DEV_DB_DATABASE'),
+            'username'       => env('DEV_DB_USERNAME'),
+            'password'       => env('DEV_DB_PASSWORD', ''),
+            'charset'        => env('DEV_DB_CHARSET', env('DEV_DB_CONNECTION', 'mysql') === 'pgsql' ? 'utf8' : 'utf8mb4'),
+            'collation'      => env('DEV_DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix'         => '',
+            'prefix_indexes' => true,
+            'strict'         => true,
+            'search_path'    => 'public',
+            'sslmode'        => env('DEV_DB_SSLMODE', 'prefer'),
+        ],
+
     ],
 
     /*

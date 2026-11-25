@@ -59,6 +59,14 @@ const GAMES = [
         spice: 2,
         tone: "from-sky-50 to-indigo-50 border-sky-200",
     },
+    {
+        slug: "world-cup",
+        title: "이상형 월드컵",
+        emoji: "🏆",
+        desc: "음식, 포켓몬, 밈까지! 테이블에서 하나 골라 각자 해보고 결과를 비교해요. (새 탭으로 열려요)",
+        spice: 1,
+        tone: "from-yellow-50 to-amber-50 border-yellow-200",
+    },
 ];
 
 /** 매운맛 정도를 고추 이모지로 표현 (1~3) */

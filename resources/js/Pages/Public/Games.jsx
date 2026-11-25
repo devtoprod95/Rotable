@@ -104,6 +104,17 @@ const GAMES = [
         tone: "from-emerald-50 to-lime-50 border-emerald-200",
         ready: true,
     },
+    {
+        slug: "world-cup",
+        category: "dating",
+        title: "이상형 월드컵",
+        players: "1인 이상",
+        emoji: "🏆",
+        desc: "음식, 포켓몬, 밈까지! 하나 골라 각자 해보고 결과를 비교해요. (새 탭으로 열려요)",
+        spice: 1,
+        tone: "from-yellow-50 to-amber-50 border-yellow-200",
+        ready: true,
+    },
 
     // ===== 술게임 (🔞 성인) =====
     {

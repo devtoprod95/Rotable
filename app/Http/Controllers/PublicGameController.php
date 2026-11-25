@@ -67,6 +67,7 @@ class PublicGameController extends Controller
             'halli-galli'  => 'Public/HalliGalli',
             'liar-game'    => 'Public/LiarGame',
             'connect-four' => 'Public/ConnectFour',
+            'world-cup'    => 'Public/WorldCup',
             // 술게임 (🔞 성인)
             'drink-balance' => 'Public/DrinkBalance',
             'kings-game'    => 'Public/KingsGame',

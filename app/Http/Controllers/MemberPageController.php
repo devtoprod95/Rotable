@@ -1090,6 +1090,7 @@ class MemberPageController extends Controller
             'table-poll'  => 'Games/TablePoll',
             'halli-galli' => 'Games/HalliGalli',
             'liar-game'   => 'Games/LiarGame',
+            'world-cup'   => 'Games/WorldCup',
         ];
 
         if (! isset($pages[$slug])) {

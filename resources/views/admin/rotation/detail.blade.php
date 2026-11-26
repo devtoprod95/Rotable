@@ -592,36 +592,67 @@
         var EXPORT_SCALE = 2;
 
         /**
-         * 캡처 공통 옵션 — 폰트 파일을 한 번만 받아 메모리에 담아 두고 다시 쓴다.
-         *  - 상세페이지는 Google Fonts(Gothic A1·Jua)를 쓰는데, 한글 폰트는 글자 범위별로 잘게 나뉜 파일이
-         *    굵기마다 수십~수백 개다. 캡처 라이브러리는 장마다 이 파일들을 전부 다시 받아 이미지에 넣었다.
-         *  - 폰트(fonts.gstatic.com)만 여기서 받아 data URL 로 캐시하고, 이미지 등 나머지는 기존 방식(false → 기본 fetch)으로 둔다.
-         *    (업로드 이미지는 CORS 캐시 문제를 피하려고 계속 no-cache 로 받는다)
+         * 캡처 공통 옵션 — 폰트를 "실제 쓰인 글자만" 담은 작은 파일로 직접 만들어 넘긴다.
+         *  - 기존: 캡처 라이브러리가 페이지의 스타일시트(cross-origin Google Fonts)를 읽어 폰트를 넣었다.
+         *    Safari 는 cross-origin 스타일시트 규칙을 읽지 못해 폰트가 빠지고(미리보기와 글꼴이 달라짐),
+         *    읽히는 브라우저도 한글 폰트가 굵기마다 수십~수백 개 조각이라 장마다 전부 받아 느렸다.
+         *  - 개선: Google Fonts 에 text= 로 "쓰인 글자만" 요청하면 굵기당 파일 1개(수십 KB)가 온다.
+         *    이를 data URL 로 바꿔 font.cssText 로 넘기면 모든 브라우저에서 같은 글꼴로, 네트워크 없이 빠르게 그려진다.
+         *  - 실패하거나 글자 종류가 너무 많으면 cssText 없이 기본 방식으로 폴백한다.
          */
-        var fontDataCache = {};
+        var FONT_CSS_URL = 'https://fonts.googleapis.com/css2?family=Jua&family=Gothic+A1:wght@400;500;700;800;900&display=swap';
+        var captureFontCss = '';
+        var fontCssCache   = {};
+
         function blobToDataUrl(blob){
             return new Promise(function(resolve, reject){
                 var reader = new FileReader();
-                reader.onload = function(){ resolve(reader.result); };
+                reader.onload  = function(){ resolve(reader.result); };
                 reader.onerror = reject;
                 reader.readAsDataURL(blob);
             });
         }
+
+        // text 에 쓰인 글자만 담은 @font-face CSS(폰트는 data URL)를 만든다. 실패 시 ''.
+        async function buildFontCss(text){
+            var chars = Array.from(new Set(Array.from(String(text || '').replace(/\s+/g, '')))).sort().join('');
+            if (!chars) { return ''; }
+            // 영문/숫자/기호는 항상 포함(동적 문구 대비)
+            chars += ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.,:;!?~-_()[]/+&%@#*\'"·…♥♡';
+            chars = Array.from(new Set(Array.from(chars))).join('');
+            if (chars.length > 900) { return ''; }   // URL 길이 한계 → 기본 방식으로 폴백
+            if (fontCssCache[chars]) { return fontCssCache[chars]; }
+
+            try {
+                var cssRes = await fetch(FONT_CSS_URL + '&text=' + encodeURIComponent(chars), { mode: 'cors' });
+                if (!cssRes.ok) { return ''; }
+                var css  = await cssRes.text();
+                var urls = Array.from(new Set((css.match(/url\((https:[^)]+)\)/g) || []).map(function(u){
+                    return u.slice(4, -1).replace(/^['"]|['"]$/g, '');
+                })));
+                var map = {};
+                await Promise.all(urls.map(async function(u){
+                    var r = await fetch(u, { mode: 'cors' });
+                    if (!r.ok) { throw new Error(r.status); }
+                    map[u] = await blobToDataUrl(await r.blob());
+                }));
+                urls.forEach(function(u){ css = css.split(u).join(map[u]); });
+                fontCssCache[chars] = css;
+                return css;
+            } catch (e) {
+                return '';
+            }
+        }
+
         function captureOptions(extra){
-            return Object.assign({
+            var opts = {
                 backgroundColor: '#ffffff',
                 fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } },
-                fetchFn: function(url){
-                    if (!/^https:\/\/fonts\.gstatic\.com\//.test(url)) { return Promise.resolve(false); }
-                    if (!fontDataCache[url]) {
-                        fontDataCache[url] = fetch(url, { mode: 'cors' })
-                            .then(function(res){ if (!res.ok) { throw new Error(res.status); } return res.blob(); })
-                            .then(blobToDataUrl)
-                            .catch(function(){ delete fontDataCache[url]; return false; }); // 실패하면 기본 방식으로
-                    }
-                    return fontDataCache[url];
-                }
-            }, extra || {});
+                // Safari 는 이미지마다 캔버스를 다시 그리며 기본 100ms 씩 기다린다. 간격만 줄여 속도를 높인다.
+                drawImageInterval: 20
+            };
+            if (captureFontCss) { opts.font = { cssText: captureFontCss }; }
+            return Object.assign(opts, extra || {});
         }
 
         function computeSafeScale(cssWidth, cssHeight, desired){
@@ -753,7 +784,29 @@
             }));
         }
 
-        function triggerDownload(blob, filename){
+        /* =====================================================================
+         * iPhone/iPad: 사진첩 저장 — 웹은 사진 앱에 직접 쓸 수 없어, 공유 시트(Web Share)로 "이미지 저장"을 누르게 한다.
+         *  - 공유는 "사용자 탭 직후"에만 허용되므로, 생성이 끝나면 버튼을 띄우고 그 탭에서 share 를 호출한다.
+         *  - 만든 파일은 shareQueue 에 모았다가 한 번에(여러 장이어도) 공유한다.
+         *  - 체크인 화면의 숨김 iframe 은 탭을 받을 수 없어, 파일을 부모 창에 넘겨 부모가 버튼을 띄운다.
+         * =================================================================== */
+        var shareQueue = [];
+
+        function isIOSDevice(){
+            var ua = navigator.userAgent || '';
+            return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+        }
+
+        function canShareImageFiles(){
+            if (!isIOSDevice() || !navigator.share || !navigator.canShare) { return false; }
+            try {
+                return navigator.canShare({ files: [new File([new Blob(['a'])], 'a.png', { type: 'image/png' })] });
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function anchorDownload(blob, filename){
             var url = URL.createObjectURL(blob);
             var link = document.createElement('a');
             link.download = filename;
@@ -761,7 +814,54 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            setTimeout(function(){ URL.revokeObjectURL(url); }, 10000);
+        }
+
+        function triggerDownload(blob, filename){
+            if (canShareImageFiles()) {
+                shareQueue.push(new File([blob], filename, { type: blob.type || 'image/png' }));
+                return;
+            }
+            anchorDownload(blob, filename);
+        }
+
+        // 모은 파일을 처리한다. iframe 이면 부모에 넘기고, 아니면 "사진첩에 저장" 버튼 화면을 띄운다.
+        function flushShareQueue(){
+            if (!shareQueue.length) { return; }
+            var files = shareQueue.splice(0, shareQueue.length);
+            if (window.self !== window.top) {
+                window.parent.postMessage({ source: 'rotable-roster-download', files: files }, window.location.origin);
+                return;
+            }
+            showShareSaveDialog(files);
+        }
+
+        function showShareSaveDialog(files){
+            var old = document.getElementById('shareSaveDialog');
+            if (old) { old.remove(); }
+            var box = document.createElement('div');
+            box.id = 'shareSaveDialog';
+            box.style.cssText = 'position:fixed; inset:0; z-index:3000; background:rgba(17,24,39,0.55); display:flex; align-items:center; justify-content:center; padding:16px;';
+            box.innerHTML =
+                '<div style="background:#fff; border-radius:14px; padding:26px 28px; text-align:center; max-width:340px; width:100%; box-shadow:0 10px 30px rgba(0,0,0,0.25);">'
+                + '<div style="font-size:2.2rem; line-height:1;">✅</div>'
+                + '<div style="margin-top:12px; font-size:16px; font-weight:700; color:#374151;">이미지 ' + files.length + '장이 준비됐어요</div>'
+                + '<div style="margin-top:4px; font-size:13px; color:#9ca3af;">아래 버튼을 누른 뒤 “이미지 저장”을 선택하면<br>사진첩에 저장돼요</div>'
+                + '<button type="button" id="shareSaveBtn" style="margin-top:18px; width:100%; padding:12px; border:0; border-radius:10px; background:#e83e8c; color:#fff; font-size:15px; font-weight:700;">사진첩에 저장</button>'
+                + '<button type="button" id="shareSaveClose" style="margin-top:8px; width:100%; padding:10px; border:0; background:transparent; color:#6b7280; font-size:13px;">닫기</button>'
+                + '</div>';
+            document.body.appendChild(box);
+            document.getElementById('shareSaveClose').onclick = function(){ box.remove(); };
+            document.getElementById('shareSaveBtn').onclick = async function(){
+                try {
+                    await navigator.share({ files: files });
+                    box.remove();
+                } catch (e) {
+                    if (e && e.name === 'AbortError') { return; }   // 사용자가 취소 — 다시 누를 수 있게 둔다
+                    files.forEach(function(f){ anchorDownload(f, f.name); });   // 공유 불가 → 기존 다운로드로 대체
+                    box.remove();
+                }
+            };
         }
 
         async function exportCanvasUnder10MB(canvas, baseName){
@@ -2732,6 +2832,9 @@
                 // 이미지 로드 전에 높이를 재면(특히 1장 메인 이미지) 높이가 0 으로 잡혀 아래가 잘린다.
                 await waitForImages(holder);
 
+                // 쓰인 글자만 담은 폰트를 한 번 만들어 모든 장에서 재사용한다.
+                captureFontCss = await buildFontCss(holder.textContent);
+
                 // 폰트 @import 등 <style> 은 모든 페이지에 공통으로 넣어야 폰트가 유지된다.
                 var styleHtml = Array.prototype.map.call(
                     holder.querySelectorAll('style'),
@@ -2852,6 +2955,7 @@
                 await salert({text: '이미지 생성 중 오류가 발생했습니다: ' + (e?.message || e), cancel: false});
             } finally {
                 hideExportOverlay();
+                flushShareQueue();
             }
         }
 
@@ -3090,6 +3194,8 @@
                     try { await document.fonts.ready; } catch (fe) { /* 무시 */ }
                 }
 
+                captureFontCss = await buildFontCss(target.textContent);
+
                 var feedW = target.offsetWidth || 1080;
                 var feedH = target.scrollHeight || target.offsetHeight || 1080;
                 var feedScale = computeSafeScale(feedW, feedH, EXPORT_SCALE);
@@ -3109,6 +3215,7 @@
                 target.style.maxWidth = prevMaxWidth;
                 target.style.transform = prevTransform;
                 hideExportOverlay();
+                flushShareQueue();
             }
         });
 

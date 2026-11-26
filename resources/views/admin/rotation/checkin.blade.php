@@ -1568,12 +1568,36 @@
             frame.tabIndex = -1;
 
             var timer = null;
+            var sharedFiles = [];
             var finish = function(ok, msg){
                 clearTimeout(timer);
                 window.removeEventListener('message', onMessage);
                 if (frame.parentNode) { frame.parentNode.removeChild(frame); }
                 $btn.prop('disabled', false).html(original);
-                if (ok) {
+                if (ok && sharedFiles.length) {
+                    // 사진첩 저장 — 사용자 탭에서 공유 시트를 연다.
+                    var files = sharedFiles;
+                    $('#rosterImageOverlayIcon').html('<div style="font-size:2.5rem;line-height:1;">✅</div>');
+                    $('#rosterImageOverlayText').text('이미지 ' + files.length + '장이 준비됐어요');
+                    $('#rosterImageOverlaySub').html('아래 버튼을 누른 뒤 “이미지 저장”을 선택하면 사진첩에 저장돼요'
+                        + '<div style="margin-top:14px;"><button type="button" id="rosterShareSave" class="btn w-100" style="background:#e83e8c;color:#fff;font-weight:700;">사진첩에 저장</button></div>'
+                        + '<div style="margin-top:6px;"><button type="button" id="rosterShareClose" class="btn btn-link text-muted w-100">닫기</button></div>');
+                    $('#rosterShareClose').on('click', function(){ $ov.hide(); });
+                    $('#rosterShareSave').on('click', async function(){
+                        try {
+                            await navigator.share({ files: files });
+                            $ov.hide();
+                        } catch (e) {
+                            if (e && e.name === 'AbortError') { return; }
+                            files.forEach(function(f){
+                                var u = URL.createObjectURL(f), a = document.createElement('a');
+                                a.href = u; a.download = f.name; document.body.appendChild(a); a.click(); a.remove();
+                                setTimeout(function(){ URL.revokeObjectURL(u); }, 10000);
+                            });
+                            $ov.hide();
+                        }
+                    });
+                } else if (ok) {
                     // 완료 표시를 잠깐 보여준 뒤 닫는다.
                     $('#rosterImageOverlayIcon').html('<div style="font-size:2.5rem;line-height:1;">✅</div>');
                     $('#rosterImageOverlayText').text('다운로드가 완료됐어요');
@@ -1589,9 +1613,11 @@
                 var d = ev.data || {};
                 if (d.source !== 'rotable-roster-download') { return; }
                 if (d.progress) { $('#rosterImageOverlayText').text(d.text || '이미지 생성 중…'); return; }
+                // iPhone/iPad: iframe 이 만든 파일을 받아 둔다. (사진첩 저장은 이 창에서 버튼을 눌러야 한다)
+                if (d.files) { sharedFiles = d.files; return; }
                 // 파일 저장이 시작될 시간을 잠깐 준 뒤 정리한다.
                 if (d.ok) { $('#rosterImageOverlayText').text('파일 저장 중…'); }
-                setTimeout(function(){ finish(!!d.ok, d.msg); }, d.ok ? 1500 : 0);
+                setTimeout(function(){ finish(!!d.ok, d.msg); }, (d.ok && !sharedFiles.length) ? 1500 : 0);
             };
             window.addEventListener('message', onMessage);
             timer = setTimeout(function(){ finish(false, '시간이 오래 걸리고 있어요. 잠시 후 다시 시도해 주세요.'); }, 120000);

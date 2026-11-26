@@ -263,6 +263,11 @@
                      모바일: 여/남 정가 2칸 + 얼리버드/수수료 2칸 / PC(md+): 플랫폼 · 여 · 남 · 얼리버드 · 수수료 한 줄 --}}
                 @php
                     $feeGenders = [\App\Models\Member::GENDER_FEMALE => '여', \App\Models\Member::GENDER_MALE => '남'];
+                    // 행사 생성 시 기본 정가 (플랫폼 => 성별 => 원). 수정 화면은 저장된 값을 쓴다.
+                    $defaultPrices = [
+                        \App\Models\Member::PLATFORM_MUNTO => [\App\Models\Member::GENDER_FEMALE => 20000, \App\Models\Member::GENDER_MALE => 20000],
+                        \App\Models\Member::PLATFORM_FRIP  => [\App\Models\Member::GENDER_FEMALE => 12900, \App\Models\Member::GENDER_MALE => 19800],
+                    ];
                 @endphp
                 <div class="ef-fee-section">
                     <div class="ef-section-title"><i class="ti ti-receipt"></i>참가비 · 수수료 <span class="fw-normal">(선택 · 페이백/매출 계산용)</span></div>
@@ -271,7 +276,7 @@
                             <div class="ef-fee-block is-{{ $opt['id'] }}">
                                 <div class="ef-fee-platform">{{ $opt['label'] }}</div>
                                 @foreach ($feeGenders as $gender => $gLabel)
-                                    @php $price = $isEdit ? $event->basePriceFor($opt['id'], $gender) : null; @endphp
+                                    @php $price = $isEdit ? $event->basePriceFor($opt['id'], $gender) : ($defaultPrices[$opt['id']][$gender] ?? null); @endphp
                                     <div class="ef-fee-cell">
                                         <label class="ef-fee-label" for="{{ $idPrefix }}Fee-{{ $opt['id'] }}-{{ $gender }}">{{ $gLabel }} 정가 (원)</label>
                                         <input type="text" class="form-control ef-money ef-fee-price" inputmode="numeric" id="{{ $idPrefix }}Fee-{{ $opt['id'] }}-{{ $gender }}"
@@ -284,7 +289,7 @@
                                     <label class="ef-fee-label" for="{{ $idPrefix }}Eb-{{ $opt['id'] }}">얼리버드 할인율</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control ef-fee-eb-rate" inputmode="numeric" maxlength="3" id="{{ $idPrefix }}Eb-{{ $opt['id'] }}"
-                                               data-platform="{{ $opt['id'] }}" value="{{ $isEdit ? $event->earlyBirdRateFor($opt['id']) : 0 }}">
+                                               data-platform="{{ $opt['id'] }}" value="{{ $isEdit ? $event->earlyBirdRateFor($opt['id']) : ($opt['id'] === \App\Models\Member::PLATFORM_MUNTO ? 10 : 0) }}">
                                         <span class="input-group-text">%</span>
                                     </div>
                                 </div>

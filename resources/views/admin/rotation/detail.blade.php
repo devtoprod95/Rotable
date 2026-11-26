@@ -74,6 +74,12 @@
             이미지 생성 중…
         </div>
         <div style="margin-top:4px; font-size:13px; color:#9ca3af;">잠시만 기다려 주세요 (고화질 처리 중)</div>
+        <div id="imageExportGauge" style="display:none; margin-top:16px; width:260px; max-width:100%;">
+            <div style="height:10px; border-radius:999px; background:#f3f4f6; overflow:hidden;">
+                <div id="imageExportGaugeBar" style="height:100%; width:0%; border-radius:999px; background:#e83e8c; transition:width .25s ease;"></div>
+            </div>
+            <div id="imageExportGaugePct" style="margin-top:6px; font-size:14px; font-weight:700; color:#e83e8c;">0%</div>
+        </div>
     </div>
 </div>
 
@@ -678,12 +684,21 @@
         var EXPORT_MAX_BYTES = 10 * 1024 * 1024; // 10MB 상한 (분할 다운로드 시 장당 과용량 방지)
 
         // 이미지 생성 로딩 오버레이 제어 (드롭다운 닫힘과 무관하게 항상 보인다)
-        function showExportOverlay(text){
-            // 체크인 화면의 숨김 iframe 안이면, 진행 문구를 부모 창에 전달해 그쪽 로딩 화면에 보여준다.
+        // pct(0~100)를 주면 게이지와 퍼센트를 함께 보여준다. 생략하면 스피너만.
+        function showExportOverlay(text, pct){
+            // 체크인 화면의 숨김 iframe 안이면, 진행 문구·퍼센트를 부모 창에 전달해 그쪽 로딩 화면에 보여준다.
             if (window.self !== window.top) {
-                window.parent.postMessage({ source: 'rotable-roster-download', progress: true, text: text || '이미지 생성 중…' }, window.location.origin);
+                window.parent.postMessage({ source: 'rotable-roster-download', progress: true, text: text || '이미지 생성 중…', pct: pct }, window.location.origin);
             }
             $('#imageExportOverlayText').text(text || '이미지 생성 중…');
+            if (typeof pct === 'number') {
+                var v = Math.max(0, Math.min(100, Math.round(pct)));
+                $('#imageExportGauge').show();
+                $('#imageExportGaugeBar').css('width', v + '%');
+                $('#imageExportGaugePct').text(v + '%');
+            } else {
+                $('#imageExportGauge').hide();
+            }
             $('#imageExportOverlay').css('display', 'flex');
         }
         function hideExportOverlay(){
@@ -2808,7 +2823,7 @@
                 return;
             }
 
-            showExportOverlay('이미지 분할 준비 중…');
+            showExportOverlay('이미지 분할 준비 중…', 2);
             await new Promise(function(r){ setTimeout(r, 30); });
 
             // 측정 전용 holder 에 전체 HTML 을 1080px 로 렌더해 블록 높이를 잰다.
@@ -2875,12 +2890,23 @@
 
                 var baseName = buildDownloadBaseName('rotable_상세페이지');
 
+                // 진행률(%) — 만들 장 수 기준. 한 장 안에서는 준비(~15%) → 그리기(~80%) → 저장(100%) 순으로 오른다. 뒤로 줄지 않게 한다.
+                var renderTotal = onlyPageNo ? 1 : pages.length;
+                var renderDone  = 0;
+                var lastPct     = 2;
+                var pageLabel   = '';
+                var reportProgress = function(frac){
+                    lastPct = Math.max(lastPct, 5 + 95 * ((renderDone + frac) / renderTotal));
+                    showExportOverlay(pageLabel, lastPct);
+                };
+
                 // 각 페이지 그룹의 블록들을, "바깥 wrapper(폰트/색 상속)를 그대로 복제한" 구조 안에 넣어 캡처한다.
                 for (var i = 0; i < pages.length; i++) {
                     var pageNo = i + 1;
                     if (onlyPageNo && pageNo !== onlyPageNo) { continue; } // 특정 장만 모드면 건너뜀
 
-                    showExportOverlay('이미지 생성 중… (' + pageNo + '/' + pages.length + ')');
+                    pageLabel = '이미지 생성 중… (' + (renderDone + 1) + '/' + renderTotal + ')';
+                    reportProgress(0);
                     await new Promise(function(r){ setTimeout(r, 20); });
 
                     var pageHolder = document.createElement('div');
@@ -2912,6 +2938,7 @@
                     //  - 로드 전 측정 시 height:auto 이미지(1장 메인 이미지)가 0 높이로 잡혀 하단이 잘렸다.
                     await waitForImages(pageHolder);
                     fixImageHeights(pageHolder);
+                    reportProgress(0.1);
 
                     // (DOM 삽입 후) 장 상·하단 빈 공간 축소 — 구분마다 여백이 커 보이는 문제 해소.
                     //  - "보이는" 첫 블록의 위 마진 / 마지막 블록의 아래 마진을 0 으로.
@@ -2934,10 +2961,12 @@
                         var scale = computeSafeScale(capW, capH, EXPORT_SCALE);
 
                         var canvas = await modernScreenshot.domToCanvas(pageHolder, captureOptions({
-                            width: capW,
-                            height: capH,
-                            scale: scale
+                            width:    capW,
+                            height:   capH,
+                            scale:    scale,
+                            progress: function(cur, total){ reportProgress(0.15 + 0.65 * (total ? cur / total : 0)); }
                         }));
+                        reportProgress(0.8);
 
                         // 파일명: 여러 장이면 _1, _2 … suffix. (한 장이면 suffix 없이)
                         // 파일명: 여러 장이면 순서 번호를 "앞에" 붙인다(1_, 2_ …). 한 장이면 접두 없음.
@@ -2948,6 +2977,8 @@
                             ? (pageNo + '_' + label + '_' + baseName)
                             : baseName;
                         await exportCanvasUnder10MB(canvas, fileName);
+                        renderDone++;
+                        reportProgress(0);
                     } finally {
                         document.body.removeChild(pageHolder);
                     }
@@ -3179,7 +3210,7 @@
             var target = document.getElementById('feedCapture');
 
             // 화면 전체 로딩 오버레이로 진행 표시 (드롭다운/모달과 무관하게 보임)
-            showExportOverlay('피드 이미지 생성 중…');
+            showExportOverlay('피드 이미지 생성 중…', 3);
             await new Promise(function(r){ setTimeout(r, 30); });
 
             // 미리보기 축소(transform)와 폭을 캡처 직전 1080px 로 고정했다가 끝나면 원복.
@@ -3202,10 +3233,12 @@
                 var feedScale = computeSafeScale(feedW, feedH, EXPORT_SCALE);
 
                 var canvas = await modernScreenshot.domToCanvas(target, captureOptions({
-                    width: feedW,
-                    height: feedH,
-                    scale: feedScale
+                    width:    feedW,
+                    height:   feedH,
+                    scale:    feedScale,
+                    progress: function(cur, total){ showExportOverlay('피드 이미지 생성 중…', 5 + 75 * (total ? cur / total : 0)); }
                 }));
+                showExportOverlay('피드 이미지 저장 중…', 85);
 
                 // 화질 최우선 + 상한 (상세페이지 다운로드와 동일 로직)
                 await exportCanvasUnder10MB(canvas, buildDownloadBaseName('rotable_피드'));
@@ -3263,7 +3296,7 @@
                 ? Math.max(0, Math.min(2, parseInt(q.get('recruitExtra'), 10) || 0))
                 : (q.get('recruit') === '0' ? 0 : 2);
 
-            showExportOverlay('참가자 명단 준비 중…');
+            showExportOverlay('참가자 명단 준비 중…', 1);
             try {
                 // 주소를 깨끗하게(새로고침 시 다시 다운로드되지 않도록) 정리하고 유형을 맞춘다.
                 history.replaceState({ type: type, saveId: null }, '', detailPageUrl + '?type=' + type);

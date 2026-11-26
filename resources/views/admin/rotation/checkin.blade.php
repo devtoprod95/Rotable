@@ -1558,6 +1558,8 @@
             // 진행 상태 오버레이 — 단계 문구는 숨김 iframe 이 알려주는 대로 갱신한다.
             var $ov = $('#rosterImageOverlay');
             $('#rosterImageOverlayIcon').html('<div class="spinner-border text-pink" style="width:2.5rem;height:2.5rem;" role="status" aria-hidden="true"></div>');
+            $('#rosterImageGauge').hide();
+            $('#rosterImageGaugeBar').css('width', '0%');
             $('#rosterImageOverlayText').text('참가자 명단 불러오는 중…');
             $('#rosterImageOverlaySub').text('잠시만 기다려 주세요 (고화질 처리 중, 몇 초 걸려요)');
             $ov.css('display', 'flex');
@@ -1575,6 +1577,7 @@
                 if (frame.parentNode) { frame.parentNode.removeChild(frame); }
                 $btn.prop('disabled', false).html(original);
                 if (ok && sharedFiles.length) {
+                    $('#rosterImageGauge').hide();
                     // 사진첩 저장 — 사용자 탭에서 공유 시트를 연다.
                     var files = sharedFiles;
                     $('#rosterImageOverlayIcon').html('<div style="font-size:2.5rem;line-height:1;">✅</div>');
@@ -1598,6 +1601,7 @@
                         }
                     });
                 } else if (ok) {
+                    $('#rosterImageGauge').hide();
                     // 완료 표시를 잠깐 보여준 뒤 닫는다.
                     $('#rosterImageOverlayIcon').html('<div style="font-size:2.5rem;line-height:1;">✅</div>');
                     $('#rosterImageOverlayText').text('다운로드가 완료됐어요');
@@ -1612,7 +1616,16 @@
                 if (ev.origin !== window.location.origin) { return; }
                 var d = ev.data || {};
                 if (d.source !== 'rotable-roster-download') { return; }
-                if (d.progress) { $('#rosterImageOverlayText').text(d.text || '이미지 생성 중…'); return; }
+                if (d.progress) {
+                    $('#rosterImageOverlayText').text(d.text || '이미지 생성 중…');
+                    if (typeof d.pct === 'number') {
+                        var pv = Math.max(0, Math.min(100, Math.round(d.pct)));
+                        $('#rosterImageGauge').show();
+                        $('#rosterImageGaugeBar').css('width', pv + '%');
+                        $('#rosterImageGaugePct').text(pv + '%');
+                    }
+                    return;
+                }
                 // iPhone/iPad: iframe 이 만든 파일을 받아 둔다. (사진첩 저장은 이 창에서 버튼을 눌러야 한다)
                 if (d.files) { sharedFiles = d.files; return; }
                 // 파일 저장이 시작될 시간을 잠깐 준 뒤 정리한다.
@@ -1640,6 +1653,12 @@
         <div id="rosterImageOverlayIcon"></div>
         <div id="rosterImageOverlayText" style="margin-top:14px; font-size:16px; font-weight:700; color:#374151;"></div>
         <div id="rosterImageOverlaySub" style="margin-top:4px; font-size:13px; color:#9ca3af;"></div>
+        <div id="rosterImageGauge" style="display:none; margin-top:16px; width:260px; max-width:100%; margin-left:auto; margin-right:auto;">
+            <div style="height:10px; border-radius:999px; background:#f3f4f6; overflow:hidden;">
+                <div id="rosterImageGaugeBar" style="height:100%; width:0%; border-radius:999px; background:#e83e8c; transition:width .25s ease;"></div>
+            </div>
+            <div id="rosterImageGaugePct" style="margin-top:6px; font-size:14px; font-weight:700; color:#e83e8c;">0%</div>
+        </div>
     </div>
 </div>
 

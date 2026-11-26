@@ -650,8 +650,7 @@
             var opts = {
                 backgroundColor: '#ffffff',
                 fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } },
-                // Safari 는 이미지마다 캔버스를 다시 그리며 기본 100ms 씩 기다린다. 간격만 줄여 속도를 높인다.
-                drawImageInterval: 5
+                // (Safari 는 이미지마다 캔버스를 다시 그리며 기다린다. 큰 이미지가 덜 그려진 채 저장되지 않도록 기본값 100ms 를 그대로 둔다.)
             };
             if (captureFontCss) { opts.font = { cssText: captureFontCss }; }
             return Object.assign(opts, extra || {});

@@ -161,6 +161,21 @@
                     $idPrefix  = $isEdit ? 'edit' : 'create';
                 @endphp
                 {{-- 모바일: 기본 정보 → 옵션 순으로 한 줄씩. PC(lg+): 왼쪽 기본 정보 / 오른쪽 옵션 2단 --}}
+                @unless ($isEdit)
+                    @if (! empty($copySources))
+                        {{-- 지난 행사 설정 불러오기: 제목·타입·테이블 수·옵션·참가비/수수료만 채운다. 일시는 새로 고른다. --}}
+                        <div class="mb-3 p-3 rounded border bg-light">
+                            <label class="form-label mb-1" for="copySource"><i class="ti ti-copy me-1"></i>지난 행사에서 불러오기 <span class="text-muted fw-normal">(선택)</span></label>
+                            <select class="form-select" id="copySource">
+                                <option value="">선택 안 함</option>
+                                @foreach ($copySources as $src)
+                                    <option value="{{ $src['id'] }}">{{ $src['label'] }}</option>
+                                @endforeach
+                            </select>
+                            <div class="create-hint mt-1">행사명·타입·테이블 수·옵션·참가비를 가져와요. 일시는 새로 골라 주세요.</div>
+                        </div>
+                    @endif
+                @endunless
                 <div class="row g-4">
                     <div class="col-12 col-lg-7">
                         <div class="ef-section-title"><i class="ti ti-info-circle"></i>기본 정보</div>
@@ -695,6 +710,35 @@
         $('#drinkToggle').on('change', function(){
             $('#drinkLabel').text(this.checked ? '켜짐' : '꺼짐');
         });
+
+        // ===== 생성: 지난 행사 설정 불러오기 =====
+        @if (! empty($copySources))
+        var COPY_SOURCES = @json($copySources);
+        $('#copySource').on('change', function(){
+            var src = COPY_SOURCES.filter(function(c){ return String(c.id) === String($('#copySource').val()); })[0];
+            if (!src) { return; }
+
+            $('#createTitle').val(src.title);
+            $('#eventForm [name=type][value="' + src.type + '"]').prop('checked', true).trigger('change');
+            $('#createTableCount').val(src.table_count);
+            $('#reviewGateToggle').prop('checked', !!src.review_gate).trigger('change');
+            $('#drinkToggle').prop('checked', !!src.drink).trigger('change');
+
+            $('.ef-fee-price').each(function(){
+                var v = ((src.fee_prices || {})[$(this).data('platform')] || {})[$(this).data('gender')];
+                $(this).val(v != null ? Number(v).toLocaleString('ko-KR') : '');
+            });
+            $('.ef-fee-eb-rate').each(function(){
+                var v = (src.early_bird || {})[$(this).data('platform')];
+                $(this).val(v != null ? v : 0);
+            });
+            $('.ef-fee-pf-rate').each(function(){
+                var v = (src.platform_fee || {})[$(this).data('platform')];
+                if (v != null) { $(this).val(v); }
+            });
+            efRenderEarlyBird();
+        });
+        @endif
 
         // ===== 생성: 테이블 수 -/+ (0~100) =====
         function clampTableCount(v){

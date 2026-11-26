@@ -78,9 +78,37 @@ class EventController extends RotationBaseController
     public function eventCreate(): View
     {
         return view('admin.rotation.eventForm', [
-            'event' => null,
-            'types' => EventRound::typeOptions(),
+            'event'       => null,
+            'types'       => EventRound::typeOptions(),
+            'copySources' => $this->copySources(),
         ]);
+    }
+
+    /**
+     * 행사 복제용 원본 목록 (최근 행사 20개). 제목·타입·테이블 수·옵션·참가비/수수료 설정만 담는다.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function copySources(): array
+    {
+        return EventRound::query()
+            ->withCount('rotationTables')
+            ->orderByDesc('event_time')
+            ->limit(20)
+            ->get()
+            ->map(fn (EventRound $e): array => [
+                'id'           => $e->id,
+                'label'        => $e->title . ' (' . ($e->event_time?->format('Y-m-d') ?? '일시 없음') . ')',
+                'title'        => $e->title,
+                'type'         => $e->type,
+                'table_count'  => (int) $e->rotation_tables_count,
+                'review_gate'  => (bool) $e->review_gate_enabled,
+                'drink'        => (bool) $e->drink_enabled,
+                'fee_prices'   => $e->fee_prices ?? [],
+                'early_bird'   => $e->early_bird_rates ?? [],
+                'platform_fee' => $e->platform_fee_rates ?? [],
+            ])
+            ->all();
     }
 
     public function eventStore(EventStoreRequest $request): JsonResponse

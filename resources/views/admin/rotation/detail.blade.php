@@ -589,7 +589,9 @@
          * 이미지 저장 배율. 1080px 디자인을 이 배율로 그린다. (2 → 가로 2160px)
          * 4배는 세로로 긴 장이 5천만 화소를 넘어 그리기·PNG 변환이 매우 느렸다. 화질을 더 올리려면 3 으로.
          */
-        var EXPORT_SCALE = 2;
+        //  모바일은 CPU 가 약해 그리기·PNG 변환이 PC 보다 훨씬 느리다. 폰 화면(가로 약 1100~1300px)에는 1.5배(1620px)면 충분해 화소를 절반 가까이 줄인다.
+        var EXPORT_SCALE = /Android|Mobile|iPhone|iPad|iPod/i.test(navigator.userAgent || '')
+            || (/Macintosh/.test(navigator.userAgent || '') && navigator.maxTouchPoints > 1) ? 1.5 : 2;
 
         /**
          * 캡처 공통 옵션 — 폰트를 "실제 쓰인 글자만" 담은 작은 파일로 직접 만들어 넘긴다.
@@ -649,7 +651,7 @@
                 backgroundColor: '#ffffff',
                 fetch: { requestInit: { mode: 'cors', cache: 'no-cache' } },
                 // Safari 는 이미지마다 캔버스를 다시 그리며 기본 100ms 씩 기다린다. 간격만 줄여 속도를 높인다.
-                drawImageInterval: 20
+                drawImageInterval: 5
             };
             if (captureFontCss) { opts.font = { cssText: captureFontCss }; }
             return Object.assign(opts, extra || {});
@@ -1337,7 +1339,7 @@
                 //  (남 더스티 네이비·여 로즈와 명도 차이가 커서 영역이 분명히 나뉜다)
                 html +=     '<div style="background:linear-gradient(135deg,#7a1f3d,#b4385e); padding:20px 10px 18px; text-align:center;">';
                 html +=       '<div style="font-family:\'Jua\',sans-serif; font-size:' + evTitleSize + '; font-weight:400; color:#ffffff; word-break:keep-all; line-height:1.25; letter-spacing:0.5px;">' + esc(card.title) + '</div>';
-                html +=       '<div style="display:inline-block; margin-top:10px; padding:5px 18px; border-radius:999px; background:#fff4ef; color:#7a1f3d; font-size:' + evDateSize + '; font-weight:900; word-break:keep-all;">🗓 ' + esc(card.date) + '</div>';
+                html +=       '<div style="display:inline-block; margin-top:10px; padding:5px 18px; border-radius:999px; background:#fff4ef; color:#7a1f3d; font-size:' + evDateSize + '; font-weight:900; word-break:keep-all;"><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"1em\" height=\"1em\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"display:inline-block; vertical-align:-0.12em; margin-right:0.3em;\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2.5\"/><path d=\"M3 10h18M8 3v4M16 3v4\"/></svg>' + esc(card.date) + '</div>';
                 html +=     '</div>';
                 // 남/여 헤더 (실제 참여자 수만 표시 — 모집중 더미는 제외)
                 // (남/여 띠는 세로로 넉넉하게, 가운데 흰 구분선)
@@ -2228,7 +2230,7 @@
                 var scheduleHtml = model.events.map(function(s, i){
                     var last = i === model.events.length - 1;
                     return '<div style="background:#ffffff; border:1px solid #f2d4dc; border-radius:12px; padding:16px 14px; text-align:center;' + (last ? '' : ' margin-bottom:12px;') + '">'
-                        +   '<div style="font-size:32px; font-weight:900; color:#7a1f3d; word-break:keep-all;">🗓 ' + esc(dates[i] || '') + '</div>'
+                        +   '<div style="font-size:32px; font-weight:900; color:#7a1f3d; word-break:keep-all;"><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" width=\"1em\" height=\"1em\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"display:inline-block; vertical-align:-0.12em; margin-right:0.3em;\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2.5\"/><path d=\"M3 10h18M8 3v4M16 3v4\"/></svg>' + esc(dates[i] || '') + '</div>'
                         +   '<div style="font-size:28px; font-weight:800; color:#374151; margin-top:6px; word-break:keep-all;">' + esc(settingEventLabel(titles[i], i)) + '</div>'
                         +   '<div style="font-size:27px; font-weight:800; margin-top:6px; word-break:keep-all;">'
                         +     '<span style="color:#4a6fa5;">남 ' + esc(s.maleAgeText || '') + '</span> · '

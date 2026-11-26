@@ -257,7 +257,7 @@
             <div data-setting-block="schedule">
                 @foreach ($sampleEvents as $i => $event)
                     <div style="background:#ffffff; border:1px solid #f2d4dc; border-radius:12px; padding:16px 14px; text-align:center;{{ $loop->last ? '' : ' margin-bottom:12px;' }}">
-                        <div style="font-size:32px; font-weight:900; color:#7a1f3d; word-break:keep-all;">🗓 {{ $event['date'] }}</div>
+                        <div style="font-size:32px; font-weight:900; color:#7a1f3d; word-break:keep-all;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-0.12em; margin-right:0.3em;"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>{{ $event['date'] }}</div>
                         <div style="font-size:28px; font-weight:800; color:#374151; margin-top:6px; word-break:keep-all;">{{ $event['title'] }}</div>
                         <div style="font-size:27px; font-weight:800; margin-top:6px; word-break:keep-all;"><span style="color:#4a6fa5;">남 {{ $eventSettings[$i]['maleAgeText'] }}</span> · <span style="color:#e8708a;">여 {{ $eventSettings[$i]['femaleAgeText'] }}</span></div>
                     </div>
@@ -322,7 +322,7 @@
                     {{-- 행사명 + 날짜 — "와인 & 블러쉬" 팔레트 (detail.blade.php buildRosterGrid 와 동일 마크업) --}}
                     <div style="background:linear-gradient(135deg,#7a1f3d,#b4385e); padding:20px 10px 18px; text-align:center;">
                         <div style="font-family:'Jua',sans-serif; font-size:{{ $evTitleSize }}; font-weight:400; color:#ffffff; word-break:keep-all; line-height:1.25; letter-spacing:0.5px;">{{ $event['title'] }}</div>
-                        <div style="display:inline-block; margin-top:10px; padding:5px 18px; border-radius:999px; background:#fff4ef; color:#7a1f3d; font-size:{{ $evDateSize }}; font-weight:900; word-break:keep-all;">🗓 {{ $event['date'] }}</div>
+                        <div style="display:inline-block; margin-top:10px; padding:5px 18px; border-radius:999px; background:#fff4ef; color:#7a1f3d; font-size:{{ $evDateSize }}; font-weight:900; word-break:keep-all;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-0.12em; margin-right:0.3em;"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>{{ $event['date'] }}</div>
                     </div>
 
                     {{-- 남(좌) / 여(우) 헤더 --}}

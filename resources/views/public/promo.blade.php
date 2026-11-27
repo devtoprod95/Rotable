@@ -12,14 +12,14 @@
             'badge'   => 'WINE PARTY',
             'title'   => '와인 한 잔과 함께<br>모두와 마주치는 로테이션 파티',
             'desc'    => '3:3 · 4:4 테이블에 앉아 단체로 대화하고, 턴마다 자리를 옮겨 오늘 온 모든 분과 이야기해요.',
-            'image'   => 'images/on-site_wine01.png',
+            'images'  => ['images/on-site_wine02.png', 'images/on-site_wine01.png', 'images/rotable_main_banner.png'],
             'accent'  => '#cf2f4c',
         ],
         'one'  => [
             'badge'   => '1:1 ROTATION',
             'title'   => '한 분 한 분과 마주 앉는<br>1:1 로테이션 소개팅',
             'desc'    => '정해진 시간 동안 1:1로 대화하고, 턴마다 상대가 바뀌어 모든 이성과 한 번씩 만나요.',
-            'image'   => 'images/on-site_solo01.png',
+            'images'  => ['images/on-site_solo01.png', 'images/on-site_solo02.png', 'images/on-site_solo03.png', 'images/on-site_solo04.png', 'images/rotable_main_banner.png'],
             'accent'  => '#e86aa6',
         ],
     ][$type];
@@ -83,8 +83,30 @@
 
         /* 히어로 */
         .hero { display: grid; grid-template-columns: 1fr; gap: 20px; align-items: center; margin: 24px 0 36px; }
-        .hero__img { border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 3; background: #1b1c33; }
-        .hero__img img { display: block; width: 100%; height: 100%; object-fit: cover; }
+        .hero__img { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 4 / 3; background: #1b1c33; }
+
+        /* 메인 이미지 슬라이더 — scroll-snap 으로 터치 스와이프, 점/화살표는 JS 로 동기화 */
+        .slider__track {
+            display: flex; width: 100%; height: 100%;
+            overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch; scrollbar-width: none;
+        }
+        .slider__track::-webkit-scrollbar { display: none; }
+        .slider__slide { flex: 0 0 100%; height: 100%; scroll-snap-align: center; }
+        .slider__slide img { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; -webkit-user-drag: none; }
+        .slider__dots { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 6px; }
+        .slider__dot { width: 7px; height: 7px; padding: 0; border: 0; border-radius: 999px; background: rgba(255,255,255,.5); cursor: pointer; transition: width .2s ease, background .2s ease; }
+        .slider__dot.active { width: 20px; background: #fff; }
+        .slider__nav {
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 38px; height: 38px; border: 0; border-radius: 999px; cursor: pointer;
+            background: rgba(15,16,32,.55); color: #fff; font-size: 1.1rem; display: none;
+        }
+        .slider__nav--prev { left: 10px; }
+        .slider__nav--next { right: 10px; }
+        @media (hover: hover) {
+            .slider__nav { display: inline-flex; align-items: center; justify-content: center; }
+        }
         .badge { display: inline-block; font-size: .75rem; font-weight: 800; letter-spacing: .12em; color: var(--accent); margin-bottom: 8px; }
         .hero__title { font-weight: 800; font-size: clamp(1.55rem, 5.5vw, 2.3rem); line-height: 1.3; margin: 0 0 12px; color: #fff; }
         .hero__desc { color: #aeb2d6; font-size: 1rem; margin: 0; }
@@ -146,6 +168,31 @@
         .apply__card.is-waiting .apply__name { color: var(--btn); }
         .apply__card.is-waiting .apply__go { background: transparent; border: 1px solid rgba(255,255,255,.18); color: #e9eaf5; }
 
+        /* 오픈 채팅방 (신청 카드 아래 가로 전체) */
+        .kakao {
+            display: block; margin-top: 12px; padding: 20px 18px 18px;
+            border-radius: 18px; text-decoration: none; color: #191919;
+            background: linear-gradient(135deg, #fee500 0%, #ffd400 100%);
+            box-shadow: 0 10px 28px -14px rgba(254,229,0,.55);
+            transition: transform .12s ease, filter .12s ease;
+        }
+        .kakao:hover { transform: translateY(-2px); filter: brightness(1.03); }
+        .kakao__badge {
+            display: inline-block; padding: 3px 10px; border-radius: 999px;
+            background: #191919; color: #fee500; font-size: .72rem; font-weight: 800; letter-spacing: .04em;
+        }
+        .kakao__name { margin-top: 10px; font-weight: 800; font-size: 1.15rem; line-height: 1.4; }
+        .kakao__desc { margin-top: 2px; font-size: .88rem; opacity: .75; }
+        .kakao__perks { list-style: none; margin: 14px 0 16px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .kakao__perks li { padding: 10px 12px; border-radius: 12px; background: rgba(255,255,255,.55); font-size: .86rem; font-weight: 700; line-height: 1.4; }
+        .kakao__go {
+            display: flex; align-items: center; justify-content: center; height: 48px;
+            border-radius: 12px; background: #191919; color: #fee500; font-weight: 800; font-size: .98rem;
+        }
+        @media (max-width: 360px) {
+            .kakao__perks { grid-template-columns: 1fr; }
+        }
+
         .foot { margin-top: 40px; text-align: center; color: #6f739a; font-size: .8rem; }
 
         /* 하단 고정 신청하기 바 (가로 전체) */
@@ -205,8 +252,25 @@
 
     {{-- 1. 유형 소개 --}}
     <section class="hero">
-        <div class="hero__img">
-            <img src="{{ asset($intro['image']) }}" alt="{{ $types[$type] }} 현장">
+        <div class="hero__img slider" data-slider>
+            <div class="slider__track" data-slider-track>
+                @foreach ($intro['images'] as $index => $image)
+                    <div class="slider__slide">
+                        <img src="{{ asset($image) }}" alt="{{ $types[$type] }} 현장 {{ $index + 1 }}"
+                             @if ($index > 0) loading="lazy" @endif draggable="false">
+                    </div>
+                @endforeach
+            </div>
+            @if (count($intro['images']) > 1)
+                <button type="button" class="slider__nav slider__nav--prev" data-slider-prev aria-label="이전 이미지">‹</button>
+                <button type="button" class="slider__nav slider__nav--next" data-slider-next aria-label="다음 이미지">›</button>
+                <div class="slider__dots">
+                    @foreach ($intro['images'] as $index => $image)
+                        <button type="button" class="slider__dot {{ $index === 0 ? 'active' : '' }}"
+                                data-slider-dot="{{ $index }}" aria-label="{{ $index + 1 }}번째 이미지"></button>
+                    @endforeach
+                </div>
+            @endif
         </div>
         <div>
             <span class="badge">{{ $intro['badge'] }}</span>
@@ -282,6 +346,20 @@
                 </a>
             @endforeach
         </div>
+
+        {{-- 오픈 채팅방 — 무료 이벤트·소식 안내 --}}
+        <a class="kakao" href="https://open.kakao.com/o/gdLw3DWi" target="_blank" rel="noopener">
+            <span class="kakao__badge">💛 ROTABLE 소식방</span>
+            <div class="kakao__name">무료 이벤트 소식, 오픈채팅방에서 가장 먼저 받아보세요</div>
+            <div class="kakao__desc">방에 계신 분들께만 먼저 전해드리는 소식이 있어요</div>
+            <ul class="kakao__perks">
+                <li>🎁 무료 참가 이벤트</li>
+                <li>📢 새 일정 오픈 소식</li>
+                <li>💸 얼리버드·할인 안내</li>
+                <li>💬 궁금한 점 바로 문의</li>
+            </ul>
+            <span class="kakao__go">오픈채팅방 입장하기 →</span>
+        </a>
     </section>
 
     <div class="foot">© ROTABLE</div>
@@ -291,5 +369,47 @@
 <div class="float-apply {{ $hasSchedule ? '' : 'is-waiting' }}">
     <a href="#apply">{{ $hasSchedule ? $types[$type].' 신청하기' : '둘러보기' }}</a>
 </div>
+
+<script>
+    /**
+     * 메인 이미지 슬라이더 — 스와이프는 CSS scroll-snap 이 처리하고,
+     * 여기서는 점 표시 동기화, 점/화살표 이동, 자동 넘김(4초, 사용자가 만지면 잠시 멈춤)만 담당한다.
+     */
+    document.querySelectorAll('[data-slider]').forEach((slider) => {
+        const track = slider.querySelector('[data-slider-track]');
+        const dots  = slider.querySelectorAll('[data-slider-dot]');
+        const count = track.children.length;
+        if (count < 2) {
+            return;
+        }
+
+        let current   = 0;
+        let autoTimer = null;
+
+        const goTo = (index) => {
+            current = (index + count) % count;
+            track.scrollTo({ left: track.clientWidth * current, behavior: 'smooth' });
+        };
+        const startAuto = () => {
+            clearInterval(autoTimer);
+            autoTimer = setInterval(() => goTo(current + 1), 4000);
+        };
+
+        track.addEventListener('scroll', () => {
+            const index = Math.round(track.scrollLeft / track.clientWidth);
+            current     = index;
+            dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+        }, { passive: true });
+
+        dots.forEach((dot) => dot.addEventListener('click', () => { goTo(Number(dot.dataset.sliderDot)); startAuto(); }));
+        slider.querySelector('[data-slider-prev]')?.addEventListener('click', () => { goTo(current - 1); startAuto(); });
+        slider.querySelector('[data-slider-next]')?.addEventListener('click', () => { goTo(current + 1); startAuto(); });
+        track.addEventListener('touchstart', () => clearInterval(autoTimer), { passive: true });
+        track.addEventListener('touchend', startAuto, { passive: true });
+        window.addEventListener('resize', () => track.scrollTo({ left: track.clientWidth * current }));
+
+        startAuto();
+    });
+</script>
 </body>
 </html>

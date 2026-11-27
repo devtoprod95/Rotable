@@ -33,6 +33,11 @@ Route::prefix('public')->name('public.')->group(function () {
         ->where('type', 'wine|solo')
         ->name('script');
 
+    // 홍보(신청 안내) — /public/promo 또는 /public/promo/{type}(wine|one). 문토·프립 신청 페이지로 연결.
+    Route::get('/promo/{type?}', [\App\Http\Controllers\PublicPromoController::class, 'index'])
+        ->where('type', 'wine|one')
+        ->name('promo');
+
     Route::get('/games', [\App\Http\Controllers\PublicGameController::class, 'index'])->name('games');
     Route::get('/games/{slug}', [\App\Http\Controllers\PublicGameController::class, 'show'])
         ->where('slug', '[a-z0-9-]+')

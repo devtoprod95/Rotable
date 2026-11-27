@@ -51,6 +51,23 @@
                 <div class="text-muted mb-3" style="font-size:.85rem;">로그인 없이 접속 가능 — 링크를 그대로 공유하세요.</div>
 
                 <div class="row row-cards g-3 mb-4">
+                    {{-- 홍보(신청 안내) --}}
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="pub-card">
+                            <div class="pub-card__ico">📣</div>
+                            <div class="pub-card__title">홍보 페이지 (신청 안내)</div>
+                            <div class="pub-card__desc">
+                                유형별 소개·다가오는 일정·핵심 기능과 문토·프립 신청 링크를 담은 홍보 페이지예요.
+                            </div>
+                            <div class="pub-variants">
+                                <a href="{{ route('public.promo', ['type' => 'one']) }}" target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-outline-pink">1:1 소개팅</a>
+                                <a href="{{ route('public.promo', ['type' => 'wine']) }}" target="_blank" rel="noopener"
+                                   class="btn btn-sm btn-outline-pink">와인파티</a>
+                            </div>
+                        </div>
+                    </div>
+
                     {{-- 공개 미니게임 --}}
                     <div class="col-12 col-sm-6 col-lg-4">
                         <a href="{{ route('public.games') }}" target="_blank" rel="noopener" class="pub-card">
